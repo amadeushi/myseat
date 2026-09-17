@@ -218,11 +218,11 @@ if (isset($_SESSION['selectedDate_saison'])
 	$break_open = $weekday.'_open_break';
 	$break_close = $weekday.'_close_break';
 	//echo $_SESSION['selOutlet']['outlet_open_time']."//".$_SESSION['selOutlet']['outlet_close_time']."<br/>";
-	if (isset($_SESSION['selOutlet'][$field_open]) && isset($_SESSION['selOutlet'][$field_close])
-		&& $_SESSION['selOutlet'][$field_open] != '00:00:00' && $_SESSION['selOutlet'][$field_close] != '00:00:00' ) 
-	{	
+	if (isset($_SESSION['selOutlet'][$field_open]) && $_SESSION['selOutlet'][$field_open] != '00:00:00') {
 		$_SESSION['selOutlet']['outlet_open_time'] = $_SESSION['selOutlet'][$field_open];
-		$_SESSION['selOutlet']['outlet_close_time'] = $_SESSION['selOutlet'][$field_close];			
+	}
+	if (isset($_SESSION['selOutlet'][$field_close]) && $_SESSION['selOutlet'][$field_close] != '00:00:00') {
+		$_SESSION['selOutlet']['outlet_close_time'] = $_SESSION['selOutlet'][$field_close];
 	}
 	
 	// set break times
