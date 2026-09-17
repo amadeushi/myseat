@@ -43,7 +43,7 @@ class phphooks {
 	 * @param string $tag. The name of the hook.
 	 */
 	function set_hook($tag) {
-		$this->hooks [$tag] = '';
+		$this->hooks [$tag] = array();
 	}
 	
 	/**
