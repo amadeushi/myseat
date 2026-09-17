@@ -226,7 +226,7 @@ var $tbTrans = array(
   * @param array $settings
   * @return void
   */
- function flexibleAccess($dbConn = '', $settings = '')
+ function __construct($dbConn = '', $settings = '')
  {
     if ( is_array($settings) ){
 	    foreach ( $settings as $k => $v ){
