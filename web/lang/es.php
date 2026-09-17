@@ -635,4 +635,6 @@ define ( 'text_mail_6', 'Si usted desea cambiar o cancelar su reservación no du
 
 //original text: "Login"
 define ( '_login', 'Login' );
+
+define ( '_closed', ' está cerrado el ' );
 ?>

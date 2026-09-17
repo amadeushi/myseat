@@ -86,7 +86,7 @@
 			<p>
 				<?php echo $row->reservation_parkticket; ?>
 			</p>
-			<!-- <label><?php echo _Tisch; ?></label>
+			<!-- <label><?php echo _table; ?></label>
 				 <p>
 					<?php echo $row->reservation_table; ?>
 				 </p>

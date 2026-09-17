@@ -625,4 +625,6 @@ define ( '_reservation_terms', 'Accetto i termini d\'uso del ristorante.');
 
 //original text: "Login"
 define ( '_login', 'Accesso' );
+
+define ( '_closed', ' è chiuso il ' );
 ?>

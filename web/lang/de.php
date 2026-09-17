@@ -636,4 +636,6 @@ define ( 'text_mail_6', 'Wenn Sie Ihre Reservierung ändern oder stornieren möc
 //original text: "Login"
 define ( '_login', 'Login' );
 
+
+define ( '_closed', ' ist geschlossen am ' );
 ?>

@@ -634,4 +634,6 @@ define ( 'text_mail_6', 'Hvis du ønsker at ændre eller annullere din reservati
 
 //original text: "Login"
 define ( '_login', 'Logon' );
+
+define ( '_closed', ' er lukket den ' );
 ?>

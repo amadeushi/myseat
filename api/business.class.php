@@ -2,7 +2,11 @@
 require_once __DIR__ . '/../web/classes/mysql_compat.php';
 function getHost($Address) {
    $parseUrl = parse_url(trim($Address));
-   return trim($parseUrl[host] ? $parseUrl[host] : array_shift(explode('/', $parseUrl[path], 2)));
+   if (!empty($parseUrl['host'])) {
+       return trim($parseUrl['host']);
+   }
+   $pathParts = explode('/', $parseUrl['path'] ?? '', 2);
+   return trim($pathParts[0]);
 }
 
 function language_navigation($language) {

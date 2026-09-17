@@ -623,4 +623,11 @@ define ( '_form_notes', 'Belangrijke details (allergieën, wensen)');
 
 // original text: "I accept the terms of use of the restaurant."
 define ( '_reservation_terms', 'Ik ga akkoord met de gebruiksvoorwaarden van het restaurant.');
+
+define ( '_closed', ' is gesloten op ' );
+
+define ( '_HG', 'Huisgast' );
+define ( '_PASS', 'Passant' );
+define ( '_WALK', 'Walk in' );
+define ( '_login', 'Inloggen' );
 ?>

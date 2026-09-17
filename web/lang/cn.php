@@ -620,4 +620,9 @@ define ( '_reservation_terms', '我接受的餐厅使用的条款');
 //original text: "Login"
 define ( '_login', '登录' );
 
+
+define ( '_closed', ' 已关闭 ' );
+
+define ( '_ads', 'Advertisement' );
+define ( '_print', 'Print' );
 ?>

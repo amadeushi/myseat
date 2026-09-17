@@ -626,4 +626,6 @@ define ( '_reservation_terms', 'J\'accepte les conditions d\'utilisation du rest
 
 //original text: "Login"
 define ( '_login', 'Entrer' );
+
+define ( '_closed', ' est fermé le ' );
 ?>
