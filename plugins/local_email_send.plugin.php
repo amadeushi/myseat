@@ -37,7 +37,7 @@ function my_email_send_conf() {
 	// degrade gracefully on absence
 	$mail_charset = (isset($settings['mailCharset']) ? $settings['mailCharset'] : 'UTF-8');
 	// ** PHPMailer class
-	require_once('../classes/phpmailer/class.phpmailer.php');
+	require_once __DIR__ . '/../web/classes/phpmailer/class.phpmailer.php';
 
 	// *** send confirmation email
 				// Prepare basedir
