@@ -218,10 +218,16 @@ if (isset($_SESSION['selectedDate_saison'])
 	$break_open = $weekday.'_open_break';
 	$break_close = $weekday.'_close_break';
 	//echo $_SESSION['selOutlet']['outlet_open_time']."//".$_SESSION['selOutlet']['outlet_close_time']."<br/>";
-	if (isset($_SESSION['selOutlet'][$field_open]) && $_SESSION['selOutlet'][$field_open] != '00:00:00') {
+	// a day counts as customized once its opening time has been set explicitly;
+	// only then can '00:00:00' in the closing time mean an actual midnight close
+	// instead of "not set" (both fields otherwise default to '00:00:00')
+	$day_is_customized = isset($_SESSION['selOutlet'][$field_open]) && $_SESSION['selOutlet'][$field_open] != '00:00:00';
+	if ($day_is_customized) {
 		$_SESSION['selOutlet']['outlet_open_time'] = $_SESSION['selOutlet'][$field_open];
-	}
-	if (isset($_SESSION['selOutlet'][$field_close]) && $_SESSION['selOutlet'][$field_close] != '00:00:00') {
+		if (isset($_SESSION['selOutlet'][$field_close])) {
+			$_SESSION['selOutlet']['outlet_close_time'] = $_SESSION['selOutlet'][$field_close];
+		}
+	} elseif (isset($_SESSION['selOutlet'][$field_close]) && $_SESSION['selOutlet'][$field_close] != '00:00:00') {
 		$_SESSION['selOutlet']['outlet_close_time'] = $_SESSION['selOutlet'][$field_close];
 	}
 	
