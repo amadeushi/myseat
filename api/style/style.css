@@ -488,46 +488,10 @@ width: 530px;
 	font-weight:bold;
 	color:#ccc;
 }
-#timefield {
-	line-height:20px;
-	overflow:hidden;
-}
-#timefield input {
-	margin-right:10px;
-	margin-left:10px;
-}
-#timefield div {
-	float:left;
-	width:80px;
-	margin-right:10px;
-	background-color:#fff;
-	padding:5px 50px 10px 20px;
-	border:1px solid #ccc;
-	border-radius:3px;
-	-moz-border-radius: 3px;
-	-webkit-border-radius: 3px;
-}
-.trenner { 
-	clear:both; 
+.trenner {
+	clear:both;
 	font-size:12px;
 	height:10px;
-}
-#reservation_date, #reservation_pax{
-	float: left;
-	width: 100px;
-	padding: 5px;
-	border: 1px solid #CCC;
-	margin-top: 5px;
-	font-size: 14px;
-	line-height: 20px;
-	font-weight: bold;
-	border-radius: 3px;
-	-moz-border-radius: 3px;
-	-webkit-border-radius: 3px;
-}
-#reservation_pax{
-	font-size: 20px;
-	margin-top: 3px;
 }
 .langnav {
 	float:right;
@@ -774,3 +738,556 @@ span.hide { display:none; }
 	text-decoration: none; 
 }
 
+
+/* ==========================================================================
+   Online reservation — dark/gold redesign
+   ========================================================================== */
+
+.booking-shell {
+	--bg: #0c0b0a;
+	--surface: #151312;
+	--surface-2: #1c1a18;
+	--border: rgba(201, 164, 89, 0.22);
+	--border-soft: rgba(245, 240, 230, 0.08);
+	--gold: #c9a259;
+	--gold-strong: #e2c07f;
+	--text: #f3ede1;
+	--text-muted: #a89e8c;
+	--danger: #e2867c;
+	--success: #8fbf7a;
+	--radius: 10px;
+	--font-display: 'Instrument Serif', Georgia, serif;
+	--font-body: 'Sora', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+	background: var(--bg);
+	color: var(--text);
+	font-family: var(--font-body);
+	min-height: 100vh;
+	padding: 48px 24px;
+	box-sizing: border-box;
+	width: auto;
+}
+.booking-shell *, .booking-shell *::before, .booking-shell *::after {
+	box-sizing: border-box;
+}
+.booking-shell ::selection {
+	background: var(--gold);
+	color: #1a1408;
+}
+.booking-shell a {
+	color: var(--gold);
+}
+.booking-shell a:hover {
+	color: var(--gold-strong);
+}
+.booking-shell :focus-visible {
+	outline: 2px solid var(--gold);
+	outline-offset: 2px;
+}
+
+.booking-grid {
+	max-width: 1080px;
+	margin: 0 auto;
+	display: grid;
+	grid-template-columns: 300px 1fr;
+	gap: 56px;
+	align-items: start;
+}
+
+/* ---- Sidebar ---- */
+.booking-sidebar {
+	position: sticky;
+	top: 48px;
+	display: flex;
+	flex-direction: column;
+	gap: 28px;
+}
+.back-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 15px;
+	font-weight: 600;
+	color: var(--text);
+	text-decoration: none;
+	padding: 10px 16px;
+	background: var(--surface-2);
+	border: 1px solid var(--border-soft);
+	border-radius: 999px;
+	width: fit-content;
+	transition: border-color 150ms ease, transform 150ms ease;
+}
+.back-link:hover {
+	color: var(--gold-strong);
+	border-color: var(--border);
+	transform: translateX(-2px);
+}
+.back-link svg {
+	flex: none;
+}
+
+.hours-card h3 {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-family: var(--font-body);
+	font-size: 13px;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	color: var(--text);
+	margin: 0 0 14px;
+}
+.hours-card h3 svg {
+	color: var(--gold);
+	flex: none;
+}
+.hours-card dl {
+	margin: 0;
+	border-top: 1px solid var(--border-soft);
+}
+.hours-row {
+	display: flex;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 9px 0;
+	border-bottom: 1px solid var(--border-soft);
+	font-size: 14px;
+}
+.hours-row dt {
+	color: var(--text-muted);
+	font-weight: 500;
+}
+.hours-row dd {
+	margin: 0;
+	font-variant-numeric: tabular-nums;
+	color: var(--text);
+}
+
+.contact-list {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	padding-top: 4px;
+	border-top: 1px solid var(--border-soft);
+}
+.contact-item {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	font-size: 14px;
+	line-height: 1.45;
+	color: var(--text-muted);
+	text-decoration: none;
+}
+.contact-item svg {
+	flex: none;
+	margin-top: 2px;
+	color: var(--gold);
+}
+a.contact-item:hover {
+	color: var(--gold-strong);
+}
+a.contact-item:hover svg {
+	color: var(--gold-strong);
+}
+
+/* ---- Main column ---- */
+.booking-main {
+	background: var(--surface);
+	border: 1px solid var(--border-soft);
+	border-radius: 16px;
+	padding: 40px 44px 44px;
+}
+.booking-title {
+	font-family: var(--font-display);
+	font-weight: 400;
+	font-size: 40px;
+	line-height: 1.1;
+	letter-spacing: -0.01em;
+	margin: 0 0 28px;
+	color: var(--text);
+}
+
+.booking-shell .langnav {
+	float: right;
+	margin: -8px 0 16px;
+}
+.booking-shell .langnav li {
+	display: inline-block;
+	margin-left: 10px;
+}
+.booking-shell .langnav a {
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	color: var(--text-muted);
+	text-transform: uppercase;
+}
+.booking-shell .langnav a:hover {
+	color: var(--gold-strong);
+}
+
+.picker-row {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 14px;
+	margin-bottom: 14px;
+}
+.picker {
+	background: var(--surface-2);
+	border: 1px solid var(--border-soft);
+	border-radius: var(--radius);
+	padding: 10px 16px 12px;
+}
+.picker-label {
+	display: block;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+	margin-bottom: 4px;
+}
+.timeslot-section > .picker-label {
+	margin-bottom: 12px;
+}
+
+.pax-stepper {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+}
+.pax-stepper input {
+	background: transparent;
+	border: 0;
+	color: var(--text);
+	font-family: var(--font-body);
+	font-size: 17px;
+	font-weight: 600;
+	width: 32px;
+	text-align: center;
+	padding: 0;
+}
+.booking-shell .btn_pax {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	border-radius: 50%;
+	border: 1px solid var(--border);
+	color: var(--gold);
+	font-size: 16px;
+	font-weight: 700;
+	line-height: 1;
+	text-decoration: none !important;
+	background: transparent;
+	margin: 0;
+	transition: background 150ms ease, color 150ms ease;
+}
+.booking-shell .btn_pax:hover {
+	background: var(--gold);
+	color: #1a1408;
+}
+
+.date-picker #reservation_date {
+	background: transparent;
+	border: 0;
+	color: var(--text);
+	font-family: var(--font-body);
+	font-size: 17px;
+	font-weight: 600;
+	width: 100%;
+	padding: 0;
+	line-height: 24px;
+	cursor: pointer;
+}
+.ui-datepicker-trigger {
+	display: none;
+}
+
+.timeslot-section {
+	background: var(--surface-2);
+	border: 1px solid var(--border-soft);
+	border-radius: var(--radius);
+	padding: 16px 18px 6px;
+	margin-bottom: 24px;
+}
+#timefield {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 10px;
+}
+#timefield .elem1, #timefield .elem2 {
+	display: contents;
+}
+.timeslot {
+	position: relative;
+	display: block;
+}
+.timeslot input[type="radio"] {
+	position: absolute;
+	opacity: 0;
+	width: 1px;
+	height: 1px;
+	margin: 0;
+}
+.timeslot .radiotext {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 40px;
+	border-radius: 8px;
+	border: 1px solid var(--border-soft);
+	background: transparent;
+	color: var(--text);
+	font-size: 14px;
+	font-variant-numeric: tabular-nums;
+	cursor: pointer;
+	transition: border-color 150ms ease, background 150ms ease, color 150ms ease;
+}
+.timeslot:hover .radiotext {
+	border-color: var(--border);
+	color: var(--gold-strong);
+}
+.timeslot input[type="radio"]:checked + .radiotext {
+	background: var(--gold);
+	border-color: var(--gold);
+	color: #1a1408;
+	font-weight: 600;
+}
+.timeslot input[type="radio"]:focus-visible + .radiotext {
+	outline: 2px solid var(--gold);
+	outline-offset: 2px;
+}
+.timeslot-disabled .radiotext,
+.timeslot input[type="radio"]:disabled + .radiotext {
+	color: rgba(243, 237, 225, 0.28);
+	border-color: var(--border-soft);
+	cursor: not-allowed;
+	text-decoration: line-through;
+}
+.timeslot-disabled:hover .radiotext {
+	border-color: var(--border-soft);
+	color: rgba(243, 237, 225, 0.28);
+}
+.radiotext.error {
+	border-color: var(--danger);
+	color: var(--danger);
+}
+
+.guest-details {
+	border-top: 1px solid var(--border-soft);
+	padding-top: 24px;
+	margin-bottom: 28px;
+}
+.guest-details h3 {
+	font-family: var(--font-body);
+	font-size: 13px;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	color: var(--text-muted);
+	text-transform: uppercase;
+	margin: 0 0 18px;
+}
+.guest-details .field {
+	margin-bottom: 16px;
+}
+.guest-details label {
+	display: block;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text-muted);
+	margin-bottom: 6px;
+	float: none;
+	width: auto;
+}
+.guest-details input[type="text"],
+.guest-details textarea,
+.guest-details select {
+	width: 100%;
+	background: var(--surface-2);
+	border: 1px solid var(--border-soft);
+	border-radius: 8px;
+	color: var(--text);
+	font-family: var(--font-body);
+	font-size: 15px;
+	padding: 11px 14px;
+	margin: 0;
+	transition: border-color 150ms ease;
+}
+.guest-details input[type="text"]:focus,
+.guest-details textarea:focus,
+.guest-details select:focus {
+	border-color: var(--gold);
+	outline: none;
+}
+.guest-details input.error,
+.guest-details textarea.error {
+	border-color: var(--danger);
+}
+.guest-details textarea {
+	resize: vertical;
+	min-height: 90px;
+	font-family: var(--font-body);
+}
+
+.consent-group {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin-top: 20px;
+}
+.checkbox-row {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--text-muted);
+	cursor: pointer;
+	float: none;
+	width: auto;
+}
+.checkbox-row input[type="checkbox"] {
+	margin-top: 2px;
+	width: 16px;
+	height: 16px;
+	accent-color: var(--gold);
+	flex: none;
+}
+.checkbox-row .checktext.error {
+	color: var(--danger);
+}
+.checkbox-row a {
+	white-space: nowrap;
+}
+
+.submit-button {
+	display: block;
+	width: 100%;
+	background: var(--gold);
+	color: #1a1408;
+	border: 0;
+	border-radius: 999px;
+	font-family: var(--font-body);
+	font-size: 15px;
+	font-weight: 700;
+	letter-spacing: 0.01em;
+	padding: 15px 20px;
+	cursor: pointer;
+	transition: background 150ms ease, transform 150ms ease;
+}
+.submit-button:hover {
+	background: var(--gold-strong);
+	transform: translateY(-1px);
+}
+.submit-button:active {
+	transform: translateY(0);
+}
+
+.booking-shell .alert_error,
+.booking-shell .alert_success,
+.booking-shell .alert_ads,
+.booking-shell .alert_info,
+.booking-shell .alert_tip {
+	border-radius: var(--radius);
+	text-shadow: none;
+	font-family: var(--font-body);
+	margin: 0 0 20px;
+}
+.booking-shell .alert_error {
+	background: rgba(226, 134, 124, 0.12);
+	border: 1px solid rgba(226, 134, 124, 0.4);
+	color: var(--danger);
+}
+.booking-shell .alert_success {
+	background: rgba(143, 191, 122, 0.12);
+	border: 1px solid rgba(143, 191, 122, 0.4);
+	color: var(--success);
+}
+.booking-shell .alert_ads {
+	background: var(--surface-2);
+	border: 1px solid var(--border-soft);
+	color: var(--text-muted);
+}
+.booking-shell .alert_ads a {
+	color: var(--gold);
+}
+.booking-shell .alert_ads cite, .booking-shell .alert_ads cite a {
+	color: var(--text-muted);
+}
+
+/* jQuery UI datepicker — reskinned to match */
+.ui-datepicker {
+	background: var(--surface-2);
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	padding: 12px;
+	width: 260px;
+	box-shadow: 0 16px 40px rgba(0,0,0,0.45);
+	font-family: var(--font-body);
+}
+.ui-datepicker .ui-datepicker-title {
+	color: var(--text);
+	font-family: var(--font-body);
+	font-weight: 600;
+}
+.ui-datepicker th {
+	color: var(--text-muted);
+	font-family: var(--font-body);
+	font-weight: 600;
+	font-size: 12px;
+}
+.ui-datepicker td span,
+.ui-datepicker td a {
+	color: var(--text);
+	text-shadow: none;
+	border-radius: 6px;
+}
+.ui-datepicker td a:hover {
+	background: var(--gold);
+	color: #1a1408;
+}
+.ui-datepicker td.ui-datepicker-current-day a {
+	background: var(--gold);
+	color: #1a1408;
+}
+.ui-datepicker-today a {
+	border: 1px solid var(--gold) !important;
+}
+.ui-datepicker td.ui-state-disabled span {
+	background: transparent;
+	color: rgba(243, 237, 225, 0.25);
+}
+.ui-datepicker-prev span, .ui-datepicker-next span {
+	filter: invert(1);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 860px) {
+	.booking-shell {
+		padding: 24px 16px 40px;
+	}
+	.booking-grid {
+		grid-template-columns: 1fr;
+		gap: 28px;
+	}
+	.booking-sidebar {
+		position: static;
+	}
+	.booking-main {
+		padding: 28px 22px 32px;
+	}
+	.booking-title {
+		font-size: 32px;
+	}
+}
+@media (max-width: 480px) {
+	.picker-row {
+		grid-template-columns: 1fr;
+	}
+	#timefield {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}

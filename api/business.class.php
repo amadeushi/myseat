@@ -9,6 +9,47 @@ function getHost($Address) {
    return trim($pathParts[0]);
 }
 
+// build a grouped weekly opening-hours summary, e.g.
+// [['days' => 'Mo - Mi', 'hours' => '12:00 - 22:00'], ['days' => 'Fr - Sa', 'hours' => '14:30 - 00:00'], ...]
+function getWeeklyHoursSummary($outlet) {
+	$dayLabels = array(1 => 'Mo', 2 => 'Di', 3 => 'Mi', 4 => 'Do', 5 => 'Fr', 6 => 'Sa', 0 => 'So');
+	$order = array(1, 2, 3, 4, 5, 6, 0);
+	$closedDays = array_filter(explode(',', $outlet['outlet_closeday'] ?? ''), 'strlen');
+
+	$rows = array();
+	foreach ($order as $day) {
+		if (in_array((string)$day, $closedDays, true)) {
+			$rows[] = array('day' => $day, 'label' => null);
+			continue;
+		}
+		$dayOpen = $outlet[$day.'_open_time'] ?? '00:00:00';
+		$dayClose = $outlet[$day.'_close_time'] ?? '00:00:00';
+		$isCustom = ($dayOpen !== '00:00:00');
+		$open = $isCustom ? $dayOpen : $outlet['outlet_open_time'];
+		$close = $isCustom ? $dayClose : $outlet['outlet_close_time'];
+		$rows[] = array('day' => $day, 'label' => substr($open, 0, 5).' - '.substr($close, 0, 5));
+	}
+
+	// group consecutive days that share the same hours
+	$groups = array();
+	foreach ($rows as $row) {
+		$lastIndex = count($groups) - 1;
+		if ($lastIndex >= 0 && $groups[$lastIndex]['label'] === $row['label']) {
+			$groups[$lastIndex]['days'][] = $row['day'];
+		} else {
+			$groups[] = array('label' => $row['label'], 'days' => array($row['day']));
+		}
+	}
+
+	$result = array();
+	foreach ($groups as $g) {
+		$dayNames = array_map(function($d) use ($dayLabels) { return $dayLabels[$d]; }, $g['days']);
+		$rangeLabel = (count($dayNames) > 1) ? $dayNames[0].' - '.end($dayNames) : $dayNames[0];
+		$result[] = array('days' => $rangeLabel, 'hours' => $g['label']);
+	}
+	return $result;
+}
+
 function language_navigation($language) {
 		echo '<ul class="langnav"><li><a href="'.$_SERVER['PHP_SELF'].'?lang=en">EN</a></li>';
 		if($language!='en'){
@@ -202,9 +243,8 @@ function timeFields($format,$intervall,$field='',$select='',$open_time='00:00:00
 		echo "<div id='timefield' class='required radio'>";
 		 echo "<div class='elem1'>";
 		
-		while( $value <= $endtime ){ 
-		 // check that the 2 columns have the same length 
-		 if( $value < $endtime || ($value == $endtime && $i % 2 == 0) ){
+		while( $value <= $endtime ){
+		 if( true ){
 			// get loose of break
 			if( $value <= $open_break || ($value >= $close_break && $value<=$endtime) ){
 			// Generating the time drop down menu
@@ -212,23 +252,23 @@ function timeFields($format,$intervall,$field='',$select='',$open_time='00:00:00
 			$max_passerby = ($_SESSION['passerby_max_pax'] == 0) ? $_SESSION['selOutlet']['outlet_max_capacity'] : $_SESSION['passerby_max_pax'];
 			$ava_passerby = $max_passerby - $_SESSION['passbyTime'][date('H:i:s',$value)];
 				if($ava_passerby>0){
+					 $tbl_capacity = $_SESSION['outlet_max_tables']-$tbl_availability[date('H:i',$value)];
+					 $pax_capacity = ($tbl_capacity >=1) ? $max_passerby-$availability[date('H:i',$value)]-$_SESSION['pax'] : 0;
+					 $slot_disabled = ($pax_capacity < 0 || $tbl_capacity < 1);
+
+					echo "<label class='timeslot".($slot_disabled ? " timeslot-disabled" : "")."'>";
 					echo "<input name='$field' type='radio' value='".date('H:i',$value)."'";
 					if ( $select == date('H:i:s',$value) ) {
 						echo ' selected="selected" ';
 					}
-				
-					 $tbl_capacity = $_SESSION['outlet_max_tables']-$tbl_availability[date('H:i',$value)];
-					 $pax_capacity = ($tbl_capacity >=1) ? $max_passerby-$availability[date('H:i',$value)]-$_SESSION['pax'] : 0;
-			
-					if ( $pax_capacity < 0 || $tbl_capacity < 1) {
+					if ( $slot_disabled ) {
 						echo ' disabled="disabled" ';
 					 }
-				
 					echo " ><span class='radiotext'>";
 				
 					$txt_value = ($format == 24) ? date('H:i',$value) : date("g:i a", $value);
 					echo $txt_value;
-					echo "</span>";
+					echo "</span></label>";
 				}
 			}
 			// calculate new time

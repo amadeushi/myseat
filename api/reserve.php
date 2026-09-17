@@ -33,7 +33,7 @@ header('P3P: CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CN
 // ** SETTINGS **
 // Select the type of time selector:
 // 'radio': radio buttons; 'drop': select box 
-$time_selector = "drop";
+$time_selector = "radio";
 
 //link to terms&condition page
 // Your license
@@ -210,25 +210,18 @@ if($check_web_outlet==1){
 	<link rel="shortcut icon" href="http://www.myseat.us/favicon.ico">
 
 	<!-- CSS - Setup -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
 	<link href="style/datepicker.css" rel="stylesheet" type="text/css" />
-	<?php
-	// Mobile Browser detection
-		$mobile_browser = checkMobile();
-		//$mobile_browser = 1;
-		if ($mobile_browser > 0) {
-			$time_selector = "drop"; // mobile has always dropdown menu
-			echo '<link href="style/mobile.css" rel="stylesheet" type="text/css" />';
-		}else{
-			echo '<link href="style/style.css" rel="stylesheet" type="text/css" />';
-		}
-	?>
+	<link href="style/style.css" rel="stylesheet" type="text/css" />
 
     <!-- jQuery Library-->
     <script src="js/jQuery.min.js" type="text/javascript"></script>
     <script src="js/jquery.easing.1.3.js" type="text/javascript"></script>
-    <script src="js/jquery-ui.js" type="text/javascript"></script> 
+    <script src="js/jquery-ui.js" type="text/javascript"></script>
     <script src="js/functions.js" type="text/javascript"></script>
-	<script src="../web/lang/jquery.ui.datepicker-<?php echo substr($_SESSION['language'],0,2);?>.js" type="text/javascript"></script>	
+	<script src="../web/lang/jquery.ui.datepicker-<?php echo substr($_SESSION['language'],0,2);?>.js" type="text/javascript"></script>
 
 <!-- Uncomment to define your own color scheme for the booking form -->
 <!-- The example here is from the Monmarthe DEMO page at myseat.us -->
@@ -269,130 +262,166 @@ if($check_web_outlet==1){
 </head>
 <body>
 	    
-<div id="page-content">
 <?php
 	if( $check_web_outlet<1 ){
-		echo "<div class='tc'><div class='alert_error'><p><img src='../web/images/icon_error.png' alt='error' class='middle'/>&nbsp;&nbsp;";
-		echo _sorry."<br></p></div><br/></div>";
+		echo "<div class='booking-shell'><div class='alert_error'><p><img src='../web/images/icon_error.png' alt='error' class='middle'/>&nbsp;&nbsp;";
+		echo _sorry."<br></p></div></div>";
 		exit; //stop script
 	}
+	$num_outlets = 0;
+	if ($_SESSION['single_outlet'] == 'OFF') {
+		$num_outlets = querySQL('num_outlets');
+	}
+	$hours_summary = getWeeklyHoursSummary($_SESSION['selOutlet']);
+	$page_title = ($num_outlets > 1) ? $prp_info['name'] : $outlet_name;
 ?>
-<?php language_navigation($set_lang);?>
-<form action="process_booking.php" method="post" name="contactForm" id="contactForm">
-	<?php	
-				// outlets dropdown
-				$num_outlets = 0;
-				$order = 0;
-				if ($_SESSION['single_outlet'] == 'OFF') {
-					$num_outlets = querySQL('num_outlets');
-				}
+<div class="booking-shell">
+<div class="booking-grid">
 
-					if ($num_outlets>1) {
-						$order++;
-						echo "<h1>"._webform." "._for_." <span>".$prp_info['name']."</span></h1><div class='trenner'></div>";
-						echo"<div class='data3'>	
-							<div class='number'>".$order."</div>";
-						echo "<input type='hidden' name='reservation_outlet_id' id='single_outlet' value='".$_SESSION['outletID']."'>";
-						$outlet_result = outletListweb($_SESSION['outletID'],'enabled','reservation_outlet_id');
-						echo"</div>";
-					} else{
-						echo "<h1>"._webform." "._for_." <span>".$outlet_name."</span></h1><div class='trenner'></div>";
-						echo "<input type='hidden' name='reservation_outlet_id' id='single_outlet' value='".$_SESSION['outletID']."'>";
-					}
-?>
-<div class="data1">	
-	<div class="number"><?php echo $order+1;?></div>
-	<h3><?php echo _date;?></h3>		
-			 <!-- Datepicker -->
-			    <input type="hidden" name="dbdate" id="dbdate" value="<?php echo $_SESSION['selectedDate']; ?>"/>
-			    <input id="reservation_date" name="reservation_date" value="<?php echo $_SESSION['selectedDate'];?>">
-			    <input type="hidden" name="recurring_dbdate" value="<?php echo $_SESSION['selectedDate']; ?>"/>
-</div>
-<div class="data2">	
-	<div class="number"><?php echo $order+2;?></div>
-	<h3><?php echo ucfirst(_people_);?></h3>
-	<div>
-        <?php //personsList($general['max_menu'],2); ?>
-		<input type="text" name="reservation_pax" id="reservation_pax" readonly="true" value="<?php echo $_SESSION['pax'];?>"/>
-		<a href="javascript:void(0);" class="inc btn_pax">+</a>
-		<a href="javascript:void(0);" class="dec btn_pax">-</a>
-	</div>
-</div>
-<div class="data3">	
-	<div class="number"><?php echo $order+3;?></div>
-	<h3><?php echo _time;?></h3>
-		<?php
-		if ($time_selector == "radio") {
-		timeFields($general['timeformat'], $general['timeintervall'],'reservation_time',$time,$_SESSION['selOutlet']['outlet_open_time'],$_SESSION['selOutlet']['outlet_close_time'],0);
-		}else{
-		    timeList($general['timeformat'], $general['timeintervall'],'reservation_time',$time,$_SESSION['selOutlet']['outlet_open_time'],$_SESSION['selOutlet']['outlet_close_time'],0);
-		} 
-		?>
-		<?php
-		// Special event of the day and outlet
-		$special_events = '';
-		$special_events = querySQL('event_data_day');
+	<aside class="booking-sidebar">
+		<a class="back-link" href="<?php echo $website; ?>">
+			<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M10 3.5 5.5 8l4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+			<?php echo $prp_info['name']; ?>
+		</a>
 
-			if ( $special_events ) {
-				echo "<br/><div class='alert_ads'>";
-				// special events today at outlet
-							foreach($special_events as $row) {
-								echo "<span class='bold'>
-								<a href='".$_SERVER['SCRIPT_NAME']."?outletID=".$row->outlet_id."&selectedDate=".$row->event_date."'>".
-								_today.": ".$row->subject."</a></span>
-								<p>".$row->description."<br/><cite><span class='bold'>
-								".date($general['dateformat'],strtotime($row->event_date)).
-								"</span> ".formatTime($row->start_time,$general['timeformat']).
-								" - ".formatTime($row->end_time,$general['timeformat'])." | ".
-								_ticket_price.": ".number_format($row->price,2).
-								"</cite></p>";
-								if( key($row) != count($events_advertise)-1 && key($row) > 1) {
-									// BR between special events
-									echo"<br/>";
-								}
-							}
-						echo "</div>";
-			}
-			//end special events
-		?>
-</div>
-<div class="register">	
-	<div class="number"><?php echo $order+4;?></div>
-	<h3><?php echo _detail;?></h3>
-	<label><?php echo _title; ?></label><br/>
-	<br/>
-			<?php
-				$title = '';
-				 if (isset($me)) {
-				 	if ( $me['gender']=='male' ) {
-						$title = 'M';
-				 	}else if ( $me['gender']=='female' ) {
-						$title = 'F';
-				 	}
-				 }
-			    titleList($title);
-			?>
-		    <br/>
-		    <div>
-			<label><?php echo _name; ?></label><br/>
-               <input type="text" name="reservation_guest_name" class="required" id="reservation_guest_name" value="<?php if(isset($me['last_name'])){echo $me['last_name'].", ".$me['first_name'];} ?>" />
-                    </div>
-		    <br/>
-            <div>
-			   <label><?php echo _email; ?></label><br/>
-               <input type="text" name="reservation_guest_email" class="required email" id="reservation_guest_email" value="<?php if(isset($me['last_name'])){echo $me['email'];} ?>" />
-            </div>
-		    <br/>
-		    <div>
-			   <label><?php echo _phone; ?></label><br/>
-               <input type="text" name="reservation_guest_phone" class="required" id="reservation_guest_phone" value="" />
-            </div>
-			<br/>
-			<div>
-				<label><?php echo _form_notes; ?></label><br/>
-				<textarea cols="50" rows="5" name="reservation_notes" id="reservation_notes" ></textarea>
+		<div class="hours-card">
+			<h3>
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+				Öffnungszeiten
+			</h3>
+			<dl>
+				<?php foreach ($hours_summary as $row): ?>
+				<div class="hours-row">
+					<dt><?php echo htmlspecialchars($row['days']); ?></dt>
+					<dd><?php echo $row['hours'] ? htmlspecialchars($row['hours']) : 'Geschlossen'; ?></dd>
+				</div>
+				<?php endforeach; ?>
+			</dl>
+		</div>
+
+		<div class="contact-list">
+			<?php if (!empty($prp_info['street'])): ?>
+			<div class="contact-item">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12Z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="9" r="2.5" stroke="currentColor" stroke-width="1.6"/></svg>
+				<span><?php echo $prp_info['street'].', '.$prp_info['zip'].' '.$prp_info['city']; ?></span>
 			</div>
-		    <br/>
+			<?php endif; ?>
+			<?php if (!empty($prp_info['phone'])): ?>
+			<a class="contact-item" href="tel:<?php echo preg_replace('/\s+/', '', $prp_info['phone']); ?>">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 4h3l1.5 4.5-2 1.5a12 12 0 0 0 5.5 5.5l1.5-2L20 15v3a2 2 0 0 1-2 2C10.8 20 4 13.2 4 6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+				<span><?php echo $prp_info['phone']; ?></span>
+			</a>
+			<?php endif; ?>
+			<?php if (!empty($prp_info['email'])): ?>
+			<a class="contact-item" href="mailto:<?php echo $prp_info['email']; ?>">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="m4 6.5 8 6 8-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+				<span><?php echo $prp_info['email']; ?></span>
+			</a>
+			<?php endif; ?>
+		</div>
+	</aside>
+
+	<main class="booking-main">
+		<?php language_navigation($set_lang);?>
+		<h1 class="booking-title"><?php echo $page_title; ?></h1>
+
+		<form action="process_booking.php" method="post" name="contactForm" id="contactForm">
+			<?php if ($num_outlets > 1): ?>
+			<input type="hidden" name="reservation_outlet_id" id="single_outlet" value="<?php echo $_SESSION['outletID']; ?>">
+			<div class="picker-row">
+			<?php $outlet_result = outletListweb($_SESSION['outletID'],'enabled','reservation_outlet_id'); ?>
+			</div>
+			<?php else: ?>
+			<input type="hidden" name="reservation_outlet_id" id="single_outlet" value="<?php echo $_SESSION['outletID']; ?>">
+			<?php endif; ?>
+
+			<div class="picker-row">
+				<div class="picker pax-picker">
+					<span class="picker-label"><?php echo ucfirst(_people_);?></span>
+					<div class="pax-stepper">
+						<a href="javascript:void(0);" class="dec btn_pax" aria-label="weniger Gäste">–</a>
+						<input type="text" name="reservation_pax" id="reservation_pax" readonly="true" value="<?php echo $_SESSION['pax'];?>"/>
+						<a href="javascript:void(0);" class="inc btn_pax" aria-label="mehr Gäste">+</a>
+					</div>
+				</div>
+				<div class="picker date-picker">
+					<span class="picker-label"><?php echo _date;?></span>
+					<input type="hidden" name="dbdate" id="dbdate" value="<?php echo $_SESSION['selectedDate']; ?>"/>
+					<input id="reservation_date" name="reservation_date" readonly="readonly" value="<?php echo $_SESSION['selectedDate'];?>">
+					<input type="hidden" name="recurring_dbdate" value="<?php echo $_SESSION['selectedDate']; ?>"/>
+				</div>
+			</div>
+
+			<div class="timeslot-section">
+				<span class="picker-label"><?php echo _time;?></span>
+				<?php
+				if ($time_selector == "radio") {
+				timeFields($general['timeformat'], $general['timeintervall'],'reservation_time',$time,$_SESSION['selOutlet']['outlet_open_time'],$_SESSION['selOutlet']['outlet_close_time'],0);
+				}else{
+				    timeList($general['timeformat'], $general['timeintervall'],'reservation_time',$time,$_SESSION['selOutlet']['outlet_open_time'],$_SESSION['selOutlet']['outlet_close_time'],0);
+				}
+				?>
+				<?php
+				// Special event of the day and outlet
+				$special_events = '';
+				$special_events = querySQL('event_data_day');
+
+					if ( $special_events ) {
+						echo "<div class='alert_ads'>";
+						// special events today at outlet
+									foreach($special_events as $row) {
+										echo "<span class='bold'>
+										<a href='".$_SERVER['SCRIPT_NAME']."?outletID=".$row->outlet_id."&selectedDate=".$row->event_date."'>".
+										_today.": ".$row->subject."</a></span>
+										<p>".$row->description."<br/><cite><span class='bold'>
+										".date($general['dateformat'],strtotime($row->event_date)).
+										"</span> ".formatTime($row->start_time,$general['timeformat']).
+										" - ".formatTime($row->end_time,$general['timeformat'])." | ".
+										_ticket_price.": ".number_format($row->price,2).
+										"</cite></p>";
+										if( key($row) != count($events_advertise)-1 && key($row) > 1) {
+											// BR between special events
+											echo"<br/>";
+										}
+									}
+								echo "</div>";
+					}
+					//end special events
+				?>
+			</div>
+
+			<div class="guest-details">
+				<h3><?php echo _detail;?></h3>
+				<div class="field">
+					<label><?php echo _title; ?></label>
+					<?php
+						$title = '';
+						 if (isset($me)) {
+						 	if ( $me['gender']=='male' ) {
+								$title = 'M';
+						 	}else if ( $me['gender']=='female' ) {
+								$title = 'F';
+						 	}
+						 }
+					    titleList($title);
+					?>
+				</div>
+				<div class="field">
+					<label><?php echo _name; ?></label>
+					<input type="text" name="reservation_guest_name" class="required" id="reservation_guest_name" value="<?php if(isset($me['last_name'])){echo $me['last_name'].", ".$me['first_name'];} ?>" />
+				</div>
+				<div class="field">
+					<label><?php echo _email; ?></label>
+					<input type="text" name="reservation_guest_email" class="required email" id="reservation_guest_email" value="<?php if(isset($me['last_name'])){echo $me['email'];} ?>" />
+				</div>
+				<div class="field">
+					<label><?php echo _phone; ?></label>
+					<input type="text" name="reservation_guest_phone" class="required" id="reservation_guest_phone" value="" />
+				</div>
+				<div class="field">
+					<label><?php echo _form_notes; ?></label>
+					<textarea cols="50" rows="5" name="reservation_notes" id="reservation_notes"></textarea>
+				</div>
 
 				<input type="hidden" name="action" id="action" value="submit"/>
 				<input type="hidden" name="barrier" value="<?php echo $barrier; ?>" />
@@ -401,31 +430,28 @@ if($check_web_outlet==1){
 				<input type="hidden" name="reservation_booker_name" id="reservation_booker_name" value="Contact Form"/>
 				<input type="hidden" name="reservation_author" id="reservation_author" value="<?php echo querySQL('db_property');?> Team"/>
 				<input type="hidden" name="email_type" id="email_type" value="<?php echo $language; ?>"/>
-				<br/>
-				<div class="tl">
-					<input type="checkbox" name="reservation_advertise" id="reservation_advertise" value="YES"/>
-					&nbsp;<strong><?php echo _reservation_advertise; ?></strong>
-					<br/>
-					<!-- <div style="visibility:hidden;"> -->
-					<input type="checkbox" name="terms" class="required checkbox" id="terms" value="YES" checked="checked"/>
-					<a href="<?php echo $terms_link;?>" target="_blank" onclick="window.open(this.href, this.target, 'width=700,height=700'); return false;" class="checktext">
-						&nbsp;<?php echo _reservation_terms; ?>
-					</a>
-					<!-- </div> -->
-				</div> 
-				<br/>
-	</div> 
-	
-				<br/>
-				<div class="tc">
-					<input class='button' type='submit' value='<?php echo _create; ?>' /></div>
-                </div>
+
+				<div class="consent-group">
+					<label class="checkbox-row">
+						<input type="checkbox" name="reservation_advertise" id="reservation_advertise" value="YES"/>
+						<span><?php echo _reservation_advertise; ?></span>
+					</label>
+					<label class="checkbox-row">
+						<input type="checkbox" name="terms" class="required checkbox" id="terms" value="YES" checked="checked"/>
+						<span class="checktext">
+							<?php echo _reservation_terms; ?>
+							&nbsp;<a href="<?php echo $terms_link;?>" target="_blank" onclick="window.open(this.href, this.target, 'width=700,height=700'); return false;">↗</a>
+						</span>
+					</label>
+				</div>
+			</div>
+
+			<button class="submit-button" type="submit"><?php echo _create; ?></button>
 		</form>
-		<br/>		
-		</div></div><!-- page content end -->
-			
-</div><!-- page container end -->
-</div><!-- main close -->
+	</main>
+
+</div>
+</div><!-- booking-shell end -->
 <?php
 // ** plugin hook
 if ($hook->hook_exist( 'debug_online' )) {
@@ -466,9 +492,7 @@ if ($hook->hook_exist( 'debug_online' )) {
 		  maxDate: '+12M',      
 		  nextText: '&raquo;',
 	      prevText: '&laquo;',
-		  showOn: "button",
-		  buttonImage: "images/button_cal.png",
-		  buttonImageOnly: true,
+		  showOn: "focus",
 	      firstDay: 1,
 	      numberOfMonths: 1,
 	      gotoCurrent: true,
