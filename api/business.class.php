@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../web/classes/mysql_compat.php';
 function getHost($Address) {
    $parseUrl = parse_url(trim($Address));
    return trim($parseUrl[host] ? $parseUrl[host] : array_shift(explode('/', $parseUrl[path], 2)));
@@ -57,7 +58,7 @@ function checkMobile(){
 }
 
 // calculate and print select list with interval times
-function timeList($format,$intervall,$field='',$select,$open_time='00:00:00',$close_time='24:00:00',$showtime=0) 
+function timeList($format,$intervall,$field='',$select='',$open_time='00:00:00',$close_time='24:00:00',$showtime=0) 
 { 
 		GLOBAL $general,$availability, $tbl_availability;
 
@@ -145,7 +146,7 @@ function timeList($format,$intervall,$field='',$select,$open_time='00:00:00',$cl
 }
 
 // calculate and print select list with interval times
-function timeFields($format,$intervall,$field='',$select,$open_time='00:00:00',$close_time='24:00:00',$showtime=0) 
+function timeFields($format,$intervall,$field='',$select='',$open_time='00:00:00',$close_time='24:00:00',$showtime=0) 
 { 
 		GLOBAL $general,$availability, $tbl_availability;
 		// calculate after midnight

@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/mysql_compat.php';
 
 function querySQL($statement){
 	GLOBAL $storno,$wait,$author,$cellid,$repeatid,$id,$value,$field,$searchquery,$dbTables;

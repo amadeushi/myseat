@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../classes/mysql_compat.php';
 // prevent dangerous input
 secureSuperGlobals();
 // init variables
@@ -150,7 +151,7 @@ if (empty($_SESSION['selectedDate'])) {
 
 
 list($sj,$sm,$sd)                = explode("-",$_SESSION['selectedDate']);
-$_SESSION['selectedDate_user']   = buildDate($general['dateformat'],$sd,$sm,$sj);
+$_SESSION['selectedDate_user']   = buildDate($general['dateformat'] ?? '',$sd,$sm,$sj);
 $_SESSION['selectedDate_saison'] = $sm.$sd;
 $_SESSION['selectedDate_year']	 = $sj;
 

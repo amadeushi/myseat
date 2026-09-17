@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../web/classes/mysql_compat.php';
 // JASON status messages
 function getStatusCodeMessage($status) {
 		// these could be stored in a .ini file and loaded

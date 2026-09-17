@@ -70,7 +70,7 @@ $(document).ready(function() {
 			altFormat: 'yy-mm-dd',
 			defaultDate: 0,
 			showButtonPanel: true,
-			dateFormat: '<?php echo $general['datepickerformat'];?>',
+			dateFormat: '<?php echo $general['datepickerformat'] ?? '';?>',
 			regional: '<?php echo substr($_SESSION['language'],0,2);?>',
 			onSelect: function(dateText, inst) { window.location.href="?selectedDate="+$("#dbdate").val(); }
 		});
@@ -85,7 +85,7 @@ $(document).ready(function() {
 				altField: '#s_dbdate',
 				altFormat: 'yy-mm-dd',
 				defaultDate: 0,
-				dateFormat: '<?php echo $general['datepickerformat'];?>',
+				dateFormat: '<?php echo $general['datepickerformat'] ?? '';?>',
 				regional: '<?php echo substr($_SESSION['language'],0,2);?>'
 			});
 			$("#e_datepicker").datepicker({
@@ -98,7 +98,7 @@ $(document).ready(function() {
 				defaultDate: 0,
 				altField: '#e_dbdate',
 				altFormat: 'yy-mm-dd',
-				dateFormat: '<?php echo $general['datepickerformat'];?>',
+				dateFormat: '<?php echo $general['datepickerformat'] ?? '';?>',
 				regional: '<?php echo substr($_SESSION['language'],0,2);?>'
 			});
 			//$("#datepicker").datepicker('setDate', new Date ( "<?php echo $pickerDate; ?>" ));
@@ -114,7 +114,7 @@ $(document).ready(function() {
 			altField: '#recurring_dbdate',
 			altFormat: 'yy-mm-dd',
 			defaultDate: 0,
-			dateFormat: '<?php echo $general['datepickerformat'];?>',
+			dateFormat: '<?php echo $general['datepickerformat'] ?? '';?>',
 			regional: '<?php echo substr($_SESSION['language'],0,2);?>'
 		});
 		//$("#recurring_date").datepicker('setDate', new Date ( "<?php echo $_SESSION['selectedDate']; ?>" ));
@@ -128,7 +128,7 @@ $(document).ready(function() {
 			altField: '#event_date',
 			altFormat: 'yy-mm-dd',
 			defaultDate: 0,
-			dateFormat: '<?php echo $general['datepickerformat'];?>',
+			dateFormat: '<?php echo $general['datepickerformat'] ?? '';?>',
 			regional: '<?php echo substr($_SESSION['language'],0,2);?>'
 		});
 		

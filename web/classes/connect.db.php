@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/mysql_compat.php';
 // DB connect
 $link = mysql_connect($settings['dbHost'].':'.$settings['dbPort'], $settings['dbUser'], $settings['dbPass']);
         mysql_query("SET NAMES 'utf8'");

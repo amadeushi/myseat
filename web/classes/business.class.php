@@ -4,7 +4,7 @@ Searches an array for a given value (insensitive case) and returns the correspon
 */
 function array_isearch($value, $array)
 {
-   while (list($key, $val) = each($array))
+   foreach ($array as $key => $val)
    {
       $val = strtolower($val);
 	  $value = strtolower($value);
@@ -15,7 +15,7 @@ function array_isearch($value, $array)
 }
 
 // calculate and print select list with intervall times
-function getTimeList($format,$intervall,$field='',$select,$open_time='00:00:00',$close_time='24:00:00',$showtime=0,$required='') 
+function getTimeList($format,$intervall,$field='',$select='',$open_time='00:00:00',$close_time='24:00:00',$showtime=0,$required='') 
 { 
 		GLOBAL $availability, $tbl_availability;
 		// calculate after midnight

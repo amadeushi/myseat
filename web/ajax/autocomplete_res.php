@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../classes/mysql_compat.php';
 /*
 **************************************************************************
           AutoSuggest for new reservation build a database query

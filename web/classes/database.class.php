@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/mysql_compat.php';
 ob_start();
 
 //ini_set('display_errors', 1);

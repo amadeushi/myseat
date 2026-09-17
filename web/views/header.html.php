@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head> 
 <!-- Website Title --> 
-<title><?php echo $general['app_name'];?></title>
+<title><?php echo $general['app_name'] ?? '';?></title>
 
 <!-- Meta data for SEO -->
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/> 

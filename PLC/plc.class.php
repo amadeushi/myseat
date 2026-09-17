@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../web/classes/mysql_compat.php';
 /**
 * PHP Class to user access (login, register, logout, etc)
 * 
@@ -339,7 +340,7 @@ return 2;
 	* param string $id
 	* @return int
 */
-function newpassword($newpass='',$id)
+function newpassword($newpass='',$id=0)
 {
 	if (!empty($newpass)) {
 		$password =	$newpass;
@@ -763,7 +764,7 @@ function checkAttempt($id = 1)
 	* @param string $app,$field
 	* @return int
 */
-function transformData($app = 'Unknown', $field, $id)
+function transformData($app = 'Unknown', $field='', $id=0)
 {
 	$sql = "SELECT `new_id` FROM `{$this->dbTrans}` WHERE `{$this->tbTrans['app']}` = '".$app."' AND `{$this->tbTrans['field']}` = '".$field."' AND `{$this->tbTrans['old_id']}` = '".$id."' LIMIT 1";
 	$res = $this->query($sql);

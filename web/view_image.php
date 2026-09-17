@@ -17,7 +17,7 @@
     
 	//get image from database
         $row = querySQL('view_img');
-	header( "Content-type: $row['img_filetype']");
+	header( "Content-type: {$row['img_filetype']}");
 	echo $row['img'];
 	
 ?>

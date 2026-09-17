@@ -3,8 +3,8 @@
 			$email_value = ($index > 0) ? $values[$index] : "admin@example.com";
 
 // ### Set standard settings for a new property ###
-$query = "INSERT INTO `$dbTables->settings` (`property_id`, `language`, `timezone`, `timeformat`, `timeintervall`, `dateformat`, `dateformat_short`, `datepickerformat`, `app_name`, `max_menu`, `old_days`, `manual_lines`) VALUES
-	('".$new_id."', 'en_EN', 'Asia/Singapore', 24, 15, 'd.m.Y', 'd/m', 'd/m/y', 'mySeat XT', 8, 120, 5);";
+$query = "INSERT INTO `$dbTables->settings` (`property_id`, `language`, `timezone`, `timeformat`, `timeintervall`, `dateformat`, `dateformat_short`, `datepickerformat`, `app_name`, `max_menu`, `old_days`, `manual_lines`, `guest_type_text_HG`, `guest_type_text_PASS`, `guest_type_text_WALK`) VALUES
+	('".$new_id."', 'en_EN', 'Asia/Singapore', 24, 15, 'd.m.Y', 'd/m', 'd/m/y', 'mySeat XT', 8, 120, 5, '', '', '');";
   $result = query($query);
 
 

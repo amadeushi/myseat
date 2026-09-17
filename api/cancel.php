@@ -1,4 +1,5 @@
-<?php session_start();
+<?php
+require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 
 // PHP part of page / business logic
 // ** set configuration

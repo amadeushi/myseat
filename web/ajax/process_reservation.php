@@ -1,4 +1,5 @@
-<?php session_start();
+<?php
+require_once __DIR__ . '/../classes/mysql_compat.php'; session_start();
 
 // ** set configuration
 include('../../config/config.general.php');

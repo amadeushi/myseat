@@ -28,7 +28,8 @@
 	echo '</pre>';
 
 	// example of storing the API result status code in variable
-	$status = 	echo $output->status->code;
+	echo $output->status->code;
+	$status = $output->status->code;
 
 
 	// close the curl handle to free system resources

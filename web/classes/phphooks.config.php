@@ -19,7 +19,7 @@ class config {
 	/**
 	 *  initialization constructor.  Called when class is created.
 	 */
-	function config() {
+	function __construct() {
 		$this->IsFile = '';
 		$this->Error = null;
 		$this->LastError = null;

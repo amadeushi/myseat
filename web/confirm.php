@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/classes/mysql_compat.php';
 //$_SESSION['language'] = ($_SESSION['language']!='') ? $_SESSION['language'] : 'en_EN';
 
 // Check for a unique username

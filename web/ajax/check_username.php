@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../classes/mysql_compat.php';
 session_start();
 $_SESSION['language'] = ($_SESSION['language']) ? $_SESSION['language'] : 'en';
 

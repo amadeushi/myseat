@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/mysql_compat.php';
 
 // ** build and format date from today
 // * format see php date()
@@ -67,17 +68,17 @@ function translateSite($lang='en', $apx = ''){
 	include($apx.'lang/man_text.php');
 	
 	//define custom guest type
-	if ($general['guest_type_text_HG']!="") {
+	if (!empty($general['guest_type_text_HG'])) {
 		define ( '_HG_', $general['guest_type_text_HG'] );
 	}else{
 		define ( '_HG_', _HG );
 	}
-	if ($general['guest_type_text_HG']!="") {
+	if (!empty($general['guest_type_text_HG'])) {
 		define ( '_PASS_', $general['guest_type_text_PASS'] );
 	}else{
 		define ( '_PASS_', _PASS );
 	}
-	if ($general['guest_type_text_WALK']!="") {
+	if (!empty($general['guest_type_text_WALK'])) {
 		define ( '_WALK_', $general['guest_type_text_WALK'] );
 	}else{
 		define ( '_WALK_', _WALK );
