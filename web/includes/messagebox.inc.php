@@ -55,10 +55,10 @@ if ( !empty($_SESSION['errors']) ) {
 	echo "</p></div></div>";
 	//Clear errors after printing
 	$_SESSION['errors'] = array();
-}else if (isset($_SESSION['result']) ) {
+}else if (!empty($_SESSION['result']) ) {
 	echo "<div id='messageBox'>";
 	echo "<div class='alert_success'><p><img src='images/icons/icon_accept.png' alt='success' class='middle'/>". _new_entry ."</p></div></div>";
-	$_SESSION['result'] = '';
+	unset($_SESSION['result']);
 }
 
 // Special event advertise
