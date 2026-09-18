@@ -899,6 +899,14 @@ a.contact-item:hover svg {
 	border-radius: 16px;
 	padding: 40px 44px 44px;
 }
+.booking-main form {
+	/* the legacy shared "form { margin-left: 30px }" rule (still used by
+	   other pages built on this stylesheet) pushed the whole wizard form
+	   - and everything centered inside it on mobile, like the step
+	   titles - 30px off from the heading above it, which sits outside
+	   the form. */
+	margin-left: 0;
+}
 .booking-title {
 	font-family: var(--font-display);
 	font-weight: 300;
