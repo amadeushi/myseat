@@ -328,39 +328,89 @@ if($check_web_outlet==1){
 		<form action="process_booking.php" method="post" name="contactForm" id="contactForm">
 			<?php if ($num_outlets > 1): ?>
 			<input type="hidden" name="reservation_outlet_id" id="single_outlet" value="<?php echo $_SESSION['outletID']; ?>">
-			<div class="picker-row">
-			<?php $outlet_result = outletListweb($_SESSION['outletID'],'enabled','reservation_outlet_id'); ?>
-			</div>
 			<?php else: ?>
 			<input type="hidden" name="reservation_outlet_id" id="single_outlet" value="<?php echo $_SESSION['outletID']; ?>">
 			<?php endif; ?>
 
-			<div class="picker-row">
-				<div class="picker pax-picker">
-					<span class="picker-label"><?php echo ucfirst(_people_);?></span>
-					<div class="pax-stepper">
-						<a href="javascript:void(0);" class="dec btn_pax" aria-label="weniger Gäste">–</a>
-						<input type="text" name="reservation_pax" id="reservation_pax" readonly="true" value="<?php echo $_SESSION['pax'];?>"/>
-						<a href="javascript:void(0);" class="inc btn_pax" aria-label="mehr Gäste">+</a>
+			<input type="hidden" name="action" id="action" value="submit"/>
+			<input type="hidden" name="barrier" value="<?php echo $barrier; ?>" />
+			<input type="hidden" name="reservation_referer" value="<?php echo $_SESSION['referer']; ?>" />
+			<input type="hidden" name="reservation_hotelguest_yn" id="reservation_hotelguest_yn" value="PASS"/>
+			<input type="hidden" name="reservation_booker_name" id="reservation_booker_name" value="Contact Form"/>
+			<input type="hidden" name="reservation_author" id="reservation_author" value="<?php echo querySQL('db_property');?> Team"/>
+			<input type="hidden" name="email_type" id="email_type" value="<?php echo $language; ?>"/>
+
+			<!-- Step 1: date, time, party size -->
+			<div class="wizard-step" data-step="1">
+				<?php if ($num_outlets > 1): ?>
+				<div class="picker-row">
+				<?php $outlet_result = outletListweb($_SESSION['outletID'],'enabled','reservation_outlet_id'); ?>
+				</div>
+				<?php endif; ?>
+
+				<div class="picker-row">
+					<div class="picker pax-picker">
+						<span class="picker-label"><?php echo ucfirst(_people_);?></span>
+						<div class="pax-stepper">
+							<a href="javascript:void(0);" class="dec btn_pax" aria-label="weniger Gäste">–</a>
+							<input type="text" name="reservation_pax" id="reservation_pax" readonly="true" value="<?php echo $_SESSION['pax'];?>"/>
+							<a href="javascript:void(0);" class="inc btn_pax" aria-label="mehr Gäste">+</a>
+						</div>
+					</div>
+					<div class="picker date-picker">
+						<span class="picker-label"><?php echo _date;?></span>
+						<input type="hidden" name="dbdate" id="dbdate" value="<?php echo $_SESSION['selectedDate']; ?>"/>
+						<input id="reservation_date" name="reservation_date" readonly="readonly" value="<?php echo $_SESSION['selectedDate'];?>">
+						<input type="hidden" name="recurring_dbdate" value="<?php echo $_SESSION['selectedDate']; ?>"/>
 					</div>
 				</div>
-				<div class="picker date-picker">
-					<span class="picker-label"><?php echo _date;?></span>
-					<input type="hidden" name="dbdate" id="dbdate" value="<?php echo $_SESSION['selectedDate']; ?>"/>
-					<input id="reservation_date" name="reservation_date" readonly="readonly" value="<?php echo $_SESSION['selectedDate'];?>">
-					<input type="hidden" name="recurring_dbdate" value="<?php echo $_SESSION['selectedDate']; ?>"/>
+
+				<div class="timeslot-section">
+					<span class="picker-label"><?php echo _time;?></span>
+					<div id="timeslot-results">
+					<?php include 'timeslot_fragment.inc.php'; ?>
+					</div>
+					<p class="wizard-error" id="timeslot-error">Bitte wähle eine Uhrzeit aus.</p>
+				</div>
+
+				<div class="wizard-nav">
+					<span></span>
+					<button type="button" class="submit-button wizard-btn wizard-next" data-goto="2">Weiter</button>
 				</div>
 			</div>
 
-			<div class="timeslot-section">
-				<span class="picker-label"><?php echo _time;?></span>
-				<div id="timeslot-results">
-				<?php include 'timeslot_fragment.inc.php'; ?>
+			<!-- Step 2: notes -->
+			<div class="wizard-step wizard-step-hidden" data-step="2">
+				<h3 class="wizard-step-title">Reservierungsdetails</h3>
+				<div class="field">
+					<label><?php echo _form_notes; ?></label>
+					<textarea cols="50" rows="5" name="reservation_notes" id="reservation_notes"></textarea>
+				</div>
+				<div class="wizard-nav">
+					<button type="button" class="wizard-btn wizard-back" data-goto="1">‹ Zurück</button>
+					<button type="button" class="submit-button wizard-btn wizard-next" data-goto="3">Weiter</button>
 				</div>
 			</div>
 
-			<div class="guest-details">
-				<h3><?php echo _detail;?></h3>
+			<!-- Step 3: contact details + confirm -->
+			<div class="wizard-step wizard-step-hidden" data-step="3">
+				<h3 class="wizard-step-title">Check-out</h3>
+
+				<div class="wizard-summary">
+					<div class="summary-item">
+						<span class="summary-label"><?php echo _date;?></span>
+						<span class="summary-value" id="summary-date"></span>
+					</div>
+					<div class="summary-item">
+						<span class="summary-label"><?php echo _time;?></span>
+						<span class="summary-value" id="summary-time"></span>
+					</div>
+					<div class="summary-item">
+						<span class="summary-label"><?php echo ucfirst(_people_);?></span>
+						<span class="summary-value" id="summary-pax"></span>
+					</div>
+				</div>
+
 				<div class="field">
 					<label><?php echo _title; ?></label>
 					<?php
@@ -387,18 +437,6 @@ if($check_web_outlet==1){
 					<label><?php echo _phone; ?></label>
 					<input type="text" name="reservation_guest_phone" class="required" id="reservation_guest_phone" value="" />
 				</div>
-				<div class="field">
-					<label><?php echo _form_notes; ?></label>
-					<textarea cols="50" rows="5" name="reservation_notes" id="reservation_notes"></textarea>
-				</div>
-
-				<input type="hidden" name="action" id="action" value="submit"/>
-				<input type="hidden" name="barrier" value="<?php echo $barrier; ?>" />
-				<input type="hidden" name="reservation_referer" value="<?php echo $_SESSION['referer']; ?>" />
-				<input type="hidden" name="reservation_hotelguest_yn" id="reservation_hotelguest_yn" value="PASS"/>
-				<input type="hidden" name="reservation_booker_name" id="reservation_booker_name" value="Contact Form"/>
-				<input type="hidden" name="reservation_author" id="reservation_author" value="<?php echo querySQL('db_property');?> Team"/>
-				<input type="hidden" name="email_type" id="email_type" value="<?php echo $language; ?>"/>
 
 				<div class="consent-group">
 					<label class="checkbox-row">
@@ -413,9 +451,12 @@ if($check_web_outlet==1){
 						</span>
 					</label>
 				</div>
-			</div>
 
-			<button class="submit-button" type="submit"><?php echo _create; ?></button>
+				<div class="wizard-nav">
+					<button type="button" class="wizard-btn wizard-back" data-goto="2">‹ Zurück</button>
+					<button class="submit-button wizard-btn" type="submit"><?php echo _create; ?></button>
+				</div>
+			</div>
 		</form>
 	</main>
 
@@ -519,7 +560,46 @@ if ($hook->hook_exist( 'debug_online' )) {
 					}
 				});
 		});
-	
+
+		// ---- multi-step wizard navigation ----
+		function showWizardStep(n) {
+			$(".wizard-step").addClass("wizard-step-hidden");
+			$(".wizard-step[data-step='" + n + "']").removeClass("wizard-step-hidden");
+			if (n == 3) {
+				$("#summary-date").text($("#reservation_date").val());
+				var $checkedTime = $("input[name='reservation_time']:checked");
+				$("#summary-time").text($checkedTime.length ? $checkedTime.val() : "");
+				$("#summary-pax").text($("#reservation_pax").val());
+			}
+			var $shell = $(".booking-main");
+			if ($shell.length) {
+				$("html, body").animate({ scrollTop: $shell.offset().top - 20 }, 200);
+			}
+		}
+
+		$(".wizard-next").click(function() {
+			var gotoStep = $(this).data("goto");
+			if (gotoStep == 2) {
+				// require a time slot before leaving step 1
+				if ($("input[name='reservation_time']:checked").length === 0) {
+					$("#timeslot-error").addClass("wizard-error-visible");
+					return;
+				}
+				$("#timeslot-error").removeClass("wizard-error-visible");
+			}
+			showWizardStep(gotoStep);
+		});
+
+		$(".wizard-back").click(function() {
+			showWizardStep($(this).data("goto"));
+		});
+
+		// picking a time slot clears any pending "please choose a time" error
+		// (jQuery 1.4.4 predates .on(); .delegate() is its equivalent)
+		$(document).delegate("input[name='reservation_time']", "change", function() {
+			$("#timeslot-error").removeClass("wizard-error-visible");
+		});
+
     });
 </script>
 
