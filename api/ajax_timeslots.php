@@ -46,4 +46,7 @@ $tbl_availability = getAvailability($tblbyTime,$general['timeintervall']);
 $lang = substr($_SESSION['lang'],0,2);
 translateSite($lang,'../web/');
 
+// needed for the "no availability - contact us" fallback message
+$prp_info = querySQL('property_info');
+
 include 'timeslot_fragment.inc.php';

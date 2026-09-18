@@ -904,8 +904,17 @@ a.contact-item:hover svg {
 	font-size: 40px;
 	line-height: 1.1;
 	letter-spacing: -0.01em;
-	margin: 0 0 28px;
+	margin: 0;
 	color: var(--text);
+}
+.booking-subtitle {
+	font-family: var(--font-body);
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+	margin: 6px 0 28px;
 }
 
 .booking-shell .langnav {
@@ -1371,7 +1380,7 @@ a.contact-item:hover svg {
 /* ---- Responsive ---- */
 @media (max-width: 860px) {
 	.booking-shell {
-		padding: 24px 16px 40px;
+		padding: 20px 12px 40px;
 	}
 	.booking-grid {
 		grid-template-columns: 1fr;
@@ -1380,19 +1389,38 @@ a.contact-item:hover svg {
 	.booking-sidebar {
 		display: none;
 	}
+	/* drop the outer "card" look on mobile - the individual pickers and
+	   time-slot pills already carry their own border, so wrapping them
+	   in a card, in a card, in a card just eats into the available
+	   width for no visual benefit on a narrow screen */
 	.booking-main {
-		padding: 28px 22px 32px;
+		padding: 0;
+		background: none;
+		border: 0;
+		border-radius: 0;
 	}
 	.booking-title {
 		font-size: 32px;
 		text-align: center;
 	}
+	.booking-subtitle {
+		text-align: center;
+	}
+	.timeslot-section {
+		background: none;
+		border: 0;
+		padding: 0;
+		margin-bottom: 24px;
+	}
+	.guest-details,
+	.wizard-step .field:last-child {
+		border-top: 0;
+	}
 }
-@media (max-width: 480px) {
+@media (max-width: 360px) {
+	/* only stack on genuinely tiny screens - the reference layout keeps
+	   guests/date side by side down to ~375px */
 	.picker-row {
 		grid-template-columns: 1fr;
-	}
-	#timefield {
-		grid-template-columns: repeat(2, 1fr);
 	}
 }

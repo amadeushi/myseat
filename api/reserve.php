@@ -324,6 +324,7 @@ if($check_web_outlet==1){
 	<main class="booking-main">
 		<?php language_navigation($set_lang);?>
 		<h1 class="booking-title"><?php echo $page_title; ?></h1>
+		<p class="booking-subtitle">Online-Reservierung</p>
 
 		<form action="process_booking.php" method="post" name="contactForm" id="contactForm">
 			<?php if ($num_outlets > 1): ?>
