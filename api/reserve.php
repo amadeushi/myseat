@@ -353,7 +353,7 @@ if($check_web_outlet==1){
 						<span class="picker-label"><?php echo ucfirst(_people_);?></span>
 						<div class="pax-stepper">
 							<a href="javascript:void(0);" class="dec btn_pax" aria-label="weniger Gäste">–</a>
-							<input type="text" name="reservation_pax" id="reservation_pax" readonly="true" value="<?php echo $_SESSION['pax'];?>"/>
+							<input type="text" name="reservation_pax" id="reservation_pax" <?php echo ($_SESSION['pax'] < 10) ? 'readonly="readonly"' : ''; ?> value="<?php echo $_SESSION['pax'];?>"/>
 							<a href="javascript:void(0);" class="inc btn_pax" aria-label="mehr Gäste">+</a>
 						</div>
 					</div>
@@ -521,15 +521,45 @@ if ($hook->hook_exist( 'debug_online' )) {
 	    		window.location.href='?propertyID=<?php echo $_SESSION['property'];?>&outletID=' + this.value;
 	  	 	});
 	
-	 // +/- button for pax field  
+		var maxPax = <?php echo (int)$general['max_menu']; ?>;
+
+		// refresh the time-slot grid for a new guest count without reloading the page
+		function refreshTimeslotsForPax(newVal) {
+			var $results = $("#timeslot-results");
+			$results.css("opacity", 0.5);
+			$.ajax({
+				url: "ajax_timeslots.php",
+				data: { pax: newVal },
+				success: function(html) {
+					$results.html(html);
+					$results.css("opacity", 1);
+				},
+				error: function() {
+					// fall back to the old behaviour if the request itself fails
+					window.location.href = "?pax=" + newVal;
+				}
+			});
+		}
+
+		// once the party size reaches 10, let people type the number directly
+		// instead of clicking "+" repeatedly up to e.g. 20
+		function setPaxEditable(editable) {
+			var $input = $("#reservation_pax");
+			if (editable) {
+				$input.removeAttr("readonly");
+			} else {
+				$input.attr("readonly", "readonly");
+			}
+		}
+
+	 // +/- button for pax field
 		$(".btn_pax").click(function() {
 		    var $button = $(this);
 		    var oldValue = $button.parent().find("input").val();
-  
+
 		if ($button.text() == "+") {
-				  if(oldValue < <?php echo $general['max_menu']?>){
+				  if(oldValue < maxPax){
 		          	  var newVal = parseFloat(oldValue) + 1;
-		          	  // AJAX save would go here
 				  }else{
 					  var newVal = parseFloat(oldValue);
 				  }
@@ -537,28 +567,31 @@ if ($hook->hook_exist( 'debug_online' )) {
 		          // Don't allow decrementing below zero
 		          if (oldValue >= 1) {
 		              var newVal = parseFloat(oldValue) - 1;
-		              // AJAX save would go here
 		          }else{
 					  var newVal = parseFloat(oldValue);
 				  }
 		        }
 		        $button.parent().find("input").val(newVal);
+				setPaxEditable(newVal >= 10);
+				refreshTimeslotsForPax(newVal);
+		});
 
-				// refresh the time-slot grid for the new guest count without reloading the page
-				var $results = $("#timeslot-results");
-				$results.css("opacity", 0.5);
-				$.ajax({
-					url: "ajax_timeslots.php",
-					data: { pax: newVal },
-					success: function(html) {
-						$results.html(html);
-						$results.css("opacity", 1);
-					},
-					error: function() {
-						// fall back to the old behaviour if the request itself fails
-						window.location.href = "?pax=" + newVal;
-					}
-				});
+		// typing a party size directly once the field is editable (>= 10 guests)
+		$("#reservation_pax").change(function() {
+			var $input = $(this);
+			if ($input.attr("readonly")) {
+				return;
+			}
+			var newVal = parseInt($input.val(), 10);
+			if (isNaN(newVal) || newVal < 1) {
+				newVal = 1;
+			}
+			if (newVal > maxPax) {
+				newVal = maxPax;
+			}
+			$input.val(newVal);
+			setPaxEditable(newVal >= 10);
+			refreshTimeslotsForPax(newVal);
 		});
 
 		// ---- multi-step wizard navigation ----

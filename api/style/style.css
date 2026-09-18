@@ -960,6 +960,7 @@ a.contact-item:hover svg {
 .pax-stepper input {
 	background: transparent;
 	border: 0;
+	border-bottom: 1px solid transparent;
 	color: var(--text);
 	font-family: var(--font-body);
 	font-size: 17px;
@@ -967,6 +968,15 @@ a.contact-item:hover svg {
 	width: 32px;
 	text-align: center;
 	padding: 0;
+}
+.pax-stepper input:not([readonly]) {
+	width: 40px;
+	border-bottom-color: var(--border);
+	cursor: text;
+}
+.pax-stepper input:not([readonly]):focus {
+	border-bottom-color: var(--gold);
+	outline: none;
 }
 .booking-shell .btn_pax {
 	display: inline-flex;
@@ -1333,6 +1343,33 @@ a.contact-item:hover svg {
 }
 .ui-datepicker-prev span, .ui-datepicker-next span {
 	filter: invert(1);
+}
+
+/* ---- Compact, scrollable time grid on desktop ---- */
+@media (min-width: 861px) {
+	#timefield {
+		max-height: 420px;
+		overflow-y: auto;
+		padding-right: 8px;
+		margin-right: -8px;
+	}
+	#timefield::-webkit-scrollbar {
+		width: 8px;
+	}
+	#timefield::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	#timefield::-webkit-scrollbar-thumb {
+		background: var(--border);
+		border-radius: 8px;
+	}
+	#timefield::-webkit-scrollbar-thumb:hover {
+		background: var(--gold);
+	}
+	#timefield {
+		scrollbar-width: thin;
+		scrollbar-color: var(--border) transparent;
+	}
 }
 
 /* ---- Responsive ---- */
