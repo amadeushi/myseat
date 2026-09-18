@@ -893,6 +893,7 @@ a.contact-item:hover svg {
 
 /* ---- Main column ---- */
 .booking-main {
+	position: relative;
 	background: var(--surface);
 	border: 1px solid var(--border-soft);
 	border-radius: 16px;
@@ -927,11 +928,23 @@ a.contact-item:hover svg {
 }
 
 .booking-shell .langnav {
-	float: right;
-	margin: -4px 0 16px;
+	/* its own row above the heading, not floated/absolute beside it -
+	   a float only narrows that one line (skewing text-align:center on
+	   a short title without reserving space), and absolute positioning
+	   in the corner collides with a centered heading long enough to
+	   reach it. A plain flex row above avoids both failure modes.
+	   float:none is required here: the legacy shared .langnav rule
+	   (used by cancel.php) sets float:right, and display:flex alone
+	   does not override a float declared on a lower-specificity rule -
+	   it just narrows the following lines' line boxes, which is exactly
+	   what skewed the centered title/subtitle on mobile. */
+	float: none;
+	text-align: left;
 	display: flex;
+	justify-content: flex-end;
 	align-items: center;
 	gap: 10px;
+	margin-bottom: 20px;
 }
 .booking-shell .lang-picker {
 	display: flex;
@@ -1182,7 +1195,7 @@ a.contact-item:hover svg {
 	letter-spacing: 0.08em;
 	color: var(--text-muted);
 	text-transform: uppercase;
-	text-align: center;
+	text-align: left;
 	margin: 0 0 24px;
 }
 .wizard-nav {
@@ -1439,6 +1452,9 @@ a.contact-item:hover svg {
 		text-align: center;
 	}
 	.booking-subtitle {
+		text-align: center;
+	}
+	.wizard-step-title {
 		text-align: center;
 	}
 	.timeslot-section {
