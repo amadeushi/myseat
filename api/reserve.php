@@ -85,6 +85,7 @@ $_SESSION['resID'] = 0;
 	if (isset($_GET['outletID'])) {
 		$_SESSION['outletID'] = (int)$_GET['outletID'];
 		$_SESSION['property'] = querySQL('property_id_outlet');
+		$_SESSION['propertyID'] = $_SESSION['property'];
 	}
 
 	// prevent injection with false outlet id's
@@ -212,7 +213,7 @@ if($check_web_outlet==1){
 	<!-- CSS - Setup -->
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;500;600&family=Raleway:wght@400;500;600;700&display=swap" rel="stylesheet">
 	<link href="style/datepicker.css" rel="stylesheet" type="text/css" />
 	<link href="style/style.css" rel="stylesheet" type="text/css" />
 
@@ -322,7 +323,7 @@ if($check_web_outlet==1){
 	</aside>
 
 	<main class="booking-main">
-		<?php language_navigation($set_lang);?>
+		<?php language_navigation($lang);?>
 		<h1 class="booking-title"><?php echo $page_title; ?></h1>
 		<p class="booking-subtitle">Online-Reservierung</p>
 
@@ -517,13 +518,14 @@ if ($hook->hook_exist( 'debug_online' )) {
       });
       // month is 0 based, hence for Feb. we use 1
 	     $("#reservation_date").datepicker('setDate', new Date(<?php echo $sy.", ".($sm-1).", ".$sd; ?>));
+	     	<?php if ($_SESSION['selectedDate'] == date('Y-m-d')): ?>
+	     	$("#reservation_date").val("<?php echo _today; ?>");
+	     	<?php endif; ?>
 	     	$("#ui-datepicker-div").hide();
 	     	$("#reservation_outlet_id").change(function(){
 	    		window.location.href='?propertyID=<?php echo $_SESSION['property'];?>&outletID=' + this.value;
 	  	 	});
 	
-		var maxPax = <?php echo (int)$general['max_menu']; ?>;
-
 		// refresh the time-slot grid for a new guest count without reloading the page
 		function refreshTimeslotsForPax(newVal) {
 			var $results = $("#timeslot-results");
@@ -548,11 +550,7 @@ if ($hook->hook_exist( 'debug_online' )) {
 		    var oldValue = $button.parent().find("input").val();
   
 		if ($button.text() == "+") {
-				  if(oldValue < maxPax){
-		          	  var newVal = parseFloat(oldValue) + 1;
-				  }else{
-					  var newVal = parseFloat(oldValue);
-				  }
+				  var newVal = parseFloat(oldValue) + 1;
 		        } else {
 		          // Don't allow decrementing below zero
 		          if (oldValue >= 1) {
@@ -572,8 +570,8 @@ if ($hook->hook_exist( 'debug_online' )) {
 			if (isNaN(newVal) || newVal < 1) {
 				newVal = 1;
 			}
-			if (newVal > maxPax) {
-				newVal = maxPax;
+			if (newVal > 500) {
+				newVal = 500;
 			}
 			$input.val(newVal);
 			refreshTimeslotsForPax(newVal);
@@ -585,7 +583,12 @@ if ($hook->hook_exist( 'debug_online' )) {
 			$(".wizard-step").addClass("wizard-step-hidden");
 			$(".wizard-step[data-step='" + n + "']").removeClass("wizard-step-hidden");
 			if (n == 3) {
-				$("#summary-date").text($("#reservation_date").val());
+				// always show the real date in the summary, even when the
+				// picker itself currently displays "Heute"
+				var isoDate = $("#dbdate").val();
+				var dateParts = isoDate.split("-");
+				var displayDate = (dateParts.length == 3) ? dateParts[2] + "." + dateParts[1] + "." + dateParts[0] : isoDate;
+				$("#summary-date").text(displayDate);
 				var $checkedTime = $("input[name='reservation_time']:checked");
 				$("#summary-time").text($checkedTime.length ? $checkedTime.val() : "");
 				$("#summary-pax").text($("#reservation_pax").val());

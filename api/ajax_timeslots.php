@@ -24,12 +24,13 @@ if (empty($_SESSION['outletID']) || empty($_SESSION['selectedDate'])) {
 	exit;
 }
 
-// update guest count, clamped to a sane range
+// update guest count - only sanity-bounded here, NOT capped to max_menu:
+// exceeding max_menu is a valid state (it means "too big for online
+// booking, please email us"), which timeslot_fragment.inc.php handles
 if (isset($_GET['pax'])) {
 	$pax = (int)$_GET['pax'];
-	$max_pax_allowed = ($general['max_menu'] > 0) ? $general['max_menu'] : 20;
 	if ($pax < 1) { $pax = 1; }
-	if ($pax > $max_pax_allowed) { $pax = $max_pax_allowed; }
+	if ($pax > 500) { $pax = 500; }
 	$_SESSION['pax'] = $pax;
 }
 

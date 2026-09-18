@@ -51,12 +51,15 @@ function getWeeklyHoursSummary($outlet) {
 }
 
 function language_navigation($language) {
-		echo '<ul class="langnav"><li><a href="'.$_SERVER['PHP_SELF'].'?lang=en">EN</a></li>';
-		if($language!='en'){
-			echo '<li><a href="'.$_SERVER['PHP_SELF'].'?lang='.$language.'">'.strtoupper($language).'</a></li>';
-		}
-		echo '<li><a href="cancel.php">'.strtoupper(_delete).'</a></li>';
-		echo '</ul>';
+		echo '<div class="langnav">';
+		echo '<div class="lang-picker">';
+		echo '<a href="'.$_SERVER['PHP_SELF'].'?lang=en" title="English"'.($language=='en'?' class="active"':'').'>EN</a>';
+		echo '<a href="'.$_SERVER['PHP_SELF'].'?lang=de" title="Deutsch"'.($language=='de'?' class="active"':'').'>DE</a>';
+		echo '</div>';
+		echo '<a href="cancel.php" class="lang-cancel" title="'._delete.'">';
+		echo '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+		echo '</a>';
+		echo '</div>';
 }
 
 function checkMobile(){
