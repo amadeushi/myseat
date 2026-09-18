@@ -1013,6 +1013,9 @@ a.contact-item:hover svg {
 	padding: 16px 18px 6px;
 	margin-bottom: 24px;
 }
+#timeslot-results {
+	transition: opacity 150ms ease;
+}
 #timefield {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);

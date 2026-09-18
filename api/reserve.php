@@ -354,40 +354,9 @@ if($check_web_outlet==1){
 
 			<div class="timeslot-section">
 				<span class="picker-label"><?php echo _time;?></span>
-				<?php
-				if ($time_selector == "radio") {
-				timeFields($general['timeformat'], $general['timeintervall'],'reservation_time',$time,$_SESSION['selOutlet']['outlet_open_time'],$_SESSION['selOutlet']['outlet_close_time'],0);
-				}else{
-				    timeList($general['timeformat'], $general['timeintervall'],'reservation_time',$time,$_SESSION['selOutlet']['outlet_open_time'],$_SESSION['selOutlet']['outlet_close_time'],0);
-				}
-				?>
-				<?php
-				// Special event of the day and outlet
-				$special_events = '';
-				$special_events = querySQL('event_data_day');
-
-					if ( $special_events ) {
-						echo "<div class='alert_ads'>";
-						// special events today at outlet
-									foreach($special_events as $row) {
-										echo "<span class='bold'>
-										<a href='".$_SERVER['SCRIPT_NAME']."?outletID=".$row->outlet_id."&selectedDate=".$row->event_date."'>".
-										_today.": ".$row->subject."</a></span>
-										<p>".$row->description."<br/><cite><span class='bold'>
-										".date($general['dateformat'],strtotime($row->event_date)).
-										"</span> ".formatTime($row->start_time,$general['timeformat']).
-										" - ".formatTime($row->end_time,$general['timeformat'])." | ".
-										_ticket_price.": ".number_format($row->price,2).
-										"</cite></p>";
-										if( key($row) != count($events_advertise)-1 && key($row) > 1) {
-											// BR between special events
-											echo"<br/>";
-										}
-									}
-								echo "</div>";
-					}
-					//end special events
-				?>
+				<div id="timeslot-results">
+				<?php include 'timeslot_fragment.inc.php'; ?>
+				</div>
 			</div>
 
 			<div class="guest-details">
@@ -533,7 +502,22 @@ if ($hook->hook_exist( 'debug_online' )) {
 				  }
 		        }
 		        $button.parent().find("input").val(newVal);
-				window.location.href='?pax=' + newVal;
+
+				// refresh the time-slot grid for the new guest count without reloading the page
+				var $results = $("#timeslot-results");
+				$results.css("opacity", 0.5);
+				$.ajax({
+					url: "ajax_timeslots.php",
+					data: { pax: newVal },
+					success: function(html) {
+						$results.html(html);
+						$results.css("opacity", 1);
+					},
+					error: function() {
+						// fall back to the old behaviour if the request itself fails
+						window.location.href = "?pax=" + newVal;
+					}
+				});
 		});
 	
     });
