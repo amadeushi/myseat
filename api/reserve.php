@@ -578,6 +578,71 @@ if ($hook->hook_exist( 'debug_online' )) {
 		});
 
 
+		// ---- preserve wizard progress across a language-switch reload ----
+		// the EN/DE links are plain page reloads (?lang=en/de), which would
+		// otherwise always land back on step 1 with every field emptied
+		var WIZARD_STATE_KEY = "myseat_wizard_state";
+
+		$(".lang-picker a").click(function() {
+			try {
+				var $checkedTime = $("input[name='reservation_time']:checked");
+				sessionStorage.setItem(WIZARD_STATE_KEY, JSON.stringify({
+					step: $(".wizard-step:not(.wizard-step-hidden)").data("step") || 1,
+					time: $checkedTime.length ? $checkedTime.val() : "",
+					notes: $("#reservation_notes").val(),
+					title: $("#reservation_title").val(),
+					name: $("#reservation_guest_name").val(),
+					email: $("#reservation_guest_email").val(),
+					phone: $("#reservation_guest_phone").val(),
+					advertise: $("#reservation_advertise").is(":checked")
+				}));
+			} catch (e) {
+				// sessionStorage unavailable (e.g. private browsing) - the
+				// language switch still works, it just restarts the wizard
+			}
+		});
+
+		function restoreWizardState() {
+			var saved;
+			try {
+				saved = sessionStorage.getItem(WIZARD_STATE_KEY);
+				sessionStorage.removeItem(WIZARD_STATE_KEY);
+			} catch (e) {
+				return;
+			}
+			if (!saved) {
+				return;
+			}
+			try {
+				saved = JSON.parse(saved);
+			} catch (e) {
+				return;
+			}
+			$("#reservation_notes").val(saved.notes || "");
+			if (saved.title) {
+				$("#reservation_title").val(saved.title);
+			}
+			$("#reservation_guest_name").val(saved.name || "");
+			$("#reservation_guest_email").val(saved.email || "");
+			$("#reservation_guest_phone").val(saved.phone || "");
+			// jQuery 1.4.4 (this app's bundled version) predates .prop() -
+			// set the DOM property directly instead
+			var $advertise = $("#reservation_advertise")[0];
+			if ($advertise) {
+				$advertise.checked = !!saved.advertise;
+			}
+			if (saved.time) {
+				$("input[name='reservation_time']").each(function() {
+					if (this.value === saved.time) {
+						this.checked = true;
+					}
+				});
+			}
+			if (saved.step && saved.step > 1) {
+				showWizardStep(saved.step);
+			}
+		}
+
 		// ---- multi-step wizard navigation ----
 		function showWizardStep(n) {
 			$(".wizard-step").addClass("wizard-step-hidden");
@@ -622,6 +687,7 @@ if ($hook->hook_exist( 'debug_online' )) {
 			$("#timeslot-error").removeClass("wizard-error-visible");
 		});
 
+		restoreWizardState();
     });
 </script>
 
