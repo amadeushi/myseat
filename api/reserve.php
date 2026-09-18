@@ -353,7 +353,7 @@ if($check_web_outlet==1){
 						<span class="picker-label"><?php echo ucfirst(_people_);?></span>
 						<div class="pax-stepper">
 							<a href="javascript:void(0);" class="dec btn_pax" aria-label="weniger Gäste">–</a>
-							<input type="text" name="reservation_pax" id="reservation_pax" <?php echo ($_SESSION['pax'] < 10) ? 'readonly="readonly"' : ''; ?> value="<?php echo $_SESSION['pax'];?>"/>
+							<input type="text" name="reservation_pax" id="reservation_pax" value="<?php echo $_SESSION['pax'];?>"/>
 							<a href="javascript:void(0);" class="inc btn_pax" aria-label="mehr Gäste">+</a>
 						</div>
 					</div>
@@ -541,22 +541,11 @@ if ($hook->hook_exist( 'debug_online' )) {
 			});
 		}
 
-		// once the party size reaches 10, let people type the number directly
-		// instead of clicking "+" repeatedly up to e.g. 20
-		function setPaxEditable(editable) {
-			var $input = $("#reservation_pax");
-			if (editable) {
-				$input.removeAttr("readonly");
-			} else {
-				$input.attr("readonly", "readonly");
-			}
-		}
-
-	 // +/- button for pax field
+	 // +/- button for pax field  
 		$(".btn_pax").click(function() {
 		    var $button = $(this);
 		    var oldValue = $button.parent().find("input").val();
-
+  
 		if ($button.text() == "+") {
 				  if(oldValue < maxPax){
 		          	  var newVal = parseFloat(oldValue) + 1;
@@ -572,16 +561,12 @@ if ($hook->hook_exist( 'debug_online' )) {
 				  }
 		        }
 		        $button.parent().find("input").val(newVal);
-				setPaxEditable(newVal >= 10);
 				refreshTimeslotsForPax(newVal);
 		});
 
-		// typing a party size directly once the field is editable (>= 10 guests)
+		// party size can also always be typed in directly
 		$("#reservation_pax").change(function() {
 			var $input = $(this);
-			if ($input.attr("readonly")) {
-				return;
-			}
 			var newVal = parseInt($input.val(), 10);
 			if (isNaN(newVal) || newVal < 1) {
 				newVal = 1;
@@ -590,9 +575,9 @@ if ($hook->hook_exist( 'debug_online' )) {
 				newVal = maxPax;
 			}
 			$input.val(newVal);
-			setPaxEditable(newVal >= 10);
 			refreshTimeslotsForPax(newVal);
 		});
+
 
 		// ---- multi-step wizard navigation ----
 		function showWizardStep(n) {

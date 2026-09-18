@@ -960,21 +960,17 @@ a.contact-item:hover svg {
 .pax-stepper input {
 	background: transparent;
 	border: 0;
-	border-bottom: 1px solid transparent;
+	border-bottom: 1px solid var(--border);
 	color: var(--text);
 	font-family: var(--font-body);
 	font-size: 17px;
 	font-weight: 600;
-	width: 32px;
+	width: 40px;
 	text-align: center;
 	padding: 0;
-}
-.pax-stepper input:not([readonly]) {
-	width: 40px;
-	border-bottom-color: var(--border);
 	cursor: text;
 }
-.pax-stepper input:not([readonly]):focus {
+.pax-stepper input:focus {
 	border-bottom-color: var(--gold);
 	outline: none;
 }
