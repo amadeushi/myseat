@@ -50,6 +50,34 @@ function getWeeklyHoursSummary($outlet) {
 	return $result;
 }
 
+// how many minutes before closing the last online booking is still accepted
+// ($settings['lastBookingMinutes'] in config.general.php, default 60)
+function lastBookingMinutes() {
+	global $settings;
+	return isset($settings['lastBookingMinutes']) ? max(0, (int)$settings['lastBookingMinutes']) : 60;
+}
+
+// true if $time on $date lies after the last accepted online booking
+// (uses the daily open/close times already resolved into $_SESSION['selOutlet'])
+function isPastLastBooking($date, $time) {
+	$open  = date('H:i:s', strtotime($_SESSION['selOutlet']['outlet_open_time']));
+	$close = date('H:i:s', strtotime($_SESSION['selOutlet']['outlet_close_time']));
+	$slot  = date('H:i:s', strtotime($time));
+	$closeTs = strtotime($date.' '.$close);
+	$slotTs  = strtotime($date.' '.$slot);
+	if ($closeTs === false || $slotTs === false) {
+		return false;
+	}
+	// closing after midnight (e.g. 14:30 - 00:00): close and late slots belong to the next day
+	if ($close <= $open) {
+		$closeTs += 86400;
+		if ($slot < $open) {
+			$slotTs += 86400;
+		}
+	}
+	return $slotTs > $closeTs - lastBookingMinutes() * 60;
+}
+
 function language_navigation($language) {
 		echo '<div class="langnav">';
 		echo '<div class="lang-picker">';
@@ -145,7 +173,7 @@ function timeList($format,$intervall,$field='',$select='',$open_time='00:00:00',
 		list($h3,$m3)		= explode(":",$breaktime_open);
 		list($h4,$m4)		= explode(":",$breaktime_close);
 		$value  		= mktime($h1+0,$m1+0,0,$month,$day,$year);
-		$endtime		= mktime($h2+0,$m2+0,0,$month,$endday,$year);
+		$endtime		= mktime($h2+0,$m2+0,0,$month,$endday,$year) - lastBookingMinutes()*60;
 		$open_break  		= mktime($h3+0,$m3+0,0,$month,$day,$year);
 		$close_break  		= mktime($h4+0,$m4+0,0,$month,$day,$year);
 		$i 			= 1;
@@ -235,7 +263,7 @@ function timeFields($format,$intervall,$field='',$select='',$open_time='00:00:00
 		list($h3,$m3)		= explode(":",$breaktime_open);
 		list($h4,$m4)		= explode(":",$breaktime_close);
 		$value  		= mktime($h1+0,$m1+0,0,$month,$day,$year);
-		$endtime		= mktime($h2+0,$m2+0,0,$month,$endday,$year);
+		$endtime		= mktime($h2+0,$m2+0,0,$month,$endday,$year) - lastBookingMinutes()*60;
 		$open_break  		= mktime($h3+0,$m3+0,0,$month,$day,$year);
 		$close_break  		= mktime($h4+0,$m4+0,0,$month,$day,$year);
 		$i 			= 1;

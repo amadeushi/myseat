@@ -1348,6 +1348,23 @@ a.contact-item:hover svg {
 	border: 1px solid rgba(143, 191, 122, 0.4);
 	color: var(--success);
 }
+.booking-shell .alert_info {
+	background: rgba(201, 162, 89, 0.08);
+	border: 1px solid var(--border);
+	color: var(--text);
+	padding: 4px 8px;
+}
+.booking-shell .alert_info p {
+	line-height: 1.6;
+}
+.booking-shell .alert_info a {
+	color: var(--gold);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+.booking-shell .alert_info a:hover {
+	color: var(--gold-strong);
+}
 .booking-shell .alert_ads {
 	background: var(--surface-2);
 	border: 1px solid var(--border-soft);
@@ -1358,6 +1375,92 @@ a.contact-item:hover svg {
 }
 .booking-shell .alert_ads cite, .booking-shell .alert_ads cite a {
 	color: var(--text-muted);
+}
+
+/* ---- Booking confirmation (process_booking.php) ---- */
+.confirm-shell {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	/* matches .booking-shell's own min-height: 100vh - a plain child
+	   block won't otherwise stretch to fill it, which left a band of
+	   the page's white default background exposed below the card */
+	min-height: 100vh;
+}
+.confirm-card {
+	width: 100%;
+	max-width: 460px;
+	background: var(--surface);
+	border: 1px solid var(--border-soft);
+	border-radius: 16px;
+	padding: 48px 40px;
+	text-align: center;
+}
+.confirm-icon {
+	width: 56px;
+	height: 56px;
+	margin: 0 auto 24px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	border: 1px solid var(--border);
+}
+.confirm-icon svg {
+	width: 26px;
+	height: 26px;
+}
+.confirm-icon.is-success {
+	color: var(--success);
+	border-color: rgba(143, 191, 122, 0.4);
+}
+.confirm-icon.is-waitlist {
+	color: var(--gold);
+}
+.confirm-icon.is-error {
+	color: var(--danger);
+	border-color: rgba(226, 134, 124, 0.4);
+}
+.confirm-title {
+	font-family: var(--font-display);
+	font-weight: 300;
+	font-size: 30px;
+	margin: 0 0 10px;
+	color: var(--text);
+}
+.confirm-text {
+	font-size: 14px;
+	line-height: 1.6;
+	color: var(--text-muted);
+	margin: 0 0 28px;
+}
+.confirm-text strong {
+	color: var(--gold);
+	font-weight: 600;
+}
+.confirm-text a {
+	color: var(--gold);
+}
+.confirm-card .wizard-summary {
+	text-align: left;
+}
+.confirm-actions {
+	margin-top: 28px;
+}
+.confirm-actions .submit-button {
+	/* .booking-shell a { color: var(--gold) } otherwise outranks
+	   .submit-button's own color on an <a> (a class+element selector
+	   beats a single class) and the CTA renders gold-on-gold */
+	color: #1a1408;
+	text-decoration: none;
+}
+.confirm-actions .submit-button:hover {
+	color: #1a1408;
+}
+@media (max-width: 560px) {
+	.confirm-card {
+		padding: 40px 24px;
+	}
 }
 
 /* jQuery UI datepicker — reskinned to match */

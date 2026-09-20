@@ -215,7 +215,7 @@ if($check_web_outlet==1){
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;500;600&family=Raleway:wght@400;500;600;700&display=swap" rel="stylesheet">
 	<link href="style/datepicker.css" rel="stylesheet" type="text/css" />
-	<link href="style/style.css" rel="stylesheet" type="text/css" />
+	<link href="style/style.css?v=<?php echo @filemtime(__DIR__.'/style/style.css'); ?>" rel="stylesheet" type="text/css" />
 
     <!-- jQuery Library-->
     <script src="js/jQuery.min.js" type="text/javascript"></script>

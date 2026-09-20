@@ -87,7 +87,7 @@ $prp_info = querySQL('property_info');
 		if ($mobile_browser > 0) {
 			echo '<link href="style/mobile.css" rel="stylesheet" type="text/css" />';
 		}else{
-			echo '<link href="style/style.css" rel="stylesheet" type="text/css" />';
+			echo '<link href="style/style.css?v='.@filemtime(__DIR__.'/style/style.css').'" rel="stylesheet" type="text/css" />';
 		}
 	?>
 
