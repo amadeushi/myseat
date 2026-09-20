@@ -727,3 +727,56 @@ ul.first_level_tab, .first_level_tab li, .second_level_tab {
 	border-radius: 4px 4px 0 0;
 	box-sizing: border-box;
 }
+
+/* ---- occupancy bar: scales down to a half-width / portrait window ---- */
+.timeline-section {
+	padding-left: clamp(6px, 1.5vw, 26px);
+	padding-right: clamp(6px, 1.5vw, 26px);
+}
+.timeline-section .timeline {
+	font-size: clamp(8px, 1.05vw, 12px);
+	gap: 0 clamp(1px, 0.2vw, 3px);
+	flex-wrap: nowrap;
+}
+.timeline-section .timeline li {
+	flex: 1 1 0;
+	min-width: 0;
+	max-width: 28px;
+	width: auto;
+}
+.timeline li .label,
+.timeline li .label2 {
+	overflow: visible;
+	white-space: nowrap;
+}
+
+/* ---- modal windows (fancybox: CXL list, details, confirmations) ---- */
+#fancybox-outer {
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+}
+#fancybox-inner {
+	color: var(--text-muted);
+	border-radius: 12px;
+}
+#fancybox-inner div[style*="background"] {
+	background: transparent !important;
+}
+#fancybox-inner h2, #fancybox-inner h3 {
+	color: var(--text);
+}
+#fancybox-inner strong, #fancybox-inner b {
+	color: var(--gold);
+}
+#fancybox-inner p {
+	color: var(--text-muted);
+}
+#fancybox-overlay {
+	background: #000 !important;
+	opacity: 0.7 !important;
+}
+.fancy-bg {
+	display: none;
+}

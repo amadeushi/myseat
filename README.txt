@@ -3,9 +3,9 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 0.2160                        =-= 
-=-= Date:    08.12.2012                   =-= 
-=-= Time:    16:00 GMT                    =-= 
+=-= Version: 0.2166                        =-=
+=-= Date:    20.09.2026                   =-=
+=-= Time:    19:50 GMT                    =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 
@@ -19,6 +19,8 @@ mySeat will help you keep track of your reservations with ease.
 News
 ====
 
+ * Current fork (PHP 8 port, new booking form and backend theme) - http://github.com/amadeushi/myseat
+ * Runs on PHP 8.x with mysqli (tested on PHP 8.5, MariaDB 12.3); no database changes since v0.2160
  * New Repo - http://github.com/apmuthu/myseat
  * Get the latest tarball at: https://nodeload.github.com/apmuthu/myseat/tar.gz/master
  * Add Property Vulnerability Workaround - rename and disable web/properties.php when not needed
@@ -26,6 +28,78 @@ News
  
 CHANGELOG
 =========
+
+Versions 0.2161 - 0.2166 are maintained in http://github.com/amadeushi/myseat.
+No database update is needed for any of them. Optional new settings for
+config/config.general.php (defaults apply when missing):
+  $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
+  $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-20 == mySeat v0.2166 == amadeushi - http://github.com/amadeushi/myseat
+
+ * One-click cancel link: api/cancel.php?nr=<booking number>&email=<address>
+   opens a confirmation page and cancels only after an explicit click; works without a
+   session, German/English, themed. Link added to the confirmation page and the emails
+   (local_email_send and email_send plugins); manual lookup form as fallback
+ * Cancel history entry is written with the correct reservation id, debug output removed
+ * Security: processBooking() no longer takes column names from POST (field whitelist,
+   plain INSERT - reservation_id can no longer overwrite other bookings); server-side
+   checks for name, email, party size (max_menu) and time format; selectedDate, pax and
+   outlet id validated at the public entry points; referer escaped in the form
+ * Backend (web/): dark/gold theme in web/css/theme-dark.css (screen only, print stays
+   light), brand name instead of the logo image, larger centred occupancy bar that scales
+   down to a half-width / portrait window, dark modal windows (CXL list, details, confirmations)
+
+2026-09-20 == mySeat v0.2165 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Booking confirmation page redesigned (dark/gold card) with confirmed / waitlist / error
+   states; waitlist bookings were shown as an error before
+ * Last-booking cutoff: $settings['lastBookingMinutes'] (default 60) hides late time slots,
+   also for closing times after midnight, and is enforced server-side
+ * Info boxes (.alert_info) in the booking form follow the dark/gold theme
+ * style.css is cache-busted with the file time so deployments reach visitors immediately
+
+2026-09-18 == mySeat v0.2164 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Mobile booking form: no nested cards, 3-column time grid, "Online-Reservierung" subtitle,
+   centred headings
+ * Party size is free text from 1 guest; groups above max_menu and fully booked or closed
+   days show a "contact us" message with the property email (closed weekdays now also
+   enforced server-side)
+ * Date field shows "Today"/"Heute" for the current day; EN/DE picker instead of text links;
+   correct active language; fonts from amadeus-hildesheim.de (Cormorant Garamond, Raleway)
+ * Wizard keeps its step and all entered data when the language is switched
+ * property id is set when entering with ?outletID=
+
+2026-09-18 == mySeat v0.2163 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Public reservation form (api/reserve.php) redesigned in a dark/gold two-column layout
+   with sidebar (back link, weekly opening hours, address, contact)
+ * Three-step wizard: date/time/guests, notes, contact details with live summary
+ * Guest count updates the time slots via AJAX (api/ajax_timeslots.php) without reload;
+   time-slot fragment shared in api/timeslot_fragment.inc.php
+ * Time slots as clickable pills in a scrollable grid; the last slot of the day (e.g. 00:00)
+   is no longer dropped
+
+2026-09-18 == mySeat v0.2162 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Day-specific opening hours work when only the opening or only the closing time is set
+ * Midnight (00:00) can be used as a day-specific closing time
+ * Confirmation page after booking no longer stays blank (wrong PHPMailer path in
+   local_email_send plugin)
+ * "Entry added" message no longer reappears on every outlet page view
+ * Datepicker language script no longer returns a 500 (wrong session key)
+
+2026-09-18 == mySeat v0.2161 == amadeushi - http://github.com/amadeushi/myseat
+
+ * PHP 8 compatibility: mysql_* functions provided on top of mysqli
+   (web/classes/mysql_compat.php), each() and PHP4 constructors replaced,
+   get_magic_quotes_gpc() shim, parse errors fixed, deprecations cleared
+ * Strict SQL mode (MySQL 5.7+ / MariaDB 10.2+): missing NOT NULL columns added to the
+   default settings insert
+ * Login works again (constructor of flexibleAccess in PLC/plc.class.php)
+ * Plugin hook system no longer fatals (phphooks.class.php)
+ * Further PHP 8 fatals fixed in the public form, reservation detail and the translation files
 
 2012-12-08 == mySeat v0.2160 == Ap.Muthu - http://github.com/apmuthu/myseat
 
