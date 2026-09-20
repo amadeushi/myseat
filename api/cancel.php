@@ -19,206 +19,235 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 // ** set configuration
 	include('../config/config.inc.php');
 // ** get superglobal variables
-	include('../web/includes/get_variables.inc.php');	
-// ** get property info for logo path
-$prp_info = querySQL('property_info');
-
-  if ($_POST['action']=='cncl_book'){
-
-    // cancel reservation
-    $result = query("UPDATE `$dbTables->reservations` SET `reservation_hidden` = '1' WHERE `reservation_hidden` = '0' AND `reservation_bookingnumber` = '%s' AND `reservation_guest_email` = '%s'", $_POST['reservation_bookingnumber'], $_POST['reservation_guest_email']);
-    $cancel = $result;
-
-    // get reservation id from booking number
-    if($cancel>=1){
-      $result = query("SELECT `reservation_id` FROM `$dbTables->reservations` WHERE `reservation_bookingnumber` = '%s' LIMIT 1",$_POST['reservation_booking_number']);
-	if ($row = mysql_fetch_row($result)) {
-		$reservation_id = $row[0];
-	}
-      // store changes in history
-      $result = query("INSERT INTO `$dbTables->res_history` (reservation_id,author) VALUES ('%d','Online-Cancel')",$reservation_id);
-    }
-    
-  }
-
- // translate to selected language
+	include('../web/includes/get_variables.inc.php');
+// translate to selected language
 	$language = $general['language'];
-	$set_lang = substr($language,0,2);
-	$browser_lang = $_SERVER['HTTP_ACCEPT_LANGUAGE'];
-	if( isset($_GET['lang']) ){
+	if (isset($_GET['lang']) && preg_match('/^[a-z]{2}$/', $_GET['lang'])) {
 		$language = $_GET['lang'];
 		$_SESSION['lang'] = $language;
-	}else if ( isset($browser_lang) && $_SESSION['lang'] == '' && ($browser_lang=="en" || $browser_lang == $set_lang) ){
-		echo "HERE";
-		$language = $browser_lang;
 	}
-	if( $_SESSION['lang'] == ''){
-		echo "Here";
+	if (empty($_SESSION['lang'])) {
 		$_SESSION['lang'] = $language;
 	}
 	$lang = substr($_SESSION['lang'],0,2);
 	translateSite($lang,'../web/');
-?>
 
-<!DOCTYPE html>
-<html lang="<?php echo $language; ?>">
-<head>
-	<!-- Meta data for SEO -->
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/> 
-	<meta http-equiv="X-UA-Compatible" content="IE=8" />
-	<meta name="robots" content="follow,index,no-cache" />
-	<meta name="author" lang="en" content="Bernd Orttenburger [www.myseat.us]" />
-	<meta name="copyright" lang="en" content="mySeat [www.myseat.us]" />
-	<meta name="keywords" content="mySeat, table reservation system, Bookings Diary, Reservation Diary, Restaurant Reservations, restaurant reservation system, open source, software, reservation management software, restaurant table management, table planner, restaurant table planner, table management, hotel" />
-	<meta id="htmlTagMetaDescription" name="Description" content="Make online reservationsfor lunch and dinners. mySeat is a OpenSource online reservation system for restaurants." />
-	<meta id="htmlTagMetaKeyword" name="Keyword" content="restaurant reservations, online restaurant reservations, restaurant management software, mySeat, free tables" />
+// texts of this page (de / en)
+	$tr = array(
+		'de' => array(
+			'lookup_title' => 'Reservierung stornieren',
+			'lookup_text'  => 'Bitte gib deine Buchungsnummer und die E-Mail-Adresse ein, mit der du reserviert hast.',
+			'lookup_btn'   => 'Reservierung suchen',
+			'confirm_title'=> 'Reservierung stornieren?',
+			'confirm_text' => 'Möchtest du diese Reservierung wirklich stornieren?',
+			'confirm_btn'  => 'Ja, stornieren',
+			'keep'         => 'Nein, Reservierung behalten',
+			'done_title'   => 'Reservierung storniert',
+			'done_text'    => 'Deine Reservierung wurde storniert. Wir hoffen, dich bald wieder bei uns zu sehen.',
+			'again'        => 'Neue Reservierung',
+			'nf_title'     => 'Reservierung nicht gefunden',
+			'nf_text'      => 'Zu diesen Angaben gibt es keine aktive Reservierung. Sie wurde eventuell schon storniert. Bitte prüfe Buchungsnummer und E-Mail-Adresse.',
+			'contact'      => 'Bei Fragen erreichst du uns direkt per E-Mail:',
+			'booknum'      => 'Buchungsnummer',
+			'email'        => 'E-Mail',
+			'website'      => 'Zurück zur Website',
+		),
+		'en' => array(
+			'lookup_title' => 'Cancel reservation',
+			'lookup_text'  => 'Please enter your booking number and the email address you reserved with.',
+			'lookup_btn'   => 'Find reservation',
+			'confirm_title'=> 'Cancel reservation?',
+			'confirm_text' => 'Do you really want to cancel this reservation?',
+			'confirm_btn'  => 'Yes, cancel it',
+			'keep'         => 'No, keep my reservation',
+			'done_title'   => 'Reservation cancelled',
+			'done_text'    => 'Your reservation has been cancelled. We hope to see you again soon.',
+			'again'        => 'New reservation',
+			'nf_title'     => 'Reservation not found',
+			'nf_text'      => 'There is no active reservation for these details. It may already have been cancelled. Please check your booking number and email address.',
+			'contact'      => 'If you have any questions, reach us directly by email:',
+			'booknum'      => 'Booking number',
+			'email'        => 'Email',
+			'website'      => 'Back to website',
+		),
+	);
+	$t = isset($tr[$lang]) ? $tr[$lang] : $tr['en'];
 
-	<!-- Meta data for all iDevices -->
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<meta name="apple-mobile-web-app-capable" content="yes" />
-	<meta name="apple-mobile-web-app-status-bar-style" content="black" />
-	<link rel="shortcut icon" href="http://www.myseat.us/favicon.ico">
+	$h = function($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); };
 
-	<!-- CSS - Setup -->
-	<link href="style/datepicker.css" rel="stylesheet" type="text/css" />
-	<?php
-	// Mobile Browser detection
-		$mobile_browser = checkMobile();
-		if ($mobile_browser > 0) {
-			echo '<link href="style/mobile.css" rel="stylesheet" type="text/css" />';
-		}else{
-			echo '<link href="style/style.css?v='.@filemtime(__DIR__.'/style/style.css').'" rel="stylesheet" type="text/css" />';
+// input: from the emailed link / the lookup form (GET) or the confirm button (POST)
+	$src = ($_SERVER['REQUEST_METHOD'] === 'POST') ? $_POST : $_GET;
+	$nr    = isset($src['nr'])    ? trim($src['nr'])    : '';
+	$email = isset($src['email']) ? trim($src['email']) : '';
+
+// find the active reservation belonging to this booking number + email
+	function findActiveReservation($nr, $email) {
+		global $dbTables;
+		if (!preg_match('/^[A-Za-z0-9]{1,12}$/', $nr) || $email === '') {
+			return null;
 		}
-	?>
+		$result = query("SELECT `reservation_id`, `reservation_outlet_id`, `reservation_date`, `reservation_time`, `reservation_pax` FROM `$dbTables->reservations` WHERE `reservation_bookingnumber` = '%s' AND `reservation_guest_email` = '%s' AND `reservation_hidden` = '0' LIMIT 1",
+			mysql_real_escape_string($nr), mysql_real_escape_string($email));
+		$row = mysql_fetch_assoc($result);
+		return $row ? $row : null;
+	}
 
-    <!-- jQuery Library-->
-    <script src="js/jQuery.min.js" type="text/javascript" ></script>
-    <script src="js/jquery.easing.1.3.js" type="text/javascript" ></script>
-    <script src="js/jquery-ui.js" type="text/javascript" ></script> 
-    <script src="js/functions.js" type="text/javascript" ></script>
+	$state = 'lookup';
+	$res = null;
+	if ($nr !== '' || $email !== '') {
+		$res = findActiveReservation($nr, $email);
+		if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'cncl_book') {
+			if ($res) {
+				// cancel only after the explicit confirmation click
+				query("UPDATE `$dbTables->reservations` SET `reservation_hidden` = '1' WHERE `reservation_id` = '%d' AND `reservation_hidden` = '0'", (int)$res['reservation_id']);
+				if (mysql_affected_rows() >= 1) {
+					query("INSERT INTO `$dbTables->res_history` (reservation_id,author) VALUES ('%d','Online-Cancel')", (int)$res['reservation_id']);
+					$state = 'done';
+				} else {
+					$state = 'notfound';
+				}
+			} else {
+				$state = 'notfound';
+			}
+		} else {
+			$state = $res ? 'confirm' : 'notfound';
+		}
+	}
 
-	<!-- Here you can define your own color scheme for the booking form -->
-<!--	
-		<style type="text/css">
-			html {
-				background:url(images/html-bg.jpg) left top repeat !important;
-			}
-			.data1, .data2, .data3, .register{
-				background-color: #F6E6CC;			
-			}
-			h1, .data1 .number, .data2 .number, .data3 .number, .register .number{
-				color: #AB245E;			
-			}
-			a, a:active, a:visited {
-			color: #42032C;
-			}
-			a:hover {
-				color:#7e4e7f;
-				background-color: #F6E6CC;
-			}
-			.button:hover {
-				color:#7e4e7f;
-				background-color: #F6E6CC;
-			}
-				button, .button, .btn_pax {
-				background-color: #561C40;
-				color: #F6E6CC;
-				border: 1px solid #B89394;
-				text-shadow: none;
-			}
-		</style>
--->	
-	<!-- color scheme for the booking form END -->
+// visitors arriving from the emailed link have no session yet: derive
+// outlet + property from the reservation, else from the first web outlet
+	if ($res) {
+		$_SESSION['outletID'] = (int)$res['reservation_outlet_id'];
+	}
+	if (empty($_SESSION['outletID'])) {
+		$r = query("SELECT `outlet_id` FROM `$dbTables->outlets` WHERE `webform` = '1' ORDER BY `outlet_id` LIMIT 1");
+		$row = mysql_fetch_assoc($r);
+		$_SESSION['outletID'] = $row ? (int)$row['outlet_id'] : 1;
+	}
+	$_SESSION['property'] = querySQL('property_id_outlet');
+	$_SESSION['propertyID'] = $_SESSION['property'];
+	$prp_info = querySQL('property_info');
 
-    <title><?php echo _edit_reservation;?></title>
+// details for the summary
+	$outlet_name = '';
+	$outlet_id = (int)$_SESSION['outletID'];
+	if ($res) {
+		$r = query("SELECT `outlet_name` FROM `$dbTables->outlets` WHERE `outlet_id` = '%d' LIMIT 1", $outlet_id);
+		$row = mysql_fetch_assoc($r);
+		$outlet_name = $row ? $row['outlet_name'] : '';
+	}
+	$new_url = 'reserve.php'.($outlet_id ? '?outletID='.$outlet_id : '');
+
+	if (strtolower(substr($prp_info['website'],0,4)) == "http") {
+		$website = $prp_info['website'];
+	} else {
+		$website = "http://".$prp_info['website'];
+	}
+	$contact_email = isset($prp_info['email']) ? $prp_info['email'] : '';
+?>
+<!DOCTYPE html>
+<html lang="<?php echo $h($lang); ?>">
+<head>
+	<meta charset="utf-8"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="robots" content="noindex,nofollow" />
+
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;500;600&family=Raleway:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<link href="style/style.css?v=<?php echo @filemtime(__DIR__.'/style/style.css'); ?>" rel="stylesheet" type="text/css" />
+
+	<title><?php echo $h($t['lookup_title']); ?><?php echo $prp_info['name'] ? ' &ndash; '.$prp_info['name'] : ''; ?></title>
 </head>
 <body>
-<!-- page container -->
-<div id="page-content">
-<form method="post" action="cancel.php" name="contactForm" id="contactForm">
-<?php language_navigation($set_lang);?>
-<h1><?php echo _reservations;?> - <span><?php echo ucfirst(_cancelled);?></span></h1>
-<div class='trenner'></div>
-<span id="result">
-<?php
- if($_POST['action'] == 'cncl_book'){
-      if($cancel>=1){
-		echo "<div class='alert_success'><p><img src='../web/images/icons/icon_accept.png' alt='success' class='middle'/>&nbsp;&nbsp;";
-		echo _entry_deleted."<br>";
-		echo "</p></div>";
-      }else{
-		echo "<div class='alert_error'><p><img src='../web/images/icon_error.png' alt='error' class='middle'/>&nbsp;&nbsp;";
-		echo _nothing_deleted."<br>";
-		echo "</p></div>";
-      }
-echo "<div class='trenner'></div>";
-}
-?>
-</span>
-<div class='data3'>	
-	<div class='number'>1</div>
-	<label><?php echo _booknum; ?></label><br/>	
-		<input type="text" name="reservation_bookingnumber" id="reservation_bookingnumber" class="required" value=""/>
-		<label><?php echo _email; ?></label><br/>
-		<input type="text" name="reservation_guest_email" class="required email" id="reservation_guest_email" value="" />
-</div> <!-- data3 close -->
-                <br/>
-                <p class="tc">
-                  <input type="hidden" name="reservation_timestamp" value="<?php echo date('Y-m-d H:i:s');?>">
-                  <input type="hidden" name="reservation_ip" value="<?php echo $_SERVER['REMOTE_ADDR'];?>">
-                  <input type="hidden" name="action" value="cncl_book">
-                  <button type="submit" class="button" id="submit"><?php echo _delete;?></button>
-				<br/><br/>
-				<a href="reserve.php">
-					<button class="button <?php echo $default_color;?>" ><?php echo " "._back." ";?></button>
-				</a>                
-				</p>
-                <div class="error"></div>
-              </form>
-			<br/>
-	 <br class="cl" />
+<div class="booking-shell confirm-shell">
+	<div class="confirm-card">
+		<?php language_navigation($lang, false); ?>
 
-</div><!-- page-content close -->
-  <!-- Javascript at the bottom for fast page loading --> 
-<script>
+	<?php if ($state == 'done'): ?>
 
- jQuery(document).ready(function($) {
- 				// placeholder text for input fields 
-		jQuery('.placeholder').each(function(i) {
+		<div class="confirm-icon is-success">
+			<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12.5 10 17l9-10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+		</div>
+		<h1 class="confirm-title"><?php echo $h($t['done_title']); ?></h1>
+		<p class="confirm-text"><?php echo $h($t['done_text']); ?></p>
+		<div class="confirm-actions">
+			<a class="submit-button" href="<?php echo $h($new_url); ?>"><?php echo $h($t['again']); ?></a>
+			<a class="confirm-secondary" href="<?php echo $h($website); ?>"><?php echo $h($t['website']); ?></a>
+		</div>
 
-		 var item = jQuery(this);
-		 var text = item.attr('rel');
-		 var form = item.parents('form:first');
+	<?php elseif ($state == 'confirm'): ?>
 
-		 if (item.val() === '') 
-		 {
-		 item.val(text);
-		 item.css('color', '#888');
-		 }
+		<div class="confirm-icon is-waitlist">
+			<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M4 10h16M9 3v4M15 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+		</div>
+		<h1 class="confirm-title"><?php echo $h($t['confirm_title']); ?></h1>
+		<p class="confirm-text">
+			<?php echo $h($t['confirm_text']); ?><br/>
+			<?php if ($outlet_name) { echo $h($outlet_name).' &middot; '; } ?><?php echo $h($t['booknum']); ?> <strong><?php echo $h($nr); ?></strong>
+		</p>
 
-		 item.bind('focus.placeholder', function(event) {
-		 if (item.val() === text)
-		 item.val('');
-		 item.css('color', '');
-		 });
+		<div class="wizard-summary">
+			<div class="summary-item">
+				<span class="summary-label"><?php echo _date; ?></span>
+				<span class="summary-value"><?php echo $h(date($general['dateformat'], strtotime($res['reservation_date']))); ?></span>
+			</div>
+			<div class="summary-item">
+				<span class="summary-label"><?php echo _time; ?></span>
+				<span class="summary-value"><?php echo $h(formatTime($res['reservation_time'], $general['timeformat'])); ?></span>
+			</div>
+			<div class="summary-item">
+				<span class="summary-label"><?php echo ucfirst(_people_); ?></span>
+				<span class="summary-value"><?php echo (int)$res['reservation_pax']; ?></span>
+			</div>
+		</div>
 
-		 item.bind('blur.placeholder', function(event) {
-		 if (item.val() === '')
-		 {
-		 item.val(text);
-		 item.css('color', '#888');
-		 }
-		 });
+		<form method="post" action="cancel.php" class="confirm-actions">
+			<input type="hidden" name="action" value="cncl_book">
+			<input type="hidden" name="nr" value="<?php echo $h($nr); ?>">
+			<input type="hidden" name="email" value="<?php echo $h($email); ?>">
+			<button type="submit" class="submit-button"><?php echo $h($t['confirm_btn']); ?></button>
+			<a class="confirm-secondary" href="<?php echo $h($website); ?>"><?php echo $h($t['keep']); ?></a>
+		</form>
 
-		 form.bind("submit.placeholder", function(event) {
-		 if (item.val() === text)
-		 item.val("");
-		 }); 
+	<?php else: ?>
 
-		 });
-	
-	
-    });
-</script>
+		<?php if ($state == 'notfound'): ?>
+		<div class="confirm-icon is-error">
+			<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 8v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg>
+		</div>
+		<h1 class="confirm-title"><?php echo $h($t['nf_title']); ?></h1>
+		<p class="confirm-text">
+			<?php echo $h($t['nf_text']); ?>
+			<?php if ($contact_email): ?>
+			<br/><?php echo $h($t['contact']); ?> <a href="mailto:<?php echo $h($contact_email); ?>"><?php echo $h($contact_email); ?></a>
+			<?php endif; ?>
+		</p>
+		<?php else: ?>
+		<div class="confirm-icon is-waitlist">
+			<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M4 10h16M9 3v4M15 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+		</div>
+		<h1 class="confirm-title"><?php echo $h($t['lookup_title']); ?></h1>
+		<p class="confirm-text"><?php echo $h($t['lookup_text']); ?></p>
+		<?php endif; ?>
+
+		<form method="get" action="cancel.php" class="wizard-step">
+			<div class="field">
+				<label for="nr"><?php echo $h($t['booknum']); ?></label>
+				<input type="text" name="nr" id="nr" value="<?php echo $h($nr); ?>" autocapitalize="off" autocomplete="off" required />
+			</div>
+			<div class="field">
+				<label for="email"><?php echo $h($t['email']); ?></label>
+				<input type="text" name="email" id="email" value="<?php echo $h($email); ?>" inputmode="email" autocapitalize="off" autocomplete="email" required />
+			</div>
+			<div class="confirm-actions">
+				<button type="submit" class="submit-button"><?php echo $h($t['lookup_btn']); ?></button>
+				<a class="confirm-secondary" href="<?php echo $h($website); ?>"><?php echo $h($t['website']); ?></a>
+			</div>
+		</form>
+
+	<?php endif; ?>
+	</div>
+</div>
 </body>
 </html>

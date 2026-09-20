@@ -80,7 +80,7 @@ if (!$_SESSION['outletID']) {
 */
 
 if (isset($_POST['reservation_outlet_id'])) {
-	$_SESSION['outletID'] = $_POST['reservation_outlet_id'];
+	$_SESSION['outletID'] = (int)$_POST['reservation_outlet_id'];
 }
 
 // id of event
@@ -139,10 +139,10 @@ $_SESSION['selOutlet']['outlet_max_capacity'] = (isset($_SESSION['selOutlet']['o
 // selected date
 if (empty($_SESSION['selectedDate'])) {
 	$_SESSION['selectedDate'] = buildDate($settings['dbdate'],date('d'),date('m'),date('Y'));
-}elseif (isset($_GET['selectedDate'])) {
+}elseif (isset($_GET['selectedDate']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['selectedDate'])) {
 	$_SESSION['selectedDate'] = $_GET['selectedDate'];
 }
-elseif (isset($_POST['selectedDate'])) {
+elseif (isset($_POST['selectedDate']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_POST['selectedDate'])) {
     $_SESSION['selectedDate'] = $_POST['selectedDate'];
 }
 if (empty($_SESSION['selectedDate'])) {

@@ -1,6 +1,6 @@
 <div class="topbar" id="topbar">
         <div class="container">
-			<a class="brand" href="<?php echo dirname($_SERVER['PHP_SELF']);?>/main_page.php"><img src="images/logo.png" alt=""/></a>
+			<a class="brand" href="<?php echo dirname($_SERVER['PHP_SELF']);?>/main_page.php"><img src="images/logo.png" alt=""/><?php echo htmlspecialchars(isset($settings['brandName']) ? $settings['brandName'] : 'mySeat'); ?></a>
        
 			<ul class="nav">
 				<?php

@@ -78,15 +78,24 @@ function isPastLastBooking($date, $time) {
 	return $slotTs > $closeTs - lastBookingMinutes() * 60;
 }
 
-function language_navigation($language) {
+function language_navigation($language, $show_cancel = true) {
+		// keep the cancel link's booking number/email when switching language
+		$keep = '';
+		foreach (array('nr', 'email') as $k) {
+			if (isset($_GET[$k]) && $_GET[$k] !== '') {
+				$keep .= '&'.$k.'='.urlencode($_GET[$k]);
+			}
+		}
 		echo '<div class="langnav">';
 		echo '<div class="lang-picker">';
-		echo '<a href="'.$_SERVER['PHP_SELF'].'?lang=en" title="English"'.($language=='en'?' class="active"':'').'>EN</a>';
-		echo '<a href="'.$_SERVER['PHP_SELF'].'?lang=de" title="Deutsch"'.($language=='de'?' class="active"':'').'>DE</a>';
+		echo '<a href="'.$_SERVER['PHP_SELF'].'?lang=en'.htmlspecialchars($keep).'" title="English"'.($language=='en'?' class="active"':'').'>EN</a>';
+		echo '<a href="'.$_SERVER['PHP_SELF'].'?lang=de'.htmlspecialchars($keep).'" title="Deutsch"'.($language=='de'?' class="active"':'').'>DE</a>';
 		echo '</div>';
-		echo '<a href="cancel.php" class="lang-cancel" title="'._delete.'">';
-		echo '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
-		echo '</a>';
+		if ($show_cancel) {
+			echo '<a href="cancel.php" class="lang-cancel" title="'._delete.'">';
+			echo '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+			echo '</a>';
+		}
 		echo '</div>';
 }
 
@@ -430,41 +439,53 @@ function processBooking(){
 		$values = array();
 		$i=1;
 		
-		// prepare arrays for database query
-		foreach($_POST as $key => $value) {
-			if( $key != "action"
-			      && $key != "dbdate"
-			      && $key != "reservation_date"
-			      && $key != "recurring_dbdate"
-			      && $key != "captcha"
-			      && $key != "barrier"
-			      && $key != "reservation_author"
-			      && $key != "email_type"
-				  && $key != "terms"
-			      && $key != "captchaField1"
-			      && $key != "captchaField2"
-			      && $key != "captchaField3"){
-			      	$keys[$i] = $key;
-		     		$values[$i] = "'".$value."'";
+		// Only these form fields may become database columns. The field
+		// NAMES of $_POST go straight into the SQL as column names, so they
+		// must never be taken from the request (that allowed writing any
+		// column, e.g. reservation_id to overwrite another booking through
+		// ON DUPLICATE KEY UPDATE). The VALUES were already escaped by
+		// secureSuperGlobals() in get_variables.inc.php - do not escape twice.
+		$allowed_fields = array(
+			'reservation_outlet_id', 'reservation_time', 'reservation_title',
+			'reservation_guest_name', 'reservation_guest_email', 'reservation_guest_phone',
+			'reservation_pax', 'reservation_hotelguest_yn', 'reservation_booker_name',
+			'reservation_notes', 'reservation_advertise', 'reservation_referer'
+		);
+		foreach ($allowed_fields as $key) {
+			if (!isset($_POST[$key]) || is_array($_POST[$key])) {
+				continue;
 			}
+			$value = trim($_POST[$key]);
+			if ($key == 'reservation_outlet_id' || $key == 'reservation_pax') {
+				$value = (string)(int)$value;
+			} elseif ($key == 'reservation_time' && !preg_match('/^\d{1,2}:\d{2}(:\d{2})?$/', $value)) {
+				return 0;
+			}
+			$keys[$i] = $key;
+			$values[$i] = "'".$value."'";
 			// remember some values
-			if( $key == "reservation_date" ){
-			   $reservation_date = strtotime($value);
-			}else if($key == 'reservation_booker_name'){	
-			   $_SESSION['author'] = $value;
-			}else if($key == 'reservation_time'){	
-			   $_SESSION['reservation_time'] = "'".$value."'";
-			}else if($key == 'reservation_pax'){	
-			   $_SESSION['reservation_pax'] = "'".$value."'";
+			if ($key == 'reservation_booker_name') {
+				$_SESSION['author'] = $value;
+			} elseif ($key == 'reservation_time') {
+				$_SESSION['reservation_time'] = "'".$value."'";
+			} elseif ($key == 'reservation_pax') {
+				$_SESSION['reservation_pax'] = "'".$value."'";
 			}
-			
-			if( $key == "reservation_date" ){
-			   $keys[$i] = $key;
-		     	   $values[$i] = "'".$_SESSION['selectedDate']."'";
-			}
-			
 			$i++;
-		} // END foreach $_POST
+		}
+		// the reservation date always comes from the (validated) session date
+		$keys[$i] = 'reservation_date';
+		$values[$i] = "'".$_SESSION['selectedDate']."'";
+		$i++;
+
+		// server-side sanity checks (the form only checks these in the browser)
+		$check_pax = (int)$_POST['reservation_pax'];
+		if (trim($_POST['reservation_guest_name']) === ''
+			|| !filter_var($_POST['reservation_guest_email'], FILTER_VALIDATE_EMAIL)
+			|| $check_pax < 1
+			|| ((int)$general['max_menu'] > 0 && $check_pax > (int)$general['max_menu'])) {
+			return 0;
+		}
 
 		// =-=-=-=Store in database =-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 			// clear old booking number
@@ -476,7 +497,7 @@ function processBooking(){
 			$clr = querySQL('sanitize_unique_id');
 			
 			// create and store booking number
-			if (!$_POST['reservation_id'] || $_POST['reservation_id']=='') {
+			{ // online bookings are always new (reservation_id is not accepted from the form)
 			    $_SESSION['booking_number'] = uniqueBookingnumber();
 			    //$_SESSION['messages'][] = _booknum.":&nbsp;&nbsp;' ".$_SESSION['booking_number']." '";
 			    $keys[] = 'reservation_bookingnumber';
@@ -536,21 +557,9 @@ function processBooking(){
 			// END Availability
 
 		  if ($waitlist != 1){
-			// number of database fields
-			$max_keys = count($keys);
-			// enter into database
-			// -----
-			$query = "INSERT INTO `$dbTables->reservations` (".implode(',', $keys).") VALUES (".implode(',', $values).") ON DUPLICATE KEY UPDATE ";
-			// Build 'on duplicate' query
-			for ($i=1; $i <= $max_keys; $i++) {
-				if($keys[$i]!=''){
-			 		$query .= $keys[$i]."=".$values[$i].",";
-				}else{
-					$max_keys++;
-				}
-			}
-			// run sql query 				
-			$query = substr($query,0,-1);				   
+			// enter into database - a new online booking must only ever INSERT,
+			// never update an existing reservation (no ON DUPLICATE KEY UPDATE)
+			$query = "INSERT INTO `$dbTables->reservations` (`".implode('`,`', $keys)."`) VALUES (".implode(',', $values).")";
 			$result = query($query);
 			$_SESSION['result'] = $result;
 			
@@ -567,7 +576,7 @@ function processBooking(){
 				}
 			
 			// store new reservation in history
-			$result = query("INSERT INTO `$dbTables->res_history` (reservation_id,author) VALUES ('%d','%s')",$resID,$_SESSION['author']);
+			$result = query("INSERT INTO `$dbTables->res_history` (reservation_id,author) VALUES ('%d','%s')",$resID,mysql_real_escape_string(isset($_SESSION['author']) ? $_SESSION['author'] : ''));
 			// Reservation was done
 			$waitlist = 2;
 		  }	

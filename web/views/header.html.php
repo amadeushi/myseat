@@ -29,6 +29,8 @@
 <link rel="stylesheet" href="css/print.css" type="text/css" media="print" >
 <link rel="stylesheet" href="css/plugins.css" type="text/css" media="all"/>
 <link rel="stylesheet" href="js/fancybox/jquery.fancybox-1.3.0.css" type="text/css" media="screen"/>
+<!-- dark/gold theme, must come last -->
+<link rel="stylesheet" href="css/theme-dark.css?v=<?php echo @filemtime(__DIR__.'/../css/theme-dark.css'); ?>" type="text/css" media="screen"/>
 
 <!--[if IE 7]>
 	<link href="css/ie7.css" rel="stylesheet" type="text/css" media="all">

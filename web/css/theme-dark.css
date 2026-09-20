@@ -1,0 +1,698 @@
+/* ==========================================================================
+   Backend theme - dark / gold (same colour world as the online booking form)
+   Loaded after screen.css / plugins.css, overrides colours, type and chrome.
+   ========================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;500;600&family=Raleway:wght@400;500;600;700&display=swap');
+
+:root {
+	--bg: #0c0b0a;
+	--surface: #151312;
+	--surface-2: #1c1a18;
+	--surface-3: #242220;
+	--border: rgba(201, 164, 89, 0.22);
+	--border-soft: rgba(245, 240, 230, 0.08);
+	--gold: #c9a259;
+	--gold-strong: #e2c07f;
+	--text: #f3ede1;
+	--text-muted: #a89e8c;
+	--danger: #e2867c;
+	--success: #8fbf7a;
+	--font-display: 'Cormorant Garamond', Georgia, serif;
+	--font-body: 'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ---- base ---- */
+html {
+	background: var(--bg);
+	color: var(--text);
+}
+body {
+	background: var(--bg);
+	color: var(--text-muted);
+	font-family: var(--font-body);
+	font-size: 13px;
+}
+body, table, td, th, li, p, span, div, input, select, textarea, button, label {
+	font-family: var(--font-body);
+}
+label, strong, b, th {
+	color: var(--text);
+}
+a {
+	color: var(--gold);
+}
+a:hover {
+	color: var(--gold-strong);
+}
+a:active {
+	color: var(--gold-strong);
+}
+h1, h2, h3, h4 {
+	color: var(--text);
+}
+::selection {
+	background: var(--gold);
+	color: #1a1408;
+}
+hr {
+	border-color: var(--border-soft);
+}
+.content p, .content li {
+	color: var(--text-muted);
+}
+
+/* ---- top bar ---- */
+.topbar {
+	background: var(--surface);
+	border-bottom: 1px solid var(--border);
+	box-shadow: none;
+	height: 44px;
+}
+.topbar .brand,
+.topbar .brand a {
+	font-family: var(--font-display);
+	font-weight: 500;
+	font-size: 24px;
+	letter-spacing: 0.01em;
+	color: var(--text);
+	text-shadow: none;
+}
+.topbar .brand img {
+	display: none;
+}
+.topbar a,
+.topbar div > ul a,
+.nav a {
+	color: var(--text-muted);
+	text-shadow: none;
+	font-weight: 500;
+}
+.topbar a:hover,
+.topbar div > ul a:hover,
+.nav a:hover,
+.topbar ul .active > a,
+.topbar div > ul .active > a,
+.nav .active > a {
+	background: transparent;
+	color: var(--gold-strong);
+}
+.topbar div > ul .active > a,
+.nav .active > a {
+	color: var(--gold);
+}
+.topbar div > ul .dropdown-toggle:hover,
+.topbar div > ul .dropdown.open .dropdown-toggle,
+.nav .dropdown.open .dropdown-toggle {
+	background: var(--surface-2);
+	color: var(--gold-strong);
+}
+.topbar div > ul .menu-dropdown,
+.topbar div > ul .dropdown-menu,
+.nav .menu-dropdown,
+.nav .dropdown-menu {
+	background: var(--surface-2);
+	border: 1px solid var(--border);
+	border-radius: 0 0 10px 10px;
+	box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+.topbar div > ul .dropdown-menu li a,
+.nav .dropdown-menu li a {
+	color: var(--text);
+	text-shadow: none;
+}
+.topbar div > ul .dropdown-menu li a:hover,
+.nav .dropdown-menu li a:hover {
+	background: var(--surface-3);
+	color: var(--gold-strong);
+}
+.topbar .dropdown-menu .divider {
+	background: var(--border-soft);
+}
+.topbar form input,
+.topbar input {
+	background: var(--surface-2);
+	border: 1px solid var(--border-soft);
+	color: var(--text);
+	box-shadow: none;
+}
+.topbar input:hover,
+.topbar input:focus,
+.topbar input.focused {
+	background: var(--surface-3);
+	border-color: var(--gold);
+	color: var(--text);
+}
+.topbar input::-webkit-input-placeholder {
+	color: var(--text-muted);
+}
+
+/* ---- layout cards ---- */
+#wrapper {
+	background: transparent;
+}
+.onecolumn,
+.twocolumn {
+	background: var(--surface);
+	border: 1px solid var(--border-soft);
+	border-radius: 12px;
+	box-shadow: none;
+	/* no overflow:hidden here - it would make the card a block formatting
+	   context and push it beside the floated tab list instead of under it */
+}
+.onecolumn .header,
+.twocolumn .header {
+	border-radius: 11px 11px 0 0;
+	background: var(--surface-2);
+	border-bottom: 1px solid var(--border-soft);
+	text-shadow: none;
+}
+.onecolumn .header h2,
+.twocolumn .header h2,
+.dategroup_name {
+	font-family: var(--font-display);
+	font-weight: 500;
+	font-size: 22px;
+	letter-spacing: 0.01em;
+	color: var(--text);
+	text-shadow: none;
+}
+.onecolumn .header .description {
+	color: var(--text-muted);
+}
+.onecolumn .content,
+#content_wrapper {
+	background: transparent;
+	color: var(--text-muted);
+}
+.most-recent {
+	box-shadow: none;
+}
+#footer {
+	background: var(--surface);
+	border-top: 1px solid var(--border);
+	color: var(--text-muted);
+}
+#footer a {
+	color: var(--gold);
+}
+
+/* ---- tabs / small nav ---- */
+.second_level_tab li a {
+	background: transparent;
+	border: 1px solid var(--border-soft);
+	color: var(--text-muted);
+	text-shadow: none;
+	box-shadow: none;
+	border-radius: 8px;
+}
+.second_level_tab li a:hover {
+	background: var(--surface-3);
+	border-color: var(--border);
+	color: var(--gold-strong);
+}
+.second_level_tab li.active a,
+.second_level_tab li a.active,
+.second_level_tab li a:active {
+	background: var(--gold);
+	border-color: var(--gold);
+	color: #1a1408;
+}
+.second_level_tab li.disabled a {
+	opacity: 0.45;
+}
+.navgroup {
+	color: var(--gold);
+}
+.dategroup, .date {
+	color: var(--text);
+}
+.pagination a {
+	background: var(--surface-2);
+	border: 1px solid var(--border-soft);
+	color: var(--text-muted);
+}
+.pagination a:hover {
+	color: var(--gold-strong);
+	border-color: var(--border);
+}
+.pagination a.active {
+	background: var(--gold);
+	color: #1a1408;
+	border-color: var(--gold);
+}
+
+/* ---- tables ---- */
+table.global,
+table.global tr,
+table.global tbody tr,
+.bordered-table,
+.bordered-table tr,
+.resv-table,
+.resv-table-small,
+.resv-table-small tr {
+	background: transparent;
+	color: var(--text-muted);
+}
+table.global thead tr,
+table.global tr th,
+.bordered-table th,
+.grey,
+thead.grey th,
+.resv-table thead th,
+.resv-table-small thead th {
+	background: var(--surface-2);
+	color: var(--text-muted);
+	text-shadow: none;
+	border-color: var(--border-soft);
+	font-weight: 600;
+	letter-spacing: 0.02em;
+}
+table.global td,
+table.global th,
+.bordered-table td,
+.bordered-table th,
+.resv-table td,
+.resv-table-small td {
+	border-color: var(--border-soft);
+	color: var(--text-muted);
+}
+table.global tbody tr:hover td,
+.bordered-table tbody tr:hover td,
+.resv-table-small tbody tr:hover td {
+	background: var(--surface-2);
+}
+table.global tfoot tr,
+table.global tfoot td {
+	background: var(--surface-2);
+	color: var(--text);
+}
+.bordered-table {
+	border: 1px solid var(--border-soft);
+	box-shadow: none;
+}
+table.global td.big {
+	color: var(--gold);
+}
+
+/* ---- forms ---- */
+input, textarea, select {
+	background: var(--surface-2);
+	color: var(--text);
+	border: 1px solid var(--border-soft);
+	border-radius: 8px;
+	box-shadow: none;
+}
+input[type=text]:hover, input[type=password]:hover, textarea:hover,
+select:hover {
+	border-color: var(--border);
+	box-shadow: none;
+}
+input[type=text]:focus, input[type=password]:focus, textarea:focus,
+select:focus, input:focus {
+	background: var(--surface-3);
+	border-color: var(--gold);
+	color: var(--text);
+	outline: 0;
+	box-shadow: 0 0 0 3px rgba(201, 162, 89, 0.18);
+}
+input[type=text].blur, input[type=password].blur, textarea.blur {
+	color: var(--text-muted);
+	background: var(--surface-2);
+}
+input[disabled], select[disabled], textarea[disabled],
+input[readonly], select[readonly], textarea[readonly] {
+	background: var(--bg);
+	color: var(--text-muted);
+	border-color: var(--border-soft);
+}
+input.error, textarea.error, .error {
+	background: rgba(226, 134, 124, 0.12) !important;
+	border-color: var(--danger) !important;
+}
+option {
+	background: var(--surface-2);
+	color: var(--text);
+}
+input[type=radio], input[type=checkbox] {
+	accent-color: var(--gold);
+	background: transparent;
+	box-shadow: none;
+}
+::placeholder {
+	color: var(--text-muted);
+	opacity: 0.7;
+}
+input:-webkit-autofill {
+	-webkit-text-fill-color: var(--text);
+	-webkit-box-shadow: 0 0 0 40px var(--surface-2) inset;
+}
+
+/* ---- buttons ---- */
+input.button_dark,
+input[type=submit],
+input[type=button],
+button,
+.button,
+a.button {
+	background: var(--gold);
+	background-image: none;
+	color: #1a1408;
+	border: 0;
+	border-radius: 999px;
+	text-shadow: none;
+	box-shadow: none;
+	font-family: var(--font-body);
+	font-weight: 700;
+	letter-spacing: 0.01em;
+	cursor: pointer;
+	transition: background 150ms ease, transform 150ms ease;
+}
+input.button_dark:hover,
+input[type=submit]:hover,
+input[type=button]:hover,
+button:hover,
+.button:hover,
+a.button:hover {
+	background: var(--gold-strong);
+	color: #1a1408;
+	border: 0;
+	box-shadow: none;
+	transform: translateY(-1px);
+}
+input.button_dark:active,
+input[type=submit]:active,
+button:active,
+.button:active {
+	background: var(--gold);
+	color: #1a1408;
+	transform: translateY(0);
+}
+input.button_dark[disabled], button[disabled] {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+/* ---- alert boxes ---- */
+.alert_error, .alert_tip, .alert_info, .alert_success, .alert_ads {
+	border-radius: 10px;
+	text-shadow: none;
+	font-family: var(--font-body);
+	color: var(--text);
+}
+.alert_error {
+	background: rgba(226, 134, 124, 0.12);
+	border: 1px solid rgba(226, 134, 124, 0.4);
+	color: var(--danger);
+}
+.alert_success {
+	background: rgba(143, 191, 122, 0.12);
+	border: 1px solid rgba(143, 191, 122, 0.4);
+	color: var(--success);
+}
+.alert_info, .alert_tip {
+	background: rgba(201, 162, 89, 0.08);
+	border: 1px solid var(--border);
+	color: var(--text);
+}
+.alert_ads {
+	background: var(--surface-2);
+	border: 1px solid var(--border-soft);
+	color: var(--text-muted);
+}
+.alert_info a, .alert_ads a, .alert_tip a {
+	color: var(--gold);
+}
+
+/* ---- jQuery UI: datepicker, dialogs, autocomplete ---- */
+.ui-widget, .ui-widget input, .ui-widget select, .ui-widget textarea, .ui-widget button {
+	font-family: var(--font-body);
+}
+.ui-widget-content {
+	background: var(--surface-2);
+	border: 1px solid var(--border);
+	color: var(--text);
+}
+.ui-widget-header {
+	background: var(--surface-3);
+	border: 1px solid var(--border);
+	color: var(--text);
+}
+.ui-datepicker {
+	background: var(--surface-2);
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+.ui-datepicker .ui-datepicker-header {
+	background: transparent;
+	border: 0;
+}
+.ui-datepicker .ui-datepicker-title,
+.ui-datepicker th {
+	color: var(--text);
+}
+.ui-datepicker td a,
+.ui-datepicker td span {
+	background: transparent;
+	border: 1px solid transparent;
+	color: var(--text);
+	text-align: center;
+	border-radius: 6px;
+}
+.ui-datepicker td a:hover {
+	background: var(--surface-3);
+	border-color: var(--border);
+	color: var(--gold-strong);
+}
+.ui-datepicker td .ui-state-active,
+.ui-datepicker td .ui-state-highlight {
+	background: var(--gold);
+	border-color: var(--gold);
+	color: #1a1408;
+}
+.ui-datepicker td.ui-state-disabled span,
+.ui-datepicker .ui-state-disabled {
+	color: var(--text-muted);
+	opacity: 0.4;
+}
+.ui-datepicker-prev span, .ui-datepicker-next span {
+	filter: invert(1);
+}
+.ui-dialog {
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+	color: var(--text);
+}
+.ui-dialog .ui-dialog-titlebar {
+	background: var(--surface-2);
+	border: 0;
+	border-bottom: 1px solid var(--border-soft);
+	color: var(--text);
+}
+.ui-dialog .ui-dialog-title {
+	font-family: var(--font-display);
+	font-size: 20px;
+	font-weight: 500;
+}
+.ui-dialog .ui-dialog-content {
+	background: transparent;
+	color: var(--text-muted);
+}
+.ui-dialog .ui-dialog-buttonpane {
+	background: var(--surface);
+	border-top: 1px solid var(--border-soft);
+}
+.ui-widget-overlay {
+	background: #000;
+	opacity: 0.65;
+}
+.ui-menu, .ui-autocomplete {
+	background: var(--surface-2);
+	border: 1px solid var(--border);
+	color: var(--text);
+}
+.ui-state-hover, .ui-state-focus, .ui-menu-item a:hover {
+	background: var(--surface-3);
+	border-color: var(--border);
+	color: var(--gold-strong);
+}
+.ui-state-default, .ui-widget-content .ui-state-default {
+	background: var(--surface-2);
+	border-color: var(--border-soft);
+	color: var(--text);
+}
+.ui-state-active, .ui-widget-content .ui-state-active {
+	background: var(--gold);
+	border-color: var(--gold);
+	color: #1a1408;
+}
+
+/* ---- fancybox ---- */
+#fancybox-content {
+	background: var(--surface);
+	border-color: var(--surface);
+	color: var(--text);
+}
+#fancybox-title-main {
+	color: var(--text);
+}
+
+/* ---- tooltips / misc ---- */
+.tooltip, #tooltip {
+	background: var(--surface-3);
+	border: 1px solid var(--border);
+	color: var(--text);
+}
+img.middle {
+	padding: 5px;
+}
+
+/* ---- login page ---- */
+body.login {
+	background: var(--bg);
+}
+#login_top {
+	background: transparent;
+	border-bottom: 1px solid var(--border);
+	text-align: center;
+}
+#login_top img {
+	display: none;
+}
+#login_top::after {
+	content: attr(data-brand);
+	display: block;
+	padding-top: 42px;
+	font-family: var(--font-display);
+	font-weight: 300;
+	font-size: 56px;
+	color: var(--text);
+}
+
+/* ---- first level tabs (settings) ---- */
+.first_level_tab li a {
+	background: var(--surface-2);
+	border: 1px solid var(--border-soft);
+	border-bottom: 0;
+	color: var(--text-muted);
+	text-shadow: none;
+	box-shadow: none;
+	border-radius: 10px 10px 0 0;
+}
+.first_level_tab li a:hover,
+.first_level_tab li a:active {
+	background: var(--surface-3);
+	color: var(--gold-strong);
+	border-color: var(--border);
+}
+.first_level_tab li a.active {
+	background: var(--surface);
+	color: var(--gold);
+	border-color: var(--border);
+}
+
+/* ---- statistics ---- */
+h1.stats_header_text {
+	font-family: var(--font-display);
+	font-weight: 500;
+	font-size: 30px;
+	color: var(--gold);
+}
+div.stats_section_title {
+	color: var(--text-muted);
+	border-color: var(--border);
+}
+div.stats_section_content {
+	color: var(--text);
+}
+div.stats_section_content li {
+	color: var(--gold);
+}
+span.stats_small_text {
+	color: var(--text-muted);
+}
+
+/* ---- date navigation + generic cell borders ---- */
+td, th {
+	border-color: var(--border-soft);
+}
+
+/* ---- date navigation (background image replaced) ---- */
+.date {
+	background: var(--surface-2);
+	border: 1px solid var(--border-soft);
+	border-radius: 8px;
+	width: 167px;
+	height: 38px;
+}
+.date:hover {
+	border-color: var(--border);
+}
+.date .text {
+	color: var(--text);
+	font-size: 15px;
+}
+
+/* ---- headings inside content ---- */
+h1, h2, h3, h4,
+.onecolumn .content h2,
+.onecolumn .content h3 {
+	font-family: var(--font-display);
+	font-weight: 500;
+	color: var(--text);
+	text-shadow: none;
+}
+h2 { font-size: 26px; }
+h3 { font-size: 22px; }
+.onecolumn .header h2 { font-size: 24px; }
+
+/* ---- occupancy timeline ---- */
+.timeline li .label,
+.timeline li .label2 {
+	background: var(--surface-2);
+	color: var(--text-muted);
+}
+.timeline li .label2 {
+	color: var(--gold);
+}
+.timeline li .count {
+	background: var(--surface-3);
+}
+.timeline .full, .sparkline .index .full  { background: #c65a4f !important; }
+.timeline .high, .sparkline .index .high  { background: var(--gold) !important; }
+.timeline .low,  .sparkline .index .low   { background: #6f9c5f !important; }
+.timeline .free, .sparkline .index .free  { background: #4a463f !important; }
+.timeline .table, .sparkline .index .table { color: var(--text-muted) !important; }
+.timeline .active, .sparkline .index .active {
+	opacity: 0.6;
+	color: var(--text) !important;
+}
+
+/* ---- input add-ons, tab rail ---- */
+.add-on, span.add-on {
+	background: var(--surface-3);
+	border-color: var(--border-soft);
+	color: var(--text-muted);
+	text-shadow: none;
+}
+ul.first_level_tab, .first_level_tab li, .second_level_tab {
+	border-color: var(--border-soft);
+}
+
+/* ---- occupancy bar centred in its card ---- */
+.timeline-section {
+	float: none;
+	clear: both;
+	width: 100%;
+	box-sizing: border-box;
+	text-align: center;
+}
+.timeline-section .timeline {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	width: 100%;
+	margin: 0 auto;
+}

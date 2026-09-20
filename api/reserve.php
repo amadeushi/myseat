@@ -111,7 +111,7 @@ $_SESSION['resID'] = 0;
 // selected pax	
 	if ($_GET['pax']) {
 		// set selected time
-		$_SESSION['pax'] = $_GET['pax'];	
+		$_SESSION['pax'] = max(1, min(500, (int)$_GET['pax']));
 	}elseif($_SESSION['selected_pax']<1){
 		$_SESSION['pax'] = 2;
 	}
@@ -130,7 +130,7 @@ if($check_web_outlet==1){
 	}
 
 	// selected date
-    if ($_GET['selectedDate']) {
+    if ($_GET['selectedDate'] && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['selectedDate'])) {
         $_SESSION['selectedDate'] = $_GET['selectedDate'];
     }
 	
@@ -336,7 +336,7 @@ if($check_web_outlet==1){
 
 			<input type="hidden" name="action" id="action" value="submit"/>
 			<input type="hidden" name="barrier" value="<?php echo $barrier; ?>" />
-			<input type="hidden" name="reservation_referer" value="<?php echo $_SESSION['referer']; ?>" />
+			<input type="hidden" name="reservation_referer" value="<?php echo htmlspecialchars($_SESSION['referer'], ENT_QUOTES, 'UTF-8'); ?>" />
 			<input type="hidden" name="reservation_hotelguest_yn" id="reservation_hotelguest_yn" value="PASS"/>
 			<input type="hidden" name="reservation_booker_name" id="reservation_booker_name" value="Contact Form"/>
 			<input type="hidden" name="reservation_author" id="reservation_author" value="<?php echo querySQL('db_property');?> Team"/>

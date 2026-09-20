@@ -1425,6 +1425,7 @@ a.contact-item:hover svg {
 	font-family: var(--font-display);
 	font-weight: 300;
 	font-size: 30px;
+	line-height: 1.15;
 	margin: 0 0 10px;
 	color: var(--text);
 }
@@ -1456,6 +1457,28 @@ a.contact-item:hover svg {
 }
 .confirm-actions .submit-button:hover {
 	color: #1a1408;
+}
+.confirm-card .wizard-step {
+	text-align: left;
+}
+.confirm-card form {
+	margin-left: 0;
+}
+.confirm-card .wizard-step .confirm-actions {
+	text-align: center;
+}
+.confirm-card form.confirm-actions {
+	margin: 28px 0 0;
+}
+.booking-shell .confirm-secondary {
+	display: block;
+	margin-top: 16px;
+	font-size: 13px;
+	color: var(--text-muted);
+	text-decoration: none;
+}
+.booking-shell .confirm-secondary:hover {
+	color: var(--gold-strong);
 }
 @media (max-width: 560px) {
 	.confirm-card {

@@ -132,12 +132,20 @@ function email_send_conf() {
 				$descr = 'outlet_description';
 			}
 			
+			// one-click cancel link (booking number + email prefilled, cancels only after confirmation)
+			$cancel_scheme = isset($_SERVER['HTTPS']) ? 'https://' : 'http://';
+			$cancel_url = $cancel_scheme.$_SERVER['SERVER_NAME'].preg_replace('#/(api|web)/.*$#','',$_SERVER['SCRIPT_NAME']).'/api/cancel.php?nr='.urlencode($_SESSION['booking_number']).'&email='.urlencode($to_guest).'&lang='.(($_SESSION['form']['email_type'] == 'en') ? 'en' : 'de');
+			$cancel_label = ($_SESSION['form']['email_type'] == 'en') ? 'Cancel your reservation with one click' : 'Reservierung mit einem Klick stornieren';
+			$cancel_intro = ($_SESSION['form']['email_type'] == 'en') ? 'Your plans changed?' : 'Deine Pläne haben sich geändert?';
+
 			$plain_text  = $salut.",\r\n\r\n";
 			$plain_text .= sprintf( $text , $_SESSION['selOutlet']['outlet_name'], $_SESSION['form']['reservation_pax'], $txt_date, formatTime($_SESSION['form']['reservation_time'],$general['timeformat']), $_SESSION['booking_number'], $prop_name." Team"  );
+			$plain_text .= "\r\n\r\n".$cancel_intro." ".$cancel_label.": ".$cancel_url;
 			$plain_text  = nl2br($plain_text);
 			
 			$msg_text  = $salut.",<br/><br/>";
 			$msg_text .= sprintf( $text , $_SESSION['selOutlet']['outlet_name'], $_SESSION['form']['reservation_pax'], $txt_date, formatTime($_SESSION['form']['reservation_time'],$general['timeformat']), '<strong>'.$_SESSION['booking_number'].'</strong>', $property['name']." Team"  );
+			$msg_text .= '<br/><br/>'.$cancel_intro.' <a href="'.htmlspecialchars($cancel_url).'" style="color: #3279BB; text-decoration: underline;">'.$cancel_label.'</a>';
 			//$res_details = formatTime($_SESSION['form']['reservation_time'],$general['timeformat'])." "._for_." "._phone.": ".$_SESSION['form']['reservation_guest_phone']." /"._note.": \"".$_SESSION['form']['reservation_notes']."\"";
 			//$message .= sprintf( $text , $_SESSION['selOutlet']['outlet_name'], $_SESSION['form']['reservation_pax'], $txt_date, formatTime($_SESSION['form']['reservation_time'],$general['timeformat']), '<strong>'.$_SESSION['booking_number'].'</strong>', $property['name']." Team"  );
 			

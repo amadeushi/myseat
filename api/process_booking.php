@@ -51,11 +51,12 @@ $prp_info = querySQL('property_info');
         $_SESSION['property'] = (int)$_POST['prp'];
     }
     // selected date
-    if ($_GET['selectedDate']) {
+    $date_ok = function($d) { return is_string($d) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $d); };
+    if ($date_ok($_GET['selectedDate'] ?? null)) {
         $_SESSION['selectedDate'] = $_GET['selectedDate'];
-    }elseif ($_POST['selectedDate']) {
+    }elseif ($date_ok($_POST['selectedDate'] ?? null)) {
         $_SESSION['selectedDate'] = $_POST['selectedDate'];
-    }elseif ($_POST['dbdate']) {
+    }elseif ($date_ok($_POST['dbdate'] ?? null)) {
         $_SESSION['selectedDate'] = $_POST['dbdate'];
     }elseif (!$_SESSION['selectedDate']){
         //$_SESSION['selectedDate'] = date('Y-m-d');
@@ -160,6 +161,7 @@ $prp_info = querySQL('property_info');
 
 		<div class="confirm-actions">
 			<a class="submit-button" href="<?php echo $website; ?>">Zurück zur Website</a>
+			<a class="confirm-secondary" href="cancel.php?nr=<?php echo urlencode($_SESSION['booking_number']); ?>&amp;email=<?php echo urlencode($_POST['reservation_guest_email']); ?>">Reservierung stornieren</a>
 		</div>
 
 	<?php elseif ($waitlist == 1): ?>

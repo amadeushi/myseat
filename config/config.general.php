@@ -43,6 +43,9 @@
  // On Screen Keyboard for Login - default false for backward compatibility
  $settings['OnScreenKbd'] = false;
 
+// ** Name shown in the backend header and login page
+ $settings['brandName'] = 'Amadeus';
+
 // ** Online reservation: last booking time
  // last online booking is accepted this many minutes before closing time
  // (0 = allow bookings up to the closing time itself)

@@ -104,6 +104,7 @@ $forwardPage = "../web/main_page.php?p=1";
 
 <!-- CSS Stylesheets -->
 <link rel="stylesheet" href="../web/css/screen.css" type="text/css" media="all"/>
+<link rel="stylesheet" href="../web/css/theme-dark.css?v=<?php echo @filemtime(__DIR__.'/../web/css/theme-dark.css'); ?>" type="text/css" media="all"/>
 
 <!--[if IE 7]>
 	<link href="../web/css/ie7.css" rel="stylesheet" type="text/css" media="all">
@@ -142,7 +143,7 @@ $forwardPage = "../web/main_page.php?p=1";
 	<!-- Begin control panel wrapper -->
 	<div id="wrapper">
 
-		<div id="login_top">
+		<div id="login_top" data-brand="<?php echo htmlspecialchars(isset($settings['brandName']) ? $settings['brandName'] : 'mySeat'); ?>">
 			<img src="../web/images/logo_big.png" alt=""/>
 		</div>
 		
