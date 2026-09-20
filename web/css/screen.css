@@ -167,6 +167,7 @@ ul.global li                            { line-height: 2em }
 ol.global                               { margin-left: 30px }
 ol.global li                            { line-height: 2em }
 table.global tr                         { background: #fff }
+table.global tbody tr.row-hover          { background: #f6f6f6 }
 table.global tr td, table.global tr th  { font-size: 1.1em }
 table.global thead tr                   {
                                             font-family: 'DroidSansBold', Arial;

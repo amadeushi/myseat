@@ -15,7 +15,7 @@
 	<script type="text/javascript" src="js/plugins.js"></script>
 	<script type="text/javascript" src="js/fancybox/jquery.fancybox-1.3.0.js"></script>
 	<script type="text/javascript" src="js/jquery.validate.min.js"></script>
-	<script type="text/javascript" src="js/custom.js"></script>
+	<script type="text/javascript" src="js/custom.js?v=<?php echo @filemtime(__DIR__.'/../js/custom.js'); ?>"></script>
 	<script type="text/javascript" src="lang/jquery.ui.datepicker-<?php echo substr($_SESSION['language'],0,2);?>.js"></script>	
 	
 	<script type="text/javascript">

@@ -780,3 +780,179 @@ ul.first_level_tab, .first_level_tab li, .second_level_tab {
 .fancy-bg {
 	display: none;
 }
+
+/* ---- highlighted / hovered list items (autocomplete, menus) ---- */
+.ui-state-hover,
+.ui-widget-content .ui-state-hover,
+.ui-state-focus,
+.ui-widget-content .ui-state-focus,
+.ui-autocomplete .ui-menu-item a:hover,
+.ui-autocomplete .ui-menu-item a.ui-state-hover,
+.ui-autocomplete .ui-menu-item a.ui-state-focus,
+.ui-menu .ui-menu-item a:hover {
+	background: var(--surface-3) !important;
+	background-image: none !important;
+	border-color: var(--border) !important;
+	color: var(--gold-strong) !important;
+}
+.ui-autocomplete-loading {
+	background: var(--surface-2) url('../images/ajax-loader.gif') right center no-repeat !important;
+}
+
+/* ---- invalid form fields: no pink, a red edge instead ---- */
+.error {
+	background: transparent !important;
+}
+input.error, textarea.error, select.error {
+	background: var(--surface-2) !important;
+	border: 1px solid var(--danger) !important;
+	color: var(--text);
+	box-shadow: 0 0 0 3px rgba(226, 134, 124, 0.14) !important;
+}
+label.error, span.error, em.error {
+	color: var(--danger);
+	background: none !important;
+	border: 0 !important;
+}
+.error_select {
+	background: transparent !important;
+	border-color: var(--danger) !important;
+	box-shadow: 0 0 0 3px rgba(226, 134, 124, 0.14);
+}
+
+/* ---- weekly occupancy table lines ---- */
+.bordered-table th,
+.bordered-table td,
+.bordered-table th + th,
+.bordered-table td + td,
+.bordered-table tr + tr td {
+	border-color: var(--border-soft) !important;
+}
+
+/* ---- table row hover (class set by custom.js) ---- */
+table.global tbody tr.row-hover,
+table.global tbody tr.row-hover td {
+	background: var(--surface-2);
+}
+table.global tbody tr.row-hover td,
+table.global tbody tr.row-hover td a {
+	color: var(--text);
+}
+
+/* ---- reservation rows (dashboard / day view): readability ---- */
+table.global.resv-table-small tbody tr td,
+table.global.resv-table tbody tr td {
+	font-size: 14px;
+	line-height: 1.35;
+	padding: 12px 10px;
+	vertical-align: middle;
+	border-bottom: 1px solid var(--border-soft);
+	color: var(--text-muted);
+}
+table.global.resv-table-small tbody tr td a,
+table.global.resv-table tbody tr td a {
+	color: var(--text);
+}
+table.global.resv-table-small tbody tr td a strong,
+table.global.resv-table-small tbody tr td .bold,
+table.global.resv-table tbody tr td a strong {
+	color: var(--gold);
+	font-weight: 700;
+}
+table.global.resv-table-small tbody tr td:nth-child(2) {
+	font-size: 17px;
+	font-weight: 700;
+	color: var(--text);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+table.global.resv-table-small tbody tr td:nth-child(3) {
+	color: var(--text);
+	white-space: nowrap;
+}
+table.global.resv-table-small tbody tr td.big {
+	font-size: 16px;
+	color: var(--gold);
+}
+table.global.resv-table-small tbody tr td.noprint select,
+.resv-table-small select.status_dbox {
+	font-size: 13px;
+	padding: 6px 8px;
+	width: auto;
+	min-width: 92px;
+}
+table.global.resv-table-small tfoot tr td,
+table.global.resv-table tfoot tr td {
+	font-size: 14px;
+	padding: 10px;
+	color: var(--text);
+}
+
+/* time-of-day marker at the start of a row */
+td.morning, td.afternoon, td.evening {
+	width: 6px;
+	padding: 0 !important;
+	border-bottom-color: transparent !important;
+	background-clip: content-box;
+	text-shadow: none;
+}
+.morning   { background: #d8c9a6; }
+.afternoon { background: var(--gold); }
+.evening   { background: #7a5c2e; }
+td.morning, td.afternoon, td.evening {
+	border-left: 4px solid transparent;
+	box-shadow: inset 4px 0 0 currentColor;
+}
+td.morning   { color: #d8c9a6; background: transparent; }
+td.afternoon { color: var(--gold); background: transparent; }
+td.evening   { color: #7a5c2e; background: transparent; }
+
+/* highlighted / special rows */
+.row-active {
+	background: rgba(143, 191, 122, 0.12) !important;
+}
+.waitlist-header {
+	background: rgba(226, 134, 124, 0.14);
+	color: var(--danger);
+}
+.tautologous {
+	color: var(--gold-strong) !important;
+}
+.grey {
+	color: var(--text-muted) !important;
+}
+
+/* weekly occupancy table */
+.bordered-table th,
+.bordered-table td {
+	font-size: 14px;
+	padding: 12px 14px;
+}
+table.global.resv-table-small tbody tr td small {
+	font-size: 12px;
+	color: var(--text-muted);
+	white-space: nowrap;
+}
+table.global.resv-table-small tbody tr td span {
+	font-size: inherit;
+}
+table.global.resv-table-small tbody tr td:nth-child(4),
+table.global.resv-table-small tbody tr td:nth-child(4) span {
+	font-size: 15px;
+}
+table.global.resv-table-small tbody tr td:nth-child(4) a,
+table.global.resv-table-small tbody tr td:nth-child(4) strong {
+	color: var(--gold);
+	font-weight: 700;
+}
+/* sun / moon icons in the weekly occupancy table */
+.bordered-table td img.middle {
+	width: 16px;
+	height: 16px;
+	padding: 0 3px 0 10px;
+	filter: brightness(1.4);
+}
+.bordered-table td strong {
+	font-size: 15px;
+	color: var(--gold);
+}

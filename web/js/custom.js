@@ -11,12 +11,13 @@ $(function(){
 		$('.popup').parent().find('a').removeClass('selected');
 	});
 	
+	// row hover via a class (was inline #f6f6f6 / #fff, which no stylesheet could override)
 	$('table.global tbody tr').mouseenter(function(){
-		$(this).css('background', '#f6f6f6');
+		$(this).addClass('row-hover');
 	});
-	
+
 	$('table.global tbody tr').mouseleave(function(){
-		$(this).css('background', '#ffffff');
+		$(this).removeClass('row-hover');
 	});
 	
 	$(window).resize(function() {
