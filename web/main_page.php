@@ -23,7 +23,7 @@ This file is part of mySeat.
 /** Login **/
 // ** set configuration
 	//Software version - http://github.com/apmuthu/myseat
-	$sw_version = 'v0.2170';
+	$sw_version = 'v0.2171';
 	
 	include('../config/config.general.php');
 	
@@ -147,6 +147,10 @@ echo "<body>";
 			}else{
 				redeclare_access();
 			}
+		break;
+		case '7':
+			// table plan (capability check is inside the page)
+			include('content/tableplan.page.php');
 		break;
 		case '101':
 			// outlet detail

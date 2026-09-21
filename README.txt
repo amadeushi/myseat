@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 0.2170                        =-=
+=-= Version: 0.2171                        =-=
 =-= Date:    21.09.2026                   =-=
 =-= Time:    18:30 GMT                    =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -29,11 +29,26 @@ News
 CHANGELOG
 =========
 
-Versions 0.2161 - 0.2170 are maintained in http://github.com/amadeushi/myseat.
-No database update is needed for any of them. Optional new settings for
+Versions 0.2161 - 0.2171 are maintained in http://github.com/amadeushi/myseat.
+No manual database update is needed for any of them (the table plan of v0.2171 creates its own
+tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-21 == mySeat v0.2171 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New backend page "Tischplan" (main_page.php?p=7), first step towards table based capacity:
+   administrators (Page-System) draw the floor plan of the outlet - add tables, drag them on a
+   10px grid, resize, rotate (0/45/90/135 degrees), round or rectangular, seats per table, and mark
+   which tables may be pushed together for larger parties. Reservation staff can view it
+ * An outlet has several areas (floors, terrace, ...), each with its own plan shown as a tab; areas
+   can be added, renamed, reordered and deleted (only when empty), tables can be moved between
+   areas, and tables can only be linked inside one area
+ * Storage in own tables tp_areas, tp_tables, tp_table_links, tp_reservation_tables, tp_settings (InnoDB,
+   created automatically); JSON endpoint web/ajax/tp.php with session, CSRF token and role checks
+   and prepared statements. Nothing changes for bookings yet - the existing counter based
+   availability stays active (assignment of reservations to tables follows in later versions)
 
 2026-09-21 == mySeat v0.2170 == amadeushi - http://github.com/amadeushi/myseat
 

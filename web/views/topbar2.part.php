@@ -12,6 +12,13 @@
 						<?php echo _dashboard; ?>	
 					</a>
 				</li>
+				<?php if ( current_user_can( 'Reservation-Edit' ) || current_user_can( 'Page-System' ) ): ?>
+				<li>
+					<a href="main_page.php?p=7" <?php if($_SESSION['page']=='7'){echo "class='active'";} ?> >
+						Tischplan
+					</a>
+				</li>
+				<?php endif ?>
 				<?php if ( current_user_can( 'Page-Statistic' ) ): ?>
 				<li>
 					<a href="main_page.php?p=3" <?php if($_SESSION['page']=='3'){echo "class='active'";} ?> >
