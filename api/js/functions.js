@@ -6,7 +6,7 @@ $(document).ready(function(){
     
     if($("#contactForm").length){
 
-		$("#contactForm").submit(function(){ 
+		$("#contactForm").on("submit", function(){ 
 		    var ContactForm = $(this),
 		    	errors = 0,
 		        loader = $("#loader"),
@@ -36,7 +36,7 @@ $(document).ready(function(){
 		    });
 		    //If there are no errors, send the form
 		    if(errors === 0){
-			$("#contactForm").submit();
+			ContactForm[0].submit();
 		    }else{
 		    	// else, nudge the incorrect fields
 		    	ContactForm.find(".notRight").each(function(){

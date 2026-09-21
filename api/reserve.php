@@ -218,9 +218,8 @@ if($check_web_outlet==1){
 	<link href="style/style.css?v=<?php echo @filemtime(__DIR__.'/style/style.css'); ?>" rel="stylesheet" type="text/css" />
 
     <!-- jQuery Library-->
-    <script src="js/jQuery.min.js" type="text/javascript"></script>
-    <script src="js/jquery.easing.1.3.js" type="text/javascript"></script>
-    <script src="js/jquery-ui.js" type="text/javascript"></script>
+    <script src="js/jquery-3.7.1.min.js" type="text/javascript"></script>
+    <script src="js/jquery-ui-1.13.3.min.js" type="text/javascript"></script>
     <script src="js/functions.js" type="text/javascript"></script>
 	<script src="../web/lang/jquery.ui.datepicker-<?php echo substr($_SESSION['lang'],0,2);?>.js" type="text/javascript"></script>
 
@@ -522,7 +521,7 @@ if ($hook->hook_exist( 'debug_online' )) {
 	     	$("#reservation_date").val("<?php echo _today; ?>");
 	     	<?php endif; ?>
 	     	$("#ui-datepicker-div").hide();
-	     	$("#reservation_outlet_id").change(function(){
+	     	$("#reservation_outlet_id").on("change", function(){
 	    		window.location.href='?propertyID=<?php echo $_SESSION['property'];?>&outletID=' + this.value;
 	  	 	});
 	
@@ -545,7 +544,7 @@ if ($hook->hook_exist( 'debug_online' )) {
 		}
 
 	 // +/- button for pax field  
-		$(".btn_pax").click(function() {
+		$(".btn_pax").on("click", function() {
 		    var $button = $(this);
 		    var oldValue = $button.parent().find("input").val();
   
@@ -564,7 +563,7 @@ if ($hook->hook_exist( 'debug_online' )) {
 		});
 
 		// party size can also always be typed in directly
-		$("#reservation_pax").change(function() {
+		$("#reservation_pax").on("change", function() {
 			var $input = $(this);
 			var newVal = parseInt($input.val(), 10);
 			if (isNaN(newVal) || newVal < 1) {
@@ -583,7 +582,7 @@ if ($hook->hook_exist( 'debug_online' )) {
 		// otherwise always land back on step 1 with every field emptied
 		var WIZARD_STATE_KEY = "myseat_wizard_state";
 
-		$(".lang-picker a").click(function() {
+		$(".lang-picker a").on("click", function() {
 			try {
 				var $checkedTime = $("input[name='reservation_time']:checked");
 				sessionStorage.setItem(WIZARD_STATE_KEY, JSON.stringify({
@@ -664,7 +663,7 @@ if ($hook->hook_exist( 'debug_online' )) {
 			}
 		}
 
-		$(".wizard-next").click(function() {
+		$(".wizard-next").on("click", function() {
 			var gotoStep = $(this).data("goto");
 			if (gotoStep == 2) {
 				// require a time slot before leaving step 1
@@ -677,13 +676,13 @@ if ($hook->hook_exist( 'debug_online' )) {
 			showWizardStep(gotoStep);
 		});
 
-		$(".wizard-back").click(function() {
+		$(".wizard-back").on("click", function() {
 			showWizardStep($(this).data("goto"));
 		});
 
 		// picking a time slot clears any pending "please choose a time" error
-		// (jQuery 1.4.4 predates .on(); .delegate() is its equivalent)
-		$(document).delegate("input[name='reservation_time']", "change", function() {
+		// (delegated, so slots re-rendered by the AJAX refresh keep working)
+		$(document).on("change", "input[name='reservation_time']", function() {
 			$("#timeslot-error").removeClass("wizard-error-visible");
 		});
 
