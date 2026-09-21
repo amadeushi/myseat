@@ -501,8 +501,8 @@ if ($hook->hook_exist( 'debug_online' )) {
       $("#reservation_date").datepicker({
 		  minDate: '0',
 		  maxDate: '+12M',      
-		  nextText: '&raquo;',
-	      prevText: '&laquo;',
+		  nextText: '»',
+	      prevText: '«',
 		  showOn: "focus",
 	      firstDay: 1,
 	      numberOfMonths: 1,

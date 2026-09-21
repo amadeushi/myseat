@@ -1487,6 +1487,17 @@ a.contact-item:hover svg {
 }
 
 /* jQuery UI datepicker — reskinned to match */
+/* the calendar is appended to <body>, outside .booking-shell, so the theme
+   variables have to be defined on it as well (otherwise it renders transparent) */
+#ui-datepicker-div {
+	--surface-2: #1c1a18;
+	--border: rgba(201, 164, 89, 0.22);
+	--gold: #c9a259;
+	--text: #f3ede1;
+	--text-muted: #a89e8c;
+	--font-body: 'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+	z-index: 1000 !important;
+}
 .ui-datepicker {
 	background: var(--surface-2);
 	border: 1px solid var(--border);

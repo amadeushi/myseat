@@ -3,9 +3,9 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 0.2169                        =-=
+=-= Version: 0.2170                        =-=
 =-= Date:    21.09.2026                   =-=
-=-= Time:    18:26 GMT                    =-=
+=-= Time:    18:30 GMT                    =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 
@@ -29,11 +29,18 @@ News
 CHANGELOG
 =========
 
-Versions 0.2161 - 0.2169 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 0.2170 are maintained in http://github.com/amadeushi/myseat.
 No database update is needed for any of them. Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-21 == mySeat v0.2170 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Online booking form: the datepicker showed "&laquo;" / "&raquo;" as text (jQuery UI 1.13 no
+   longer renders HTML in the arrow labels) and was transparent - its theme variables were only
+   defined inside .booking-shell, but the calendar is appended to <body>; they are now defined on
+   the calendar itself, which also lifts it above the time slots
 
 2026-09-21 == mySeat v0.2169 == amadeushi - http://github.com/amadeushi/myseat
 
