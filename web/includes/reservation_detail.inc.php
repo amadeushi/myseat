@@ -35,13 +35,13 @@
 			<p>
 				<?php echo $row->reservation_pax; ?>
 			</p>
-		    <label><?php echo _type; ?></label>
-			<p>
-					<?php echo getTypeList($row->reservation_hotelguest_yn,'disabled');?>
-		    </p>
-			<label><?php echo _phone_room; ?></label>
+			<label><?php echo rt('phone'); ?></label>
 			<p>
 				<?php echo $row->reservation_guest_phone; ?>
+			</p>
+			<label><?php echo rt('tables'); ?></label>
+			<p>
+				<?php $rsv_names = tp_assigned_table_names($row->reservation_id); echo $rsv_names !== '' ? htmlspecialchars($rsv_names) : htmlspecialchars((string)$row->reservation_table); ?>
 			</p>
 			<label><?php echo _note; ?></label>
 			<p>
@@ -59,14 +59,13 @@
 		 <div class="twocolumn form-height">
 		  <div class="content detailbig content-height">
 			<br/>
+			<?php // old fields (address, discount, parking, payment) are only shown when an old reservation still has data in them ?>
+			<?php if (trim($row->reservation_guest_adress) !== '' || trim($row->reservation_guest_city) !== ''): ?>
 			<label><?php echo _adress; ?></label>
 			<p>
-				<?php echo $row->reservation_guest_adress; ?>
+				<?php echo $row->reservation_guest_adress; ?><br/><?php echo $row->reservation_guest_city; ?>
 			</p>
-			<label><?php echo _area_code; ?></label>
-			<p>
-				<?php echo $row->reservation_guest_city; ?>
-			</p>
+			<?php endif; ?>
 			<label><?php echo _email; ?></label>
 			<p>
 				<?php
@@ -78,20 +77,19 @@
 					}
 				?>
 			</p>
-			<label><?php echo _discount; ?></label>
+			<?php if (!empty($row->reservation_discount) || !empty($row->reservation_parkticket)): ?>
+			<label><?php echo _discount; ?> / <?php echo _parking; ?></label>
 			<p>
-				<?php echo $row->reservation_discount; ?>
+				<?php echo $row->reservation_discount; ?> / <?php echo $row->reservation_parkticket; ?>
 			</p>
-			<label><?php echo _parking; ?></label>
-			<p>
-				<?php echo $row->reservation_parkticket; ?>
-			</p>
+			<?php endif; ?>
 			<!-- <label><?php echo _table; ?></label>
 				 <p>
 					<?php echo $row->reservation_table; ?>
 				 </p>
 			-->
 
+			<?php $rsv_has_pay = ($row->reservation_bill_paid || $row->reservation_billet_sent || (trim((string)$row->reservation_bill) !== '' && strtolower(trim((string)$row->reservation_bill)) !== 'mail')); if ($rsv_has_pay): ?>
 			<label><?php echo _payment; ?></label>
 			<p>
 				<span class="width-250">
@@ -115,6 +113,7 @@
 			<p>
 				<?php getPaidList($row->reservation_bill,'disabled');?>
 			</p>
+			<?php endif; ?>
 			<label><?php echo _multi_booking; ?></label>
 			<p>
 				<?php echo $row->start_date;?>

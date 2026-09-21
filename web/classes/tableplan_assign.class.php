@@ -527,3 +527,46 @@ function tp_online_day_block_reason($outlet_id, $date) {
 	if (function_exists('ob_is_blocked') && ob_is_blocked($outlet_id, $date)) { return 'Online-Reservierungen sind für diesen Tag gesperrt.'; }
 	return null;
 }
+
+/*
+ * The tables of an outlet as offered in the reservation form for a date, time and party size:
+ * state 'free', 'busy' (taken within the stay of another reservation) or 'closed' (area closed
+ * that day), plus the automatic suggestion. $exclude_res is the reservation being edited.
+ */
+function tp_table_options($outlet_id, $date, $time, $pax, $exclude_res = 0) {
+	$ctx = tp_day_context($outlet_id, $date);
+	$min = ($time !== '') ? tp_ctx_min($ctx, $time) : null;
+	$areas = tp_list_areas($outlet_id);
+	$order = array();
+	foreach ($areas as $i => $a) { $order[(int)$a['area_id']] = $i; }
+	$out = array();
+	foreach ($ctx['tables'] as $tid => $t) {
+		if (!(int)$t['active']) { continue; }
+		$state = 'free'; $by = '';
+		if (isset($ctx['closed'][(int)$t['area_id']])) {
+			$state = 'closed';
+		} elseif ($min !== null && isset($ctx['occ'][$tid])) {
+			foreach ($ctx['occ'][$tid] as $rid) {
+				if ($rid === (int)$exclude_res || !isset($ctx['res'][$rid])) { continue; }
+				if (tp_overlaps($min, $ctx['res'][$rid]['min'], $ctx['dur'])) {
+					$state = 'busy'; $by = $ctx['res'][$rid]['time'].' '.$ctx['res'][$rid]['name']; break;
+				}
+			}
+		}
+		$out[] = array('table_id' => (int)$tid, 'name' => $t['table_name'], 'seats' => (int)$t['seats'],
+			'area_id' => (int)$t['area_id'], 'state' => $state, 'by' => $by);
+	}
+	usort($out, function ($a, $b) use ($order) {
+		$oa = isset($order[$a['area_id']]) ? $order[$a['area_id']] : 99;
+		$ob = isset($order[$b['area_id']]) ? $order[$b['area_id']] : 99;
+		return ($oa <=> $ob) ?: strnatcasecmp($a['name'], $b['name']);
+	});
+	$auto = array();
+	if ($min !== null && (int)$pax > 0 && $out) {
+		$v = tp_virtual_ctx($outlet_id, $date);
+		$found = tp_find_tables($v, (int)$exclude_res, (int)$pax, tp_ctx_min($v, $time));
+		if ($found) { $auto = array_values($found); }
+	}
+	return array('areas' => array_map(function ($a) { return array('area_id' => (int)$a['area_id'], 'area_name' => $a['area_name']); }, $areas),
+		'tables' => $out, 'auto' => $auto, 'dur' => $ctx['dur']);
+}

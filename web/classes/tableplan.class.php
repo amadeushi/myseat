@@ -339,3 +339,13 @@ function tp_table_cell($reservation_id, $free_text, $date) {
 	}
 	return "<a class='tp-tablelabel' href='main_page.php?p=7&selectedDate=".htmlspecialchars($date)."' title='Tischplan'>".htmlspecialchars($names)."</a>";
 }
+
+// ids of the tables a reservation is assigned to (for the edit form), never throws
+function tp_assigned_table_ids($reservation_id) {
+	try {
+		$rows = tp_rows("SELECT `table_id` FROM ".tp_t('reservation_tables')." WHERE `reservation_id` = ?", 'i', array((int)$reservation_id));
+		return array_map(function ($r) { return (int)$r['table_id']; }, $rows);
+	} catch (Throwable $e) {
+		return array();
+	}
+}

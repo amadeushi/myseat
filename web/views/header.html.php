@@ -31,6 +31,9 @@
 <link rel="stylesheet" href="js/fancybox/jquery.fancybox-1.3.0.css" type="text/css" media="screen"/>
 <!-- dark/gold theme, must come last -->
 <link rel="stylesheet" href="css/theme-dark.css?v=<?php echo @filemtime(__DIR__.'/../css/theme-dark.css'); ?>" type="text/css" media="screen"/>
+<?php if (isset($_SESSION['page']) && ($_SESSION['page'] == 2 || $_SESSION['page'] == 102)): ?>
+<link rel="stylesheet" href="css/resform.css?v=<?php echo @filemtime(__DIR__.'/../css/resform.css'); ?>" type="text/css" media="screen"/>
+<?php endif; ?>
 <?php if (isset($_SESSION['page']) && $_SESSION['page'] == 7): ?>
 <link rel="stylesheet" href="css/tableplan.css?v=<?php echo @filemtime(__DIR__.'/../css/tableplan.css'); ?>" type="text/css" media="screen"/>
 <?php endif; ?>

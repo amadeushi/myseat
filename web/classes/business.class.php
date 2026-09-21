@@ -638,6 +638,81 @@ function daytimeSums($outlet_id, $date) {
 	return array($noon, $evening);
 }
 
+// is this a plausible phone number? (empty is fine - the field is optional)
+// digits, spaces, + ( ) - / . allowed, 6 to 15 digits, a "+" only at the start
+function validPhone($value) {
+	$v = trim((string)$value);
+	if ($v === '') { return true; }
+	if (!preg_match('/^\+?[0-9\s().\/\-]+$/', $v)) { return false; }
+	$digits = preg_replace('/\D/', '', $v);
+	return strlen($digits) >= 6 && strlen($digits) <= 15;
+}
+
+// texts of the reservation form (German / English, every other language falls back to English)
+function rt($key, $arg = null) {
+	static $tr = null;
+	if ($tr === null) {
+		$tr = array(
+			'de' => array(
+				'date' => 'Datum', 'time' => 'Zeit', 'pax' => 'Personen', 'name' => 'Name', 'phone' => 'Telefon',
+				'phone_bad' => 'Bitte eine gültige Telefonnummer eingeben (z. B. +49 151 2345678 oder 0512 1234567).',
+				'phone_hint' => 'optional, wird auf Gültigkeit geprüft',
+				'email_bad' => 'Bitte eine gültige E-Mail-Adresse eingeben.',
+				'email_confirm' => 'Bestätigung per E-Mail senden',
+				'email_need' => 'Für die Bestätigung bitte eine E-Mail-Adresse eintragen.',
+				'note' => 'Notiz', 'tables' => 'Tisch',
+				'tables_auto' => 'Ohne Auswahl wird automatisch ein passender Tisch zugewiesen.',
+				'tables_suggest' => 'Vorschlag',
+				'tables_none' => 'Im Tischplan sind noch keine Tische angelegt.',
+				'tables_pick_time' => 'Bitte zuerst eine Uhrzeit wählen.',
+				'tables_loading' => 'Lade Tische …',
+				'all_areas' => 'Alle Bereiche', 'free' => 'Verfügbar', 'all' => 'Alle',
+				'fit_ok' => 'Die Auswahl passt für die Gruppe.',
+				'fit_seats' => '%d Plätze für die Gruppe – bitte mehr Tische wählen oder bewusst überbuchen.',
+				'fit_busy' => 'Achtung: mindestens ein gewählter Tisch ist zu dieser Zeit schon vergeben.',
+				'closed_area' => 'Bereich an diesem Tag gesperrt',
+				'busy_by' => 'belegt',
+				'details' => 'Details', 'title' => 'Anrede', 'email' => 'E-Mail', 'staff' => 'Mitarbeiter',
+				'series' => 'Serienreservierung', 'series_until' => 'Wiederholen bis',
+				'daily' => 'täglich', 'weekly' => 'wöchentlich',
+				'need_time' => 'Bitte eine Uhrzeit wählen.', 'need_name' => 'Bitte den Namen des Gastes eintragen.',
+				'need_pax' => 'Bitte die Personenzahl eintragen.', 'need_staff' => 'Bitte den Mitarbeiter eintragen.',
+				'save' => 'Speichern', 'more' => 'Mehr Gäste', 'less' => 'Weniger Gäste',
+			),
+			'en' => array(
+				'date' => 'Date', 'time' => 'Time', 'pax' => 'Guests', 'name' => 'Name', 'phone' => 'Phone',
+				'phone_bad' => 'Please enter a valid phone number (e.g. +49 151 2345678 or 0512 1234567).',
+				'phone_hint' => 'optional, checked for validity',
+				'email_bad' => 'Please enter a valid email address.',
+				'email_confirm' => 'Send confirmation by email',
+				'email_need' => 'Please enter an email address for the confirmation.',
+				'note' => 'Note', 'tables' => 'Table',
+				'tables_auto' => 'Without a selection a suitable table is assigned automatically.',
+				'tables_suggest' => 'Suggestion',
+				'tables_none' => 'No tables have been created in the table plan yet.',
+				'tables_pick_time' => 'Please choose a time first.',
+				'tables_loading' => 'Loading tables …',
+				'all_areas' => 'All areas', 'free' => 'Available', 'all' => 'All',
+				'fit_ok' => 'The selection fits the group.',
+				'fit_seats' => '%d seats for the group – please pick more tables or overbook on purpose.',
+				'fit_busy' => 'Attention: at least one selected table is already taken at this time.',
+				'closed_area' => 'Area closed on this day',
+				'busy_by' => 'taken',
+				'details' => 'Details', 'title' => 'Title', 'email' => 'Email', 'staff' => 'Staff member',
+				'series' => 'Recurring reservation', 'series_until' => 'Repeat until',
+				'daily' => 'daily', 'weekly' => 'weekly',
+				'need_time' => 'Please choose a time.', 'need_name' => 'Please enter the guest name.',
+				'need_pax' => 'Please enter the number of guests.', 'need_staff' => 'Please enter the staff member.',
+				'save' => 'Save', 'more' => 'More guests', 'less' => 'Fewer guests',
+			),
+		);
+	}
+	$lang = isset($_SESSION['language']) ? substr($_SESSION['language'], 0, 2) : 'de';
+	$set = ($lang === 'de') ? $tr['de'] : $tr['en'];
+	$text = isset($set[$key]) ? $set[$key] : $key;
+	return ($arg !== null) ? sprintf($text, $arg) : $text;
+}
+
 /*
  * Crisp vector icons for the backend (replace the old pixel images).
  * uiIcon('pen', array('title' => 'Edit', 'class' => 'help', 'alt' => 'Edit'))

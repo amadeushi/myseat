@@ -51,6 +51,18 @@
  // (0 = allow bookings up to the closing time itself)
  $settings['lastBookingMinutes'] = 60;
 
+ // link of the online booking form to the terms / privacy page of the restaurant (full address,
+ // opens in a new tab); empty = the consent text is shown without a link
+ $settings['termsLink'] = '';
+
+ // booking mails (web/classes/booking_mail.class.php): imprint data for the footer, one line per
+ // line, and the links to imprint and privacy page; mailPhone = phone number as it should read in
+ // the mail. Empty = data of the property record of the system is used.
+ $settings['mailLegal']  = '';
+ $settings['imprintUrl'] = '';
+ $settings['privacyUrl'] = '';
+ $settings['mailPhone']  = '';
+
 // ** Daylight settings
  // ** noon time
  $daylight_noon = '12:00';

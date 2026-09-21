@@ -90,7 +90,11 @@ function email_send_conf() {
 			
 			//Salutation
 			if ( $_SESSION['form']['email_type'] == 'en' ) {
-				switch ($_SESSION['form']['reservation_title']) {
+				switch (isset($_SESSION['form']['reservation_title']) ? $_SESSION['form']['reservation_title'] : '') {
+					case '':
+						// no title asked (booking form without it): neutral greeting
+						$salut = "Hello ".$_SESSION['form']['reservation_guest_name'];
+						break;
 					case 'W':
 						$salut = _dear_mrs_en." ".$_SESSION['form']['reservation_guest_name'];
 						break;	
@@ -104,7 +108,11 @@ function email_send_conf() {
 						$salut = _dear_mr_en." ".$_SESSION['form']['reservation_guest_name'];	
 				}
 			}else{
-				switch ($_SESSION['form']['reservation_title']) {
+				switch (isset($_SESSION['form']['reservation_title']) ? $_SESSION['form']['reservation_title'] : '') {
+					case '':
+						// no title asked (booking form without it): neutral greeting
+						$salut = "Guten Tag ".$_SESSION['form']['reservation_guest_name'];
+						break;
 					case 'W':
 						$salut = _dear_mrs." ".$_SESSION['form']['reservation_guest_name'];
 						break;	

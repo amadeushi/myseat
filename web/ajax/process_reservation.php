@@ -54,6 +54,32 @@ if($_SESSION['selOutlet']['limit_password']!=""){
 }
 
 
+// a phone number / email address that was typed in must be plausible, and a confirmation mail
+// needs an address (the form checks this too)
+$rsv_email = isset($_POST['reservation_guest_email']) ? trim(html_entity_decode($_POST['reservation_guest_email'], ENT_QUOTES, 'UTF-8')) : '';
+$rsv_error = '';
+if (isset($_POST['reservation_guest_phone']) && !validPhone(html_entity_decode($_POST['reservation_guest_phone'], ENT_QUOTES, 'UTF-8'))) {
+	$rsv_error = rt('phone_bad');
+} elseif ($rsv_email !== '' && !filter_var($rsv_email, FILTER_VALIDATE_EMAIL)) {
+	$rsv_error = rt('email_bad');
+} elseif (isset($_POST['email_type']) && $_POST['email_type'] !== 'no' && $rsv_email === '') {
+	$rsv_error = rt('email_need');
+}
+if ($rsv_error !== '') {
+	$_SESSION['errors'] = array($rsv_error);
+	$_SESSION['token'] = md5(uniqid(rand(), true));
+	header("Location: ../main_page.php?p=2&q=".(empty($_POST['reservation_id']) ? '2' : '1')."&selectedDate=".$_SESSION['selectedDate']);
+	exit;
+}
+
+// columns of the reservations table that the forms may write (form field names are never
+// used as column names unchecked)
+$allowed_cols = array('reservation_id', 'reservation_outlet_id', 'reservation_date', 'reservation_time', 'reservation_title',
+	'reservation_guest_name', 'reservation_guest_adress', 'reservation_guest_city', 'reservation_guest_email',
+	'reservation_guest_phone', 'reservation_pax', 'reservation_hotelguest_yn', 'reservation_notes', 'reservation_booker_name',
+	'reservation_timestamp', 'reservation_ip', 'reservation_discount', 'reservation_parkticket', 'reservation_bill',
+	'reservation_bill_paid', 'reservation_billet_sent', 'reservation_advertise', 'repeat_id', 'reservation_status', 'reservation_table');
+
 // CSRF - Secure forms with token and limit password
 if ($_SESSION['token'] == $_POST['token'] && $compare_pass > 0 ) {
 	// submitted forms storage
@@ -72,6 +98,8 @@ if ($_SESSION['token'] == $_POST['token'] && $compare_pass > 0 ) {
 		
 		// prepare arrays for database query
 		foreach($_POST as $key => $value) {
+			// only known reservation columns (and the recurring end date) are taken from the form
+			if (!in_array($key, $allowed_cols, true) && $key !== 'recurring_dbdate') { continue; }
 			if($key == 'password'){
 				if($value != "EdituseR"){
 					$keys[$i] = $key;
@@ -264,10 +292,24 @@ if ($_SESSION['token'] == $_POST['token'] && $compare_pass > 0 ) {
 			// store changes in history
 			$result = query("INSERT INTO `$dbTables->res_history` (reservation_id,author) VALUES ('%d','%s')",$history_id,$_POST['reservation_booker_name']);
 
-			// table plan: put a new reservation on a table (optional, never breaks the booking)
-			if (!empty($new_id) && is_file(__DIR__.'/../classes/tableplan_assign.class.php')) {
+			// table plan: tables chosen in the form (first reservation of a series / the edited one),
+			// otherwise put a new reservation on a table automatically (never breaks the booking)
+			if (is_file(__DIR__.'/../classes/tableplan_assign.class.php')) {
 				require_once(__DIR__.'/../classes/tableplan_assign.class.php');
-				tp_hook_after_booking((int)$new_id);
+				try {
+					$target_id = !empty($_POST['reservation_id']) ? (int)$_POST['reservation_id'] : (int)$new_id;
+					$pick = (isset($_POST['tp_tables']) && is_array($_POST['tp_tables'])) ? array_map('intval', $_POST['tp_tables']) : array();
+					// a new reservation without a choice is placed automatically; when editing, an empty choice removes the tables
+					if (!empty($_POST['tp_tables_sent']) && $target_id && empty($tables_done) && ($pick || !empty($_POST['reservation_id']))) {
+						$res = tp_assign((int)$_SESSION['outletID'], $target_id, $pick, true);
+						if (empty($res['ok'])) { $_SESSION['errors'][] = isset($res['error']) ? $res['error'] : 'Tischzuweisung nicht möglich'; }
+						$tables_done = true;
+					} elseif (!empty($new_id) && empty($_POST['reservation_id'])) {
+						tp_hook_after_booking((int)$new_id);
+					}
+				} catch (Throwable $e) {
+					// the assignment is optional
+				}
 			}
 
 			// -----

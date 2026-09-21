@@ -37,7 +37,7 @@ $sent  = isset($_SERVER['HTTP_X_TP_TOKEN']) ? $_SERVER['HTTP_X_TP_TOKEN'] : '';
 if ($token === '' || !hash_equals($token, $sent)) {
 	tp_fail('Ungültiges Token - Seite neu laden', 403);
 }
-if (!current_user_can('Reservation-Edit') && !current_user_can('Page-System')) {
+if (!current_user_can('Reservation-Edit') && !current_user_can('Page-System') && !current_user_can('Reservation-New')) {
 	tp_fail('Keine Berechtigung', 403);
 }
 $can_edit_plan = (bool)current_user_can('Page-System');
@@ -153,6 +153,15 @@ switch ($action) {
 			tp_set_setting('availability_mode', $mode);
 		}
 		tp_out(array('ok' => true, 'autoAssign' => tp_get_setting('auto_assign', '1') === '1', 'availabilityMode' => tp_availability_mode()));
+
+	case 'free_tables':
+		$date = isset($data['date']) ? (string)$data['date'] : '';
+		$time = isset($data['time']) ? (string)$data['time'] : '';
+		if (!tp_is_date($date) || ($time !== '' && !preg_match('/^\d{1,2}:\d{2}(:\d{2})?$/', $time))) {
+			tp_fail('Ungültige Angaben');
+		}
+		tp_out(array('ok' => true) + tp_table_options($outlet_id, $date, substr($time, 0, 5), isset($data['pax']) ? (int)$data['pax'] : 0,
+			isset($data['reservation_id']) ? (int)$data['reservation_id'] : 0));
 
 	case 'preview':
 		$date = isset($data['date']) ? (string)$data['date'] : '';

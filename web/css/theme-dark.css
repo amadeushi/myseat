@@ -1195,3 +1195,18 @@ select.status_dbox:not([multiple]) option.st-DEP, select.status_dbox:not([multip
 select.status_dbox:not([multiple]) option.st-NSW, select.status_dbox:not([multiple]) option.st-NSW:hover, select.status_dbox:not([multiple]) option.st-NSW:checked { color: #9ba6c0; }
 select.status_dbox:not([multiple]) option:checked { background: rgba(243, 237, 225, 0.06); }
 select.status_dbox:not([multiple]) option::checkmark { display: inline-block; order: 2; margin-left: auto; padding-left: 16px; content: '✓'; color: var(--text-muted); font-size: 16px; }
+
+/* ---- small screens: the backend pages follow the window width ---- */
+@media screen and (max-width: 940px) {
+	.container { width: auto; padding: 0 12px; box-sizing: border-box; }
+	.topbar { height: auto; padding-bottom: 6px; }
+	.topbar .container:after { content: ''; display: block; clear: both; }
+	.topbar .brand { float: none; display: block; padding: 6px 0 0; }
+	.topbar ul.nav, .topbar div > ul.nav { float: none; display: flex; flex-wrap: wrap; margin: 0 0 4px; font-size: 1.05em; }
+	.topbar ul.nav > li { float: none; }
+	.topbar form { float: none; display: flex; align-items: center; gap: 10px; margin: 4px 0 0; }
+	.topbar input#searchquery { width: min(220px, 60vw); }
+	#wrapper { margin-left: 8px; margin-right: 8px; }
+	#content_wrapper { min-width: 0; margin-left: 0; margin-right: 0; }
+	.onecolumn .header { flex-wrap: wrap; }
+}

@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 0.2183                        =-=
+=-= Version: 0.2186                        =-=
 =-= Date:    21.09.2026                   =-=
 =-= Time:    18:30 GMT                    =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -29,12 +29,69 @@ News
 CHANGELOG
 =========
 
-Versions 0.2161 - 0.2183 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 0.2186 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-21 == mySeat v0.2186 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Booking mails rewritten (web/classes/booking_mail.class.php, used by the active plugin
+   local_email_send): friendly "du" text in German and English (English when the guest used the
+   English form), subject with weekday, date and time, a clear reservation box (date, time, guests,
+   booking number, the guest's note), one-click cancel link, contact line, a real sign-off. No images
+   (no logo, dividers or background images) and no attachments (the old code tried to attach
+   /data/*.pdf menus that do not exist). The notification mail for the restaurant has a useful
+   subject ("Neue Reservierung: name, guests, date, time") and readable lines
+ * Legal footer of the mail from config/config.general.php: $settings['mailLegal'] (imprint lines),
+   ['imprintUrl'], ['privacyUrl'], ['mailPhone']; empty = property data of the system. Filled for
+   Amadeus from https://www.amadeus-hildesheim.de/impressum.html
+ * Technical: the text part contained HTML (<br />, &auml;) - now proper plain text; subject and
+   sender name are RFC 2047 encoded (umlauts in the subject were sent raw), both parts are UTF-8
+   base64; values of the forms are cleaned of SQL/HTML escaping (backslashes, \n, entities); a mail
+   error can no longer break a booking; the salutation by title ("Sehr geehrter Herr ...") is gone
+   in the mail
+
+2026-09-21 == mySeat v0.2185 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Online booking form: the title ("Anrede") is no longer asked. The confirmation mails (both
+   mail plugins) greet with "Guten Tag <name>" / "Hello <name>" when there is no title; before,
+   every guest without a title got "Sehr geehrter Herr ...". Existing titles still work
+ * Online booking form: the arrow icon behind the consent text is gone. The consent text links to
+   the terms / privacy page of the restaurant when $settings['termsLink'] is set in
+   config/config.general.php (full https address, opens in a new tab); without it the text has no
+   link. Before, the link was hard-coded to the terms of the original mySeat project
+   (myseat.us/terms.htm)
+
+2026-09-21 == mySeat v0.2184 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New reservation form (backend) redesigned and simplified: date, time, guests, name, phone,
+   email, note and a table picker on one page; everything else sits under "Details" (advertising
+   consent, staff member - prefilled with the logged in user -, recurring booking). The title
+   ("Anrede") is no longer asked. Email: the confirmation mail is an opt-in checkbox ("Bestätigung
+   per E-Mail senden", off by default, only active with a valid address); there is no choice of
+   language any more, the mail goes out in the local language (German). The address is checked
+   in the browser and on the server. Guest type (house guest / passer-by / walk-in) is no longer asked (stored
+   as PASS, like the online form). The old fields address, postcode/city, discount ("GdH"),
+   parking, paid and paid by are gone from the new and the edit form; their data in old
+   reservations is kept and shown in the detail view only when a reservation has values there
+ * Phone: "Telefon/Zimmer" is now "Telefon" and is checked (digits, + ( ) - / . and spaces,
+   6 - 15 digits) in the browser and again on the server; empty is allowed
+ * Table picker: chips of the tables of the table plan for the chosen day and time, with
+   seats, area filter, "available / all", closed areas and taken tables marked; several tables
+   per reservation; tables that fit the group are outlined, the automatic suggestion is dashed;
+   the message under the chips warns about too few seats or a taken table (a manual choice may
+   overrule it, like in the table plan). Without a choice a new reservation is placed
+   automatically. The edit form has the same picker with the current tables preselected;
+   removing all tables there clears the assignment. For a recurring booking only the first day
+   gets the chosen tables, the others are placed automatically
+ * Responsive: the form is a grid that goes to one column on phones with a fixed save bar, and
+   the backend top bar and page container follow the window width below 940px
+ * Security: ajax/process_reservation.php only writes known reservation columns (form field
+   names were used as column names before); tp.php lets the "new reservation" right read the
+   table list (action free_tables)
 
 2026-09-21 == mySeat v0.2183 == amadeushi - http://github.com/amadeushi/myseat
 

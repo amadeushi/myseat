@@ -35,13 +35,9 @@ header('P3P: CP="IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CN
 // 'radio': radio buttons; 'drop': select box 
 $time_selector = "radio";
 
-//link to terms&condition page
-// Your license
-//$terms_link = "http://www.mysite.com/license.html";
-// mySeat license
-$terms_link = "http://www.myseat.us/terms.htm";
-// GNU license
-//$terms_link = "http://www.gnu.org/licenses/gpl-3.0.txt";
+// link to the terms / privacy page of the restaurant: $settings['termsLink'] in config.general.php
+// (full https address). Without it the consent text of the form is shown without a link.
+$terms_link = (isset($settings['termsLink']) && preg_match('#^https?://#i', trim($settings['termsLink']))) ? trim($settings['termsLink']) : '';
 
 // END settings
 
@@ -413,20 +409,6 @@ if($check_web_outlet==1){
 				</div>
 
 				<div class="field">
-					<label><?php echo _title; ?></label>
-					<?php
-						$title = '';
-						 if (isset($me)) {
-						 	if ( $me['gender']=='male' ) {
-								$title = 'M';
-						 	}else if ( $me['gender']=='female' ) {
-								$title = 'F';
-						 	}
-						 }
-					    titleList($title);
-					?>
-				</div>
-				<div class="field">
 					<label><?php echo _name; ?></label>
 					<input type="text" name="reservation_guest_name" class="required" id="reservation_guest_name" value="<?php if(isset($me['last_name'])){echo $me['last_name'].", ".$me['first_name'];} ?>" />
 				</div>
@@ -447,8 +429,9 @@ if($check_web_outlet==1){
 					<label class="checkbox-row">
 						<input type="checkbox" name="terms" class="required checkbox" id="terms" value="YES" checked="checked"/>
 						<span class="checktext">
-							<?php echo _reservation_terms; ?>
-							&nbsp;<a href="<?php echo $terms_link;?>" target="_blank" onclick="window.open(this.href, this.target, 'width=700,height=700'); return false;">↗</a>
+							<?php if ($terms_link !== ''): ?>
+							<a href="<?php echo htmlspecialchars($terms_link); ?>" target="_blank" rel="noopener noreferrer"><?php echo _reservation_terms; ?></a>
+							<?php else: echo _reservation_terms; endif; ?>
 						</span>
 					</label>
 				</div>
@@ -589,7 +572,6 @@ if ($hook->hook_exist( 'debug_online' )) {
 					step: $(".wizard-step:not(.wizard-step-hidden)").data("step") || 1,
 					time: $checkedTime.length ? $checkedTime.val() : "",
 					notes: $("#reservation_notes").val(),
-					title: $("#reservation_title").val(),
 					name: $("#reservation_guest_name").val(),
 					email: $("#reservation_guest_email").val(),
 					phone: $("#reservation_guest_phone").val(),
@@ -618,9 +600,6 @@ if ($hook->hook_exist( 'debug_online' )) {
 				return;
 			}
 			$("#reservation_notes").val(saved.notes || "");
-			if (saved.title) {
-				$("#reservation_title").val(saved.title);
-			}
 			$("#reservation_guest_name").val(saved.name || "");
 			$("#reservation_guest_email").val(saved.email || "");
 			$("#reservation_guest_phone").val(saved.phone || "");
