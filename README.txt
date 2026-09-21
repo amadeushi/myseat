@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 0.2171                        =-=
+=-= Version: 0.2172                        =-=
 =-= Date:    21.09.2026                   =-=
 =-= Time:    18:30 GMT                    =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -29,12 +29,31 @@ News
 CHANGELOG
 =========
 
-Versions 0.2161 - 0.2171 are maintained in http://github.com/amadeushi/myseat.
-No manual database update is needed for any of them (the table plan of v0.2171 creates its own
+Versions 0.2161 - 0.2172 are maintained in http://github.com/amadeushi/myseat.
+No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-21 == mySeat v0.2172 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Table plan: day view with the reservations of a date (date navigation, "occupancy at time"
+   filter). Assign a reservation to one or more tables by clicking tables or dragging the
+   reservation card onto a table; a table can be given to several reservations at different
+   times. Conflicts (capacity too small, table taken within the average stay of the outlet)
+   are shown and can be overridden after a confirmation; closed areas can not be used.
+   Cancelled, waiting-list, departed and no-show reservations are ignored
+ * Automatic assignment (best fit: smallest free table that is big enough, otherwise tables
+   that were marked as linkable, up to four): button for the whole day, per reservation, and
+   for every new booking (online form and backend form; setting "automatically assign new
+   reservations" in the plan editor, on by default). The hook can never break a booking.
+   Parties that fit nowhere stay unassigned and are marked in the list
+ * Area closures ("Sperrzeiten"): an area can be closed for a date range, open ended, and
+   optionally repeating every year (e.g. terrace 30.09. - 01.03.) without deleting it. Closed
+   areas are marked on the tab and skipped by the automatic assignment
+ * New table tp_area_closures (created automatically). Online availability still uses the
+   old counter logic; switching it to table capacity is planned for a later version
 
 2026-09-21 == mySeat v0.2171 == amadeushi - http://github.com/amadeushi/myseat
 

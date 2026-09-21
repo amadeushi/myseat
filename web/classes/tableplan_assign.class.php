@@ -1,0 +1,379 @@
+<?php
+/*
+ * Table plan (Tischplan): area closures, day view of reservations, table assignment and
+ * automatic assignment. Builds on tableplan.class.php. None of this changes how bookings are
+ * accepted - assignments only describe where a reservation sits.
+ *
+ * "Active" reservations are the ones the counter based availability also counts:
+ * not hidden (cancelled), not on the waiting list, not departed (DEP) or no-show (NSW).
+ */
+require_once __DIR__ . '/tableplan.class.php';
+
+function tp_res_table() {
+	global $dbTables;
+	return '`'.$dbTables->reservations.'`';
+}
+
+function tp_outlets_table() {
+	global $dbTables;
+	return '`'.$dbTables->outlets.'`';
+}
+
+function tp_is_date($s) {
+	if (!is_string($s) || !preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $s, $m)) {
+		return false;
+	}
+	return checkdate((int)$m[2], (int)$m[3], (int)$m[1]);
+}
+
+function tp_min($time) {
+	$p = explode(':', (string)$time);
+	return ((int)$p[0]) * 60 + (isset($p[1]) ? (int)$p[1] : 0);
+}
+
+// average stay of the outlet in minutes ("2:00" -> 120), 120 when unknown
+function tp_duration_minutes($outlet_id) {
+	$r = tp_rows("SELECT `avg_duration` FROM ".tp_outlets_table()." WHERE `outlet_id` = ?", 'i', array((int)$outlet_id));
+	$m = $r ? tp_min($r[0]['avg_duration']) : 0;
+	return $m > 0 ? $m : 120;
+}
+
+/* ---------------------------------------------------------------- area closures */
+
+function tp_ensure_closure_schema() {
+	static $done = false;
+	if ($done) { return; }
+	tp_ensure_schema();
+	mysqli_query(tp_db(), "CREATE TABLE IF NOT EXISTS ".tp_t('area_closures')." (
+		`closure_id` INT NOT NULL AUTO_INCREMENT,
+		`area_id` INT NOT NULL,
+		`date_from` DATE NOT NULL,
+		`date_to` DATE NULL,
+		`yearly` TINYINT NOT NULL DEFAULT 0,
+		`note` VARCHAR(80) NOT NULL DEFAULT '',
+		PRIMARY KEY (`closure_id`),
+		KEY `area_id` (`area_id`)
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+	$done = true;
+}
+
+function tp_list_closures($outlet_id) {
+	tp_ensure_closure_schema();
+	return tp_rows("SELECT c.`closure_id`,c.`area_id`,c.`date_from`,c.`date_to`,c.`yearly`,c.`note`
+		FROM ".tp_t('area_closures')." c JOIN ".tp_t('areas')." a ON a.`area_id` = c.`area_id`
+		WHERE a.`outlet_id` = ? ORDER BY c.`date_from`,c.`closure_id`", 'i', array((int)$outlet_id));
+}
+
+// does the closure cover the date? yearly closures repeat every year on the same month/day window
+function tp_closure_hits($c, $date) {
+	if ($date < $c['date_from']) {
+		return false;
+	}
+	if ($c['date_to'] === null || $c['date_to'] === '') {
+		return true;
+	}
+	if (!(int)$c['yearly']) {
+		return $date <= $c['date_to'];
+	}
+	$md = substr($date, 5);
+	$f  = substr($c['date_from'], 5);
+	$t  = substr($c['date_to'], 5);
+	return $f <= $t ? ($md >= $f && $md <= $t) : ($md >= $f || $md <= $t);
+}
+
+// ids of the areas that are closed on a date
+function tp_closed_area_ids($outlet_id, $date) {
+	$out = array();
+	foreach (tp_list_closures($outlet_id) as $c) {
+		if (tp_closure_hits($c, $date)) {
+			$out[(int)$c['area_id']] = true;
+		}
+	}
+	return array_keys($out);
+}
+
+// returns the saved closure row or false
+function tp_save_closure($outlet_id, $d) {
+	tp_ensure_closure_schema();
+	$area_id = isset($d['area_id']) ? (int)$d['area_id'] : 0;
+	$from = isset($d['date_from']) ? (string)$d['date_from'] : '';
+	$to   = isset($d['date_to']) ? (string)$d['date_to'] : '';
+	if (!tp_owns_area($outlet_id, $area_id) || !tp_is_date($from)) {
+		return false;
+	}
+	if ($to !== '' && (!tp_is_date($to) || $to < $from)) {
+		return false;
+	}
+	$yearly = (!empty($d['yearly']) && $to !== '') ? 1 : 0;
+	$note = mb_substr(trim(isset($d['note']) ? (string)$d['note'] : ''), 0, 80);
+	$st = tp_exec("INSERT INTO ".tp_t('area_closures')." (`area_id`,`date_from`,`date_to`,`yearly`,`note`) VALUES (?,?,NULLIF(?,''),?,?)",
+		'issis', array($area_id, $from, $to, $yearly, $note));
+	if (!$st) { return false; }
+	$id = mysqli_stmt_insert_id($st);
+	mysqli_stmt_close($st);
+	$rows = tp_rows("SELECT `closure_id`,`area_id`,`date_from`,`date_to`,`yearly`,`note` FROM ".tp_t('area_closures')." WHERE `closure_id` = ?", 'i', array($id));
+	return $rows ? $rows[0] : false;
+}
+
+function tp_delete_closure($outlet_id, $closure_id) {
+	tp_ensure_closure_schema();
+	$own = tp_rows("SELECT c.`closure_id` FROM ".tp_t('area_closures')." c JOIN ".tp_t('areas')." a ON a.`area_id` = c.`area_id`
+		WHERE c.`closure_id` = ? AND a.`outlet_id` = ?", 'ii', array((int)$closure_id, (int)$outlet_id));
+	if (!$own) { return false; }
+	$st = tp_exec("DELETE FROM ".tp_t('area_closures')." WHERE `closure_id` = ?", 'i', array((int)$closure_id));
+	if ($st) { mysqli_stmt_close($st); }
+	return true;
+}
+
+/* ---------------------------------------------------------------- day context */
+
+// everything needed to judge assignments of one day:
+//   res      reservation_id => row (time, min, pax, name, notes, status, number, tables[])
+//   tables   table_id => row
+//   closed   area_id => true
+//   occ      table_id => list of reservation ids sitting there
+//   dur      stay in minutes
+function tp_day_context($outlet_id, $date) {
+	tp_ensure_closure_schema();
+	$rows = tp_rows("SELECT `reservation_id`,`reservation_time`,`reservation_pax`,`reservation_guest_name`,`reservation_notes`,`reservation_status`,`reservation_bookingnumber`
+		FROM ".tp_res_table()."
+		WHERE `reservation_outlet_id` = ? AND `reservation_date` = ?
+		AND IFNULL(`reservation_hidden`,0) = 0 AND IFNULL(`reservation_wait`,0) = 0
+		AND (`reservation_status` IS NULL OR `reservation_status` NOT IN ('DEP','NSW'))
+		ORDER BY `reservation_time`,`reservation_id`", 'is', array((int)$outlet_id, $date));
+	$ctx = array('date' => $date, 'res' => array(), 'tables' => array(), 'closed' => array(), 'occ' => array(), 'dur' => tp_duration_minutes($outlet_id));
+	foreach (tp_list_tables($outlet_id) as $t) {
+		$ctx['tables'][(int)$t['table_id']] = $t;
+	}
+	foreach (tp_closed_area_ids($outlet_id, $date) as $a) {
+		$ctx['closed'][$a] = true;
+	}
+	foreach ($rows as $r) {
+		$id = (int)$r['reservation_id'];
+		$ctx['res'][$id] = array(
+			'id'     => $id,
+			'time'   => substr((string)$r['reservation_time'], 0, 5),
+			'min'    => tp_min($r['reservation_time']),
+			'pax'    => (int)$r['reservation_pax'],
+			'name'   => html_entity_decode((string)$r['reservation_guest_name'], ENT_QUOTES, 'UTF-8'),
+			'notes'  => html_entity_decode((string)$r['reservation_notes'], ENT_QUOTES, 'UTF-8'),
+			'status' => (string)$r['reservation_status'],
+			'number' => (string)$r['reservation_bookingnumber'],
+			'tables' => array(),
+			'forced' => false,
+		);
+	}
+	if ($ctx['res']) {
+		$ids = implode(',', array_map('intval', array_keys($ctx['res'])));
+		foreach (tp_rows("SELECT `reservation_id`,`table_id`,`forced` FROM ".tp_t('reservation_tables')." WHERE `reservation_id` IN ($ids)") as $a) {
+			$rid = (int)$a['reservation_id']; $tid = (int)$a['table_id'];
+			if (!isset($ctx['tables'][$tid])) { continue; }
+			$ctx['res'][$rid]['tables'][] = $tid;
+			if ((int)$a['forced']) { $ctx['res'][$rid]['forced'] = true; }
+			$ctx['occ'][$tid][] = $rid;
+		}
+	}
+	return $ctx;
+}
+
+// do two reservations of the same day overlap in time at one table?
+function tp_overlaps($min_a, $min_b, $dur) {
+	return abs($min_a - $min_b) < $dur;
+}
+
+/*
+ * Judge putting a reservation (pax, minute of day) on a set of tables.
+ * Returns array('errors' => [...], 'warnings' => [...]); errors can not be overridden.
+ */
+function tp_judge($ctx, $res_id, $pax, $min, $table_ids) {
+	$errors = array(); $warnings = array();
+	if (!$table_ids) {
+		return array('errors' => $errors, 'warnings' => $warnings);
+	}
+	$seats = 0;
+	foreach ($table_ids as $tid) {
+		$t = $ctx['tables'][$tid];
+		$seats += (int)$t['seats'];
+		if (isset($ctx['closed'][(int)$t['area_id']])) {
+			$errors[] = 'Tisch '.$t['table_name'].' liegt in einem Bereich, der an diesem Tag gesperrt ist';
+		}
+		if (isset($ctx['occ'][$tid])) {
+			foreach ($ctx['occ'][$tid] as $other) {
+				if ($other === $res_id || !isset($ctx['res'][$other])) { continue; }
+				if (tp_overlaps($min, $ctx['res'][$other]['min'], $ctx['dur'])) {
+					$warnings[] = 'Tisch '.$t['table_name'].' ist um '.$ctx['res'][$other]['time'].' Uhr bereits für '.$ctx['res'][$other]['name'].' vergeben';
+				}
+			}
+		}
+	}
+	if ($seats < $pax) {
+		$warnings[] = 'Kapazität: '.$seats.' Sitzplätze für '.$pax.' Personen';
+	}
+	return array('errors' => $errors, 'warnings' => $warnings);
+}
+
+// the day as sent to the browser: reservations with their tables and current conflicts
+function tp_day_payload($outlet_id, $date) {
+	$ctx = tp_day_context($outlet_id, $date);
+	$list = array();
+	foreach ($ctx['res'] as $r) {
+		$j = tp_judge($ctx, $r['id'], $r['pax'], $r['min'], $r['tables']);
+		$r['conflicts'] = array_merge($j['errors'], $j['warnings']);
+		unset($r['min']);
+		$list[] = $r;
+	}
+	return array('date' => $date, 'dur' => $ctx['dur'], 'closed' => array_keys($ctx['closed']), 'reservations' => $list);
+}
+
+/* ---------------------------------------------------------------- assignment */
+
+function tp_reservation_row($outlet_id, $res_id) {
+	$r = tp_rows("SELECT `reservation_id`,`reservation_date`,`reservation_time`,`reservation_pax` FROM ".tp_res_table()."
+		WHERE `reservation_id` = ? AND `reservation_outlet_id` = ?", 'ii', array((int)$res_id, (int)$outlet_id));
+	return $r ? $r[0] : false;
+}
+
+function tp_write_assignment($res_id, $table_ids, $forced) {
+	$st = tp_exec("DELETE FROM ".tp_t('reservation_tables')." WHERE `reservation_id` = ?", 'i', array((int)$res_id));
+	if ($st) { mysqli_stmt_close($st); }
+	foreach ($table_ids as $tid) {
+		$st = tp_exec("INSERT INTO ".tp_t('reservation_tables')." (`reservation_id`,`table_id`,`forced`) VALUES (?,?,?)", 'iii', array((int)$res_id, (int)$tid, $forced ? 1 : 0));
+		if ($st) { mysqli_stmt_close($st); }
+	}
+}
+
+/*
+ * Set the tables of a reservation (empty list = remove the assignment).
+ * Returns array('ok' => true, 'date' => ...) or array('ok' => false, 'error' => ..., 'needs_confirm' => bool, 'warnings' => [...])
+ */
+function tp_assign($outlet_id, $res_id, $table_ids, $confirm) {
+	$row = tp_reservation_row($outlet_id, $res_id);
+	if (!$row) {
+		return array('ok' => false, 'error' => 'Reservierung nicht gefunden');
+	}
+	$date = $row['reservation_date'];
+	$ctx = tp_day_context($outlet_id, $date);
+	$ids = array();
+	foreach ((array)$table_ids as $t) {
+		$t = (int)$t;
+		if (!isset($ctx['tables'][$t])) {
+			return array('ok' => false, 'error' => 'Unbekannter Tisch');
+		}
+		$ids[$t] = $t;
+	}
+	$ids = array_values($ids);
+	$j = tp_judge($ctx, (int)$res_id, (int)$row['reservation_pax'], tp_min($row['reservation_time']), $ids);
+	if ($j['errors']) {
+		return array('ok' => false, 'error' => implode('. ', $j['errors']));
+	}
+	if ($j['warnings'] && !$confirm) {
+		return array('ok' => false, 'needs_confirm' => true, 'warnings' => $j['warnings']);
+	}
+	tp_write_assignment($res_id, $ids, (bool)$j['warnings']);
+	return array('ok' => true, 'date' => $date);
+}
+
+function tp_list_links_all($table_ids) {
+	if (!$table_ids) { return array(); }
+	$ids = implode(',', array_map('intval', $table_ids));
+	return tp_rows("SELECT `table_a`,`table_b` FROM ".tp_t('table_links')." WHERE `table_a` IN ($ids) AND `table_b` IN ($ids)");
+}
+
+// tables that could take a reservation, best fit first; null when nothing fits
+function tp_find_tables($ctx, $res_id, $pax, $min) {
+	$free = array();
+	foreach ($ctx['tables'] as $tid => $t) {
+		if (!(int)$t['active'] || isset($ctx['closed'][(int)$t['area_id']])) { continue; }
+		$busy = false;
+		if (isset($ctx['occ'][$tid])) {
+			foreach ($ctx['occ'][$tid] as $o) {
+				if ($o !== $res_id && isset($ctx['res'][$o]) && tp_overlaps($min, $ctx['res'][$o]['min'], $ctx['dur'])) { $busy = true; break; }
+			}
+		}
+		if (!$busy) { $free[$tid] = $t; }
+	}
+	// a single table: the smallest one that is big enough
+	$best = null;
+	foreach ($free as $tid => $t) {
+		$s = (int)$t['seats'];
+		if ($s >= $pax && ($best === null || $s < $best[0])) { $best = array($s, $tid); }
+	}
+	if ($best) { return array($best[1]); }
+
+	// tables that may be pushed together: connected groups of up to four, least waste first
+	$adj = array();
+	foreach (tp_list_links_all(array_keys($free)) as $l) {
+		$a = (int)$l['table_a']; $b = (int)$l['table_b'];
+		$adj[$a][$b] = true; $adj[$b][$a] = true;
+	}
+	$bestSet = null; $bestScore = null; $budget = 20000;
+	$grow = function ($set, $seats) use (&$grow, &$bestSet, &$bestScore, &$budget, $adj, $free, $pax) {
+		if ($budget-- <= 0) { return; }
+		if ($seats >= $pax) {
+			$score = array($seats - $pax, count($set));
+			if ($bestScore === null || $score < $bestScore) { $bestScore = $score; $bestSet = $set; }
+			return;
+		}
+		if (count($set) >= 4) { return; }
+		$cand = array();
+		foreach ($set as $s) {
+			if (isset($adj[$s])) {
+				foreach ($adj[$s] as $n => $_) {
+					if (!in_array($n, $set, true) && $n > min($set)) { $cand[$n] = true; }
+				}
+			}
+		}
+		foreach (array_keys($cand) as $n) {
+			$grow(array_merge($set, array($n)), $seats + (int)$free[$n]['seats']);
+		}
+	};
+	foreach (array_keys($adj) as $start) {
+		$grow(array($start), (int)$free[$start]['seats']);
+	}
+	return $bestSet;
+}
+
+// automatic assignment of one reservation; returns the table ids or null (already assigned / nothing fits)
+function tp_auto_assign($outlet_id, $res_id) {
+	$row = tp_reservation_row($outlet_id, $res_id);
+	if (!$row || !$row['reservation_date']) { return null; }
+	$ctx = tp_day_context($outlet_id, $row['reservation_date']);
+	if (!isset($ctx['res'][(int)$res_id]) || $ctx['res'][(int)$res_id]['tables'] || !$ctx['tables']) { return null; }
+	$found = tp_find_tables($ctx, (int)$res_id, (int)$row['reservation_pax'], tp_min($row['reservation_time']));
+	if (!$found) { return null; }
+	tp_write_assignment($res_id, $found, false);
+	return $found;
+}
+
+// automatic assignment of all unassigned reservations of a day, larger parties first
+function tp_auto_assign_day($outlet_id, $date) {
+	$ctx = tp_day_context($outlet_id, $date);
+	$todo = array_filter($ctx['res'], function ($r) { return !$r['tables']; });
+	uasort($todo, function ($a, $b) {
+		return ($b['pax'] <=> $a['pax']) ?: ($a['min'] <=> $b['min']);
+	});
+	$done = 0; $open = 0;
+	foreach ($todo as $r) {
+		$found = $ctx['tables'] ? tp_find_tables($ctx, $r['id'], $r['pax'], $r['min']) : null;
+		if (!$found) { $open++; continue; }
+		tp_write_assignment($r['id'], $found, false);
+		foreach ($found as $tid) { $ctx['occ'][$tid][] = $r['id']; }
+		$ctx['res'][$r['id']]['tables'] = $found;
+		$done++;
+	}
+	return array('assigned' => $done, 'open' => $open);
+}
+
+// called after a booking was stored; must never break the booking itself
+function tp_hook_after_booking($res_id) {
+	try {
+		if (!$res_id || !isset($GLOBALS['__mysql_compat_link'])) { return; }
+		tp_ensure_schema();
+		if (tp_get_setting('auto_assign', '1') !== '1') { return; }
+		$r = tp_rows("SELECT `reservation_outlet_id`,`reservation_wait` FROM ".tp_res_table()." WHERE `reservation_id` = ?", 'i', array((int)$res_id));
+		if (!$r || (int)$r[0]['reservation_wait']) { return; }
+		tp_auto_assign((int)$r[0]['reservation_outlet_id'], (int)$res_id);
+	} catch (Throwable $e) {
+		// assignment is optional
+	}
+}

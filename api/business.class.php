@@ -577,6 +577,11 @@ function processBooking(){
 			
 			// store new reservation in history
 			$result = query("INSERT INTO `$dbTables->res_history` (reservation_id,author) VALUES ('%d','%s')",$resID,mysql_real_escape_string(isset($_SESSION['author']) ? $_SESSION['author'] : ''));
+			// table plan: put the new reservation on a table (optional, never breaks the booking)
+			if (is_file(__DIR__.'/../web/classes/tableplan_assign.class.php')) {
+				require_once(__DIR__.'/../web/classes/tableplan_assign.class.php');
+				tp_hook_after_booking($resID);
+			}
 			// Reservation was done
 			$waitlist = 2;
 		  }	

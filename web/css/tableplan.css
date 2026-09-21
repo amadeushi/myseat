@@ -57,7 +57,7 @@
 }
 
 .tp-panel {
-	flex: 0 0 260px; box-sizing: border-box; padding: 16px;
+	flex: 0 0 320px; box-sizing: border-box; padding: 16px;
 	background: var(--surface, #151312); color: var(--text, #f3ede1);
 	border: 1px solid var(--border, rgba(201,164,89,.22)); border-radius: 6px;
 }
@@ -92,3 +92,68 @@
 	.tp-panel { flex-basis: auto; width: 100%; }
 }
 @media print { .tp-panel, .tp-msg { display: none; } }
+
+/* ---- assignment view ---- */
+.tp-daynav { display: flex; gap: 6px; margin-bottom: 10px; }
+.tp-daynav input[type=date] { flex: 1 1 auto; min-width: 0; }
+.tp-daynav .button_dark { cursor: pointer; }
+.tp-panel > select { width: 100%; box-sizing: border-box; margin-bottom: 10px; }
+.tp-summary { font-weight: 600; color: var(--gold-strong, #e2c07f); }
+.tp-reslist { max-height: 400px; overflow-y: auto; margin: 10px 0; padding-right: 4px; }
+.tp-res {
+	padding: 8px 10px; margin-bottom: 6px; cursor: pointer;
+	background: var(--surface-2, #1c1a18); border: 1px solid var(--border, rgba(201,164,89,.22));
+	border-left: 3px solid var(--border, rgba(201,164,89,.22)); border-radius: 4px;
+}
+.tp-res:hover { border-color: var(--gold, #c9a259); }
+.tp-res:focus-visible { outline: 2px solid var(--gold-strong, #e2c07f); outline-offset: 2px; }
+.tp-res.is-open { border-left-color: var(--gold, #c9a259); }
+.tp-res.has-conflict { border-left-color: var(--danger, #e2867c); }
+.tp-res.is-selected { background: var(--surface-3, #242220); border-color: var(--gold-strong, #e2c07f); }
+.tp-res-head { display: flex; gap: 8px; align-items: baseline; }
+.tp-res-time { font-variant-numeric: tabular-nums; color: var(--gold-strong, #e2c07f); font-weight: 600; }
+.tp-res-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tp-res-pax { color: var(--text-muted, #a89e8c); font-size: 13px; }
+.tp-res-tables { margin-top: 2px; font-size: 12px; color: var(--text-muted, #a89e8c); }
+.tp-res.is-open .tp-res-tables { color: var(--gold, #c9a259); }
+.tp-res-detail { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border, rgba(201,164,89,.22)); cursor: default; }
+.tp-res-detail .tp-linkbox { margin: 6px 0; }
+.tp-res-notes { font-size: 13px; color: var(--text-muted, #a89e8c); }
+.tp-conflict { font-size: 13px; color: var(--danger, #e2867c); }
+
+.tp-asg { font-size: 11px; color: var(--text, #f3ede1); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tp-table.is-mine { background: var(--gold, #c9a259); border-color: var(--gold-strong, #e2c07f); }
+.tp-table.is-mine .tp-name, .tp-table.is-mine .tp-seats, .tp-table.is-mine .tp-asg { color: var(--bg, #0c0b0a); }
+.tp-table.is-fit { border-color: var(--success, #8fbf7a); }
+.tp-table.is-small { border-style: dashed; opacity: .6; }
+.tp-table.is-busy { border-color: var(--danger, #e2867c); opacity: .5; }
+.tp-table.is-occupied { background: rgba(201,162,89,.28); }
+.tp-table.is-closed { border-style: dotted; border-color: var(--text-muted, #a89e8c); opacity: .35; cursor: not-allowed; }
+.tp-table.is-dragover { box-shadow: 0 0 0 4px rgba(226,192,127,.6); }
+.tp-closed-note {
+	position: absolute; left: 0; right: 0; top: 0; padding: 12px 16px; text-align: center; pointer-events: none;
+	background: rgba(12,11,10,.85); color: var(--danger, #e2867c); font-size: 18px;
+	border-bottom: 1px solid var(--danger, #e2867c);
+}
+.tp-tab.is-closed { opacity: .6; }
+.tp-tab.is-closed .tp-tab-count { color: var(--danger, #e2867c); opacity: 1; }
+.tp-tab.is-closed.is-active .tp-tab-count { color: var(--bg, #0c0b0a); }
+
+/* ---- closures / settings ---- */
+.tp-check { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 10px; cursor: pointer; font-size: 14px; }
+.tp-check input { margin-top: 3px; }
+.tp-closure {
+	display: flex; justify-content: space-between; gap: 8px; align-items: flex-start;
+	padding: 6px 0; border-bottom: 1px solid var(--border-soft, rgba(245,240,230,.08)); font-size: 14px;
+}
+.tp-closure-range { display: block; }
+.tp-closure-meta { display: block; font-size: 12px; color: var(--text-muted, #a89e8c); }
+.tp-closure button { background: none; border: 0; color: var(--text-muted, #a89e8c); cursor: pointer; font-size: 18px; line-height: 1; }
+.tp-closure button:hover { color: var(--danger, #e2867c); }
+.tp-closure-form { margin-top: 12px; }
+
+/* keep the assignment lines inside small tables */
+.tp-inner { max-width: 100%; min-width: 0; padding: 0 4px; box-sizing: border-box; }
+.tp-asg { display: block; }
+.tp-canvas:not(.is-edit) .tp-table { overflow: hidden; }
+.tp-table.is-busy { opacity: .7; }

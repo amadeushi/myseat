@@ -12,7 +12,11 @@ if (empty($_SESSION['tp_token'])) {
 }
 $tp_can_edit = (bool)current_user_can( 'Page-System' );
 $tp_outlet_name = isset($_SESSION['selOutlet']['outlet_name']) ? $_SESSION['selOutlet']['outlet_name'] : '';
+$tp_today = date('Y-m-d');
+$tp_date  = (isset($_SESSION['selectedDate']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_SESSION['selectedDate'])) ? $_SESSION['selectedDate'] : $tp_today;
 $tp_cfg = array(
+	'date'    => $tp_date,
+	'today'   => $tp_today,
 	'token'   => $_SESSION['tp_token'],
 	'canEdit' => $tp_can_edit,
 	'canvasW' => TP_CANVAS_W,

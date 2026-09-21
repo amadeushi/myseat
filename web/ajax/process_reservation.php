@@ -264,6 +264,12 @@ if ($_SESSION['token'] == $_POST['token'] && $compare_pass > 0 ) {
 			// store changes in history
 			$result = query("INSERT INTO `$dbTables->res_history` (reservation_id,author) VALUES ('%d','%s')",$history_id,$_POST['reservation_booker_name']);
 
+			// table plan: put a new reservation on a table (optional, never breaks the booking)
+			if (!empty($new_id) && is_file(__DIR__.'/../classes/tableplan_assign.class.php')) {
+				require_once(__DIR__.'/../classes/tableplan_assign.class.php');
+				tp_hook_after_booking((int)$new_id);
+			}
+
 			// -----
 			// increase reservation date one day or week
 			$d1 += $recurring_span;

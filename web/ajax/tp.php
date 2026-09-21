@@ -14,7 +14,7 @@ include('../classes/local.class.php');
 include('../classes/business.class.php');
 include('../classes/db_queries.db.php');
 include('../../config/config.inc.php');
-include('../classes/tableplan.class.php');
+include('../classes/tableplan_assign.class.php');
 
 function tp_out($payload, $code = 200) {
 	http_response_code($code);
@@ -55,7 +55,7 @@ if (!$ok_outlet) {
 
 tp_ensure_schema();
 
-$structure_actions = array('table_save', 'table_delete', 'link_toggle', 'area_save', 'area_delete', 'area_move');
+$structure_actions = array('table_save', 'table_delete', 'link_toggle', 'area_save', 'area_delete', 'area_move', 'closure_save', 'closure_delete', 'setting_save');
 if (in_array($action, $structure_actions, true) && !$can_edit_plan) {
 	tp_fail('Der Plan darf nur von Administratoren bearbeitet werden', 403);
 }
@@ -65,6 +65,8 @@ switch ($action) {
 		$areas = tp_list_areas($outlet_id);
 		tp_out(array(
 			'areas'    => $areas,
+			'closures' => tp_list_closures($outlet_id),
+			'autoAssign' => tp_get_setting('auto_assign', '1') === '1',
 			'ok'       => true,
 			'outlet'   => $outlet_id,
 			'canvas'   => array('w' => TP_CANVAS_W, 'h' => TP_CANVAS_H),
@@ -122,6 +124,55 @@ switch ($action) {
 			tp_fail('Bereich nicht gefunden');
 		}
 		tp_out(array('ok' => true, 'areas' => tp_move_area($outlet_id, $aid, isset($data['dir']) ? (int)$data['dir'] : 0)));
+
+	case 'closure_save':
+		$saved = tp_save_closure($outlet_id, isset($data['closure']) && is_array($data['closure']) ? $data['closure'] : array());
+		if (!$saved) {
+			tp_fail('Sperrzeitraum ungültig (Datum fehlt oder „bis“ liegt vor „von“)');
+		}
+		tp_out(array('ok' => true, 'closures' => tp_list_closures($outlet_id)));
+
+	case 'closure_delete':
+		if (!tp_delete_closure($outlet_id, isset($data['closure_id']) ? (int)$data['closure_id'] : 0)) {
+			tp_fail('Sperrzeitraum nicht gefunden');
+		}
+		tp_out(array('ok' => true, 'closures' => tp_list_closures($outlet_id)));
+
+	case 'setting_save':
+		tp_set_setting('auto_assign', !empty($data['autoAssign']) ? '1' : '0');
+		tp_out(array('ok' => true, 'autoAssign' => tp_get_setting('auto_assign', '1') === '1'));
+
+	case 'day':
+		$date = isset($data['date']) ? (string)$data['date'] : '';
+		if (!tp_is_date($date)) {
+			tp_fail('Ungültiges Datum');
+		}
+		tp_out(array('ok' => true) + tp_day_payload($outlet_id, $date));
+
+	case 'assign':
+		$r = tp_assign($outlet_id, isset($data['reservation_id']) ? (int)$data['reservation_id'] : 0,
+			isset($data['table_ids']) && is_array($data['table_ids']) ? $data['table_ids'] : array(), !empty($data['confirm']));
+		if (empty($r['ok'])) {
+			tp_out($r, !empty($r['needs_confirm']) ? 200 : 400);
+		}
+		tp_out(array('ok' => true) + tp_day_payload($outlet_id, $r['date']));
+
+	case 'auto_assign':
+		$rid = isset($data['reservation_id']) ? (int)$data['reservation_id'] : 0;
+		$row = tp_reservation_row($outlet_id, $rid);
+		if (!$row) {
+			tp_fail('Reservierung nicht gefunden');
+		}
+		$found = tp_auto_assign($outlet_id, $rid);
+		tp_out(array('ok' => true, 'found' => (bool)$found) + tp_day_payload($outlet_id, $row['reservation_date']));
+
+	case 'auto_assign_day':
+		$date = isset($data['date']) ? (string)$data['date'] : '';
+		if (!tp_is_date($date)) {
+			tp_fail('Ungültiges Datum');
+		}
+		$sum = tp_auto_assign_day($outlet_id, $date);
+		tp_out(array('ok' => true, 'summary' => $sum) + tp_day_payload($outlet_id, $date));
 
 	default:
 		tp_fail('Unbekannte Aktion');
