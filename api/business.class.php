@@ -403,6 +403,14 @@ function defineOffDays(){
 		}
 	}
 	
+	// days blocked for online bookings in the backend (closed party, sold out)
+	if (is_file(__DIR__.'/../web/classes/online_block.class.php')) {
+		require_once(__DIR__.'/../web/classes/online_block.class.php');
+		foreach (ob_blocked_dates($_SESSION['outletID'], date('Y-m-d'), date('Y-m-d', strtotime('+6 months'))) as $blocked_date => $blocked_reason) {
+			$date_string .= "'".$blocked_date."',";
+		}
+	}
+
 	$outlet_closedays   = querySQL('outlet_closedays');
 	$outlet_closedays = "'".$outlet_closedays."'";
 	

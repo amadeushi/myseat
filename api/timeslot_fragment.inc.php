@@ -26,8 +26,14 @@ $outlet_closed_today = in_array((string)$selected_weekday, $closed_weekdays, tru
 $max_menu = (int)$general['max_menu'];
 $party_too_big = ($max_menu > 0 && (int)$_SESSION['pax'] > $max_menu);
 
+// blocked for online bookings in the backend (closed party, sold out)
+include_once __DIR__.'/../web/classes/online_block.class.php';
+$online_blocked = ob_is_blocked($_SESSION['outletID'], $_SESSION['selectedDate']);
+
 if ($outlet_closed_today) {
 	reserve_contact_message("An diesem Tag haben wir leider geschlossen. Bitte wähle ein anderes Datum.", $contact_email);
+} elseif ($online_blocked) {
+	reserve_contact_message("An diesem Tag sind Online-Reservierungen leider nicht möglich. Bitte wähle ein anderes Datum.", $contact_email);
 } elseif ($party_too_big) {
 	reserve_contact_message("Für Gruppen ab ".($max_menu + 1)." Personen bitten wir um eine persönliche Anfrage.", $contact_email);
 } else {

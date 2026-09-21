@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 0.2172                        =-=
+=-= Version: 0.2173                        =-=
 =-= Date:    21.09.2026                   =-=
 =-= Time:    18:30 GMT                    =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -29,12 +29,24 @@ News
 CHANGELOG
 =========
 
-Versions 0.2161 - 0.2172 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 0.2173 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-21 == mySeat v0.2173 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Block online bookings for a single day (closed party, sold out): button "Online sperren" in
+   the dashboard header for the selected day, and "online sperren" / "freigeben" per day in the
+   week view, with an optional internal reason. The public form shows "online reservations are
+   not possible on this day, contact us", greys the day out in the datepicker, and the booking
+   is also refused server-side. Staff can still enter reservations in the backend - unlike the
+   existing "day off" of the daily settings, which closes the day completely. A notice is shown
+   in the dashboard and day view. New table online_blocks (created automatically)
+ * Security: ajax/modify_dayoff.php (day off checkbox) now requires a logged in user with the
+   Daily-Outlet-Edit right; it could be called without login before
 
 2026-09-21 == mySeat v0.2172 == amadeushi - http://github.com/amadeushi/myseat
 

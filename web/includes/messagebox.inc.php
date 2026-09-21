@@ -4,6 +4,15 @@ $maxC = maxCapacity();
 // get Pax by timeslot
 $passbyTime = reservationsByTime('pax');
 
+// online booking block of the day
+include_once 'classes/online_block.class.php';
+$ob_note = ($_SESSION['page'] == 1 || $_SESSION['page'] == 2) ? ob_get($_SESSION['outletID'], $_SESSION['selectedDate']) : false;
+if ($ob_note) {
+	echo "<div class='alert_tip'>
+	<p class='center margin-bottom-10'>Online-Reservierungen sind für diesen Tag gesperrt".($ob_note['reason'] !== '' ? " &ndash; ".htmlspecialchars($ob_note['reason']) : "").". Im Backend können weiterhin Reservierungen erfasst werden.</p>
+	</div>";
+}
+
 // Maitre day comment
 if (isset($maitre) && trim($maitre['maitre_comment_day']) != "" && $_SESSION['page'] == 2 ) {
 	echo "<div class='alert_tip'>

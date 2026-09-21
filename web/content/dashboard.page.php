@@ -14,6 +14,17 @@
 	</a>
 	<!-- Begin 2nd level tab -->
 	<ul class='second_level_tab'>
+		<?php
+		// block / release online bookings for the selected day (closed party, sold out)
+		$ob_can = current_user_can( 'Daily-Outlet-Edit' );
+		if ($ob_can) {
+			include_once 'classes/online_block.class.php';
+			if (empty($_SESSION['ob_token'])) { $_SESSION['ob_token'] = bin2hex(random_bytes(16)); }
+			$ob_day = ob_get($_SESSION['outletID'], $_SESSION['selectedDate']);
+			echo "<li><a href='#' class='button_dark ob-toggle".($ob_day ? " is-blocked" : "")."' data-outlet='".(int)$_SESSION['outletID']."' data-date='".htmlspecialchars($_SESSION['selectedDate'])."' data-blocked='".($ob_day ? 1 : 0)."'>"
+				.($ob_day ? "Online wieder freigeben" : "Online sperren")."</a></li>";
+		}
+		?>
 		<li>
 			<a href='?p=2' class='button_dark'> <?php echo _back;?>
 			</a>
@@ -114,3 +125,29 @@
 			?>
 
 <br class="clear"/><br/>
+<?php if (!empty($ob_can)): ?>
+<script type="text/javascript">
+(function () {
+	var token = <?php echo json_encode($_SESSION['ob_token']); ?>;
+	document.addEventListener('click', function (e) {
+		var a = e.target.closest ? e.target.closest('.ob-toggle') : null;
+		if (!a) { return; }
+		e.preventDefault();
+		var blocked = a.getAttribute('data-blocked') === '1';
+		var reason = '';
+		if (!blocked) {
+			reason = window.prompt('Online-Reservierungen für ' + a.getAttribute('data-date').split('-').reverse().join('.') + ' sperren.\nGrund (optional, nur intern), z. B. Geschlossene Gesellschaft:', '');
+			if (reason === null) { return; }
+		}
+		fetch('ajax/online_block.php', {
+			method: 'POST', credentials: 'same-origin',
+			headers: { 'Content-Type': 'application/json', 'X-OB-Token': token },
+			body: JSON.stringify({ outlet_id: a.getAttribute('data-outlet'), date: a.getAttribute('data-date'), blocked: !blocked, reason: reason })
+		}).then(function (r) { return r.json(); }).then(function (j) {
+			if (!j.ok) { window.alert(j.error || 'Speichern fehlgeschlagen'); return; }
+			window.location.reload();
+		}, function () { window.alert('Server nicht erreichbar'); });
+	});
+})();
+</script>
+<?php endif; ?>

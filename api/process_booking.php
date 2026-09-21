@@ -22,6 +22,7 @@ $_SESSION['language'] = 'en_EN';
 	include('../web/classes/db_queries.db.php');
 // ** set configuration
 	include('../config/config.inc.php');
+	include_once('../web/classes/online_block.class.php');
 // translate to selected language
 	translateSite($_POST['email_type'],'../web/');
 // ** get superglobal variables
@@ -97,6 +98,8 @@ $prp_info = querySQL('property_info');
 		// the terms at the reservation form must have been aceppted
 		$_POST['terms'] == 'YES' &&
 		$dayoff == 0 &&
+		// the day was blocked for online bookings in the backend (closed party, sold out)
+		!ob_is_blocked($_SESSION['outletID'], $_SESSION['selectedDate']) &&
 		// no bookings later than the configured last-booking time before closing
 		!isPastLastBooking($_SESSION['selectedDate'], $_POST['reservation_time'])
 	) {
