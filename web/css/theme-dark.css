@@ -1158,3 +1158,40 @@ a:hover > .ui-ico, .ui-ico.help:hover { color: var(--gold-strong); }
 table.global tbody tr td.morning   { color: #d8c9a6 !important; }
 table.global tbody tr td.afternoon { color: var(--gold-strong) !important; }
 table.global tbody tr td.evening   { color: #8c6a35 !important; }
+
+/* ---- reservation status dropdown (icon + colour per status) ---- */
+.status_dbox { min-width: 156px !important; width: 156px; padding: 4px 8px; }
+.status_dbox > button {
+	display: flex; align-items: center; gap: 8px; width: 100%;
+	background: transparent; border: 0; padding: 0; margin: 0;
+	color: inherit; font: inherit; cursor: pointer; text-align: left;
+}
+.status_dbox .ui-ico { color: inherit; width: 18px; height: 18px; flex: none; }
+.status_dbox option span { flex: 1 1 auto; }
+.status_dbox.st-NYA, .status_dbox option.st-NYA { color: #62b6cb; }
+.status_dbox.st-ARR, .status_dbox option.st-ARR { color: #5fc5a2; }
+.status_dbox.st-STD, .status_dbox option.st-STD { color: #a99be8; }
+.status_dbox.st-PKD, .status_dbox option.st-PKD { color: #e2b56b; }
+.status_dbox.st-DEP, .status_dbox option.st-DEP { color: var(--text-muted); }
+.status_dbox.st-NSW, .status_dbox option.st-NSW { color: #9ba6c0; }
+.status_dbox.st-NYA { border-color: rgba(98, 182, 203, .35); }
+.status_dbox.st-ARR { border-color: rgba(95, 197, 162, .35); }
+.status_dbox.st-STD { border-color: rgba(169, 155, 232, .35); }
+.status_dbox.st-PKD { border-color: rgba(226, 181, 107, .35); }
+.status_dbox.st-NSW { border-color: rgba(155, 166, 192, .35); }
+.status_dbox option { gap: 10px; padding: 8px 12px; font-size: 15px; }
+.status_dbox option::checkmark { display: inline; order: 2; margin-left: 16px; content: '✓'; color: var(--text-muted); }
+.status_dbox::picker(select) { min-width: 200px; }
+table.global.resv-table-small tbody tr td.noprint select.status_dbox,
+.resv-table-small select.status_dbox { min-width: 156px; width: 156px; font-size: 14px; padding: 4px 8px; }
+.status_dbox selectedcontent { display: flex; align-items: center; gap: 8px; }
+select.status_dbox:not([multiple]) .ui-ico { width: 20px; height: 20px; }
+select.status_dbox:not([multiple]) option { gap: 12px; padding: 9px 12px; }
+select.status_dbox:not([multiple]) option.st-NYA, select.status_dbox:not([multiple]) option.st-NYA:hover, select.status_dbox:not([multiple]) option.st-NYA:checked { color: #62b6cb; }
+select.status_dbox:not([multiple]) option.st-ARR, select.status_dbox:not([multiple]) option.st-ARR:hover, select.status_dbox:not([multiple]) option.st-ARR:checked { color: #5fc5a2; }
+select.status_dbox:not([multiple]) option.st-STD, select.status_dbox:not([multiple]) option.st-STD:hover, select.status_dbox:not([multiple]) option.st-STD:checked { color: #a99be8; }
+select.status_dbox:not([multiple]) option.st-PKD, select.status_dbox:not([multiple]) option.st-PKD:hover, select.status_dbox:not([multiple]) option.st-PKD:checked { color: #e2b56b; }
+select.status_dbox:not([multiple]) option.st-DEP, select.status_dbox:not([multiple]) option.st-DEP:hover, select.status_dbox:not([multiple]) option.st-DEP:checked { color: var(--text-muted); }
+select.status_dbox:not([multiple]) option.st-NSW, select.status_dbox:not([multiple]) option.st-NSW:hover, select.status_dbox:not([multiple]) option.st-NSW:checked { color: #9ba6c0; }
+select.status_dbox:not([multiple]) option:checked { background: rgba(243, 237, 225, 0.06); }
+select.status_dbox:not([multiple]) option::checkmark { display: inline-block; order: 2; margin-left: auto; padding-left: 16px; content: '✓'; color: var(--text-muted); font-size: 16px; }

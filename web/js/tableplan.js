@@ -30,6 +30,8 @@
 	var panel  = document.getElementById('tp-panel');
 	var msg    = document.getElementById('tp-msg');
 	var toggle = document.getElementById('tp-mode-toggle');
+	var legend = el('div', { 'class': 'tp-legend', 'aria-label': 'Legende' });
+	stage.parentNode.insertBefore(legend, stage);
 
 	/* ---------- helpers ---------- */
 	function el(tag, attrs, children) {
@@ -107,10 +109,12 @@
 		st.dayVer++;
 		st.day = {
 			dur: payload.dur,
+			open: payload.open,
+			close: payload.close,
 			closed: payload.closed.map(function (x) { return parseInt(x, 10); }),
 			reservations: payload.reservations.map(function (r) {
 				r.tables = r.tables.map(function (x) { return parseInt(x, 10); });
-				r.min = toMin(r.time);
+				r.min = (typeof r.min === 'number') ? r.min : toMin(r.time);
 				return r;
 			})
 		};
@@ -134,6 +138,31 @@
 		return st.day.reservations.filter(function (r) { return r.tables.indexOf(tid) >= 0; });
 	}
 	function overlaps(a, b) { return Math.abs(a.min - b.min) < st.day.dur; }
+	// does a reservation overlap another one of the same table (double booking)?
+	function clashes(r, list) {
+		return list.some(function (o) { return o.id !== r.id && overlaps(o, r); });
+	}
+	// occupancy of a table for the whole day: '' free, taken (one), multi (one after another), clash (overlap)
+	function occState(t) {
+		var list = asgOf(t.table_id);
+		if (!list.length) { return ''; }
+		if (list.some(function (r) { return clashes(r, list); })) { return ' is-clash'; }
+		return list.length > 1 ? ' is-multi' : ' is-taken';
+	}
+	// strip over the opening hours with one bar per reservation (start until the end of the stay)
+	function timeline(list) {
+		var d = st.day, span = Math.max(60, d.close - d.open);
+		var bar = el('span', { 'class': 'tp-tl', 'aria-hidden': 'true' });
+		list.forEach(function (r) {
+			// reservations outside the opening hours (before opening, after midnight) stay visible at the edge
+			var s = Math.min(Math.max(d.open, r.min), d.close - 1), e = Math.max(s + 1, Math.min(d.close, r.min + d.dur));
+			var seg = el('span', { 'class': 'tp-tl-seg' + (clashes(r, list) ? ' is-clash' : '') });
+			seg.style.left = Math.min(95, (s - d.open) / span * 100) + '%';
+			seg.style.width = Math.max(5, (e - s) / span * 100) + '%';
+			bar.appendChild(seg);
+		});
+		return bar;
+	}
 
 	/* ---------- scaling ---------- */
 	function rescale() {
@@ -180,8 +209,9 @@
 		if (st.time !== '') {
 			var T = toMin(st.time);
 			if (asgOf(t.table_id).some(function (o) { return o.min <= T && T < o.min + st.day.dur; })) { cls = ' is-occupied'; }
+			return cls;
 		}
-		return cls;
+		return occState(t);
 	}
 
 	function tableNode(t) {
@@ -192,21 +222,41 @@
 			el('span', { 'class': 'tp-name', text: t.table_name }),
 			el('span', { 'class': 'tp-seats', text: t.seats + ' Pl.' })
 		];
+		var all = (view && st.day) ? asgOf(t.table_id) : [];
 		if (view && st.day) {
-			var list = asgOf(t.table_id);
+			var list = all;
 			if (st.time !== '') {
 				var T = toMin(st.time);
 				list = list.filter(function (o) { return o.min <= T && T < o.min + st.day.dur; });
 			}
-			list.slice(0, 2).forEach(function (o) {
-				lines.push(el('span', { 'class': 'tp-asg', text: o.time + ' ' + o.name + ' · ' + o.pax }));
-			});
-			if (list.length > 2) { lines.push(el('span', { 'class': 'tp-asg', text: '+' + (list.length - 2) + ' weitere' })); }
+			if (Math.min(t.w, t.h) < 110) {
+				// small table: one compact line
+				if (list.length === 1) {
+					lines.push(el('span', { 'class': 'tp-asg', text: list[0].time + ' ' + list[0].name + ' · ' + list[0].pax }));
+				} else if (list.length > 1) {
+					lines.push(el('span', { 'class': 'tp-asg', text: list.slice(0, 3).map(function (o) { return o.time; }).join(' · ') + (list.length > 3 ? ' …' : '') }));
+				}
+			} else {
+				list.slice(0, 2).forEach(function (o) {
+					lines.push(el('span', { 'class': 'tp-asg', text: o.time + ' ' + o.name + ' · ' + o.pax }));
+				});
+				if (list.length > 2) { lines.push(el('span', { 'class': 'tp-asg', text: '+' + (list.length - 2) + ' weitere' })); }
+			}
+			if (all.length && !isClosed(t.area_id)) { lines.push(timeline(all)); }
+		}
+		var title = t.table_name + ' (' + t.seats + ' Plätze)';
+		if (all.length) {
+			title += ': ' + all.map(function (r) { return r.time + ' ' + r.name + ' (' + r.pax + ')'; }).join(', ');
+			if (all.some(function (r) { return clashes(r, all); })) { title += ' – Überschneidung, Tisch ist doppelt belegt'; }
+			else if (all.length > 1) { title += ' – nacheinander belegt'; }
 		}
 		var node = el('div', {
-			'class': cls, 'data-id': String(t.table_id), role: 'button', tabindex: '0',
-			'aria-label': 'Tisch ' + t.table_name + ', ' + t.seats + ' Plätze'
+			'class': cls, 'data-id': String(t.table_id), role: 'button', tabindex: '0', title: title,
+			'aria-label': title
 		}, [el('span', { 'class': 'tp-inner', style: 'transform:rotate(' + (-t.rot) + 'deg)' }, lines)]);
+		if (view && all.length > 1 && !isClosed(t.area_id)) {
+			node.appendChild(el('span', { 'class': 'tp-badge', text: all.some(function (r) { return clashes(r, all); }) ? '⚠ ' + all.length + '×' : all.length + '×' }));
+		}
 		node.style.left = t.x + 'px';
 		node.style.top = t.y + 'px';
 		node.style.width = t.w + 'px';
@@ -243,7 +293,17 @@
 		canvas.classList.toggle('is-edit', st.edit);
 		canvas.classList.toggle('is-linking', st.linkMode);
 		renderTabs();
+		renderLegend();
 		renderPanel();
+	}
+
+	function renderLegend() {
+		while (legend.firstChild) { legend.removeChild(legend.firstChild); }
+		legend.style.display = st.edit ? 'none' : '';
+		[['is-free', 'Frei'], ['is-taken', 'Belegt'], ['is-multi', 'Nacheinander belegt'], ['is-clash', 'Überschneidung (doppelt belegt)']].forEach(function (i) {
+			legend.appendChild(el('span', { 'class': 'tp-legend-item' }, [el('span', { 'class': 'tp-swatch ' + i[0] }), el('span', { text: i[1] })]));
+		});
+		legend.appendChild(el('span', { 'class': 'tp-legend-hint', text: 'Der Balken im Tisch zeigt die Belegung über die Öffnungszeit.' }));
 	}
 
 	function selectArea(id) {
@@ -383,8 +443,8 @@
 			var first = st.linkFirst ? byId(st.linkFirst) : null;
 			panel.appendChild(el('h3', { text: 'Tische verbinden' }));
 			panel.appendChild(el('p', { 'class': 'tp-hint', text: first
-				? 'Jetzt den Tisch anklicken, der mit „' + first.table_name + '“ zusammengestellt werden kann. Nochmaliges Verbinden hebt die Verbindung auf.'
-				: 'Erst den ersten Tisch anklicken, dann den zweiten.' }));
+				? 'Jetzt den Tisch anklicken, der neben „' + first.table_name + '“ steht: Er wird verbunden und ist danach der Ausgangspunkt für den nächsten (Kette). Nochmaliges Verbinden hebt die Verbindung auf, ein Klick auf „' + first.table_name + '“ beendet die Kette.'
+				: 'Die Tische der Reihe nach anklicken, z. B. 131, 132, 133, 134, 135: Jeder wird mit dem vorherigen verbunden.' }));
 			panel.appendChild(btn('Fertig', 'button_dark', function () { st.linkMode = false; st.linkFirst = null; render(); }));
 			return;
 		}
@@ -727,10 +787,11 @@
 		});
 	}
 
-	function toggleLink(a, b) {
+	function toggleLink(a, b, chainTo) {
 		api('link_toggle', { a: a, b: b }).then(function (r) {
 			if (!r.ok) { say(r.error || 'Verbindung nicht möglich', true); return; }
 			st.links = normLinks(r.links);
+			if (chainTo) { st.linkFirst = chainTo; }
 			render();
 			say(r.state === 'linked' ? 'Tische verbunden' : 'Verbindung aufgehoben');
 		});
@@ -752,7 +813,9 @@
 		if (st.linkMode) {
 			e.preventDefault();
 			if (!st.linkFirst) { st.linkFirst = t.table_id; render(); return; }
-			if (st.linkFirst !== t.table_id) { toggleLink(st.linkFirst, t.table_id); }
+			// chain: the table just clicked is the starting point of the next link
+			if (st.linkFirst !== t.table_id) { toggleLink(st.linkFirst, t.table_id, t.table_id); }
+			else { st.linkFirst = null; render(); }
 			return;
 		}
 

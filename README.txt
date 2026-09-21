@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 0.2180                        =-=
+=-= Version: 0.2183                        =-=
 =-= Date:    21.09.2026                   =-=
 =-= Time:    18:30 GMT                    =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -29,12 +29,46 @@ News
 CHANGELOG
 =========
 
-Versions 0.2161 - 0.2180 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 0.2183 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-21 == mySeat v0.2183 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Table plan, linking tables: the "Verbinden" mode of the editor now works as a chain - click
+   the tables in the order they stand (131, 132, 133, 134, 135): every click links the table to
+   the one before and continues from there (before, the first table stayed the starting point,
+   so this created a star around it, not a chain). Linking again removes the link, a click on the
+   current starting table ends the chain
+ * Automatic assignment: groups of up to 6 linked tables (was 4, so 5 chained tables of 4 could
+   not seat 20 guests). The search lists every connected group exactly once (it repeated the
+   same combinations before and could stop at its limit with larger groups); a chain counts as
+   connected in any direction. Least waste first, then fewest tables
+
+2026-09-21 == mySeat v0.2182 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Reservation status dropdown (dashboard and day view): each status has a vector icon and its
+   own colour, in the closed field and in the list, with a tick at the current status:
+   Bestätigt (calendar, blue), Angekommen (pin, green), Platziert (seated guest, purple),
+   An der Bar (glass, amber), Fertig (check, grey), No-Show (dashed guest, slate). The texts
+   were "NYA / Angekommen / Platziert / an Bar / Gegangen / No Show" (German) and are changed in
+   the language files (de and en); the stored values (NYA, ARR, STD, PKD, DEP, NSW) and the
+   change handler are untouched. Browsers with customizable selects (Chrome 135+) show the
+   icons and colours in the list, other browsers show the coloured texts in their native list
+
+2026-09-21 == mySeat v0.2181 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Table plan: occupied tables are highlighted for the whole day. Gold fill = one reservation,
+   gold with a double ring and "2x" badge = several reservations one after another, red with a
+   warning badge = overlap (double booking within the stay). Every table with reservations shows
+   a strip over the opening hours with one bar per reservation (red where they overlap; times
+   outside the opening hours stay visible at the edge), the tooltip lists all reservations of
+   the table. Small tables show one compact line (the times when there are several). A legend
+   sits above the plan. The selected-reservation view (fits / too small / taken) works together
+   with the strips. The day data of tp.php now carries the opening hours
 
 2026-09-21 == mySeat v0.2180 == amadeushi - http://github.com/amadeushi/myseat
 

@@ -406,14 +406,19 @@ function getStatusList($id, $title='NYA', $disabled=''){
 		$status = explode( ",", _statuslist);
 		$value	= array('NYA','ARR','STD','PKD','DEP','NSW');
 		
-		echo"<select name='status_id' id='stat_".$id."' size='1' class='status_dbox' $disabled style='width:90px;'>";
+		// icon per status; browsers with customizable selects (Chrome 135+) show it in the list and
+		// in the closed field, all others fall back to the plain text of the options
+		$icon = array('NYA' => 'st_confirmed', 'ARR' => 'st_arrived', 'STD' => 'st_seated', 'PKD' => 'st_bar', 'DEP' => 'check', 'NSW' => 'st_noshow');
+
+		echo"<select name='status_id' id='stat_".$id."' size='1' class='status_dbox st-".htmlspecialchars($title)."' $disabled>";
+		echo "<button type='button'><selectedcontent></selectedcontent></button>";
 		// loooping...
-		for ($i=0; $i < 6; $i++) { 
-			echo "<option value='".$value[$i]."' ";
+		for ($i=0; $i < 6; $i++) {
+			echo "<option value='".$value[$i]."' class='st-".$value[$i]."' ";
 			echo ($title==$value[$i]) ? "selected='selected'" : "";
-			echo ">".$status[$i]."</option>\n";
-		}		
-		
+			echo ">".uiIcon($icon[$value[$i]])."<span>".$status[$i]."</span></option>\n";
+		}
+
 		echo "</select>\n";
 }
 
@@ -661,6 +666,12 @@ function uiIcon($name, $opt = array()) {
 		'box_on'  => "<rect x='4' y='4' width='16' height='16' rx='3'/><path d='M8.2 12.3l2.6 2.6 5-5.4'/>",
 		'box_off' => "<rect x='4' y='4' width='16' height='16' rx='3'/>",
 		'clock'   => "<circle cx='12' cy='12' r='9'/><path d='M12 7v5.2l3.4 2'/>",
+		// reservation status
+		'st_confirmed' => "<rect x='3.5' y='5' width='17' height='15' rx='2'/><path d='M3.5 10h17M8 3v4M16 3v4M9 14.6l2.2 2.2 3.9-4.3'/>",
+		'st_arrived'   => "<path d='M12 21s7-6.2 7-11.5a7 7 0 1 0-14 0C5 14.8 12 21 12 21z'/><path d='M9 9.8l2.2 2.2 3.8-4'/>",
+		'st_seated'    => "<circle cx='8' cy='5.5' r='2'/><path d='M8 8.2v5h5M13 13.2V19M8 9.8h5.2M15.5 10.5H21M18.2 10.5V19'/>",
+		'st_bar'       => "<path d='M5.5 4.5h13L12 12z'/><path d='M12 12v7M8.2 19.2h7.6'/>",
+		'st_noshow'    => "<circle cx='12' cy='8' r='3.4' stroke-dasharray='2.2 2.4'/><path d='M5 20c.6-3.6 3.4-5.5 7-5.5s6.4 1.9 7 5.5' stroke-dasharray='2.2 2.4'/>",
 	);
 	if (!isset($paths[$name])) { return ''; }
 	$cls = 'ui-ico ui-ico-'.$name.(!empty($opt['class']) ? ' '.$opt['class'] : '');

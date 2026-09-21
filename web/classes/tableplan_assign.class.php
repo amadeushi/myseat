@@ -9,6 +9,9 @@
  */
 require_once __DIR__ . '/tableplan.class.php';
 
+// most tables that may be pushed together for one reservation by the automatic assignment
+const TP_MAX_GROUP = 6;
+
 function tp_res_table() {
 	global $dbTables;
 	return '`'.$dbTables->reservations.'`';
@@ -242,10 +245,13 @@ function tp_day_payload($outlet_id, $date) {
 	foreach ($ctx['res'] as $r) {
 		$j = tp_judge($ctx, $r['id'], $r['pax'], $r['min'], $r['tables']);
 		$r['conflicts'] = array_merge($j['errors'], $j['warnings']);
-		unset($r['min']);
 		$list[] = $r;
 	}
-	return array('date' => $date, 'dur' => $ctx['dur'], 'closed' => array_keys($ctx['closed']), 'reservations' => $list);
+	// opening hours of the day in minutes (closing after midnight counts past 24:00), for the time strips
+	$hours = tp_day_hours($outlet_id, $date);
+	$open = $hours[0];
+	$close = ($hours[1] <= $hours[0]) ? $hours[1] + 1440 : $hours[1];
+	return array('date' => $date, 'dur' => $ctx['dur'], 'open' => $open, 'close' => $close, 'closed' => array_keys($ctx['closed']), 'reservations' => $list);
 }
 
 /* ---------------------------------------------------------------- assignment */
@@ -323,35 +329,44 @@ function tp_find_tables($ctx, $res_id, $pax, $min) {
 	}
 	if ($best) { return array($best[1]); }
 
-	// tables that may be pushed together: connected groups of up to four, least waste first
+	// tables that may be pushed together: every connected group of up to TP_MAX_GROUP free tables
+	// (a chain A-B-C-D-E counts as connected, whatever order it was linked in), least waste first
 	$adj = array();
 	foreach (tp_list_links_all(array_keys($free)) as $l) {
 		$a = (int)$l['table_a']; $b = (int)$l['table_b'];
 		$adj[$a][$b] = true; $adj[$b][$a] = true;
 	}
-	$bestSet = null; $bestScore = null; $budget = 20000;
-	$grow = function ($set, $seats) use (&$grow, &$bestSet, &$bestScore, &$budget, $adj, $free, $pax) {
+	$bestSet = null; $bestScore = null; $budget = 200000;
+	// ESU: lists each connected group exactly once, starting from its lowest table id v
+	$extend = function ($sub, $seats, $ext, $v) use (&$extend, &$bestSet, &$bestScore, &$budget, $adj, $free, $pax) {
 		if ($budget-- <= 0) { return; }
 		if ($seats >= $pax) {
-			$score = array($seats - $pax, count($set));
-			if ($bestScore === null || $score < $bestScore) { $bestScore = $score; $bestSet = $set; }
-			return;
+			$score = array($seats - $pax, count($sub));
+			if ($bestScore === null || $score < $bestScore) { $bestScore = $score; $bestSet = $sub; }
+			return;   // more tables would only add waste
 		}
-		if (count($set) >= 4) { return; }
-		$cand = array();
-		foreach ($set as $s) {
-			if (isset($adj[$s])) {
-				foreach ($adj[$s] as $n => $_) {
-					if (!in_array($n, $set, true) && $n > min($set)) { $cand[$n] = true; }
+		if (count($sub) >= TP_MAX_GROUP) { return; }
+		while ($ext) {
+			$w = array_pop($ext);
+			$next = $ext;
+			if (isset($adj[$w])) {
+				foreach ($adj[$w] as $u => $_) {
+					if ($u <= $v || in_array($u, $sub, true) || in_array($u, $next, true) || $u === $w) { continue; }
+					// exclusive neighbour: not already next to a table of the group
+					$touches = false;
+					foreach ($sub as $s) { if (isset($adj[$s][$u])) { $touches = true; break; } }
+					if (!$touches) { $next[] = $u; }
 				}
 			}
-		}
-		foreach (array_keys($cand) as $n) {
-			$grow(array_merge($set, array($n)), $seats + (int)$free[$n]['seats']);
+			$extend(array_merge($sub, array($w)), $seats + (int)$free[$w]['seats'], $next, $v);
 		}
 	};
-	foreach (array_keys($adj) as $start) {
-		$grow(array($start), (int)$free[$start]['seats']);
+	$ids = array_keys($adj);
+	sort($ids);
+	foreach ($ids as $v) {
+		$ext = array();
+		foreach ($adj[$v] as $u => $_) { if ($u > $v) { $ext[] = $u; } }
+		$extend(array($v), (int)$free[$v]['seats'], $ext, $v);
 	}
 	return $bestSet;
 }

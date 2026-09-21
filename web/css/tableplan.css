@@ -166,3 +166,22 @@
 .tp-slot { font-size: 12px; font-variant-numeric: tabular-nums; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--border, rgba(201,164,89,.22)); }
 .tp-slot.is-free { border-color: var(--success, #8fbf7a); color: var(--success, #8fbf7a); }
 .tp-slot.is-full { color: var(--text-muted, #a89e8c); opacity: .5; text-decoration: line-through; }
+
+/* ---- occupancy highlighting ---- */
+.tp-table.is-taken { background: rgba(201,162,89,.24); border-color: var(--gold-strong, #e2c07f); }
+.tp-table.is-multi { background: rgba(201,162,89,.24); border-color: var(--gold-strong, #e2c07f); box-shadow: inset 0 0 0 2px rgba(226,192,127,.4); }
+.tp-table.is-clash { background: rgba(226,134,124,.24); border-color: var(--danger, #e2867c); box-shadow: 0 0 0 3px rgba(226,134,124,.32); }
+.tp-tl { position: relative; display: block; width: 100%; height: 6px; margin-top: 4px; border-radius: 3px; overflow: hidden; background: rgba(243,237,225,.14); }
+.tp-tl-seg { position: absolute; top: 0; bottom: 0; background: var(--gold-strong, #e2c07f); opacity: .9; border-right: 1px solid var(--bg, #0c0b0a); }
+.tp-tl-seg.is-clash { background: var(--danger, #e2867c); }
+.tp-table.is-mine .tp-tl { background: rgba(12,11,10,.28); }
+.tp-table.is-mine .tp-tl-seg { background: var(--bg, #0c0b0a); border-right-color: var(--gold, #c9a259); }
+.tp-badge { position: absolute; top: 2px; right: 4px; font-size: 11px; font-weight: 700; line-height: 1; color: var(--gold-strong, #e2c07f); pointer-events: none; }
+.tp-table.is-clash .tp-badge { color: var(--danger, #e2867c); }
+.tp-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin: -2px 0 10px; font-size: 13px; color: var(--text-muted, #a89e8c); }
+.tp-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.tp-swatch { width: 14px; height: 14px; border-radius: 4px; border: 2px solid var(--gold, #c9a259); box-sizing: border-box; background: var(--surface-3, #242220); }
+.tp-swatch.is-taken { background: rgba(201,162,89,.24); border-color: var(--gold-strong, #e2c07f); }
+.tp-swatch.is-multi { background: rgba(201,162,89,.24); border-color: var(--gold-strong, #e2c07f); box-shadow: inset 0 0 0 2px rgba(226,192,127,.4); }
+.tp-swatch.is-clash { background: rgba(226,134,124,.24); border-color: var(--danger, #e2867c); }
+.tp-legend-hint { opacity: .8; }

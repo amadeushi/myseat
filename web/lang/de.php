@@ -495,7 +495,7 @@ define ( '_no_', 'Nein' );
 define ( '_yes_', 'OK' );
 
 //original text: "NYA,Arrived,Seated,Parked,Departed,No Show"
-define ( '_statuslist', 'NYA,Angekommen,Platziert,an Bar,Gegangen,No Show' );
+define ( '_statuslist', 'Bestätigt,Angekommen,Platziert,An der Bar,Fertig,No-Show' );
 
 //original text: "delete series"
 define ( '_delete_all_entries', 'Serie löschen' );
