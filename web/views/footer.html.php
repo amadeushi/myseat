@@ -41,7 +41,10 @@ $(document).ready(function() {
 		  });
 		
 		// Preload images
-		$.preloadCssImages();
+		// cosmetic image preloading; it throws a SecurityError as soon as a
+		// cross-origin stylesheet (Google Fonts in the theme) is present, and
+		// an uncaught error here would stop every handler registered below
+		try { $.preloadCssImages(); } catch (e) {}
 		
 		// Realtime reservation updates with arte plugin
 		$.arte({'ajax_url': 'ajax/realtime.php?lastid=<?php echo $_SESSION['max_id']; ?>', 'on_success': update_field, 'time': 5000}).start();

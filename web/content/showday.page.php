@@ -18,7 +18,7 @@
 			$pos = (isset($maitre['maitre_comment_day']) ? strpos($maitre['maitre_comment_day'],$findme) : false);
 
 			if ( $today_date <= $_SESSION['selectedDate'] && $dayoff == 0 && current_user_can('Reservation-New') && $pos === false  ){
-				echo'<li>
+				echo'<li class="tab-new">
 					<a href="main_page.php?q=2"';
 					if ($q == 2) { echo " class='active'";}else{ echo " class='inactive'"; }
 					echo' >'._add_reservation.'</a></li>';

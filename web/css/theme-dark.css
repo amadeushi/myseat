@@ -956,3 +956,47 @@ table.global.resv-table-small tbody tr td:nth-child(4) strong {
 	font-size: 15px;
 	color: var(--gold);
 }
+
+/* ---- small headings (guest card date/time line etc.) ---- */
+h5, h6,
+.onecolumn .content h5,
+#fancybox-inner h5 {
+	color: var(--text-muted);
+	text-shadow: none;
+	font-family: var(--font-body);
+	font-weight: 600;
+}
+h5 {
+	font-size: 14px;
+}
+
+/* ---- "new reservation" tab: the primary action of the day view ---- */
+.first_level_tab li.tab-new a {
+	background: var(--gold);
+	color: #1a1408;
+	border-color: var(--gold);
+	font-weight: 700;
+	font-size: 14px;
+	text-shadow: none;
+	box-shadow: 0 0 0 3px rgba(201, 162, 89, 0.18);
+}
+.first_level_tab li.tab-new a::before {
+	content: "+";
+	display: inline-block;
+	margin-right: 8px;
+	font-size: 20px;
+	line-height: 1;
+	font-weight: 600;
+	vertical-align: -1px;
+}
+.first_level_tab li.tab-new a:hover {
+	background: var(--gold-strong);
+	border-color: var(--gold-strong);
+	color: #1a1408;
+}
+.first_level_tab li.tab-new a.active {
+	background: var(--surface);
+	color: var(--gold);
+	border-color: var(--gold);
+	box-shadow: none;
+}

@@ -3,9 +3,9 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 0.2166                        =-=
-=-= Date:    20.09.2026                   =-=
-=-= Time:    19:50 GMT                    =-=
+=-= Version: 0.2167                        =-=
+=-= Date:    21.09.2026                   =-=
+=-= Time:    18:00 GMT                    =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 
@@ -29,11 +29,24 @@ News
 CHANGELOG
 =========
 
-Versions 0.2161 - 0.2166 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 0.2167 are maintained in http://github.com/amadeushi/myseat.
 No database update is needed for any of them. Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-21 == mySeat v0.2167 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Backend: editing a reservation works again - the detail page was cut off by a PHP 8
+   fatal error (unquoted $_SESSION key in reservation_form.inc.php)
+ * Backend: fixed a regression of the dark theme - preloadCssImages() threw a SecurityError
+   because of the Google Fonts stylesheet and stopped all page scripts after it (edit button,
+   datepicker, realtime updates); the call is now guarded
+ * Backend: "+ Neu" tab highlighted as the primary action of the reservation view; the
+   "Amadeus" brand link opens the reservation view
+ * Backend: table row hover via CSS class (search results no longer turn white), dark
+   autocomplete highlight, invalid fields get a red edge instead of a pink background,
+   readable guest card (h5/h6), dashboard rows with larger type and a slim time-of-day marker
 
 2026-09-20 == mySeat v0.2166 == amadeushi - http://github.com/amadeushi/myseat
 
