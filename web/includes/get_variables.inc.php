@@ -162,6 +162,9 @@ $_SESSION['selectedDate_year']	 = $sj;
 if (isset($_GET['outletID']) || (	isset($_SESSION['outletID'])
 								&&	isset($_SESSION['selOutlet']['outlet_id'])
 								&&	$_SESSION['outletID'] != $_SESSION['selOutlet']['outlet_id'] )
+	// also load them when they are missing altogether, e.g. right after a fresh login:
+	// without them the day view dies in getAvailability() (no average duration)
+	|| ( !empty($_SESSION['outletID']) && empty($_SESSION['selOutlet']['outlet_id']) )
 	) {
 	$_SESSION['selOutlet'] = array();
 	$rows = querySQL('db_outlet_info');

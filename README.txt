@@ -3,9 +3,9 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 0.2168                        =-=
+=-= Version: 0.2169                        =-=
 =-= Date:    21.09.2026                   =-=
-=-= Time:    18:05 GMT                    =-=
+=-= Time:    18:26 GMT                    =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 
@@ -29,11 +29,27 @@ News
 CHANGELOG
 =========
 
-Versions 0.2161 - 0.2168 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 0.2169 are maintained in http://github.com/amadeushi/myseat.
 No database update is needed for any of them. Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-21 == mySeat v0.2169 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Backend (web/) runs on jQuery 3.7.1, jQuery UI 1.13.3 and jquery-validate 1.19.5 (was
+   jQuery 1.4.4 / UI 1.8.10 / validate 1.7). The new scripts live in web/js/v3/; footer.html.php
+   loads them by default. The old stack is still in web/js/ and can be loaded per browser tab
+   with ?jq3=0 (?jq3=1 switches back) - it will be removed in a later version
+ * plugins.js for jQuery 3: jQuery.browser and jQuery.support.opacity are re-created (needed by
+   the bundled WYSIWYG editor and Fancybox 1.3), .live() -> delegated .on(), .unload() and
+   .size() replaced; custom.js uses .prop() for checkboxes
+ * Datepicker arrows use the real characters (jQuery UI 1.13 no longer renders HTML there);
+   autocomplete/menu styling follows the new jQuery UI markup
+ * Fixed: the day view crashed with a PHP 8 fatal error (getAvailability, no average duration)
+   whenever the outlet data was not loaded yet, e.g. right after a fresh login
+ * Note: the WYSIWYG description editor of the outlet form could not be inspected automatically
+   during the upgrade - please check it once in the browser (outlet edit page)
 
 2026-09-21 == mySeat v0.2168 == amadeushi - http://github.com/amadeushi/myseat
 
@@ -41,7 +57,6 @@ config/config.general.php (defaults apply when missing):
    jQuery 1.4.4 / UI 1.7.3, both with known vulnerabilities); event handlers use .on(),
    form validation submits the form natively, the easing plugin is replaced by the one
    built into jQuery UI. The old api/js libraries were removed.
- * The backend (web/) still uses jQuery 1.4.4 - its upgrade is a separate step
 
 2026-09-21 == mySeat v0.2167 == amadeushi - http://github.com/amadeushi/myseat
 

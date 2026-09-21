@@ -879,7 +879,7 @@ table.global.resv-table-small tbody tr td.noprint select,
 	font-size: 13px;
 	padding: 6px 8px;
 	width: auto;
-	min-width: 92px;
+	min-width: 120px;
 }
 table.global.resv-table-small tfoot tr td,
 table.global.resv-table tfoot tr td {
@@ -999,4 +999,19 @@ h5 {
 	color: var(--gold);
 	border-color: var(--gold);
 	box-shadow: none;
+}
+
+/* ---- jQuery UI 1.13 menu markup (autocomplete): items are wrapped in a div ---- */
+.ui-menu .ui-menu-item-wrapper {
+	padding: 6px 10px;
+	border: 1px solid transparent;
+	color: var(--text);
+}
+.ui-menu .ui-menu-item-wrapper.ui-state-active,
+.ui-menu .ui-menu-item-wrapper:hover {
+	background: var(--surface-3) !important;
+	background-image: none !important;
+	border: 1px solid var(--border) !important;
+	color: var(--gold-strong) !important;
+	margin: 0;
 }

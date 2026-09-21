@@ -5,17 +5,48 @@
 <script type="text/javascript">!window.jQuery && document.write(unescape("%3Cscript src='js/jquery-1.4.4.min.js' type='text/javascript'%3E%3C/script%3E"))</script>
 <script type="text/javascript">!window.jQuery.ui && document.write(unescape("%3Cscript src='js/jquery-ui-1.8.10.custom.min.js' type='text/javascript'%3E%3C/script%3E"))</script>
 -->
-<script type="text/javascript" src="js/jquery-1.4.4.min.js"></script>
-<script type="text/javascript" src="js/jquery-ui-1.8.10.custom.min.js"></script>
+<script type="text/javascript">
+// jQuery 3 is the default; the old jQuery 1.4.4 stack stays available as a per-tab fallback. The switch lives in
+// sessionStorage, so it only affects the browser tab it was switched in:
+// ?jq3=0 loads the old stack, ?jq3=1 goes back to the new one.
+(function () {
+	var m = location.search.match(/[?&]jq3=([01])/), on = true;
+	try {
+		if (m) { sessionStorage.setItem('jq3', m[1]); }
+		on = sessionStorage.getItem('jq3') !== '0';
+	} catch (e) {}
+	window.__jq3 = on;
+	function s(src) { document.write('<script type="text/javascript" src="' + src + '"><\/script>'); }
+	if (on) {
+		s('js/v3/jquery-3.7.1.min.js');
+		s('js/v3/jquery-ui-1.13.3.min.js');
+	} else {
+		s('js/jquery-1.4.4.min.js');
+		s('js/jquery-ui-1.8.10.custom.min.js');
+	}
+})();
+</script>
 
 	<!--[if IE]>
 		<script type="text/javascript" src="js/excanvas.js"></script>
 	<![endif]-->
 	<!-- Javascript at the bottom for fast page loading --> 
-	<script type="text/javascript" src="js/plugins.js"></script>
-	<script type="text/javascript" src="js/fancybox/jquery.fancybox-1.3.0.js"></script>
-	<script type="text/javascript" src="js/jquery.validate.min.js"></script>
-	<script type="text/javascript" src="js/custom.js?v=<?php echo @filemtime(__DIR__.'/../js/custom.js'); ?>"></script>
+	<script type="text/javascript">
+	(function () {
+		function s(src) { document.write('<script type="text/javascript" src="' + src + '"><\/script>'); }
+		if (window.__jq3) {
+			s('js/v3/plugins.js?v=<?php echo @filemtime(__DIR__.'/../js/v3/plugins.js'); ?>');
+			s('js/fancybox/jquery.fancybox-1.3.0.js');
+			s('js/v3/jquery.validate.min.js');
+			s('js/v3/custom.js?v=<?php echo @filemtime(__DIR__.'/../js/v3/custom.js'); ?>');
+		} else {
+			s('js/plugins.js');
+			s('js/fancybox/jquery.fancybox-1.3.0.js');
+			s('js/jquery.validate.min.js');
+			s('js/custom.js?v=<?php echo @filemtime(__DIR__.'/../js/custom.js'); ?>');
+		}
+	})();
+	</script>
 	<script type="text/javascript" src="lang/jquery.ui.datepicker-<?php echo substr($_SESSION['language'],0,2);?>.js"></script>	
 	
 	<script type="text/javascript">
@@ -64,8 +95,8 @@ $(document).ready(function() {
         });
 		// Setup datepicker input
 		$("#datepicker").datepicker({
-			nextText: '&raquo;',
-			prevText: '&laquo;',
+			nextText: '»',
+			prevText: '«',
 			firstDay: 1,
 			numberOfMonths: 2,
 			gotoCurrent: true,
@@ -80,8 +111,8 @@ $(document).ready(function() {
 		// Setup datepickers export
 		<?php if($_SESSION['page']=='4'):?>
 			$("#s_datepicker").datepicker({
-				nextText: '&raquo;',
-				prevText: '&laquo;',
+				nextText: '»',
+				prevText: '«',
 				firstDay: 1,
 				numberOfMonths: 1,
 				gotoCurrent: true,
@@ -92,8 +123,8 @@ $(document).ready(function() {
 				regional: '<?php echo substr($_SESSION['language'],0,2);?>'
 			});
 			$("#e_datepicker").datepicker({
-				nextText: '&raquo;',
-				prevText: '&laquo;',
+				nextText: '»',
+				prevText: '«',
 				showAnim: 'slideDown',
 				firstDay: 1,
 				numberOfMonths: 1,
@@ -108,8 +139,8 @@ $(document).ready(function() {
 		<?php endif ?>
 		// Setup recurring date input
 		$("#recurring_date").datepicker({
-			nextText: '&raquo;',
-			prevText: '&laquo;',
+			nextText: '»',
+			prevText: '«',
 			firstDay: 1,
 			numberOfMonths: 1,
 			gotoCurrent: true,
@@ -123,8 +154,8 @@ $(document).ready(function() {
 		//$("#recurring_date").datepicker('setDate', new Date ( "<?php echo $_SESSION['selectedDate']; ?>" ));
 		// Setup event datepicker
 		$("#ev_datepicker").datepicker({
-			nextText: '&raquo;',
-			prevText: '&laquo;',
+			nextText: '»',
+			prevText: '«',
 			firstDay: 1,
 			numberOfMonths: 1,
 			gotoCurrent: true,
