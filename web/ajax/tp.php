@@ -15,6 +15,7 @@ include('../classes/business.class.php');
 include('../classes/db_queries.db.php');
 include('../../config/config.inc.php');
 include('../classes/tableplan_assign.class.php');
+include('../classes/online_block.class.php');
 
 function tp_out($payload, $code = 200) {
 	http_response_code($code);
@@ -67,6 +68,8 @@ switch ($action) {
 			'areas'    => $areas,
 			'closures' => tp_list_closures($outlet_id),
 			'autoAssign' => tp_get_setting('auto_assign', '1') === '1',
+			'availabilityMode' => tp_availability_mode(),
+			'counter' => tp_counter_info($outlet_id),
 			'ok'       => true,
 			'outlet'   => $outlet_id,
 			'canvas'   => array('w' => TP_CANVAS_W, 'h' => TP_CANVAS_H),
@@ -139,8 +142,27 @@ switch ($action) {
 		tp_out(array('ok' => true, 'closures' => tp_list_closures($outlet_id)));
 
 	case 'setting_save':
-		tp_set_setting('auto_assign', !empty($data['autoAssign']) ? '1' : '0');
-		tp_out(array('ok' => true, 'autoAssign' => tp_get_setting('auto_assign', '1') === '1'));
+		if (array_key_exists('autoAssign', $data)) {
+			tp_set_setting('auto_assign', !empty($data['autoAssign']) ? '1' : '0');
+		}
+		if (array_key_exists('availabilityMode', $data)) {
+			$mode = $data['availabilityMode'] === 'tables' ? 'tables' : 'counter';
+			if ($mode === 'tables' && tp_active_table_count($outlet_id) < 1) {
+				tp_fail('Für die Verfügbarkeit nach Tischplan zuerst Tische anlegen');
+			}
+			tp_set_setting('availability_mode', $mode);
+		}
+		tp_out(array('ok' => true, 'autoAssign' => tp_get_setting('auto_assign', '1') === '1', 'availabilityMode' => tp_availability_mode()));
+
+	case 'preview':
+		$date = isset($data['date']) ? (string)$data['date'] : '';
+		if (!tp_is_date($date)) {
+			tp_fail('Ungültiges Datum');
+		}
+		$pax = max(1, min(99, isset($data['pax']) ? (int)$data['pax'] : 2));
+		$interval = isset($general['timeintervall']) ? (int)$general['timeintervall'] : 15;
+		$why = tp_online_day_block_reason($outlet_id, $date);
+		tp_out(array('ok' => true, 'date' => $date, 'pax' => $pax, 'reason' => $why, 'slots' => $why ? array() : tp_online_preview($outlet_id, $date, $pax, $interval)));
 
 	case 'day':
 		$date = isset($data['date']) ? (string)$data['date'] : '';

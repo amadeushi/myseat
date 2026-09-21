@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 0.2173                        =-=
+=-= Version: 0.2175                        =-=
 =-= Date:    21.09.2026                   =-=
 =-= Time:    18:30 GMT                    =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -29,12 +29,37 @@ News
 CHANGELOG
 =========
 
-Versions 0.2161 - 0.2173 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 0.2175 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-21 == mySeat v0.2175 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Datepicker (online form on mobile and backend): the cell of today and the hovered cell had a
+   light grey background from the old jQuery UI styles - white frame / light on light text;
+   now transparent like the other days
+ * Backend: the open list of a dropdown (time, title, type ... in the edit form) was drawn in
+   the browser's light style; the dark theme now declares color-scheme: dark
+
+2026-09-21 == mySeat v0.2174 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Online availability by table plan (switch in the plan editor, box "Einstellung": "Online-
+   Verfügbarkeit: Nach Zählung (bisher) / Nach Tischplan"; default stays the old counter logic).
+   With "Nach Tischplan" a time slot is bookable when the party finds free tables: the smallest
+   free table that is big enough, otherwise up to four tables marked as linkable, outside closed
+   areas, respecting the average stay. Reservations without a table are placed on tables in
+   memory first so they block their tables. Full slots are greyed out in the form; a booking
+   for a full slot goes to the waiting list, as before. An explicit passer-by limit of the day
+   still applies; the seat/table limits of the outlet do not. Falls back to the counter logic
+   when there are no tables or on any error. The backend day view keeps its own counters
+ * "Online-Vorschau (Tischplan)" in the day view shows, for a party size, which slots the table
+   plan would offer (or why the day is not bookable: closed weekday, day off, online block),
+   so the switch can be tried in parallel before it is turned on
+ * Times after midnight (e.g. open 14:30 - 00:00) are treated as belonging to the same evening
+   when checking overlaps at a table
 
 2026-09-21 == mySeat v0.2173 == amadeushi - http://github.com/amadeushi/myseat
 

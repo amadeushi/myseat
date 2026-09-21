@@ -1022,3 +1022,15 @@ h5 {
 .ob-mini:hover { color: var(--gold-strong); }
 a.button_dark.ob-toggle.is-blocked { border-color: var(--danger); color: var(--danger); }
 .ob-cell { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* legacy datepicker styles give the cell of today / the hovered cell a light grey background */
+.ui-datepicker td,
+.ui-datepicker td.ui-datepicker-today,
+.ui-datepicker td.ui-datepicker-days-cell-over {
+	background: transparent;
+	border-color: transparent;
+}
+
+/* native form controls (the open list of a <select>, scrollbars) follow the dark theme */
+html { color-scheme: dark; }
+select, option { color-scheme: dark; }

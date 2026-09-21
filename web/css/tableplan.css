@@ -157,3 +157,12 @@
 .tp-asg { display: block; }
 .tp-canvas:not(.is-edit) .tp-table { overflow: hidden; }
 .tp-table.is-busy { opacity: .7; }
+
+/* ---- online preview ---- */
+.tp-preview { margin: 0 0 10px; padding: 8px 10px; border: 1px solid var(--border, rgba(201,164,89,.22)); border-radius: 4px; }
+.tp-preview summary { cursor: pointer; color: var(--gold-strong, #e2c07f); font-weight: 600; }
+.tp-preview .tp-field { margin-top: 8px; }
+.tp-slots { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+.tp-slot { font-size: 12px; font-variant-numeric: tabular-nums; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--border, rgba(201,164,89,.22)); }
+.tp-slot.is-free { border-color: var(--success, #8fbf7a); color: var(--success, #8fbf7a); }
+.tp-slot.is-full { color: var(--text-muted, #a89e8c); opacity: .5; text-decoration: line-through; }

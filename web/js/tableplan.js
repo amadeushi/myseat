@@ -12,6 +12,8 @@
 	var GRID = 10;
 	var st = {
 		areas: [], area: null, tables: [], links: [], closures: [], autoAssign: true,
+		availabilityMode: 'counter', counter: null,
+		dayVer: 0, previewOpen: false, previewPax: 2, preview: null,
 		selected: null,          // table_id (editor)
 		edit: false, linkMode: false, linkFirst: null,
 		date: cfg.date,          // day shown in the assignment view (YYYY-MM-DD)
@@ -102,6 +104,7 @@
 
 	/* ---------- day data ---------- */
 	function setDay(payload) {
+		st.dayVer++;
 		st.day = {
 			dur: payload.dur,
 			closed: payload.closed.map(function (x) { return parseInt(x, 10); }),
@@ -313,6 +316,8 @@
 			panel.appendChild(el('p', { 'class': 'tp-hint', text: cfg.canEdit ? 'Noch keine Tische angelegt. Mit „Plan bearbeiten“ kannst du den Plan aufbauen.' : 'Noch keine Tische angelegt.' }));
 		}
 
+		if (st.tables.length) { panel.appendChild(previewBlock()); }
+
 		var list = el('div', { 'class': 'tp-reslist', role: 'list' });
 		d.reservations.forEach(function (r) { list.appendChild(resCard(r)); });
 		if (!d.reservations.length) { list.appendChild(el('p', { 'class': 'tp-hint', text: 'Keine Reservierungen an diesem Tag.' })); }
@@ -458,10 +463,61 @@
 				st.autoAssign = r.autoAssign; say('Gespeichert');
 			});
 		});
+		var mode = el('select', {}, [
+			el('option', { value: 'counter', text: 'Nach Zählung (bisher)' }),
+			el('option', { value: 'tables', text: 'Nach Tischplan' })
+		]);
+		mode.value = st.availabilityMode;
+		mode.addEventListener('change', function () {
+			var want = mode.value;
+			if (want === 'tables' && !window.confirm('Ab sofort entscheidet der Tischplan, welche Zeiten Gäste online buchen können. Die Sitzplatz- und Tischgrenzen des Outlets gelten online nicht mehr.\n\nJetzt umschalten?')) { mode.value = st.availabilityMode; return; }
+			api('setting_save', { availabilityMode: want }).then(function (r) {
+				if (!r.ok) { say(r.error || 'Umschalten fehlgeschlagen', true); mode.value = st.availabilityMode; return; }
+				st.availabilityMode = r.availabilityMode; st.preview = null; render(); say('Online-Verfügbarkeit: ' + (r.availabilityMode === 'tables' ? 'nach Tischplan' : 'nach Zählung'));
+			});
+		});
+		var c = st.counter;
 		panel.appendChild(el('div', { 'class': 'tp-areabox' }, [
 			el('h3', { text: 'Einstellung' }),
-			el('label', { 'class': 'tp-check' }, [auto, el('span', { text: 'Neue Reservierungen automatisch einem Tisch zuweisen' })])
+			el('label', { 'class': 'tp-check' }, [auto, el('span', { text: 'Neue Reservierungen automatisch einem Tisch zuweisen' })]),
+			field('Online-Verfügbarkeit', mode),
+			c ? el('p', { 'class': 'tp-hint', text: 'Bisherige Grenzen: ' + c.maxCapacity + ' Plätze, ' + c.maxTables + ' Tische. Tischplan: ' + c.planSeats + ' Plätze, ' + c.planTables + ' Tische. Die Vorschau in der Tagesansicht zeigt, was Gäste bei „Nach Tischplan“ buchen könnten.' }) : null
 		]));
+	}
+
+	/* --- preview of the online offer by the table plan --- */
+	function previewBlock() {
+		var box = el('details', { 'class': 'tp-preview' });
+		var pax = el('input', { type: 'number', min: '1', max: '20', value: String(st.previewPax), 'aria-label': 'Personen' });
+		var chips = el('div', { 'class': 'tp-slots' });
+		var note = el('p', { 'class': 'tp-hint' });
+		function draw() {
+			while (chips.firstChild) { chips.removeChild(chips.firstChild); }
+			if (!st.preview) { chips.appendChild(el('span', { 'class': 'tp-hint', text: 'Lade …' })); return; }
+			if (!st.preview.slots.length) { chips.appendChild(el('span', { 'class': 'tp-hint', text: st.preview.reason || 'Keine Zeitfenster an diesem Tag.' })); }
+			st.preview.slots.forEach(function (s) { chips.appendChild(el('span', { 'class': 'tp-slot ' + (s.fits ? 'is-free' : 'is-full'), text: s.time })); });
+		}
+		function load() {
+			var key = st.date + '|' + st.previewPax + '|' + st.dayVer + '|' + st.tables.length;
+			if (st.preview && st.preview.key === key) { draw(); return; }
+			st.preview = null; draw();
+			api('preview', { date: st.date, pax: st.previewPax }).then(function (r) {
+				if (!r.ok) { say(r.error || 'Vorschau nicht möglich', true); return; }
+				st.preview = { key: key, slots: r.slots, reason: r.reason }; draw();
+			});
+		}
+		note.textContent = st.availabilityMode === 'tables'
+			? 'Grün: online buchbar, grau: ausgebucht. Diese Zeiten sehen Gäste online.'
+			: 'Nur Vorschau – online gilt noch die Zählung.';
+		box.open = st.previewOpen;
+		box.appendChild(el('summary', { text: 'Online-Vorschau (Tischplan)' }));
+		box.appendChild(field('Personen', pax));
+		box.appendChild(chips);
+		box.appendChild(note);
+		box.addEventListener('toggle', function () { st.previewOpen = box.open; if (box.open) { load(); } });
+		pax.addEventListener('change', function () { st.previewPax = Math.max(1, Math.min(20, parseInt(pax.value, 10) || 2)); st.preview = null; load(); });
+		if (st.previewOpen) { load(); }
+		return box;
 	}
 
 	function closurePanel(ar) {
@@ -810,6 +866,8 @@
 		st.links = normLinks(r.links);
 		st.closures = normClosures(r.closures);
 		st.autoAssign = !!r.autoAssign;
+		st.availabilityMode = r.availabilityMode;
+		st.counter = r.counter;
 		render();
 		loadDay();
 	});

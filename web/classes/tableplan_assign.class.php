@@ -38,6 +38,27 @@ function tp_duration_minutes($outlet_id) {
 	return $m > 0 ? $m : 120;
 }
 
+// opening hours of the outlet on a date as [open, close] in minutes; the daily override wins
+function tp_day_hours($outlet_id, $date) {
+	$r = tp_rows("SELECT * FROM ".tp_outlets_table()." WHERE `outlet_id` = ?", 'i', array((int)$outlet_id));
+	if (!$r) { return array(0, 24 * 60, 0, 0); }
+	$o = $r[0];
+	$w = date('w', strtotime($date));
+	$custom = isset($o[$w.'_open_time']) && $o[$w.'_open_time'] !== '00:00:00' && $o[$w.'_open_time'] !== '';
+	$open  = tp_min($custom ? $o[$w.'_open_time']  : $o['outlet_open_time']);
+	$close = tp_min($custom ? $o[$w.'_close_time'] : $o['outlet_close_time']);
+	$bo = (isset($o[$w.'_open_break'])  && $o[$w.'_open_break']  !== '00:00:00') ? $o[$w.'_open_break']  : (isset($o['outlet_open_break'])  ? $o['outlet_open_break']  : '00:00:00');
+	$bc = (isset($o[$w.'_close_break']) && $o[$w.'_close_break'] !== '00:00:00') ? $o[$w.'_close_break'] : (isset($o['outlet_close_break']) ? $o['outlet_close_break'] : '00:00:00');
+	return array($open, $close, tp_min($bo), tp_min($bc));
+}
+
+// minute of the day as used for comparing reservations: times before the opening belong to the
+// night after midnight (outlet open 14:30 - 00:00, booking at 00:00 = 24:00)
+function tp_ctx_min($ctx, $time) {
+	$m = tp_min($time);
+	return ($ctx['wrap'] !== null && $m < $ctx['wrap']) ? $m + 1440 : $m;
+}
+
 /* ---------------------------------------------------------------- area closures */
 
 function tp_ensure_closure_schema() {
@@ -141,7 +162,9 @@ function tp_day_context($outlet_id, $date) {
 		AND IFNULL(`reservation_hidden`,0) = 0 AND IFNULL(`reservation_wait`,0) = 0
 		AND (`reservation_status` IS NULL OR `reservation_status` NOT IN ('DEP','NSW'))
 		ORDER BY `reservation_time`,`reservation_id`", 'is', array((int)$outlet_id, $date));
-	$ctx = array('date' => $date, 'res' => array(), 'tables' => array(), 'closed' => array(), 'occ' => array(), 'dur' => tp_duration_minutes($outlet_id));
+	$hours = tp_day_hours($outlet_id, $date);
+	$ctx = array('date' => $date, 'res' => array(), 'tables' => array(), 'closed' => array(), 'occ' => array(), 'dur' => tp_duration_minutes($outlet_id),
+		'wrap' => ($hours[1] <= $hours[0]) ? $hours[0] : null);
 	foreach (tp_list_tables($outlet_id) as $t) {
 		$ctx['tables'][(int)$t['table_id']] = $t;
 	}
@@ -153,7 +176,7 @@ function tp_day_context($outlet_id, $date) {
 		$ctx['res'][$id] = array(
 			'id'     => $id,
 			'time'   => substr((string)$r['reservation_time'], 0, 5),
-			'min'    => tp_min($r['reservation_time']),
+			'min'    => tp_ctx_min($ctx, $r['reservation_time']),
 			'pax'    => (int)$r['reservation_pax'],
 			'name'   => html_entity_decode((string)$r['reservation_guest_name'], ENT_QUOTES, 'UTF-8'),
 			'notes'  => html_entity_decode((string)$r['reservation_notes'], ENT_QUOTES, 'UTF-8'),
@@ -262,7 +285,7 @@ function tp_assign($outlet_id, $res_id, $table_ids, $confirm) {
 		$ids[$t] = $t;
 	}
 	$ids = array_values($ids);
-	$j = tp_judge($ctx, (int)$res_id, (int)$row['reservation_pax'], tp_min($row['reservation_time']), $ids);
+	$j = tp_judge($ctx, (int)$res_id, (int)$row['reservation_pax'], tp_ctx_min($ctx, $row['reservation_time']), $ids);
 	if ($j['errors']) {
 		return array('ok' => false, 'error' => implode('. ', $j['errors']));
 	}
@@ -339,7 +362,7 @@ function tp_auto_assign($outlet_id, $res_id) {
 	if (!$row || !$row['reservation_date']) { return null; }
 	$ctx = tp_day_context($outlet_id, $row['reservation_date']);
 	if (!isset($ctx['res'][(int)$res_id]) || $ctx['res'][(int)$res_id]['tables'] || !$ctx['tables']) { return null; }
-	$found = tp_find_tables($ctx, (int)$res_id, (int)$row['reservation_pax'], tp_min($row['reservation_time']));
+	$found = tp_find_tables($ctx, (int)$res_id, (int)$row['reservation_pax'], tp_ctx_min($ctx, $row['reservation_time']));
 	if (!$found) { return null; }
 	tp_write_assignment($res_id, $found, false);
 	return $found;
@@ -376,4 +399,116 @@ function tp_hook_after_booking($res_id) {
 	} catch (Throwable $e) {
 		// assignment is optional
 	}
+}
+
+/* ---------------------------------------------------------------- online availability by tables */
+
+// 'counter' (old logic: seats/tables counters) or 'tables' (table plan)
+function tp_availability_mode() {
+	tp_ensure_schema();
+	return tp_get_setting('availability_mode', 'counter') === 'tables' ? 'tables' : 'counter';
+}
+
+function tp_active_table_count($outlet_id) {
+	$r = tp_rows("SELECT COUNT(*) AS n FROM ".tp_t('tables')." WHERE `outlet_id` = ? AND `active` = 1", 'i', array((int)$outlet_id));
+	return $r ? (int)$r[0]['n'] : 0;
+}
+
+// the day with reservations that have no table yet placed on tables in memory only (nothing is
+// written), so that they block their tables for guests booking online right now
+function tp_virtual_ctx($outlet_id, $date) {
+	$ctx = tp_day_context($outlet_id, $date);
+	$todo = array_filter($ctx['res'], function ($r) { return !$r['tables']; });
+	uasort($todo, function ($a, $b) {
+		return ($b['pax'] <=> $a['pax']) ?: ($a['min'] <=> $b['min']);
+	});
+	foreach ($todo as $r) {
+		$found = tp_find_tables($ctx, $r['id'], $r['pax'], $r['min']);
+		if (!$found) { continue; }
+		foreach ($found as $tid) { $ctx['occ'][$tid][] = $r['id']; }
+		$ctx['res'][$r['id']]['tables'] = $found;
+	}
+	return $ctx;
+}
+
+/*
+ * Would a new online booking of $pax guests at $time (HH:MM) on $date find tables?
+ * Returns true/false, or null when the table plan does not decide (mode 'counter', no tables,
+ * or any error) - callers then keep using the counter logic.
+ */
+function tp_online_fits($outlet_id, $date, $pax, $time) {
+	static $cache = array();
+	try {
+		if (tp_availability_mode() !== 'tables') { return null; }
+		$key = (int)$outlet_id.'|'.$date;
+		if (!isset($cache[$key])) {
+			$cache[$key] = tp_virtual_ctx($outlet_id, $date);
+		}
+		$ctx = $cache[$key];
+		if (!$ctx['tables'] || tp_active_table_count($outlet_id) < 1) { return null; }
+		return tp_find_tables($ctx, 0, (int)$pax, tp_ctx_min($ctx, $time)) !== null;
+	} catch (Throwable $e) {
+		return null;
+	}
+}
+
+// the bookable time slots of a day ("HH:MM" strings), following the rules of the online form
+function tp_day_slots($outlet_id, $date, $interval) {
+	list($open, $close, $bo, $bc) = tp_day_hours($outlet_id, $date);
+	global $settings;
+	$last = isset($settings['lastBookingMinutes']) ? max(0, (int)$settings['lastBookingMinutes']) : 60;
+	if ($close <= $open) { $close += 1440; }
+	$end = $close - $last;
+	$interval = max(5, (int)$interval);
+	$from = $open;
+	if ($date === date('Y-m-d')) {
+		$now = (int)date('G') * 60 + (int)date('i');
+		$from = max($from, (int)ceil($now / $interval) * $interval);
+	}
+	$out = array();
+	for ($m = $open; $m <= $end; $m += $interval) {
+		if ($m < $from) { continue; }
+		$mm = $m % 1440;
+		if ($mm <= $bo || $mm >= $bc) {
+			$out[] = sprintf('%02d:%02d', intdiv($mm, 60), $mm % 60);
+		}
+	}
+	return $out;
+}
+
+// what the table plan would offer online for a party size: list of [time, fits]
+function tp_online_preview($outlet_id, $date, $pax, $interval) {
+	$ctx = tp_virtual_ctx($outlet_id, $date);
+	$out = array();
+	foreach (tp_day_slots($outlet_id, $date, $interval) as $t) {
+		$out[] = array('time' => $t, 'fits' => $ctx['tables'] ? (tp_find_tables($ctx, 0, (int)$pax, tp_ctx_min($ctx, $t)) !== null) : false);
+	}
+	return $out;
+}
+
+// limits of the old counter logic next to what the table plan offers, for the settings box
+function tp_counter_info($outlet_id) {
+	$r = tp_rows("SELECT `outlet_max_capacity`,`outlet_max_tables` FROM ".tp_outlets_table()." WHERE `outlet_id` = ?", 'i', array((int)$outlet_id));
+	$s = tp_rows("SELECT COUNT(*) AS n, IFNULL(SUM(`seats`),0) AS seats FROM ".tp_t('tables')." WHERE `outlet_id` = ? AND `active` = 1", 'i', array((int)$outlet_id));
+	return array(
+		'maxCapacity' => $r ? (int)$r[0]['outlet_max_capacity'] : 0,
+		'maxTables'   => $r ? (int)$r[0]['outlet_max_tables'] : 0,
+		'planTables'  => $s ? (int)$s[0]['n'] : 0,
+		'planSeats'   => $s ? (int)$s[0]['seats'] : 0,
+	);
+}
+
+// why guests can not book online on a date at all (null = day is bookable): closed weekday,
+// day off of the daily settings, or the online block
+function tp_online_day_block_reason($outlet_id, $date) {
+	global $dbTables;
+	$o = tp_rows("SELECT `outlet_closeday` FROM ".tp_outlets_table()." WHERE `outlet_id` = ?", 'i', array((int)$outlet_id));
+	$closed = $o ? array_filter(explode(',', (string)$o[0]['outlet_closeday']), 'strlen') : array();
+	$off = in_array((string)date('w', strtotime($date)), $closed, true);
+	$m = tp_rows("SELECT `outlet_child_dayoff` FROM `".$dbTables->maitre."` WHERE `maitre_outlet_id` = ? AND `maitre_date` = ?", 'is', array((int)$outlet_id, $date));
+	if ($m && $m[0]['outlet_child_dayoff'] === 'ON') { $off = true; }
+	if ($m && $m[0]['outlet_child_dayoff'] === 'OFF') { $off = false; }
+	if ($off) { return 'An diesem Tag ist geschlossen (Ruhetag).'; }
+	if (function_exists('ob_is_blocked') && ob_is_blocked($outlet_id, $date)) { return 'Online-Reservierungen sind für diesen Tag gesperrt.'; }
+	return null;
 }

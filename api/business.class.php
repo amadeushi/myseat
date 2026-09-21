@@ -78,6 +78,18 @@ function isPastLastBooking($date, $time) {
 	return $slotTs > $closeTs - lastBookingMinutes() * 60;
 }
 
+// table plan verdict for a slot of the selected day and party size: true/false, or null when the
+// table plan is not switched on / can not decide (then the counter logic applies)
+function tableplanSlotFits($time, $pax = null) {
+	if (!is_file(__DIR__.'/../web/classes/tableplan_assign.class.php')) {
+		return null;
+	}
+	require_once(__DIR__.'/../web/classes/tableplan_assign.class.php');
+	$pax = ($pax === null) ? (int)$_SESSION['pax'] : (int)$pax;
+	if ($pax < 1) { $pax = 1; }
+	return tp_online_fits($_SESSION['outletID'], $_SESSION['selectedDate'], $pax, substr((string)$time, 0, 5));
+}
+
 function language_navigation($language, $show_cancel = true) {
 		// keep the cancel link's booking number/email when switching language
 		$keep = '';
@@ -201,6 +213,9 @@ function timeList($format,$intervall,$field='',$select='',$open_time='00:00:00',
 			//check for maximum passerby
 			$max_passerby = ($_SESSION['passerby_max_pax'] == 0) ? $_SESSION['selOutlet']['outlet_max_capacity'] : $_SESSION['passerby_max_pax'];
 			$ava_passerby = $max_passerby - $_SESSION['passbyTime'][date('H:i:s',$value)];
+			// table plan decides (null = counter logic): only an explicit passerby limit still applies
+			$tp_fit = tableplanSlotFits(date('H:i',$value));
+			if ($tp_fit !== null && $_SESSION['passerby_max_pax'] == 0) { $ava_passerby = 1; }
 				if($ava_passerby>0){
 					echo "<option value='".date('H:i',$value)."'";
 					if ( $select == date('H:i:s',$value) ) {
@@ -208,8 +223,8 @@ function timeList($format,$intervall,$field='',$select='',$open_time='00:00:00',
 					}
 
 					 $tbl_capacity = $_SESSION['outlet_max_tables']-$tbl_availability[date('H:i',$value)];
-					 $pax_capacity = ($tbl_capacity >=1) ? $_SESSION['outlet_max_capacity']-$availability[date('H:i',$value)]-$_SESSION['pax'] : 0; 
-					if ( $pax_capacity <= 0 || $tbl_capacity < 1) {
+					 $pax_capacity = ($tbl_capacity >=1) ? $_SESSION['outlet_max_capacity']-$availability[date('H:i',$value)]-$_SESSION['pax'] : 0;
+					if ( $tp_fit !== null ? !$tp_fit : ($pax_capacity <= 0 || $tbl_capacity < 1) ) {
 						echo ' disabled="disabled" ';
 					 }
 				
@@ -291,10 +306,17 @@ function timeFields($format,$intervall,$field='',$select='',$open_time='00:00:00
 			//check for maximum passerby
 			$max_passerby = ($_SESSION['passerby_max_pax'] == 0) ? $_SESSION['selOutlet']['outlet_max_capacity'] : $_SESSION['passerby_max_pax'];
 			$ava_passerby = $max_passerby - $_SESSION['passbyTime'][date('H:i:s',$value)];
+			// table plan decides (null = counter logic): only an explicit passerby limit still applies
+			$tp_fit = tableplanSlotFits(date('H:i',$value));
+			if ($tp_fit !== null && $_SESSION['passerby_max_pax'] == 0) { $ava_passerby = 1; }
 				if($ava_passerby>0){
-					 $tbl_capacity = $_SESSION['outlet_max_tables']-$tbl_availability[date('H:i',$value)];
-					 $pax_capacity = ($tbl_capacity >=1) ? $max_passerby-$availability[date('H:i',$value)]-$_SESSION['pax'] : 0;
-					 $slot_disabled = ($pax_capacity < 0 || $tbl_capacity < 1);
+					 if ($tp_fit !== null) {
+						$slot_disabled = !$tp_fit;
+					 } else {
+						$tbl_capacity = $_SESSION['outlet_max_tables']-$tbl_availability[date('H:i',$value)];
+						$pax_capacity = ($tbl_capacity >=1) ? $max_passerby-$availability[date('H:i',$value)]-$_SESSION['pax'] : 0;
+						$slot_disabled = ($pax_capacity < 0 || $tbl_capacity < 1);
+					 }
 
 					echo "<label class='timeslot".($slot_disabled ? " timeslot-disabled" : "")."'>";
 					echo "<input name='$field' type='radio' value='".date('H:i',$value)."'";
@@ -549,7 +571,10 @@ function processBooking(){
 			  $val_capacity = $_SESSION['outlet_max_capacity']-$occupancy[$startvalue];
 			  $tbl_capacity = $_SESSION['outlet_max_tables']-$tbl_occupancy[$startvalue]; 
 
-			if( (int)$res_pax > $val_capacity || $tbl_capacity < 1 ){
+			// table plan decides when it is switched on (null = counter logic)
+			$tp_fit = tableplanSlotFits($startvalue, (int)$res_pax);
+			$is_full = ($tp_fit !== null) ? !$tp_fit : ((int)$res_pax > $val_capacity || $tbl_capacity < 1);
+			if( $is_full ){
 				//prevent double entry 	
 				$index = array_search('reservation_wait',$keys);
 				if($index>0){			

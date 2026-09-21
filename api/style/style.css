@@ -1620,3 +1620,11 @@ a.contact-item:hover svg {
 		grid-template-columns: 1fr;
 	}
 }
+
+/* legacy datepicker styles give the cell of today / the hovered cell a light grey background */
+.ui-datepicker td,
+.ui-datepicker td.ui-datepicker-today,
+.ui-datepicker td.ui-datepicker-days-cell-over {
+	background: transparent;
+	border-color: transparent;
+}
