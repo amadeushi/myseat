@@ -47,10 +47,10 @@
 			}
 			echo ">";
 			echo "<strong>".formatTime($row->reservation_time,$general['timeformat'])."</strong></td>";
-			echo "<td id='tb_pax'><strong class='big'>".$row->reservation_pax."</strong>&nbsp;&nbsp;<span class='noprint'>";
-			printType($row->reservation_hotelguest_yn);
-				//echo "<img src='images/icons/user-silhouette.png' class='middle'/>";
-			echo "</span></td><td style='width:20%' id='tb_name'><span class='noprint'>".printTitle($row->reservation_title)."</span><strong> <a id='detlbuttontrigger' href='ajax/guest_detail.php?id=".$id."'"; 
+			echo "<td id='tb_pax'><strong class='big'>".$row->reservation_pax."</strong></td><td id='tb_name'>";
+			$sal = printTitle($row->reservation_title);
+			if ($sal !== '') { echo "<span class='noprint'>".$sal." </span>"; }
+			echo "<strong><a id='detlbuttontrigger' href='ajax/guest_detail.php?id=".$id."'"; 
 			// color guest name if tautologous
 			if($tautologous>1){echo" class='tautologous tipsy' title='"._tautologous_booking."'";}
 			echo ">".$row->reservation_guest_name."</a></strong>";
@@ -64,7 +64,7 @@
 	            echo "&nbsp;".uiIcon('loop', array('class' => 'tipsy', 'title' => _recurring, 'alt' => _recurring));
 	        }
 	
-			echo"</td><td style='width:30%' id='tb_note'>";
+			echo"</td><td id='tb_note'>";
 				if ($_SESSION['page'] == 1) {
 			 		echo $row->outlet_name;
 			 	}else{
@@ -72,7 +72,7 @@
 				}
 			echo "</td>";
 			if($_SESSION['wait'] == 0){
-				echo "<td class='big tb_nr' style='width:85px;' id='tb_table'>".uiIcon('table', array('class' => 'tipsy leftside noprint', 'title' => _table, 'alt' => _table)).tp_table_cell($id, $row->reservation_table, $_SESSION['selectedDate'])."</td>";
+				echo "<td class='big tb_nr' id='tb_table'>".uiIcon('table', array('class' => 'tipsy leftside noprint', 'title' => _table, 'alt' => _table)).tp_table_cell($id, $row->reservation_table, $_SESSION['selectedDate'])."</td>";
 			}
 			echo "<td class='noprint'><div>";
 				getStatusList($id, $row->reservation_status);

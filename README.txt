@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 0.2186                        =-=
+=-= Version: 0.2189                        =-=
 =-= Date:    21.09.2026                   =-=
 =-= Time:    18:30 GMT                    =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -29,12 +29,39 @@ News
 CHANGELOG
 =========
 
-Versions 0.2161 - 0.2186 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 0.2189 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-22 == mySeat v0.2189 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Backend login (PLC/index.php) rebuilt as a responsive page in the dark/gold look: a centred card
+   that fits phones (16px inputs, no zoom on iOS, safe-area aware) up to desktop, proper labels,
+   autocomplete hints for password managers, visible focus, DE/EN switch (?lang=de|en, default = browser
+   language, German otherwise)
+ * New welcome text ("Willkommen zurück - Melde dich an, um deine Reservierungen zu verwalten." /
+   "Welcome back - Sign in to manage your reservations."), all messages (wrong login with the attempts
+   left, blocked, password changed) are German or English instead of English only
+ * Fix: the entered user name was written into the form unescaped (XSS); it is escaped now
+
+2026-09-22 == mySeat v0.2188 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Reservation lists (dashboard, day view): the guest type (Hausgast / Passant / Walk-in) is no longer
+   shown, and a missing salutation prints nothing instead of "--"
+ * The table column no longer breaks "Tisch 128" into two lines: it is as wide as its content (and
+   never narrower than 150px), the fixed 20% / 30% widths of the name and note columns are gone so the
+   table fits the page and every entry stays on one line
+
+2026-09-21 == mySeat v0.2187 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Table plan: a floor that is deep rather than wide is shown zoomed onto its tables (bounding box
+   of the tables plus margin, at most 1.2 screens tall and 1.4x) instead of the fixed 1200x700
+   canvas, so the tables get bigger on screen. Editing and closed floors still show the whole canvas
+ * Table labels no longer wrap: the name stays on one line and name, seats and the occupancy line
+   scale with the size of the table (CSS container units), so small tables with a booking stay legible
 
 2026-09-21 == mySeat v0.2186 == amadeushi - http://github.com/amadeushi/myseat
 

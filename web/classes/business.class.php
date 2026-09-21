@@ -195,8 +195,8 @@ function printTitle($title){
 
 	switch($title){
 		case '':
-			// Empty
-			return "--";
+			// no salutation: nothing to print
+			return "";
 		break;
 		case 'M':
 			// Sir

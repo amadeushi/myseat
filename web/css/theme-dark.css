@@ -1038,6 +1038,10 @@ select, option { color-scheme: dark; }
 /* assigned tables from the table plan in the reservation lists */
 a.tp-tablelabel { color: var(--gold-strong); font-weight: 600; text-decoration: none; }
 a.tp-tablelabel:hover { text-decoration: underline; }
+/* table column: as wide as its content, the table name never wraps (tables like "Tisch 128", chains like "Tisch 131 + 132") */
+table.global.resv-table-small tbody tr td.tb_nr { min-width: 150px; white-space: nowrap; }
+table.global.resv-table-small tbody tr td#tb_name { min-width: 180px; }
+table.global.resv-table-small tbody tr td#tb_note { width: 40%; }
 
 /* Dropdown lists: browsers that support customizable selects draw the open list themselves, so it
    follows the theme (the native macOS list stays white). Others keep the native list. */

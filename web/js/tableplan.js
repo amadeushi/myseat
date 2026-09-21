@@ -165,10 +165,34 @@
 	}
 
 	/* ---------- scaling ---------- */
+	// Viewing: zoom onto the tables of the floor (a tall, narrow floor gets big, readable tables).
+	// Editing and closed floors show the whole canvas.
+	function viewBox() {
+		var full = { x: 0, y: 0, w: cfg.canvasW, h: cfg.canvasH };
+		if (st.edit || isClosed(st.area)) { return full; }
+		var list = tablesOfArea(st.area);
+		if (!list.length) { return full; }
+		var x1 = Infinity, y1 = Infinity, x2 = 0, y2 = 0, pad = 30;
+		list.forEach(function (t) {
+			// a rotated table can reach beyond its own box
+			var d = t.rot % 180 ? Math.abs(t.w - t.h) / 2 : 0;
+			x1 = Math.min(x1, t.x - d); y1 = Math.min(y1, t.y - d);
+			x2 = Math.max(x2, t.x + t.w + d); y2 = Math.max(y2, t.y + t.h + d);
+		});
+		x1 = Math.max(0, x1 - pad); y1 = Math.max(0, y1 - pad);
+		x2 = Math.min(cfg.canvasW, x2 + pad); y2 = Math.min(cfg.canvasH, y2 + pad);
+		return { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
+	}
 	function rescale() {
-		st.scale = stage.clientWidth / cfg.canvasW;
-		canvas.style.transform = 'scale(' + st.scale + ')';
-		stage.style.height = Math.round(cfg.canvasH * st.scale) + 'px';
+		var b = viewBox(), sw = stage.clientWidth, s = sw / cfg.canvasW;
+		if (b.w < cfg.canvasW || b.h < cfg.canvasH) {
+			// as large as the width allows, but at most ~1.2 screens tall and 1.4x
+			s = Math.max(s, Math.min(sw / b.w, 1.2 * window.innerHeight / b.h, 1.4));
+		}
+		st.scale = s;
+		var ox = Math.max(0, Math.min(b.x + b.w / 2 - sw / s / 2, cfg.canvasW - sw / s));
+		canvas.style.transform = 'scale(' + s + ') translate(' + (-ox) + 'px,' + (-b.y) + 'px)';
+		stage.style.height = Math.round(b.h * s) + 'px';
 	}
 	window.addEventListener('resize', rescale);
 
@@ -292,6 +316,7 @@
 		renderLinks();
 		canvas.classList.toggle('is-edit', st.edit);
 		canvas.classList.toggle('is-linking', st.linkMode);
+		rescale();
 		renderTabs();
 		renderLegend();
 		renderPanel();
