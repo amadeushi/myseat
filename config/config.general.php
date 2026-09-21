@@ -53,9 +53,9 @@
 
 // ** Daylight settings
  // ** noon time
- $daylight_noon = '14:00';
+ $daylight_noon = '12:00';
  // ** evening time
- $daylight_evening = '18:00';
+ $daylight_evening = '16:00';
 // **
 
 

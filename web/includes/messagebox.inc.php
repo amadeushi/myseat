@@ -16,7 +16,7 @@ if ($ob_note) {
 // Maitre day comment
 if (isset($maitre) && trim($maitre['maitre_comment_day']) != "" && $_SESSION['page'] == 2 ) {
 	echo "<div class='alert_tip'>
-	<p class='center margin-bottom-10'><img src='images/icon_info.png' alt='error' class='middle'/>";
+	<p class='center margin-bottom-10'>".uiIcon('info')." ";
 		// maitre comment
 		echo $maitre['maitre_comment_day']."<br>";
 	echo "</p></div>";
@@ -33,7 +33,7 @@ if (isset($passbyTime) && $_SESSION['passerby_max_pax'] > 0) {
 				echo "<div class='alert_warning'><p>";
 				$set = 1;
 			}
-			echo "<img src='images/icon_warning.png' alt='error' class='middle'/>".formatTime($key,$general['timeformat']).": "._sentence_16." <br>";
+			echo uiIcon('warning')." ".formatTime($key,$general['timeformat']).": "._sentence_16." <br>";
 			$i++;
 			//if($i==count($passbyTime)){echo "</p></div>";}
 		}
@@ -44,7 +44,7 @@ if (isset($passbyTime) && $_SESSION['passerby_max_pax'] > 0) {
 // Messages
 if (isset($_SESSION['messages']) && count($_SESSION['messages']) > 0) {
 	echo "<div class='alert_error'>
-	<p><img src='images/icon_warning.png' alt='error' class='middle'/>";
+	<p>".uiIcon('warning')." ";
 	foreach ($_SESSION['messages'] as $key => $value) {
 		echo $value."<br/>";
 	}
@@ -57,7 +57,7 @@ if (isset($_SESSION['messages']) && count($_SESSION['messages']) > 0) {
 if ( !empty($_SESSION['errors']) ) {
 	echo "<div id='messageBox'>";
 	echo "<div class='alert_error'>
-	<p><img src='images/icon_error.png' alt='error' class='middle' />";
+	<p>".uiIcon('error')." ";
 	foreach ($_SESSION['errors'] as $key => $value) {
 		echo $value."<br/>";
 	}
@@ -66,7 +66,7 @@ if ( !empty($_SESSION['errors']) ) {
 	$_SESSION['errors'] = array();
 }else if (!empty($_SESSION['result']) ) {
 	echo "<div id='messageBox'>";
-	echo "<div class='alert_success'><p><img src='images/icons/icon_accept.png' alt='success' class='middle'/>". _new_entry ."</p></div></div>";
+	echo "<div class='alert_success'><p>".uiIcon('check')." ". _new_entry ."</p></div></div>";
 	unset($_SESSION['result']);
 }
 
@@ -78,7 +78,7 @@ if ($events_advertise && ($_SESSION['page'] == 2 || $_SESSION['page'] == 1) ) {
 		// special events
 		foreach($events_advertise as $row) {
 			echo "
-			<img src='images/icon_cutlery.png' alt='special' class='middle'/>
+			".uiIcon('cutlery')."
 			<span class='bold'>
 			<a href='".$_SERVER['SCRIPT_NAME']."?outletID=".$row->outlet_id."&selectedDate=".$row->event_date."'>".
 			_sp_events.": ".date($general['dateformat'],strtotime($row->event_date))." ".
@@ -104,7 +104,7 @@ if ($special_events && $_SESSION['page'] == 2 ) {
 		foreach($special_events as $row) {
 			$special_event_subject = $row->subject;
 			echo "
-			<img src='../web/images/icon_cutlery.png' alt='special' class='middle'/>
+			".uiIcon('cutlery')."
 			<span class='bold'>
 			<a href='".$_SERVER['SCRIPT_NAME']."?outletID=".$row->outlet_id."&selectedDate=".$row->event_date."'>".
 			_today.": ".$row->subject."</a></span>

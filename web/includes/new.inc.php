@@ -136,8 +136,8 @@
 			<input type="hidden" name="recurring_dbdate" id="recurring_dbdate" value="<?php echo $_SESSION['selectedDate']; ?>"/>
 		</div>
 		<br/>
-		<input type="radio" class="radio" name="recurring_span" value="1" checked="checked"/><img src='images/icons/calendar-select-days-span.png' alt='daily' title='Daily'>&nbsp;
-		<input type="radio" class="radio" name="recurring_span" value="7"><img src='images/icons/calendar-select-days.png' alt='weekly' title='Weekly'/>
+		<input type="radio" class="radio" name="recurring_span" value="1" checked="checked"/><?php echo uiIcon('cal_month', array('title' => 'Daily', 'alt' => 'Daily')); ?>&nbsp;
+		<input type="radio" class="radio" name="recurring_span" value="7"><?php echo uiIcon('cal_week', array('title' => 'Weekly', 'alt' => 'Weekly')); ?>
 		</p>
 	</div></div></div> <!-- end right column -->
 
@@ -171,7 +171,7 @@ $(document).ready(function(){
 			$("#status").ajaxComplete(function(event, request){
 					
 					if( msg.length < 4 ){
-						$(this).html("&nbsp;<img align='absmiddle' src='images/icons/icon_accept.png' />" + msg);
+						$(this).html("&nbsp;" + <?php echo json_encode(uiIcon('check')); ?> + msg);
 						//$("#submit_btn").show(); //enabled
 					}else{
 							$(this).html(msg);

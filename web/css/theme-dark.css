@@ -1129,3 +1129,32 @@ a.tp-tablelabel:hover { text-decoration: underline; }
 	border-top: 6px solid var(--gold);
 	pointer-events: none;
 }
+
+/* noon / evening numbers in the dashboard week view: vector icons that sit on the text line */
+.dt-pair { display: inline-flex; align-items: center; gap: 4px; margin-right: 12px; font-size: 15px; font-variant-numeric: tabular-nums; }
+.dt-pair:last-child { margin-right: 0; }
+.dt-icon { flex: none; width: 16px; height: 16px; color: var(--gold); opacity: 0.9; }
+.dt-old { display: inline-flex; vertical-align: middle; margin-left: 8px; color: var(--text-muted); cursor: help; }
+.dt-old .dt-icon { width: 15px; height: 15px; color: var(--text-muted); opacity: 0.85; }
+.dt-old:hover .dt-icon { color: var(--gold-strong); }
+
+/* ---- vector UI icons (uiIcon() in business.class.php) ---- */
+.ui-ico { display: inline-flex; vertical-align: middle; width: 16px; height: 16px; color: var(--text-muted); line-height: 0; }
+.ui-ico svg { width: 100%; height: 100%; display: block; }
+a:hover > .ui-ico, .ui-ico.help:hover { color: var(--gold-strong); }
+.ui-ico-cross:hover, a:hover > .ui-ico-cross { color: var(--danger); }
+.ui-ico-check { color: var(--success); }
+.ui-ico-warning { color: var(--gold); }
+.ui-ico-error { color: var(--danger); }
+.ui-ico-info { color: var(--gold); }
+.ui-ico-user { width: 14px; height: 14px; }
+.ui-ico-table { width: 18px; height: 18px; margin-right: 4px; }
+.ui-ico.dt-old { margin-left: 8px; width: 15px; height: 15px; }
+.ui-ico-box_on { color: var(--gold); }
+.ui-ico-logout { width: 18px; height: 18px; }
+.ui-ico-bars, .ui-ico-cal_week, .ui-ico-cal_month { width: 18px; height: 18px; }
+
+/* shift marker at the start of a reservation row: noon (12-16h) bright gold, evening dark bronze */
+table.global tbody tr td.morning   { color: #d8c9a6 !important; }
+table.global tbody tr td.afternoon { color: var(--gold-strong) !important; }
+table.global tbody tr td.evening   { color: #8c6a35 !important; }

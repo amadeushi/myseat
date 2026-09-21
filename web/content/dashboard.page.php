@@ -63,17 +63,17 @@
 			<ul class="second_level_tab noprint">
 				<li class='disabled'>
 					<a href="main_page.php?p=1&q=3">
-						<img src='images/icons/bars.png'/>
+						<?php echo uiIcon('bars', array('alt' => 'Statistics')); ?>
 					</a>
 				</li>
 				<li>
 					<a href="main_page.php?p=1&q=1">
-						<img src='images/icons/calendar_week.png'/>
+						<?php echo uiIcon('cal_week', array('alt' => 'Week')); ?>
 					</a>
 				</li>
 				<li>
 					<a href="main_page.php?p=1&q=2">
-						<img src='images/icons/calendar_month.png'/>
+						<?php echo uiIcon('cal_month', array('alt' => 'Month')); ?>
 					</a>
 				</li>
 			</ul>

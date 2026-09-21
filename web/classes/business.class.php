@@ -596,6 +596,91 @@ echo"<br/><div class='alert_info' style='cursor:pointer;'>
 </span></p></div><br/>";
 }
 
+/*
+ * Shift of a reservation time: 'evening' from $daylight_evening on (config: 16:00) and for the
+ * hours after midnight of an outlet that closes after midnight, 'sun' from $daylight_noon
+ * (12:00) until then, 'morning' before that. Used for the icons, the colour marker and the
+ * noon / evening numbers of the dashboard.
+ */
+function daytimeKind($time, $outlet_id = 0, $date = '') {
+	global $daylight_noon, $daylight_evening;
+	$mins = function ($t) { $p = explode(':', (string)$t); return ((int)$p[0]) * 60 + (isset($p[1]) ? (int)$p[1] : 0); };
+	$m = $mins($time);
+	if ($m >= $mins($daylight_evening)) { return 'evening'; }
+	if ($m >= $mins($daylight_noon)) { return 'sun'; }
+	// before noon: after midnight when the outlet closes after midnight and the time is not past closing
+	if ($outlet_id && $date && function_exists('tp_day_hours')) {
+		list($open, $close) = tp_day_hours($outlet_id, $date);
+		if ($close <= $open && $m <= $close) { return 'evening'; }
+	}
+	return 'morning';
+}
+
+// guests of a day split into noon (sun) and evening (moon) shift: array(noon, evening)
+function daytimeSums($outlet_id, $date) {
+	global $dbTables;
+	$noon = 0; $evening = 0;
+	$result = query("SELECT reservation_time, reservation_pax FROM `$dbTables->reservations`
+					WHERE `reservation_wait` = 0 AND `reservation_hidden` = 0
+					AND `reservation_outlet_id` = '%d' AND `reservation_date` = '%s'", $outlet_id, $date);
+	$rows = getRowList($result);
+	if ($rows) {
+		foreach ($rows as $r) {
+			if (daytimeKind($r->reservation_time, $outlet_id, $date) == 'evening') { $evening += (int)$r->reservation_pax; }
+			else { $noon += (int)$r->reservation_pax; }
+		}
+	}
+	return array($noon, $evening);
+}
+
+/*
+ * Crisp vector icons for the backend (replace the old pixel images).
+ * uiIcon('pen', array('title' => 'Edit', 'class' => 'help', 'alt' => 'Edit'))
+ */
+function uiIcon($name, $opt = array()) {
+	static $paths = array(
+		'table'   => "<path d='M4 9h16v2.5H4zM6.5 11.5V19M17.5 11.5V19'/>",
+		'pen'     => "<path d='M4 20l.9-4.1L16.6 4.2a2 2 0 0 1 2.8 2.8L7.7 18.7 4 20zM14.5 6.3l3.2 3.2'/>",
+		'cross'   => "<circle cx='12' cy='12' r='9'/><path d='M9 9l6 6M15 9l-6 6'/>",
+		'loop'    => "<path d='M17 3.5l3 3-3 3M4 11V9.5a3 3 0 0 1 3-3h13M7 20.5l-3-3 3-3M20 13v1.5a3 3 0 0 1-3 3H4'/>",
+		'check'   => "<circle cx='12' cy='12' r='9'/><path d='M8 12.4l2.8 2.8L16 9.6'/>",
+		'info'    => "<circle cx='12' cy='12' r='9'/><path d='M12 11v5.5M12 7.7h.01'/>",
+		'warning' => "<path d='M12 3.5L21.5 20h-19z'/><path d='M12 10v4.5M12 17.2h.01'/>",
+		'error'   => "<circle cx='12' cy='12' r='9'/><path d='M12 7.5V13M12 16.4h.01'/>",
+		'mail'    => "<rect x='3' y='5.5' width='18' height='13' rx='2'/><path d='M4 7l8 6 8-6'/>",
+		'mail_no' => "<rect x='3' y='5.5' width='18' height='13' rx='2'/><path d='M4 7l8 6 8-6M4 20L20 4'/>",
+		'user'    => "<circle cx='12' cy='8' r='3.5'/><path d='M5 20c.6-3.6 3.4-5.5 7-5.5s6.4 1.9 7 5.5'/>",
+		'logout'  => "<path d='M12 3v8M7.2 6.2a8 8 0 1 0 9.6 0'/>",
+		'cutlery' => "<path d='M7 3v7a2 2 0 0 0 4 0V3M9 3v18M17 21V3c-2 1.5-3 4-3 7v3h3'/>",
+		'chevron' => "<path d='M9 5l7 7-7 7'/>",
+		'bars'    => "<path d='M5 20v-9M12 20V4M19 20v-6'/>",
+		'cal_week'  => "<rect x='3.5' y='5' width='17' height='15' rx='2'/><path d='M3.5 10h17M8 3v4M16 3v4M7.5 14h9'/>",
+		'cal_month' => "<rect x='3.5' y='5' width='17' height='15' rx='2'/><path d='M3.5 10h17M8 3v4M16 3v4M7.5 13.5h.01M12 13.5h.01M16.5 13.5h.01M7.5 17h.01M12 17h.01M16.5 17h.01'/>",
+		'play'    => "<path d='M8 5.5v13l10-6.5z'/>",
+		'pause'   => "<path d='M9 5.5v13M15 5.5v13'/>",
+		'box_on'  => "<rect x='4' y='4' width='16' height='16' rx='3'/><path d='M8.2 12.3l2.6 2.6 5-5.4'/>",
+		'box_off' => "<rect x='4' y='4' width='16' height='16' rx='3'/>",
+		'clock'   => "<circle cx='12' cy='12' r='9'/><path d='M12 7v5.2l3.4 2'/>",
+	);
+	if (!isset($paths[$name])) { return ''; }
+	$cls = 'ui-ico ui-ico-'.$name.(!empty($opt['class']) ? ' '.$opt['class'] : '');
+	$title = !empty($opt['title']) ? " title='".htmlspecialchars($opt['title'], ENT_QUOTES)."'" : '';
+	$alt = !empty($opt['alt']) ? " role='img' aria-label='".htmlspecialchars($opt['alt'], ENT_QUOTES)."'" : '';
+	return "<span class='$cls'$title$alt><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'>".$paths[$name]."</svg></span>";
+}
+
+// crisp vector icon for noon ('sun') / evening ('moon') numbers in the dashboard
+function daytimeIcon($kind) {
+	$common = "class='dt-icon' viewBox='0 0 24 24' width='16' height='16' fill='none' stroke='currentColor' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'";
+	if ($kind == 'moon') {
+		return "<svg $common><path d='M20 14.2A8.2 8.2 0 0 1 9.8 4a8.2 8.2 0 1 0 10.2 10.2Z'/></svg>";
+	}
+	if ($kind == 'clock') {
+		return "<svg $common><circle cx='12' cy='12' r='9'/><path d='M12 7v5.2l3.4 2'/></svg>";
+	}
+	return "<svg $common><circle cx='12' cy='12' r='4'/><path d='M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6'/></svg>";
+}
+
 // Whether current user has capability or role.
 function current_user_can( $capability ) {
 	$_SESSION['capability'] = $capability;
@@ -984,7 +1069,7 @@ function build_calendar($month,$year,$dateArray) {
 			$row = querySQL('statistic_week_def_evening');
 			$statistic_evening = ($row[0]->paxsum) ? $row[0]->paxsum : 0;
 
-			$stat_occupancy = ($statistic_noon+$statistic_evening == 0 ) ? '&nbsp;' : "<img src='images/icons/user-silhouette.png' style='height:10px' class='middle'/>".($statistic_noon+$statistic_evening);
+			$stat_occupancy = ($statistic_noon+$statistic_evening == 0 ) ? '&nbsp;' : uiIcon('user').($statistic_noon+$statistic_evening);
 
 		  if($currentDayRel == $today_date ){
           	$calendar .= "<td rel='$date' class='grey'><small>".$currentDay."</small>";

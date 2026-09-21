@@ -40,9 +40,9 @@ if($new!=''){
 		echo "<tr><td>"._phone_room."</td><td><strong>".$row->reservation_guest_phone."</strong></td></tr>";
 		echo "<tr><td>"._email."</td><td><strong>".$row->reservation_guest_email."</strong>";
 		if ( $row->reservation_advertise =='YES' ) {
-			echo"<img src='images/icons/mail_yes.png' class='mail-icon' title='Advertise allowed'/>";
+			echo uiIcon('mail', array('class' => 'mail-icon', 'title' => 'Advertise allowed', 'alt' => 'Advertise allowed'));
 		}else{
-			echo"<img src='images/icons/mail_no.png'  class='mail-icon' title='No advertise'/>";	
+			echo uiIcon('mail_no', array('class' => 'mail-icon', 'title' => 'No advertise', 'alt' => 'No advertise'));
 		}
 		echo "</td></tr>";
 		echo "<tr><td>"._adress."</td><td><strong>".$row->reservation_guest_adress."</td></tr>";

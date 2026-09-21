@@ -55,10 +55,10 @@ foreach ( $plugin_headers as $plugin_header ) {
 				<?php
 	if ($action==0){
 		echo '<a href="?q=7&action=plugins&button=activate&filename='.$plugin_header['filename'].'">
-			<img src="images/icons/play.png"/></a>';
+			'.uiIcon('play', array('alt' => 'Activate')).'</a>';
 	}else{
 		echo '<a href="?q=7&action=plugins&button=deactivate&filename='.$plugin_header['filename'].'">
-			<img src="images/icons/pause.png"/></a>';
+			'.uiIcon('pause', array('alt' => 'Deactivate')).'</a>';
 	}
 	?>
 			</td>

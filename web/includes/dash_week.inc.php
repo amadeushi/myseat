@@ -37,20 +37,15 @@ foreach($outlets as $row) {
 			// week day date
 			$_SESSION['statistic_week'] = date('Y-m-d',mktime(0,0,0,$sm,$sd+$i,$sy));
 			
-			// noon
-			$value	= $daylight_evening;
-			$row = querySQL('statistic_week_def_noon');
-			$statistic_noon = ($row[0]->paxsum) ? $row[0]->paxsum : 0;
-			// evening
-			$row = querySQL('statistic_week_def_evening');
-			$statistic_evening = ($row[0]->paxsum) ? $row[0]->paxsum : 0;
+			// noon shift (sun) and evening shift (moon), limits from $daylight_noon / $daylight_evening
+			list($statistic_noon, $statistic_evening) = daytimeSums($_SESSION['selOutlet']['outlet_id'], $_SESSION['statistic_week']);
 
 		  echo"<td><strong><a href='main_page.php?p=2&outletID=".$_SESSION['selOutlet']['outlet_id']."&selectedDate=".$_SESSION['statistic_week']."'>";
 		  if ( $statistic_noon == 0 && $statistic_evening == 0 ){
 			echo "&nbsp;</a></strong>";
 		}else{
-		  	echo "<img src='images/icons/clock-sun.png' style='height:10px' class='middle'/>".$statistic_noon;
-		  	echo "<img src='images/icons/clock-moon.png' style='height:10px' class='middle'/>".$statistic_evening."</a></strong>";
+		  	echo "<span class='dt-pair'>".daytimeIcon('sun').$statistic_noon."</span>";
+		  	echo "<span class='dt-pair'>".daytimeIcon('moon').$statistic_evening."</span></a></strong>";
 		  }
 		  // online booking block of the day (closed party, sold out) with a toggle for staff
 		  $ob_week_blocked = isset($ob_week[$_SESSION['statistic_week']]);

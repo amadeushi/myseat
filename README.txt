@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 0.2178                        =-=
+=-= Version: 0.2180                        =-=
 =-= Date:    21.09.2026                   =-=
 =-= Time:    18:30 GMT                    =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -29,12 +29,37 @@ News
 CHANGELOG
 =========
 
-Versions 0.2161 - 0.2178 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 0.2180 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-21 == mySeat v0.2180 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Shift limits: noon shift 12:00 - 16:00 (sun), from 16:00 evening shift (moon); config values
+   $daylight_noon = '12:00' and $daylight_evening = '16:00' in config/config.general.php (were
+   14:00 / 18:00 - please adjust the file of your installation). Times after midnight of an
+   outlet that closes after midnight count as evening (a 00:00 reservation was counted as
+   noon before), exactly 18:00 was counted differently in the week view and in the list.
+   The week view sums are computed with one rule (daytimeKind() / daytimeSums())
+ * The colour marker at the start of a reservation row is distinguishable now: noon bright
+   gold, evening dark bronze (another rule overrode both with the same colour)
+ * All remaining pixel icons of the backend are vector icons (uiIcon() in
+   web/classes/business.class.php): table, edit, delete, recurring, allow, notices (info,
+   warning, error, success, special event), logout, user, dashboard view switch, mail
+   (advertise yes/no), outlet help "i", plugins play/pause, user enable/disable, list arrows.
+   They follow the theme colours (gold on hover, red for delete) and are sharp at any size.
+   Not changed: the login-adjacent pages confirm.php and register/success.inc.php
+
+2026-09-21 == mySeat v0.2179 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Dashboard week view: the sun / moon symbols in front of the noon and evening numbers were
+   10px raster images (blurry, white, out of proportion); now crisp vector icons in the gold of
+   the theme, aligned with the numbers (daytimeIcon() in web/classes/business.class.php)
+ * Reservation list: the clock symbol next to the guest name (booking older than "old days")
+   is a vector icon too, muted grey with the tooltip kept
 
 2026-09-21 == mySeat v0.2178 == amadeushi - http://github.com/amadeushi/myseat
 

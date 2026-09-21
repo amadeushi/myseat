@@ -36,8 +36,7 @@
 			if ($row->repeat_id !=0)
 	            {
 	            //print out recurring symbol
-	            echo "<img src='images/icons/arrow-repeat.png' alt='"._recurring.
-					 "' title='"._recurring."' border='0' >";
+	            echo uiIcon('loop', array('title' => _recurring, 'alt' => _recurring));
 	            }
 			echo"</td>
 			<td><span class='bold'>".$row->reservation_pax."</strong></td>
@@ -50,7 +49,7 @@
 			// DELETE BUTTON
 			if ( current_user_can( 'Reservation-Delete' ) && $q!=3 ){
 		    	echo"<a href='#modalsecurity' name='".$row->repeat_id."' id='".$id."' class='delbtn'>
-					<img src='images/icons/delete_cross.png' alt='"._cancelled."' class='help' title='"._delete."'/></a>";
+					".uiIcon('cross', array('class' => 'help', 'title' => _delete, 'alt' => _cancelled))."</a>";
 			}
 			echo"</td></tr>";
 

@@ -40,14 +40,14 @@
 				}
 		
 			echo"<a href='#this' id='disable-".$row->userID."' class='modalactivate' ".$hidden1.">
-				<img src='../web/images/icons/ui-check-box.png' alt='Disable' title='Disable' /></a>";
+				".uiIcon('box_on', array('title' => 'Disable', 'alt' => 'Disable'))."</a>";
 			echo"<a href='#this' id='enable-".$row->userID."' class='modalactivate' ".$hidden2.">
-				<img src='../web/images/icons/ui-check-box-uncheck.png' alt='Enable' title='Enable' /></a>";
+				".uiIcon('box_off', array('title' => 'Enable', 'alt' => 'Enable'))."</a>";
 			echo "</td>
 		    		
 		    		<td>
 				    <a href='#modaldelete' name='users' id='".$row->userID."' class='deletebtn'>
-					<img src='images/icons/delete_cross.png' alt='"._cancelled."' class='help' title='"._delete."'/>
+					".uiIcon('cross', array('class' => 'help', 'title' => _delete, 'alt' => _cancelled))."
 					</a>
 		    	</td>
 			</tr>";

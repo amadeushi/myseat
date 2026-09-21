@@ -30,11 +30,12 @@
 			echo "<tr id='res-".$id."'>";
 			echo "<td";
 			// daylight coloring
-			if ($row->reservation_time > $daylight_evening){
+			$shift = daytimeKind($row->reservation_time, $_SESSION['outletID'], $_SESSION['selectedDate']);
+			if ($shift == 'evening'){
 				echo " class='evening noprint'";
-			}else if ($row->reservation_time > $daylight_noon){
+			}else if ($shift == 'sun'){
 				echo " class='afternoon noprint'";
-			}else if ($row->reservation_time < $daylight_noon){
+			}else{
 				echo " class='morning noprint'";
 			}
 			
@@ -56,12 +57,11 @@
 			
 			// old reservations symbol
 			if( (strtotime($row->reservation_timestamp) + $general['old_days']*86400) <= time() ){
-				echo "<img src='images/icons/clock-bolt.png' class='help tipsyold middle smicon' title='"._sentence_11."' />";
+				echo uiIcon('clock', array('class' => 'help tipsyold dt-old', 'title' => _sentence_11, 'alt' => _sentence_11));
 			}
 			// recurring symbol
 			if ($row->repeat_id !=0) {
-	            echo "&nbsp;<img src='images/icons/loop-alt.png' alt='"._recurring.
-					 "' title='"._recurring."' class='tipsy' border='0' >";
+	            echo "&nbsp;".uiIcon('loop', array('class' => 'tipsy', 'title' => _recurring, 'alt' => _recurring));
 	        }
 	
 			echo"</td><td style='width:30%' id='tb_note'>";
@@ -72,7 +72,7 @@
 				}
 			echo "</td>";
 			if($_SESSION['wait'] == 0){
-				echo "<td class='big tb_nr' style='width:85px;' id='tb_table'><img src='images/icons/table_II.png' class='tipsy leftside noprint' title='"._table."' />".tp_table_cell($id, $row->reservation_table, $_SESSION['selectedDate'])."</td>";
+				echo "<td class='big tb_nr' style='width:85px;' id='tb_table'>".uiIcon('table', array('class' => 'tipsy leftside noprint', 'title' => _table, 'alt' => _table)).tp_table_cell($id, $row->reservation_table, $_SESSION['selectedDate'])."</td>";
 			}
 			echo "<td class='noprint'><div>";
 				getStatusList($id, $row->reservation_status);
@@ -88,15 +88,15 @@
 			if($_SESSION['wait'] == 1){
 				$leftspace = leftSpace(substr($row->reservation_time,0,5), $availability);
 				if($leftspace >= $row->reservation_pax && $_SESSION['outlet_max_tables']-$tbl_availability[substr($row->reservation_time,0,5)] >= 1){	    
-					echo"&nbsp;<a href='#' name='".$id."' class='alwbtn'><img src='images/icons/check-alt.png' name='".$id."' alt='"._allow."' class='help' title='"._allow."'/></a>&nbsp;&nbsp;";
+					echo"&nbsp;<a href='#' name='".$id."' class='alwbtn'>".uiIcon('check', array('class' => 'help', 'title' => _allow, 'alt' => _allow))."</a>&nbsp;&nbsp;";
 				}
 			}
 			// EDIT/DETAIL BUTTON
-			echo "<a href='?p=102&resID=".$id."'><img src='images/icons/pen-fill.png' alt='"._detail."' class='help' title='"._detail."'/></a>&nbsp;&nbsp;";
+			echo "<a href='?p=102&resID=".$id."'>".uiIcon('pen', array('class' => 'help', 'title' => _detail, 'alt' => _detail))."</a>&nbsp;&nbsp;";
 			// DELETE BUTTON
 			if ( current_user_can( 'Reservation-Delete' ) && $q!=3 ){
 		    	echo"<a href='#modalsecurity' name='".$row->repeat_id."' id='".$id."' class='delbtn'>
-					<img src='images/icons/delete.png' alt='"._cancelled."' class='help' title='"._delete."'/></a>";
+					".uiIcon('cross', array('class' => 'help', 'title' => _delete, 'alt' => _cancelled))."</a>";
 			}
 		echo"</td></tr>";
 		$tablesum ++;

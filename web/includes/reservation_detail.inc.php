@@ -72,9 +72,9 @@
 				<?php
 					echo $row->reservation_guest_email; 
 					if ( $row->reservation_advertise =='YES' ) {
-						echo"<img src='images/icons/mail_yes.png' class='mail-icon' title='Advertise allowed'/>";
+						echo uiIcon('mail', array('class' => 'mail-icon', 'title' => 'Advertise allowed', 'alt' => 'Advertise allowed'));
 					}else{
-						echo"<img src='images/icons/mail_no.png'  class='mail-icon' title='No advertise'/>";	
+						echo uiIcon('mail_no', array('class' => 'mail-icon', 'title' => 'No advertise', 'alt' => 'No advertise'));
 					}
 				?>
 			</p>

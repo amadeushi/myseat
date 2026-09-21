@@ -48,7 +48,7 @@
 			<!-- Begin account menu -->
 					&nbsp;
 					<a href="../PLC/index.php?logout=1" title="Logout">
-						<img src="images/icon_logout.png" alt="" class="middle"/>
+						<?php echo uiIcon('logout', array('alt' => 'Logout')); ?>
 					</a>
 			</form>
 			</ul><!-- End account menu -->

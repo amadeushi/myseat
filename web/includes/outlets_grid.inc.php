@@ -42,7 +42,7 @@
 			<td>".printOnOff($row->webform)."</td>
 		    <td>
 					<a href='#modaldelete' name='outlets' id='".$row->outlet_id."' class='deletebtn'>
-					<img src='images/icons/delete_cross.png' alt='"._cancelled."' class='help' title='"._delete."'/>
+					".uiIcon('cross', array('class' => 'help', 'title' => _delete, 'alt' => _cancelled))."
 					</a>
 		    	</td>
 			</tr>";

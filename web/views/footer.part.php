@@ -15,7 +15,7 @@
 			$filename = substr(dirname(__FILE__),0,-9)."xt-admin";
 			
 			if((!isset($this_page)) || ($this_page != "property")) {
-				echo "<img src='images/icon_user.png' alt='User:' class='middle'/><a href='";
+				echo uiIcon('user', array('alt' => 'User'))." <a href='";
 				if ($_SESSION['role']=='1' && file_exists($filename)) {
 					echo"../xt-admin/index.php";				
 				}

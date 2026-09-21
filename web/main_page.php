@@ -23,7 +23,7 @@ This file is part of mySeat.
 /** Login **/
 // ** set configuration
 	//Software version - http://github.com/apmuthu/myseat
-	$sw_version = 'v0.2178';
+	$sw_version = 'v0.2180';
 	
 	include('../config/config.general.php');
 	
@@ -80,7 +80,7 @@ This file is part of mySeat.
 // ** set configuration
 	include('../config/config.inc.php');
 // ** table plan (assigned tables in the reservation lists)
-	include_once('classes/tableplan.class.php');
+	include_once('classes/tableplan_assign.class.php');
 // ** php hooks class
 	include_once "classes/phphooks.config.php";
 	include_once "classes/phphooks.class.php";

@@ -28,7 +28,7 @@
 			echo "<td><span class='bold'>".date($general['dateformat'],strtotime($row->event_date))."</strong></td>
 			<td><span class='bold'><a href='?p=6&q=4&btn=3&eventID=".$row->id."'>".$row->subject."</a></strong>
 			<a href='main_page.php?p=2&outletID=".$row->outlet_id."&selectedDate=".$row->event_date."' style='margin-left:12px;'>
-			<img src='images/icons/arrow.png'/></a>
+			".uiIcon('chevron')."</a>
 			</td>
 			<td>".querySQL('db_outlet')."</td>
 			<td>".formatTime($row->start_time,$general['timeformat'])."</td>
@@ -39,7 +39,7 @@
 			<td>".number_format($row->price,2)."</td>
 		    <td>
 					<a href='#modaldelete' name='events' id='".$row->id."' class='deletebtn'>
-					<img src='images/icons/delete_cross.png' alt='"._cancelled."' class='help' title='"._delete."'/>
+					".uiIcon('cross', array('class' => 'help', 'title' => _delete, 'alt' => _cancelled))."
 					</a>
 		    	</td>
 			</tr>";
