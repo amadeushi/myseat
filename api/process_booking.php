@@ -144,7 +144,7 @@ $prp_info = querySQL('property_info');
 		<div class="confirm-icon is-success">
 			<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12.5 10 17l9-10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
 		</div>
-		<h1 class="confirm-title">Reservierung bestätigt</h1>
+		<h1 class="confirm-title"><?php echo bt('confirmed'); ?></h1>
 		<p class="confirm-text"><?php echo _contact_form_success; ?> <strong><?php echo htmlspecialchars($_SESSION['booking_number']); ?></strong></p>
 
 		<div class="wizard-summary">
@@ -163,8 +163,8 @@ $prp_info = querySQL('property_info');
 		</div>
 
 		<div class="confirm-actions">
-			<a class="submit-button" href="<?php echo $website; ?>">Zurück zur Website</a>
-			<a class="confirm-secondary" href="cancel.php?nr=<?php echo urlencode($_SESSION['booking_number']); ?>&amp;email=<?php echo urlencode($_POST['reservation_guest_email']); ?>">Reservierung stornieren</a>
+			<a class="submit-button" href="<?php echo $website; ?>"><?php echo bt('back_site'); ?></a>
+			<a class="confirm-secondary" href="cancel.php?nr=<?php echo urlencode($_SESSION['booking_number']); ?>&amp;email=<?php echo urlencode($_POST['reservation_guest_email']); ?>"><?php echo bt('cancel_res'); ?></a>
 		</div>
 
 	<?php elseif ($waitlist == 1): ?>
@@ -173,7 +173,7 @@ $prp_info = querySQL('property_info');
 			<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
 		</div>
 		<h1 class="confirm-title"><?php echo _wait_list; ?></h1>
-		<p class="confirm-text">Für Ihren Wunschtermin sind aktuell keine Tische mehr frei. Wir haben Sie auf die Warteliste gesetzt und melden uns, sobald ein Platz frei wird.</p>
+		<p class="confirm-text"><?php echo bt('waitlist_text'); ?></p>
 
 		<div class="wizard-summary">
 			<div class="summary-item">
@@ -191,7 +191,7 @@ $prp_info = querySQL('property_info');
 		</div>
 
 		<div class="confirm-actions">
-			<a class="submit-button" href="<?php echo $website; ?>">Zurück zur Website</a>
+			<a class="submit-button" href="<?php echo $website; ?>"><?php echo bt('back_site'); ?></a>
 		</div>
 
 	<?php else: ?>
@@ -201,14 +201,14 @@ $prp_info = querySQL('property_info');
 		</div>
 		<h1 class="confirm-title"><?php echo _sorry; ?></h1>
 		<p class="confirm-text">
-			Ihre Reservierung konnte leider nicht angelegt werden.
+			<?php echo bt('error_text'); ?>
 			<?php if ($contact_email): ?>
-			Bitte versuchen Sie es erneut oder kontaktieren Sie uns direkt per E-Mail: <a href="mailto:<?php echo $contact_email; ?>"><?php echo $contact_email; ?></a>
+			<?php echo bt('error_retry'); ?> <a href="mailto:<?php echo $contact_email; ?>"><?php echo $contact_email; ?></a>
 			<?php endif; ?>
 		</p>
 
 		<div class="confirm-actions">
-			<a class="submit-button" href="reserve.php?outletID=<?php echo (int)$_SESSION['outletID']; ?>">Erneut versuchen</a>
+			<a class="submit-button" href="reserve.php?outletID=<?php echo (int)$_SESSION['outletID']; ?>"><?php echo bt('retry'); ?></a>
 		</div>
 
 	<?php endif; ?>

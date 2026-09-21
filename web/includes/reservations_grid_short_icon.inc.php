@@ -95,7 +95,7 @@
 				}
 			echo "</td>";
 			if($_SESSION['wait'] == 0){
-				echo "<td class='big tb_nr'><div id='reservation_table-".$id."' class='inlineedit'>".$row->reservation_table."</div></td>";
+				echo "<td class='big tb_nr'>".tp_table_cell($id, $row->reservation_table, $_SESSION['selectedDate'])."</td>";
 			}
 			echo "<td><div class='noprint'>";
 				getStatusList($id, $row->reservation_status);

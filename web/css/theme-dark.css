@@ -1034,3 +1034,98 @@ a.button_dark.ob-toggle.is-blocked { border-color: var(--danger); color: var(--d
 /* native form controls (the open list of a <select>, scrollbars) follow the dark theme */
 html { color-scheme: dark; }
 select, option { color-scheme: dark; }
+
+/* assigned tables from the table plan in the reservation lists */
+a.tp-tablelabel { color: var(--gold-strong); font-weight: 600; text-decoration: none; }
+a.tp-tablelabel:hover { text-decoration: underline; }
+
+/* Dropdown lists: browsers that support customizable selects draw the open list themselves, so it
+   follows the theme (the native macOS list stays white). Others keep the native list. */
+@supports (appearance: base-select) {
+	select:not([multiple]),
+	select:not([multiple])::picker(select) {
+		appearance: base-select;
+	}
+	select:not([multiple]) {
+		display: inline-flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+	}
+	select:not([multiple])::picker-icon {
+		color: var(--gold);
+		transition: rotate 0.15s;
+	}
+	select:not([multiple]):open::picker-icon {
+		rotate: 180deg;
+	}
+	select:not([multiple])::picker(select) {
+		background: var(--surface-2);
+		color: var(--text);
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		padding: 4px;
+		margin-top: 4px;
+		max-height: 320px;
+		box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+	}
+	select:not([multiple]) option {
+		display: flex;
+		align-items: center;
+		padding: 6px 10px;
+		border-radius: 6px;
+		background: transparent;
+		color: var(--text);
+		font-size: 14px;
+		cursor: pointer;
+	}
+	select:not([multiple]) option:hover,
+	select:not([multiple]) option:focus-visible {
+		background: var(--surface-3);
+		color: var(--gold-strong);
+	}
+	select:not([multiple]) option:checked {
+		background: rgba(201, 162, 89, 0.22);
+		color: var(--gold-strong);
+	}
+	select:not([multiple]) option:disabled {
+		color: var(--text-muted);
+		opacity: 0.5;
+		cursor: default;
+	}
+	select:not([multiple]) option::checkmark {
+		display: none;
+	}
+}
+
+/* legacy "option" widgets (e.g. the "Änderungen" history list): a white background image with an
+   invisible select on top - now a dark field with a gold arrow */
+.option, .option_xl {
+	background: var(--surface-2) !important;
+	border: 1px solid var(--border-soft);
+	border-radius: 8px;
+	position: relative;
+	box-sizing: border-box;
+}
+.option:hover, .option_xl:hover {
+	border-color: var(--border);
+}
+.option .text, .option_xl .text {
+	color: var(--text);
+	font-family: var(--font-body);
+	font-size: 14px;
+	font-weight: 400;
+	margin: 0 0 0 10px;
+	padding-top: 4px;
+	pointer-events: none;
+}
+.option::after, .option_xl::after {
+	content: '';
+	position: absolute;
+	right: 12px;
+	top: 50%;
+	margin-top: -3px;
+	border: 5px solid transparent;
+	border-top: 6px solid var(--gold);
+	pointer-events: none;
+}

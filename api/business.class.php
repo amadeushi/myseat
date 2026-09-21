@@ -12,7 +12,10 @@ function getHost($Address) {
 // build a grouped weekly opening-hours summary, e.g.
 // [['days' => 'Mo - Mi', 'hours' => '12:00 - 22:00'], ['days' => 'Fr - Sa', 'hours' => '14:30 - 00:00'], ...]
 function getWeeklyHoursSummary($outlet) {
-	$dayLabels = array(1 => 'Mo', 2 => 'Di', 3 => 'Mi', 4 => 'Do', 5 => 'Fr', 6 => 'Sa', 0 => 'So');
+	$isDe = !isset($_SESSION['lang']) || substr($_SESSION['lang'], 0, 2) === 'de';
+	$dayLabels = $isDe
+		? array(1 => 'Mo', 2 => 'Di', 3 => 'Mi', 4 => 'Do', 5 => 'Fr', 6 => 'Sa', 0 => 'So')
+		: array(1 => 'Mon', 2 => 'Tue', 3 => 'Wed', 4 => 'Thu', 5 => 'Fri', 6 => 'Sat', 0 => 'Sun');
 	$order = array(1, 2, 3, 4, 5, 6, 0);
 	$closedDays = array_filter(explode(',', $outlet['outlet_closeday'] ?? ''), 'strlen');
 
@@ -76,6 +79,68 @@ function isPastLastBooking($date, $time) {
 		}
 	}
 	return $slotTs > $closeTs - lastBookingMinutes() * 60;
+}
+
+// texts of the public booking form that are not in the language files (German / English; every
+// other language falls back to English, like cancel.php). Usage: bt('key') or bt('key', 3)
+function bt($key, $arg = null) {
+	static $tr = null;
+	if ($tr === null) {
+		$tr = array(
+			'de' => array(
+				'subtitle'       => 'Online-Reservierung',
+				'hours_title'    => 'Öffnungszeiten',
+				'closed'         => 'Geschlossen',
+				'pax_less'       => 'weniger Gäste',
+				'pax_more'       => 'mehr Gäste',
+				'pick_time'      => 'Bitte wähle eine Uhrzeit aus.',
+				'next'           => 'Weiter',
+				'back'           => '‹ Zurück',
+				'details_title'  => 'Reservierungsdetails',
+				'checkout'       => 'Check-out',
+				'contact_us'     => 'Bitte kontaktiere uns direkt per E-Mail:',
+				'closed_day'     => 'An diesem Tag haben wir leider geschlossen. Bitte wähle ein anderes Datum.',
+				'online_blocked' => 'An diesem Tag sind Online-Reservierungen leider nicht möglich. Bitte wähle ein anderes Datum.',
+				'group_big'      => 'Für Gruppen ab %d Personen bitten wir um eine persönliche Anfrage.',
+				'no_tables'      => 'Für %d Personen sind an diesem Tag leider keine Tische mehr frei.',
+				'confirmed'      => 'Reservierung bestätigt',
+				'back_site'      => 'Zurück zur Website',
+				'cancel_res'     => 'Reservierung stornieren',
+				'waitlist_text'  => 'Für Ihren Wunschtermin sind aktuell keine Tische mehr frei. Wir haben Sie auf die Warteliste gesetzt und melden uns, sobald ein Platz frei wird.',
+				'error_text'     => 'Ihre Reservierung konnte leider nicht angelegt werden.',
+				'error_retry'    => 'Bitte versuchen Sie es erneut oder kontaktieren Sie uns direkt per E-Mail:',
+				'retry'          => 'Erneut versuchen',
+			),
+			'en' => array(
+				'subtitle'       => 'Online reservation',
+				'hours_title'    => 'Opening hours',
+				'closed'         => 'Closed',
+				'pax_less'       => 'fewer guests',
+				'pax_more'       => 'more guests',
+				'pick_time'      => 'Please select a time.',
+				'next'           => 'Next',
+				'back'           => '‹ Back',
+				'details_title'  => 'Reservation details',
+				'checkout'       => 'Checkout',
+				'contact_us'     => 'Please contact us directly by email:',
+				'closed_day'     => 'We are unfortunately closed on this day. Please choose another date.',
+				'online_blocked' => 'Online reservations are unfortunately not possible on this day. Please choose another date.',
+				'group_big'      => 'For groups of %d or more guests, please send us a personal request.',
+				'no_tables'      => 'Unfortunately there are no tables left for %d guests on this day.',
+				'confirmed'      => 'Reservation confirmed',
+				'back_site'      => 'Back to website',
+				'cancel_res'     => 'Cancel reservation',
+				'waitlist_text'  => 'There are currently no tables left for your requested time. We have put you on the waiting list and will get in touch as soon as a table becomes available.',
+				'error_text'     => 'Unfortunately your reservation could not be created.',
+				'error_retry'    => 'Please try again or contact us directly by email:',
+				'retry'          => 'Try again',
+			),
+		);
+	}
+	$lang = isset($_SESSION['lang']) ? substr($_SESSION['lang'], 0, 2) : 'de';
+	$set = ($lang === 'de') ? $tr['de'] : $tr['en'];
+	$text = isset($set[$key]) ? $set[$key] : $key;
+	return ($arg !== null) ? sprintf($text, $arg) : $text;
 }
 
 // table plan verdict for a slot of the selected day and party size: true/false, or null when the

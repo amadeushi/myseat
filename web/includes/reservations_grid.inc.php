@@ -72,7 +72,7 @@
 				}
 			echo "</td>";
 			if($_SESSION['wait'] == 0){
-				echo "<td class='big tb_nr' style='width:85px;' id='tb_table'><img src='images/icons/table_II.png' class='tipsy leftside noprint' title='"._table."' /><div id='reservation_table-".$id."' class='inlineedit'>".$row->reservation_table."</div></td>";
+				echo "<td class='big tb_nr' style='width:85px;' id='tb_table'><img src='images/icons/table_II.png' class='tipsy leftside noprint' title='"._table."' />".tp_table_cell($id, $row->reservation_table, $_SESSION['selectedDate'])."</td>";
 			}
 			echo "<td class='noprint'><div>";
 				getStatusList($id, $row->reservation_status);

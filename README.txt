@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 0.2175                        =-=
+=-= Version: 0.2178                        =-=
 =-= Date:    21.09.2026                   =-=
 =-= Time:    18:30 GMT                    =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -29,12 +29,38 @@ News
 CHANGELOG
 =========
 
-Versions 0.2161 - 0.2175 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 0.2178 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-21 == mySeat v0.2178 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Online booking form in English: the texts that were hard-coded in German are translated
+   (subtitle, opening hours block with weekday names, "Closed", step titles, Next/Back, "please
+   select a time", the notices for closed days / online block / large groups / no tables left,
+   the whole confirmation, waiting-list and error page). They come from bt() in
+   api/business.class.php (German and English; other languages fall back to English, like
+   cancel.php). Emails and the cancel page were already bilingual
+
+2026-09-21 == mySeat v0.2177 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Backend: the "Änderungen" history dropdown in the reservation detail was a white box (legacy
+   .option / .option_xl widgets = white background image with an invisible select on top, black
+   text); now a dark field with a gold arrow
+ * Backend: dropdown lists are drawn by the page in browsers with customizable selects
+   (appearance: base-select, e.g. Chrome 135+): dark list, gold highlight for the current
+   choice, gold arrow - the native macOS list stayed white despite color-scheme: dark. Other
+   browsers keep the native list
+
+2026-09-21 == mySeat v0.2176 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Reservation lists (day view, dashboard, short view): the "table" column now shows the tables
+   assigned in the table plan (e.g. "Tisch 4 + Tisch 5", link to the plan of the day). It used
+   to show only the old free text field, so plan assignments were invisible there. Without an
+   assignment the free text stays as before and can still be edited inline
 
 2026-09-21 == mySeat v0.2175 == amadeushi - http://github.com/amadeushi/myseat
 

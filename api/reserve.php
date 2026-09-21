@@ -287,13 +287,13 @@ if($check_web_outlet==1){
 		<div class="hours-card">
 			<h3>
 				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-				Öffnungszeiten
+				<?php echo bt('hours_title'); ?>
 			</h3>
 			<dl>
 				<?php foreach ($hours_summary as $row): ?>
 				<div class="hours-row">
 					<dt><?php echo htmlspecialchars($row['days']); ?></dt>
-					<dd><?php echo $row['hours'] ? htmlspecialchars($row['hours']) : 'Geschlossen'; ?></dd>
+					<dd><?php echo $row['hours'] ? htmlspecialchars($row['hours']) : bt('closed'); ?></dd>
 				</div>
 				<?php endforeach; ?>
 			</dl>
@@ -324,7 +324,7 @@ if($check_web_outlet==1){
 	<main class="booking-main">
 		<?php language_navigation($lang);?>
 		<h1 class="booking-title"><?php echo $page_title; ?></h1>
-		<p class="booking-subtitle">Online-Reservierung</p>
+		<p class="booking-subtitle"><?php echo bt('subtitle'); ?></p>
 
 		<form action="process_booking.php" method="post" name="contactForm" id="contactForm">
 			<?php if ($num_outlets > 1): ?>
@@ -353,9 +353,9 @@ if($check_web_outlet==1){
 					<div class="picker pax-picker">
 						<span class="picker-label"><?php echo ucfirst(_people_);?></span>
 						<div class="pax-stepper">
-							<a href="javascript:void(0);" class="dec btn_pax" aria-label="weniger Gäste">–</a>
+							<a href="javascript:void(0);" class="dec btn_pax" aria-label="<?php echo bt('pax_less'); ?>">–</a>
 							<input type="text" name="reservation_pax" id="reservation_pax" value="<?php echo $_SESSION['pax'];?>"/>
-							<a href="javascript:void(0);" class="inc btn_pax" aria-label="mehr Gäste">+</a>
+							<a href="javascript:void(0);" class="inc btn_pax" aria-label="<?php echo bt('pax_more'); ?>">+</a>
 						</div>
 					</div>
 					<div class="picker date-picker">
@@ -371,31 +371,31 @@ if($check_web_outlet==1){
 					<div id="timeslot-results">
 					<?php include 'timeslot_fragment.inc.php'; ?>
 					</div>
-					<p class="wizard-error" id="timeslot-error">Bitte wähle eine Uhrzeit aus.</p>
+					<p class="wizard-error" id="timeslot-error"><?php echo bt('pick_time'); ?></p>
 				</div>
 
 				<div class="wizard-nav">
 					<span></span>
-					<button type="button" class="submit-button wizard-btn wizard-next" data-goto="2">Weiter</button>
+					<button type="button" class="submit-button wizard-btn wizard-next" data-goto="2"><?php echo bt('next'); ?></button>
 				</div>
 			</div>
 
 			<!-- Step 2: notes -->
 			<div class="wizard-step wizard-step-hidden" data-step="2">
-				<h3 class="wizard-step-title">Reservierungsdetails</h3>
+				<h3 class="wizard-step-title"><?php echo bt('details_title'); ?></h3>
 				<div class="field">
 					<label><?php echo _form_notes; ?></label>
 					<textarea cols="50" rows="5" name="reservation_notes" id="reservation_notes"></textarea>
 				</div>
 				<div class="wizard-nav">
-					<button type="button" class="wizard-btn wizard-back" data-goto="1">‹ Zurück</button>
-					<button type="button" class="submit-button wizard-btn wizard-next" data-goto="3">Weiter</button>
+					<button type="button" class="wizard-btn wizard-back" data-goto="1"><?php echo bt('back'); ?></button>
+					<button type="button" class="submit-button wizard-btn wizard-next" data-goto="3"><?php echo bt('next'); ?></button>
 				</div>
 			</div>
 
 			<!-- Step 3: contact details + confirm -->
 			<div class="wizard-step wizard-step-hidden" data-step="3">
-				<h3 class="wizard-step-title">Check-out</h3>
+				<h3 class="wizard-step-title"><?php echo bt('checkout'); ?></h3>
 
 				<div class="wizard-summary">
 					<div class="summary-item">
@@ -454,7 +454,7 @@ if($check_web_outlet==1){
 				</div>
 
 				<div class="wizard-nav">
-					<button type="button" class="wizard-btn wizard-back" data-goto="2">‹ Zurück</button>
+					<button type="button" class="wizard-btn wizard-back" data-goto="2"><?php echo bt('back'); ?></button>
 					<button class="submit-button wizard-btn" type="submit"><?php echo _create; ?></button>
 				</div>
 			</div>

@@ -314,3 +314,28 @@ function tp_toggle_link($outlet_id, $a, $b) {
 	if ($st) { mysqli_stmt_close($st); return 'linked'; }
 	return false;
 }
+
+// names of the tables a reservation sits at according to the plan ("T1 + T2"), '' when none;
+// used by the reservation lists, never throws
+function tp_assigned_table_names($reservation_id) {
+	try {
+		static $cache = array();
+		$id = (int)$reservation_id;
+		if (isset($cache[$id])) { return $cache[$id]; }
+		$rows = tp_rows("SELECT t.`table_name` FROM ".tp_t('reservation_tables')." rt JOIN ".tp_t('tables')." t ON t.`table_id` = rt.`table_id`
+			WHERE rt.`reservation_id` = ? ORDER BY t.`table_name`", 'i', array($id));
+		return $cache[$id] = implode(' + ', array_map(function ($r) { return $r['table_name']; }, $rows));
+	} catch (Throwable $e) {
+		return '';
+	}
+}
+
+// the cell content for the "table" column of a reservation list: plan tables (link to the plan of
+// the day) or, without an assignment, the free text field that can still be edited inline
+function tp_table_cell($reservation_id, $free_text, $date) {
+	$names = tp_assigned_table_names($reservation_id);
+	if ($names === '') {
+		return "<div id='reservation_table-".(int)$reservation_id."' class='inlineedit'>".$free_text."</div>";
+	}
+	return "<a class='tp-tablelabel' href='main_page.php?p=7&selectedDate=".htmlspecialchars($date)."' title='Tischplan'>".htmlspecialchars($names)."</a>";
+}

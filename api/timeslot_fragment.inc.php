@@ -9,7 +9,7 @@ if (!function_exists('reserve_contact_message')) {
 	function reserve_contact_message($text, $contact_email) {
 		echo "<div class='alert_info'><p>".$text;
 		if ($contact_email) {
-			echo "<br/>Bitte kontaktiere uns direkt per E-Mail: <a href='mailto:".$contact_email."'>".$contact_email."</a>";
+			echo "<br/>".bt('contact_us')." <a href='mailto:".$contact_email."'>".$contact_email."</a>";
 		}
 		echo "</p></div>";
 	}
@@ -31,11 +31,11 @@ include_once __DIR__.'/../web/classes/online_block.class.php';
 $online_blocked = ob_is_blocked($_SESSION['outletID'], $_SESSION['selectedDate']);
 
 if ($outlet_closed_today) {
-	reserve_contact_message("An diesem Tag haben wir leider geschlossen. Bitte wähle ein anderes Datum.", $contact_email);
+	reserve_contact_message(bt('closed_day'), $contact_email);
 } elseif ($online_blocked) {
-	reserve_contact_message("An diesem Tag sind Online-Reservierungen leider nicht möglich. Bitte wähle ein anderes Datum.", $contact_email);
+	reserve_contact_message(bt('online_blocked'), $contact_email);
 } elseif ($party_too_big) {
-	reserve_contact_message("Für Gruppen ab ".($max_menu + 1)." Personen bitten wir um eine persönliche Anfrage.", $contact_email);
+	reserve_contact_message(bt('group_big', $max_menu + 1), $contact_email);
 } else {
 	ob_start();
 	if ($time_selector == "radio") {
@@ -57,7 +57,7 @@ if ($outlet_closed_today) {
 	if ($available_slot_count > 0) {
 		echo $timeslots_html;
 	} else {
-		reserve_contact_message("Für ".(int)$_SESSION['pax']." Personen sind an diesem Tag leider keine Tische mehr frei.", $contact_email);
+		reserve_contact_message(bt('no_tables', (int)$_SESSION['pax']), $contact_email);
 	}
 }
 
