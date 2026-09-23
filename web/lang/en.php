@@ -586,6 +586,25 @@ define ( '_specific', 'Specific' );
 //original text: "Dashboard"
 define ( '_dashboard', 'Dashboard' );
 
+//original text: "Feedback"
+define ( '_feedback', 'Feedback' );
+define ( '_feedback_avg', 'Average overall rating' );
+define ( '_feedback_based_on', 'based on' );
+define ( '_feedback_reviews', 'reviews' );
+define ( '_feedback_food', 'Food & Drinks' );
+define ( '_feedback_service', 'Service' );
+define ( '_feedback_overall', 'Overall satisfaction' );
+define ( '_feedback_public', 'Public' );
+define ( '_feedback_no_consent', 'Guest did not consent to publishing' );
+define ( '_feedback_reply', 'Reply' );
+define ( '_feedback_reply_placeholder', 'Reply to the guest (not shown publicly)' );
+define ( '_feedback_send_reply', 'Save reply' );
+define ( '_feedback_no_entries', 'No feedback for this period yet.' );
+define ( '_feedback_from', 'on' );
+define ( '_feedback_settings', 'Review profiles' );
+define ( '_feedback_tripadvisor', 'TripAdvisor link' );
+define ( '_feedback_google', 'Google Places link' );
+
 //original text: "I would like to receive informations by email."
 define ( '_reservation_advertise', 'I would like to receive informations by email.' );
 

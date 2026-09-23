@@ -7,6 +7,10 @@
 $rsv_staff = !empty($_SESSION['realname']) ? $_SESSION['realname'] : (isset($_SESSION['u_name']) ? $_SESSION['u_name'] : '');
 $rsv_res_id = (int)$_SESSION['resID'];
 $rsv_selected = tp_assigned_table_ids($rsv_res_id);
+// keep the reservation's own mail language on save - it is not part of this form and not in the
+// explicit column list the legacy queries use, so re-saving it here must not reset it to German
+$rsv_lang_row = tp_rows("SELECT reservation_email_lang FROM `".$dbTables->reservations."` WHERE reservation_id = ?", 'i', array($rsv_res_id));
+$rsv_email_lang = $rsv_lang_row ? $rsv_lang_row[0]['reservation_email_lang'] : 'de';
 // the table picker asks for the day of the reservation, not for the day selected in the session
 $rsv_pick_date = date('Y-m-d', strtotime($row->reservation_date));
 ?>
@@ -110,6 +114,7 @@ $rsv_pick_date = date('Y-m-d', strtotime($row->reservation_date));
 	<input type="hidden" name="reservation_bookingnumber" value="<?php echo $row->reservation_bookingnumber;?>">
 	<input type="hidden" name="repeat_id" value="<?php echo $row->repeat_id;?>">
 	<input type="hidden" name="email_type" value="no">
+	<input type="hidden" name="reservation_email_lang" value="<?php echo htmlspecialchars($rsv_email_lang); ?>">
 	<input type="hidden" name="reservation_ip" value="<?php echo $_SERVER['REMOTE_ADDR'];?>">
 	<input type="hidden" name="token" value="<?php echo $token; ?>" />
 	<input type="hidden" name="action" value="save_res">

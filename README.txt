@@ -3,9 +3,9 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 0.2198                        =-=
-=-= Date:    21.09.2026                   =-=
-=-= Time:    18:30 GMT                    =-=
+=-= Version: 0.2201                        =-=
+=-= Date:    23.09.2026                   =-=
+=-= Time:    04:00 GMT                    =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 
@@ -29,12 +29,63 @@ News
 CHANGELOG
 =========
 
-Versions 0.2161 - 0.2198 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 0.2201 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-23 == mySeat v0.2201 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New guest feedback/review feature: 24-96h after a reservation took place (not cancelled or a
+   no-show) and only when a guest email is on file, a webcron-triggered mail asks the guest to
+   rate Speisen & Getränke and Service (1-5 stars each, overall computed as their rounded average).
+   A rating of 4 or 5 stars asks the guest to also leave a public review on Google or TripAdvisor
+   (links configured per outlet); lower ratings stay in-house. The guest form also asks for
+   explicit consent to display the review publicly - without that consent staff cannot publish it,
+   enforced at the database level, not just in the UI
+ * New backend "Feedback" tab (Page-Feedback capability): date-range filter, average rating with a
+   1-5 star distribution chart, per-category averages, and a list of individual reviews where staff
+   can reply (the reply is emailed to the guest) and, only once the guest has consented, mark a
+   review as publicly visible
+ * New public reviews page (api/reviews.php) and an embeddable widget (api/reviews_widget.php, for
+   dropping into the restaurant's own website via an iframe) that list every review that both the
+   guest (consent) and the restaurant (publish toggle) agreed to show, including the restaurant's
+   reply
+ * New outlet settings fields for the Google Places and TripAdvisor review page URLs used above
+ * Needs a webcron job (this host has no shell crontab) hitting
+   web/cron/send_feedback_requests.php?key=<see file> every 30-60 minutes for requests to actually
+   go out
+ * No manual database update needed - the new tp_feedback table and the outlets/reservations
+   columns it depends on are created/migrated automatically on first use
+ * Existing resmio guest feedback (1718 historical reviews, 2019-2026) imported into the new
+   tp_feedback table and published on the new public reviews page/widget; no guest name or email
+   is available from that source, so these show as "Verifizierter Gast" and cannot receive a
+   mailed staff reply
+
+2026-09-23 == mySeat v0.2200 == amadeushi - http://github.com/amadeushi/myseat
+
+ * The guest booking form (api/reserve.php) now actually detects a non-German browser and shows
+   the English form by default - the existing code compared the browser's whole raw
+   Accept-Language header (e.g. "en-US,en;q=0.9,de;q=0.8") against the literal string "en", which
+   a real browser's header is never equal to, so the auto-detection never fired in practice. It
+   now reads only the first, highest-priority language subtag and falls back to English for any
+   browser language other than German (the form only has these two)
+ * Fix: once the language was set for the session, a later step of the same booking (choosing a
+   table, entering the name) could still send the confirmation mail in German regardless, because
+   the "email_type" field the guest mail's language is based on was taken from a request-local
+   variable that resets to the German default on every request instead of the session's own,
+   already-decided language
+
+2026-09-23 == mySeat v0.2199 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Booking mails (web/classes/booking_mail.class.php, plugins/local_email_send.plugin.php): the
+   guest confirmation now comes with a calendar invite (.ics) attached - date, time (using the
+   outlet's average stay as the end time), location (property address) and, in the description,
+   the booking number, the one-click cancel link and the restaurant's website. Works for both the
+   native mail() path (multipart/mixed around the existing plain/HTML alternative) and the
+   PHPMailer/SMTP path (AddStringAttachment). The restaurant's own notification mail is unchanged
 
 2026-09-23 == mySeat v0.2198 == amadeushi - http://github.com/amadeushi/myseat
 

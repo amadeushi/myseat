@@ -46,6 +46,10 @@
 // ** Name shown in the backend header and login page
  $settings['brandName'] = 'Amadeus';
 
+// ** Secret key for the guest feedback webcron (web/cron/send_feedback_requests.php?key=...)
+ // set this to a random string of your own before enabling that webcron job
+ $settings['feedbackCronKey'] = 'CHANGE-ME';
+
 // ** Online reservation: last booking time
  // last online booking is accepted this many minutes before closing time
  // (0 = allow bookings up to the closing time itself)

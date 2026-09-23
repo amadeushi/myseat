@@ -46,6 +46,7 @@ $rsv_selected = array();
 				<input type="email" name="reservation_guest_email" id="reservation_guest_email" autocomplete="off" aria-describedby="rsv-email-msg"/>
 				<p class="rsv-msg" id="rsv-email-msg" role="alert"></p>
 				<input type="hidden" name="email_type" value="no"/>
+				<input type="hidden" name="reservation_email_lang" value="de"/>
 				<label class="rsv-check"><input type="checkbox" name="email_type" id="rsv-mail-confirm" value="loc" disabled="disabled"/> <span><?php echo rt('email_confirm'); ?></span></label>
 			</div>
 		</div>

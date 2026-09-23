@@ -46,11 +46,77 @@ function bm_legal_lines($property) {
 	return $lines;
 }
 
+// escape a value for use inside an .ics TEXT property (RFC 5545 §3.3.11)
+function bm_ics_text($s) {
+	$s = str_replace(array("\\", ";", ","), array("\\\\", "\\;", "\\,"), (string)$s);
+	return str_replace(array("\r\n", "\r", "\n"), '\\n', $s);
+}
+
+// fold a "NAME:value" line to the 75-octet limit (RFC 5545 §3.1), continuation lines start with a space
+function bm_ics_fold($line) {
+	if (strlen($line) <= 75) { return $line."\r\n"; }
+	$out = substr($line, 0, 75);
+	$rest = substr($line, 75);
+	while ($rest !== '') {
+		$out .= "\r\n ".substr($rest, 0, 74);
+		$rest = substr($rest, 74);
+	}
+	return $out."\r\n";
+}
+
+/*
+ * The calendar invite attached to the guest mail: date, time (as a start/end span using the
+ * outlet's average stay), location and a description with the booking number and the cancel /
+ * website links. $ctx keys: lang, brand, address (one line or ''), date (Y-m-d), time (H:i[:s]),
+ * duration (H:i:s, outlet avg_duration), pax, number, notes, cancel_url, website_url, uid_domain.
+ */
+function bm_ics_build($ctx) {
+	$start = strtotime($ctx['date'].' '.$ctx['time']);
+	if ($start === false) { return ''; }
+	$parts = array_map('intval', explode(':', $ctx['duration'] !== '' ? $ctx['duration'] : '02:00:00'));
+	$dur = (isset($parts[0]) ? $parts[0] : 2) * 3600 + (isset($parts[1]) ? $parts[1] : 0) * 60 + (isset($parts[2]) ? $parts[2] : 0);
+	if ($dur <= 0) { $dur = 7200; }
+	$end = $start + $dur;
+
+	$de = ($ctx['lang'] === 'de');
+	$summary = ($de ? 'Reservierung im ' : 'Reservation at ').$ctx['brand'].' ('.$ctx['pax'].($de ? ' Pers.)' : ' guests)');
+	$desc = array();
+	$desc[] = ($de ? 'Buchungsnummer' : 'Booking number').': '.$ctx['number'];
+	$desc[] = ($de ? 'Personen' : 'Guests').': '.$ctx['pax'];
+	if ($ctx['notes'] !== '') { $desc[] = ($de ? 'Anmerkung' : 'Note').': '.$ctx['notes']; }
+	if ($ctx['cancel_url'] !== '') { $desc[] = ($de ? 'Stornieren' : 'Cancel').': '.$ctx['cancel_url']; }
+	if ($ctx['website_url'] !== '') { $desc[] = ($de ? 'Webseite' : 'Website').': '.$ctx['website_url']; }
+
+	$lines = array();
+	$lines[] = 'BEGIN:VCALENDAR';
+	$lines[] = 'VERSION:2.0';
+	$lines[] = 'PRODID:-//mySeat//Reservation//'.strtoupper($ctx['lang']);
+	$lines[] = 'CALSCALE:GREGORIAN';
+	$lines[] = 'METHOD:PUBLISH';
+	$lines[] = 'BEGIN:VEVENT';
+	$lines[] = 'UID:'.$ctx['number'].'@'.$ctx['uid_domain'];
+	$lines[] = 'DTSTAMP:'.gmdate('Ymd\THis\Z');
+	$lines[] = 'DTSTART:'.gmdate('Ymd\THis\Z', $start);
+	$lines[] = 'DTEND:'.gmdate('Ymd\THis\Z', $end);
+	$lines[] = 'SUMMARY:'.bm_ics_text($summary);
+	if ($ctx['address'] !== '') { $lines[] = 'LOCATION:'.bm_ics_text($ctx['address']); }
+	$lines[] = 'DESCRIPTION:'.bm_ics_text(implode("\n", $desc));
+	if ($ctx['website_url'] !== '') { $lines[] = 'URL:'.bm_ics_text($ctx['website_url']); }
+	$lines[] = 'STATUS:CONFIRMED';
+	$lines[] = 'TRANSP:OPAQUE';
+	$lines[] = 'END:VEVENT';
+	$lines[] = 'END:VCALENDAR';
+
+	$out = '';
+	foreach ($lines as $l) { $out .= bm_ics_fold($l); }
+	return $out;
+}
+
 /*
  * Build the mails. $d keys: form (the submitted booking form), outlet (selOutlet), property,
  * date (Y-m-d), time_text (formatted time), date_text (formatted date or range), booking_number,
  * cancel_url, origin ('online' | 'backend').
- * Returns array(lang, subject, plain, html, admin_subject, admin_text).
+ * Returns array(lang, subject, plain, html, admin_subject, admin_text, ics, ics_filename).
  */
 function bm_build($d) {
 	global $settings;
@@ -145,6 +211,25 @@ function bm_build($d) {
 		.($links ? '<br>'.implode(' &middot; ', $links) : '').'<br><br>'.$h($auto).'</td></tr>'
 		.'</table></td></tr></table></body></html>';
 
+	// ---- calendar invite (date, time, location; cancel and website links in the description)
+	$website_url = '';
+	if (!empty($d['property']['website'])) {
+		$website_url = bm_clean($d['property']['website']);
+		if (!preg_match('#^https?://#i', $website_url)) { $website_url = 'https://'.$website_url; }
+	}
+	$address_line = trim(bm_clean(isset($d['property']['street']) ? $d['property']['street'] : '').', '.bm_clean(isset($d['property']['zip']) ? $d['property']['zip'] : '').' '.bm_clean(isset($d['property']['city']) ? $d['property']['city'] : ''), ' ,');
+	$location = trim($brand.($address_line !== '' ? ', '.$address_line : ''), ' ,');
+	$uid_host = 'myseat.local';
+	if ($cancel !== '' && ($host = parse_url($cancel, PHP_URL_HOST))) { $uid_host = $host; }
+	$ics = bm_ics_build(array(
+		'lang' => $lang, 'brand' => $brand, 'address' => $location,
+		'date' => $d['date'], 'time' => $form['reservation_time'],
+		'duration' => isset($d['outlet']['avg_duration']) ? $d['outlet']['avg_duration'] : '',
+		'pax' => $pax, 'number' => $number, 'notes' => $notes,
+		'cancel_url' => $cancel, 'website_url' => $website_url, 'uid_domain' => $uid_host,
+	));
+	$ics_filename = ($de ? 'reservierung' : 'reservation').'-'.$number.'.ics';
+
 	// ---- notification for the restaurant
 	$a_subject = ($de ? 'Neue Reservierung: ' : 'New reservation: ').$name.', '.$pax.($de ? ' Personen, ' : ' guests, ').$date_txt.', '.$time_txt;
 	$a  = ($de ? 'Neue Reservierung' : 'New reservation').($d['origin'] === 'online' ? ' (online)' : ($de ? ' (Backend)' : ' (backend)'))."\r\n\r\n";
@@ -158,5 +243,5 @@ function bm_build($d) {
 	if ($notes !== '') { $a .= ($de ? 'Notiz' : 'Note').': '.$notes."\r\n"; }
 	if (!empty($form['reservation_booker_name']) && $d['origin'] !== 'online') { $a .= ($de ? 'Erfasst von' : 'Entered by').': '.bm_clean($form['reservation_booker_name'])."\r\n"; }
 
-	return array('lang' => $lang, 'subject' => $subject, 'plain' => $p, 'html' => $html, 'admin_subject' => $a_subject, 'admin_text' => $a);
+	return array('lang' => $lang, 'subject' => $subject, 'plain' => $p, 'html' => $html, 'admin_subject' => $a_subject, 'admin_text' => $a, 'ics' => $ics, 'ics_filename' => $ics_filename);
 }

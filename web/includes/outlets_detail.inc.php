@@ -24,6 +24,14 @@
 	<p>
 		<?php echo $row->confirmation_email;?>
 	</p>
+	<label><?php echo _feedback_google;?></label>
+	<p>
+		<?php echo $row->outlet_google_url !== '' ? $row->outlet_google_url : '--';?>
+	</p>
+	<label><?php echo _feedback_tripadvisor;?></label>
+	<p>
+		<?php echo $row->outlet_tripadvisor_url !== '' ? $row->outlet_tripadvisor_url : '--';?>
+	</p>
 	<label><?php echo _seats;?></label>
 	<p>		 	 	 	 	 	 	
 		<?php echo $row->outlet_max_capacity;?>

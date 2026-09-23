@@ -169,13 +169,21 @@ if($check_web_outlet==1){
   // translate to selected language
 	$language = $general['language'];
 	$set_lang = substr($language,0,2);
-	$browser_lang = $_SERVER['HTTP_ACCEPT_LANGUAGE'];
+	// the browser's preferred language, e.g. "en-US,en;q=0.9,de;q=0.8" - only the first,
+	// highest-priority subtag matters here (the previous code compared the whole raw header
+	// against "en", which a real Accept-Language value never equals, so it never actually fired)
+	$browser_lang = '';
+	if ( !empty($_SERVER['HTTP_ACCEPT_LANGUAGE']) && preg_match('/^\s*([a-z]{2})/i', $_SERVER['HTTP_ACCEPT_LANGUAGE'], $bl_m) ) {
+		$browser_lang = strtolower($bl_m[1]);
+	}
 
 	if( isset($_GET['lang']) ){
 		$language = $_GET['lang'];
 		$_SESSION['lang'] = $language;
-	}else if ( isset($browser_lang) && $_SESSION['lang'] == '' && ($browser_lang=="en" || $browser_lang == $set_lang) ){
-		$language = $browser_lang;
+	}else if ( $_SESSION['lang'] == '' && $browser_lang !== '' && $browser_lang !== $set_lang ){
+		// guest's browser is not in the site's own language - English is the only alternative
+		// this form offers, so it is the reasonable default for any other language
+		$language = 'en';
 	}
 	if( $_SESSION['lang'] == ''){
 		$_SESSION['lang'] = $language;
@@ -335,7 +343,8 @@ if($check_web_outlet==1){
 			<input type="hidden" name="reservation_hotelguest_yn" id="reservation_hotelguest_yn" value="PASS"/>
 			<input type="hidden" name="reservation_booker_name" id="reservation_booker_name" value="Contact Form"/>
 			<input type="hidden" name="reservation_author" id="reservation_author" value="<?php echo querySQL('db_property');?> Team"/>
-			<input type="hidden" name="email_type" id="email_type" value="<?php echo $language; ?>"/>
+			<input type="hidden" name="email_type" id="email_type" value="<?php echo $lang; ?>"/>
+			<input type="hidden" name="reservation_email_lang" value="<?php echo $lang; ?>"/>
 
 			<!-- Step 1: date, time, party size -->
 			<div class="wizard-step" data-step="1">

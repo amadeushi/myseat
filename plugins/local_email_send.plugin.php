@@ -90,8 +90,12 @@ function my_email_send_conf() {
 				$mail->AltBody = $m['plain'];
 				$mail->MsgHTML($m['html']);
 				$mail->AddAddress($to_guest);
+				if (!empty($m['ics'])) {
+					$mail->AddStringAttachment($m['ics'], $m['ics_filename'], 'base64', 'text/calendar; method=PUBLISH; charset=UTF-8');
+				}
 				if (!$mail->Send()) { error_log('mySeat mail to guest failed: '.$mail->ErrorInfo); }
 				$mail->ClearAddresses();
+				$mail->ClearAttachments();
 			}
 			if ($to_admin !== '') {
 				$mail->IsHTML(false);
@@ -103,14 +107,25 @@ function my_email_send_conf() {
 				$mail->ClearAddresses();
 			}
 		} else {
-			// PHP mail(): UTF-8 everywhere, parts and subject encoded, no images or attachments
+			// PHP mail(): UTF-8 everywhere, parts and subject encoded, no images; the calendar
+			// invite (.ics) is the only attachment, wrapped around the plain/HTML alternative
 			if ($to_guest !== '' && filter_var($to_guest, FILTER_VALIDATE_EMAIL) && $from !== '') {
-				$boundary = '=_'.md5(uniqid('', true));
+				$alt_boundary = '=_'.md5(uniqid('', true));
+				$alt  = "--".$alt_boundary."\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n".chunk_split(base64_encode($m['plain']));
+				$alt .= "--".$alt_boundary."\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n".chunk_split(base64_encode($m['html']));
+				$alt .= "--".$alt_boundary."--\r\n";
+
 				$headers  = "MIME-Version: 1.0\r\nFrom: ".$from."\r\nReply-To: ".$from."\r\nX-Mailer: mySeat\r\n";
-				$headers .= "Content-Type: multipart/alternative; boundary=\"".$boundary."\"\r\n";
-				$body  = "--".$boundary."\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n".chunk_split(base64_encode($m['plain']));
-				$body .= "--".$boundary."\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n".chunk_split(base64_encode($m['html']));
-				$body .= "--".$boundary."--\r\n";
+				if (!empty($m['ics'])) {
+					$mix_boundary = '=_'.md5(uniqid('', true));
+					$headers .= "Content-Type: multipart/mixed; boundary=\"".$mix_boundary."\"\r\n";
+					$body  = "--".$mix_boundary."\r\nContent-Type: multipart/alternative; boundary=\"".$alt_boundary."\"\r\n\r\n".$alt;
+					$body .= "--".$mix_boundary."\r\nContent-Type: text/calendar; method=PUBLISH; charset=UTF-8; name=\"".$m['ics_filename']."\"\r\nContent-Transfer-Encoding: base64\r\nContent-Disposition: attachment; filename=\"".$m['ics_filename']."\"\r\n\r\n".chunk_split(base64_encode($m['ics']));
+					$body .= "--".$mix_boundary."--\r\n";
+				} else {
+					$headers .= "Content-Type: multipart/alternative; boundary=\"".$alt_boundary."\"\r\n";
+					$body = $alt;
+				}
 				mail($to_guest, $subject_guest, $body, $headers);
 			}
 			if ($to_admin !== '') {

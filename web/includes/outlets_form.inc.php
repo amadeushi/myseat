@@ -33,6 +33,17 @@ if ($_SESSION['button']==2) {
 	<p>
 		<input type="text" name="confirmation_email" id="confirmation_email" class="required email" title=' ' value="<?php echo $row->confirmation_email;?>"/>
 	</p>
+	<br/>
+	<label><?php echo _feedback_settings;?></label>
+	<p>
+		<label style="font-weight:normal;text-transform:none;letter-spacing:0;"><?php echo _feedback_google;?></label>
+		<input type="text" name="outlet_google_url" id="outlet_google_url" placeholder="https://g.page/r/..." title=' ' value="<?php echo htmlspecialchars(isset($row->outlet_google_url) ? $row->outlet_google_url : ''); ?>"/>
+	</p>
+	<p>
+		<label style="font-weight:normal;text-transform:none;letter-spacing:0;"><?php echo _feedback_tripadvisor;?></label>
+		<input type="text" name="outlet_tripadvisor_url" id="outlet_tripadvisor_url" placeholder="https://www.tripadvisor.com/..." title=' ' value="<?php echo htmlspecialchars(isset($row->outlet_tripadvisor_url) ? $row->outlet_tripadvisor_url : ''); ?>"/>
+	</p>
+	<br/>
 	<label><?php echo _seats;?></label>
 	&nbsp;<?php echo uiIcon('info', array('class' => 'tipsyold', 'title' => MAN_3)); ?>
 	<p>		 	 	 	 	 	 	

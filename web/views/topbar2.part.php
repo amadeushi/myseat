@@ -26,6 +26,13 @@
 					</a>
 				</li>
 				<?php endif ?>
+				<?php if ( current_user_can( 'Page-Feedback' ) ): ?>
+				<li>
+					<a href="main_page.php?p=8" <?php if($_SESSION['page']=='8'){echo "class='active'";} ?> >
+						<?php echo _feedback; ?>
+					</a>
+				</li>
+				<?php endif ?>
 				<?php if ( current_user_can( 'Page-Export' ) ): ?>
 				<li>
 					<a href="main_page.php?p=4" <?php if($_SESSION['page']=='4'){echo "class='active'";} ?> >
