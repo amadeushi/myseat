@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 0.2189                        =-=
+=-= Version: 0.2198                        =-=
 =-= Date:    21.09.2026                   =-=
 =-= Time:    18:30 GMT                    =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -29,12 +29,107 @@ News
 CHANGELOG
 =========
 
-Versions 0.2161 - 0.2189 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 0.2198 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-23 == mySeat v0.2198 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: the "+Neu" tab (day view) had a glowing box-shadow ring around it, meant to call attention
+   to it as the primary action; but the tab strip's tabs sit flush against each other with shared
+   borders, so the ring visibly bled onto the two neighbouring tabs instead of framing "+Neu" on
+   its own - it does not look like a highlight there, it looks broken. The ring is gone, the gold
+   fill and bold weight already make it stand out on their own
+
+2026-09-23 == mySeat v0.2197 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: the staff-member field next to Save (added in v0.2196) had two problems - on desktop
+   "justify-content: space-between" stretched it away from the button, leaving a wide empty gap
+   between them; on the phone it was pulled into the same sticky bottom bar as the Save button,
+   so a much taller block stayed permanently pinned over the bottom of the screen while scrolling
+   through the rest of the form (name, phone, notes, tables), hiding content behind it. The field
+   now sits directly next to Save on desktop with no gap, and on the phone only the Save button
+   itself is sticky - the staff field is a normal block right above it, scrolling with the rest of
+   the form
+
+2026-09-23 == mySeat v0.2196 == amadeushi - http://github.com/amadeushi/myseat
+
+ * The staff member field moves once more: not next to date/time/guests but right next to the Save
+   button - naming who is entering the reservation is the last thing you do before saving it, not
+   something that belongs with the booking's own facts at the top of the form
+
+2026-09-23 == mySeat v0.2195 == amadeushi - http://github.com/amadeushi/myseat
+
+ * The staff member field (who took the booking) moves out of the collapsed "Details" section into
+   the main part of the reservation form (new and edit), next to date/time/guests - no need to open
+   Details to see or set it
+ * Fix: the recurring-reservation row ("Serienreservierung") - "Wiederholen bis" - had an 18px-tall
+   Bootstrap-era label box (a leftover from before the dark redesign) that squeezed its own text
+   onto two lines and, on the phone, an unused empty element sitting in the middle of the row;
+   the label is now a proper pill matching the rest of the form, the dead element is gone, and the
+   whole row gets the full width of the Details grid instead of sharing half of it with the
+   checkbox above it
+
+2026-09-23 == mySeat v0.2194 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: the outlet (and reservation) detail/edit pages - Objekt/Name/Kuechenrichtung/Beschreibung
+   next to Saison/Ruhetag/Oeffnungszeit/Pause - are a fixed 47%+47% two-column layout with a
+   450px-wide input for the online booking links. On the phone the two floated columns did not fit
+   side by side, so the right column visually climbed up next to the long description text on the
+   left instead of following underneath it, and the page overflowed sideways on top of that. Both
+   columns now stack full-width, one after another, on a narrow screen
+
+2026-09-23 == mySeat v0.2193 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: the reservation-list "screen scroll" rule from v0.2190 unintentionally un-hid a print-only
+   table (blank manual-entry lines at the bottom of the day view) on the phone - excluded it
+ * Fix: the reservation cards opened with an empty box before the first card (the list's own empty
+   spacer row, invisible as a table row, was rendered as an empty card)
+ * Fix: the "recent reservations" card had its own fixed 450px desktop width instead of following
+   the width of the other cards, sticking out on a narrow screen
+ * The tab row (Reservierungen/+Neu/Storniert, Outlet/Benutzer/..., Erdgeschoss/Obergeschoss...) is
+   a strip of flush, flat-bottomed tabs on desktop, made to visually merge into the box it opens
+   right underneath; once wrapped onto several lines on the phone that illusion looked like
+   floating, clipped rectangles instead. It is now a row of separate rounded pill buttons on the
+   phone, the same pattern already used for the table-plan's own area tabs
+
+2026-09-23 == mySeat v0.2192 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Reservation list on the phone (dashboard and the day view) now reads as a stack of cards
+   instead of a 9-column table that needed sideways scrolling to reach the status dropdown or the
+   edit/delete icons. Each reservation becomes one self-contained card: time + party size, guest
+   name, table, status, who booked it and the actions - in the table's own row order, so the
+   reading order for screen readers matches what is shown. The shift colour code (morning /
+   afternoon / evening) that already marks each row becomes the card's left edge accent, the same
+   colour language the table-plan reservation cards already use
+ * The settings/dashboard tab row (Outlet/Benutzer/..., Erdgeschoss/Obergeschoss/...) now wraps via
+   flexbox instead of relying on floats plus a manual clearfix, so it cannot start overlapping
+   again just because a page happens to omit the clearfix
+
+2026-09-22 == mySeat v0.2191 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: on the phone, a card's header (date navigation, page title) had a fixed 30px height with
+   floated children (desktop layout); past a certain content width the floated buttons ("Online
+   sperren"/"Zurueck" on the dashboard, "Aktiv"/"InAktiv"/"Anlegen"/"Zurueck" in the settings, ...)
+   spilled out past that 30px box and overlapped the date field or the table underneath. The header
+   is now an auto-height row on the phone, and its action buttons always get their own full-width
+   row below the title/date-nav instead of trying to share a line with it
+
+2026-09-22 == mySeat v0.2190 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Backend responsive on the phone: a table wider than the screen (reservation lists, weekly
+   occupancy, outlet list, statistics numbers, ...) now scrolls inside itself instead of dragging
+   the whole page sideways, so status dropdowns and the edit/delete icons at its right edge stay
+   reachable without first scrolling the page back and forth to find them
+ * Bigger tap targets on the phone: nav links, the Outlet dropdown, the settings tabs, the
+   edit/delete icons in a reservation row and the status dropdown all get a larger tappable area
+   (the icons themselves keep their size)
+ * Form fields (including the status dropdown) are 16px on the phone so iOS no longer zooms the
+   whole page in when a field gets focus
+ * The guest-search field gets an aria-label in addition to its title, for screen readers
 
 2026-09-22 == mySeat v0.2189 == amadeushi - http://github.com/amadeushi/myseat
 

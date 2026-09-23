@@ -89,16 +89,18 @@ $rsv_pick_date = date('Y-m-d', strtotime($row->reservation_date));
 					<label><?php echo _move_reservation_to; ?></label>
 					<?php outletList($_SESSION['outletID'],'enabled','reservation_outlet_id'); ?>
 				</div>
-				<div class="rsv-field">
-					<label for="reservation_booker_name"><?php echo rt('staff'); ?> *</label>
-					<input type="text" name="reservation_booker_name" id="reservation_booker_name" class="required" title=" " minlength="3" maxlength="30" value="<?php echo htmlspecialchars($rsv_staff); ?>"/>
-				</div>
 			</div>
 		</details>
 
 		<p class="rsv-msg rsv-form-msg" id="rsv-form-msg" role="alert"></p>
-		<div class="rsv-actions">
-			<button id="submit_btn" type="submit" class="rsv-save"><?php echo rt('save'); ?></button>
+		<div class="rsv-final">
+			<div class="rsv-field rsv-staff-final">
+				<label for="reservation_booker_name"><?php echo rt('staff'); ?> *</label>
+				<input type="text" name="reservation_booker_name" id="reservation_booker_name" class="required" title=" " minlength="3" maxlength="30" value="<?php echo htmlspecialchars($rsv_staff); ?>"/>
+			</div>
+			<div class="rsv-actions">
+				<button id="submit_btn" type="submit" class="rsv-save"><?php echo rt('save'); ?></button>
+			</div>
 		</div>
 	</div>
 

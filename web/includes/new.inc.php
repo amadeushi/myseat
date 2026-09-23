@@ -75,20 +75,10 @@ $rsv_selected = array();
 					<input type="hidden" name="reservation_advertise" value=""/>
 					<label class="rsv-check"><input type="checkbox" name="reservation_advertise" id="reservation_advertise" value="YES"/> <span><?php echo _reservation_advertise; ?></span></label>
 				</div>
-				<div class="rsv-field">
-					<label for="reservation_booker_name"><?php echo rt('staff'); ?> *</label>
-					<?php if ($_SESSION['autofill']==1) { ?>
-						<input type="text" disabled="disabled" value="<?php echo htmlspecialchars($rsv_staff); ?>"/>
-						<input type="hidden" name="reservation_booker_name" id="reservation_booker_name" value="<?php echo htmlspecialchars($rsv_staff); ?>"/>
-					<?php } else { ?>
-						<input type="text" name="reservation_booker_name" id="reservation_booker_name" class="required" title=" " minlength="3" maxlength="30" value="<?php echo htmlspecialchars($rsv_staff); ?>"/>
-					<?php } ?>
-				</div>
 				<div class="rsv-field rsv-series">
 					<label><?php echo rt('series'); ?></label>
 					<div class="input-prepend">
 						<span class="add-on"><?php echo rt('series_until'); ?></span>
-						<div class="text" id="recurring_text"></div>
 						<input type="text" name="recurring_date" id="recurring_date"/>
 						<input type="hidden" name="recurring_dbdate" id="recurring_dbdate" value="<?php echo $_SESSION['selectedDate']; ?>"/>
 					</div>
@@ -101,8 +91,19 @@ $rsv_selected = array();
 		</details>
 
 		<p class="rsv-msg rsv-form-msg" id="rsv-form-msg" role="alert"></p>
-		<div class="rsv-actions">
-			<button id="submit_btn" type="submit" class="rsv-save"><?php echo rt('save'); ?></button>
+		<div class="rsv-final">
+			<div class="rsv-field rsv-staff-final">
+				<label for="reservation_booker_name"><?php echo rt('staff'); ?> *</label>
+				<?php if ($_SESSION['autofill']==1) { ?>
+					<input type="text" disabled="disabled" value="<?php echo htmlspecialchars($rsv_staff); ?>"/>
+					<input type="hidden" name="reservation_booker_name" id="reservation_booker_name" value="<?php echo htmlspecialchars($rsv_staff); ?>"/>
+				<?php } else { ?>
+					<input type="text" name="reservation_booker_name" id="reservation_booker_name" class="required" title=" " minlength="3" maxlength="30" value="<?php echo htmlspecialchars($rsv_staff); ?>"/>
+				<?php } ?>
+			</div>
+			<div class="rsv-actions">
+				<button id="submit_btn" type="submit" class="rsv-save"><?php echo rt('save'); ?></button>
+			</div>
 		</div>
 		<?php
 			if (isset($special_event_subject) && ($special_event_subject!='')) {

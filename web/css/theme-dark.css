@@ -978,16 +978,15 @@ h5 {
 	font-weight: 700;
 	font-size: 14px;
 	text-shadow: none;
-	box-shadow: 0 0 0 3px rgba(201, 162, 89, 0.18);
 }
 .first_level_tab li.tab-new a::before {
 	content: "+";
 	display: inline-block;
 	margin-right: 8px;
-	font-size: 20px;
+	font-size: 14px;
 	line-height: 1;
-	font-weight: 600;
-	vertical-align: -1px;
+	font-weight: 700;
+	vertical-align: 0;
 }
 .first_level_tab li.tab-new a:hover {
 	background: var(--gold-strong);
@@ -1212,5 +1211,115 @@ select.status_dbox:not([multiple]) option::checkmark { display: inline-block; or
 	.topbar input#searchquery { width: min(220px, 60vw); }
 	#wrapper { margin-left: 8px; margin-right: 8px; }
 	#content_wrapper { min-width: 0; margin-left: 0; margin-right: 0; }
-	.onecolumn .header { flex-wrap: wrap; }
+	/* the card header (title/date-nav + action buttons) has a fixed 30px height and floated
+	   children on desktop; past a certain content width those floats spill out past the 30px box
+	   and overlap whatever comes right after (the date field, a table's first row, ...). on mobile
+	   it becomes an auto-height flex row instead, and the action buttons always get their own full
+	   width row so they never share a line with a title or date-nav that is already tight on space */
+	.onecolumn .header, .twocolumn .header {
+		height: auto; min-height: 30px;
+		display: flex; flex-wrap: wrap; align-items: center;
+		row-gap: 10px; column-gap: 12px;
+	}
+	.onecolumn .header > *, .twocolumn .header > * { margin-top: 0; margin-bottom: 0; }
+	.onecolumn .header .second_level_tab, .twocolumn .header .second_level_tab {
+		float: none; display: flex; flex-wrap: wrap; width: 100%; gap: 8px;
+	}
+	.onecolumn .header .second_level_tab li, .twocolumn .header .second_level_tab li { float: none; padding-bottom: 0; }
+
+	/* a table (reservation list, weekly occupancy, outlet list, ...) wider than the screen scrolls
+	   by itself instead of dragging the whole page sideways - status dropdowns, edit and delete
+	   icons stay reachable without having to scroll the page itself back and forth. table becomes
+	   the scroll container (display:block) while thead/tbody/tfoot keep the normal table layout */
+	/* :not(.print) - a print-only table (blank manual-entry lines) is "display:none" on screen;
+	   without the exclusion this rule's higher specificity (#wrapper + table) would win over that
+	   single class and show it */
+	#wrapper table:not(.print) { display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+	#wrapper table:not(.print) > thead, #wrapper table:not(.print) > tbody, #wrapper table:not(.print) > tfoot { display: table; width: 100%; }
+
+	/* form controls at 16px so iOS does not zoom the page in when a field is focused */
+	input, select, textarea,
+	.resv-table-small select.status_dbox, .status_dbox { font-size: 16px; }
+	.topbar input#searchquery { font-size: 16px; }
+
+	/* bigger tap targets; the icons themselves keep their size, only the tappable area grows */
+	.topbar div > ul a, .topbar .dropdown-toggle { min-height: 44px; display: flex; align-items: center; }
+	.topbar form { min-height: 44px; }
+	.topbar form a { padding: 13px; margin: -13px; }
+	.first_level_tab li a { padding-top: 13px; padding-bottom: 15px; }
+	.second_level_tab li a { padding-top: 12px; padding-bottom: 12px; margin-bottom: 8px; }
+	table.global td.noprint a { padding: 12px 6px; display: inline-flex; align-items: center; }
+	.resv-table-small select.status_dbox, .status_dbox { min-height: 40px; }
+
+	/* the settings/day-view tab row (Reservierungen/+Neu/Storniert, Outlet/Benutzer/...) is a strip
+	   of tabs on desktop: flush against each other, square corners on the bottom edge, so the
+	   active one visually merges into the box it opens right underneath. Once the strip wraps onto
+	   two or three lines that illusion falls apart - a flat-bottomed tab floating above nothing
+	   just looks like a clipped rectangle. On mobile it becomes a row of separate pill buttons
+	   instead, the same pattern already used for the table-plan's area tabs and the header actions */
+	.first_level_tab { display: flex; flex-wrap: wrap; float: none; border-right: 0; gap: 8px; }
+	.first_level_tab li { float: none; }
+	.first_level_tab li a { border-radius: 999px; border-bottom: 1px solid var(--border-soft); }
+	.first_level_tab li.tab-new a { border-radius: 999px; }
+	.first_level_tab li a.active { border-radius: 999px; padding-bottom: 15px; }
+
+	/* the "recent reservations" card had its own fixed 450px desktop width instead of following
+	   the other cards, so on a narrow screen it stuck out past every card above and below it */
+	.most-recent { width: auto; margin: 20px 0 0; }
+
+	/* the outlet/reservation detail and edit pages (Objekt/Küchenrichtung/Beschreibung next to
+	   Saison/Öffnungszeit/Pause) are a fixed 47%+47% two-column layout with a 450px-wide input for
+	   the booking links - on a phone the two floated columns do not fit side by side, so the
+	   right column visually climbs up next to the long description text on the left instead of
+	   following underneath it. one column, full width, top to bottom fixes both */
+	.twocolumn_wrapper, .twocolumn_wrapper.right { float: none; width: auto; margin: 0 0 16px; }
+	.width-450 { width: 100%; max-width: 100%; box-sizing: border-box; }
+}
+
+/* ---- phone: the reservation list reads as cards, not a table ---- */
+@media screen and (max-width: 600px) {
+	/* a 9-column row (time, pax, name, note, table, status, booker, edit, delete) has no good
+	   column width on a phone; scrolling it sideways just to reach the status or the delete icon
+	   is not a fix, it is the same problem with extra steps. every td keeps its place in the
+	   document so the reading order does not change, it just stacks - time+pax on one line, the
+	   guest name and note below, then table+status, then who booked it with the actions beside it */
+	table.global.resv-table-small, table.global.resv-table { display: block; overflow-x: visible; }
+	#wrapper table.global.resv-table-small > tbody, #wrapper table.global.resv-table > tbody { display: block; width: auto; }
+	/* the markup opens the list with an empty spacer <tr></tr> (invisible in a real table row);
+	   as a card it would otherwise show up as its own empty box before the first reservation */
+	table.global.resv-table-small tbody tr:empty, table.global.resv-table tbody tr:empty { display: none; }
+	table.global.resv-table-small tbody tr, table.global.resv-table tbody tr {
+		display: block; position: relative;
+		background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: 10px;
+		padding: 14px 16px 14px 20px; margin: 0 0 10px;
+	}
+	table.global.resv-table-small tbody tr:first-child, table.global.resv-table tbody tr:first-child { margin-top: 0; }
+	/* the shift colour strip (morning/afternoon/evening) becomes the card's own accent edge -
+	   the same colour code already used for the table-plan reservation cards */
+	table.global.resv-table-small tbody tr td.morning, table.global.resv-table-small tbody tr td.afternoon, table.global.resv-table-small tbody tr td.evening,
+	table.global.resv-table tbody tr td.morning, table.global.resv-table tbody tr td.afternoon, table.global.resv-table tbody tr td.evening {
+		position: absolute; left: 0; top: 0; bottom: 0; width: 4px !important; height: auto;
+		border-left: 0; box-shadow: none; border-radius: 10px 0 0 10px;
+	}
+	table.global.resv-table-small tbody tr td, table.global.resv-table tbody tr td {
+		display: block; width: auto !important; min-width: 0; border: 0; background: none; padding: 0;
+	}
+	table.global.resv-table-small tbody tr td#tb_time, table.global.resv-table tbody tr td#tb_time,
+	table.global.resv-table-small tbody tr td#tb_pax, table.global.resv-table tbody tr td#tb_pax {
+		display: inline-flex; align-items: baseline; margin: 0 10px 0 0;
+	}
+	table.global.resv-table-small tbody tr td#tb_name, table.global.resv-table tbody tr td#tb_name { margin-top: 6px; font-size: 16px; }
+	table.global.resv-table-small tbody tr td#tb_note, table.global.resv-table tbody tr td#tb_note { margin-top: 4px; font-size: 13px; }
+	table.global.resv-table-small tbody tr td#tb_note:empty, table.global.resv-table tbody tr td#tb_note:empty { display: none; }
+	table.global.resv-table-small tbody tr td#tb_table, table.global.resv-table tbody tr td#tb_table,
+	table.global.resv-table-small tbody tr td:has(select.status_dbox), table.global.resv-table tbody tr td:has(select.status_dbox) {
+		display: inline-flex; align-items: center; margin: 12px 10px 0 0;
+	}
+	table.global.resv-table-small tbody tr td:has(small), table.global.resv-table tbody tr td:has(small),
+	table.global.resv-table-small tbody tr td.noprint:has(a.help), table.global.resv-table tbody tr td.noprint:has(a.help) {
+		display: inline-flex; align-items: center; margin-top: 10px;
+	}
+	table.global.resv-table-small tbody tr td:has(small), table.global.resv-table tbody tr td:has(small) { color: var(--text-muted); font-size: 12px; }
+	table.global.resv-table-small tfoot tr, table.global.resv-table tfoot tr { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+	table.global.resv-table-small tfoot td, table.global.resv-table tfoot td { display: inline; }
 }

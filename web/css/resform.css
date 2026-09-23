@@ -67,8 +67,29 @@
 .rsv-details > summary { cursor: pointer; color: var(--gold-strong, #e2c07f); font-weight: 600; font-size: 15px; padding: 6px 0; list-style-position: inside; }
 .rsv-inline { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; margin-top: 8px; font-size: 14px; color: var(--text-muted, #a89e8c); }
 .rsv-check { margin-top: 10px !important; }
-.rsv-series .input-prepend { display: flex; gap: 8px; align-items: center; }
-.rsv-actions { margin-top: 24px; display: flex; justify-content: flex-end; }
+/* the recurring-reservation row spans the full details grid instead of sharing half its width
+   with the checkbox above it, and its "Wiederholen bis" label gets its own proper pill instead of
+   the 18px-tall Bootstrap-era add-on box it inherited (that box wrapped the label text onto two
+   lines inside itself) */
+.rsv-series { grid-column: 1 / -1; }
+.rsv-series .input-prepend { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.rsv-series .add-on {
+	position: static; float: none; z-index: auto; flex: 0 0 auto;
+	height: auto; min-height: 46px; margin: 0; padding: 0 14px;
+	display: inline-flex; align-items: center; white-space: nowrap;
+	font-size: 14px; font-weight: 600; line-height: 1.2;
+	border-radius: 8px; text-shadow: none;
+	background: var(--surface-2, #1c1a18); color: var(--text, #f3ede1);
+	border: 1px solid var(--border-soft, rgba(245,240,230,.08));
+}
+.rsv-series input#recurring_date { flex: 1 1 160px; min-width: 140px; height: auto; }
+/* staff member sits right next to Save - naming who took the booking is the last thing you do
+   before saving it, not a detail buried away from the button that ends the flow. only .rsv-actions
+   (the button) is sticky on the phone - stretching that sticky bar to also cover the staff field
+   would permanently hide a chunk of the form behind it while scrolling through the rest, so the
+   field stays a normal, non-sticky block that just happens to sit right before the button */
+.rsv-final { margin-top: 24px; display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; justify-content: flex-end; }
+.rsv-staff-final { flex: 0 1 240px; margin: 0; }
 .rsv-save {
 	min-height: 48px; padding: 0 34px; cursor: pointer; border: 0; border-radius: 999px;
 	background: var(--gold, #c9a259); color: var(--bg, #0c0b0a); font-size: 16px; font-weight: 700;
@@ -84,6 +105,8 @@
 	.rsv-grid-top > .rsv-field:first-child { grid-column: 1 / -1; }
 	.rsv-grid-guest, .rsv-grid-notes, .rsv-grid-details { grid-template-columns: 1fr; }
 	.rsv-form textarea { min-height: 110px; }
+	.rsv-final { display: block; margin-top: 0; }
+	.rsv-staff-final { max-width: none; margin-bottom: 16px; }
 	.rsv-actions { position: sticky; bottom: 0; margin: 20px -16px -16px; padding: 12px 16px; background: var(--surface, #151312); border-top: 1px solid var(--border-soft, rgba(245,240,230,.08)); border-radius: 0 0 12px 12px; }
 	.rsv-save { width: 100%; }
 	.rsv-event { text-align: center; }
