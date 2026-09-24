@@ -58,7 +58,19 @@ function my_email_send_conf($mode = 'confirmed') {
 		$cancel_scheme = isset($_SERVER['HTTPS']) ? 'https://' : 'http://';
 		$cancel_url = $cancel_scheme.$_SERVER['SERVER_NAME'].preg_replace('#/(api|web)/.*$#','',$_SERVER['SCRIPT_NAME']).'/api/cancel.php?nr='.urlencode($_SESSION['booking_number']).'&email='.urlencode($to_guest).'&lang='.((isset($form['email_type']) && $form['email_type'] == 'en') ? 'en' : 'de');
 
+		// links for the restaurant notification: a signed page to look at and decide a pending
+		// request, and the backend day view (needs a login)
+		require_once __DIR__ . '/../web/classes/approval.class.php';
+		global $dbTables;
+		$request_url = '';
+		$res = mysqli_query($GLOBALS['__mysql_compat_link'], "SELECT reservation_id FROM `".$dbTables->reservations."` WHERE reservation_bookingnumber = '".mysqli_real_escape_string($GLOBALS['__mysql_compat_link'], (string)$_SESSION['booking_number'])."' ORDER BY reservation_id DESC LIMIT 1");
+		$res_row = $res ? mysqli_fetch_assoc($res) : null;
+		if ($res_row) { $request_url = appr_request_url($res_row['reservation_id'], $_SESSION['booking_number']); }
+		$backend_url = appr_base_url().'/web/main_page.php?p=2&selectedDate='.urlencode($_SESSION['selectedDate']);
+
 		$m = bm_build(array(
+			'request_url' => $request_url,
+			'backend_url' => $backend_url,
 			'form' => $form,
 			'outlet' => $_SESSION['selOutlet'],
 			'property' => $property,
@@ -72,41 +84,9 @@ function my_email_send_conf($mode = 'confirmed') {
 		));
 
 		$brand = bm_clean($property['name']);
-		$subject_admin = mb_encode_mimeheader($m['admin_subject'], 'UTF-8', 'B');
-		$from = ($to_admin !== '') ? mb_encode_mimeheader($brand, 'UTF-8', 'B').' <'.$to_admin.'>' : '';
 
 		bm_send_guest_mail($to_guest, $m, $brand, $to_admin);
-
-		if (isset($settings['emailSMTP']) && $settings['emailSMTP'] != 'LOCAL') {
-			// PHPMailer (SMTP / sendmail)
-			require_once __DIR__ . '/../web/classes/phpmailer/class.phpmailer.php';
-			$mail = new PHPMailer();
-			if ($settings['emailSMTP'] == 'SMTP') { $mail->IsSMTP(); } else { $mail->IsSendmail(); }
-			$mail->SMTPAuth      = true;
-			$mail->SMTPKeepAlive = true;
-			$mail->CharSet       = 'UTF-8';
-			$mail->Host          = $settings['emailHost'];
-			$mail->Port          = $settings['emailPort'];
-			$mail->Username      = $settings['emailUser'];
-			$mail->Password      = $settings['emailPass'];
-			$mail->SetFrom($to_admin, $brand);
-			$mail->AddReplyTo($to_admin, $brand);
-
-			if ($to_admin !== '') {
-				$mail->IsHTML(false);
-				$mail->Subject = $m['admin_subject'];
-				$mail->Body    = $m['admin_text'];
-				$mail->AltBody = '';
-				$mail->AddAddress($to_admin);
-				if (!$mail->Send()) { error_log('mySeat mail to restaurant failed: '.$mail->ErrorInfo); }
-				$mail->ClearAddresses();
-			}
-		} else {
-			if ($to_admin !== '') {
-				$headers  = "MIME-Version: 1.0\r\nFrom: ".$from."\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n";
-				mail($to_admin, $subject_admin, chunk_split(base64_encode($m['admin_text'])), $headers);
-			}
-		}
+		bm_send_admin_mail($to_admin, $m, $brand);
 	} catch (Throwable $e) {
 		// a problem with the mail must never stop the booking itself
 		error_log('mySeat booking mail: '.$e->getMessage());

@@ -116,7 +116,7 @@ function bm_ics_build($ctx) {
  * Build the mails. $d keys: form (the submitted booking form), outlet (selOutlet), property,
  * date (Y-m-d), time_text (formatted time), date_text (formatted date or range), booking_number,
  * cancel_url, origin ('online' | 'backend').
- * Returns array(lang, subject, plain, html, admin_subject, admin_text, ics, ics_filename).
+ * Returns array(lang, subject, plain, html, admin_subject, admin_text, admin_html, reply_to, ics, ics_filename).
  */
 function bm_build($d) {
 	global $settings;
@@ -191,13 +191,13 @@ function bm_build($d) {
 		}
 		$info_h = 'So kommst du gut an';
 		$info = array(
-			'Mit dem Bus' => 'Die zentralen Haltestellen Rathausstraße und Schuhstraße liegen ganz in der Nähe, dort halten fast alle Linien.',
-			'Parken' => 'Tiefgarage am Ratsbauhof, Parkhaus Arnekengalerie oder die Tiefgarage unter dem Marktplatz (Zufahrt über die Jakobistraße). Am Straßenrand in der Rathausstraße oder Osterstraße parkst du werktags ab 19 Uhr und samstags ab 16 Uhr kostenlos.',
-			'Barrierefreiheit' => 'Der Eingang hat zwei Stufen. Melde dich vorab kurz'.($phone_contact !== '' ? ' unter '.$phone_contact : '').', dann bauen wir eine mobile Rollstuhlrampe auf und bewirten dich gern im Erdgeschoss. Eine öffentliche barrierefreie Toilette liegt nur 10 Meter entfernt.',
+			'Mit dem Bus' => 'Haltestellen Rathausstraße und Schuhstraße, fast alle Linien halten dort.',
+			'Parken' => 'Tiefgaragen am Ratsbauhof und unter dem Marktplatz (Zufahrt Jakobistraße), Parkhaus Arnekengalerie. Am Straßenrand (Rathaus- und Osterstraße) kostenlos werktags ab 19 Uhr, samstags ab 16 Uhr.',
+			'Barrierefreiheit' => 'Zwei Stufen am Eingang. Ruf vorab kurz an'.($phone_contact !== '' ? ' ('.$phone_contact.')' : '').', dann bauen wir eine Rollstuhlrampe auf und setzen dich ins Erdgeschoss. Barrierefreie öffentliche Toilette 10 Meter entfernt.',
 		);
-		$addr_l = 'Adresse'; $route_l = 'Route planen';
+		$addr_l = 'Adresse'; $route_l = 'Route planen'; $bus_key = 'Mit dem Bus'; $bus_l = 'Fahrplanauskunft';
 		$menu_t = 'Schau vorab, worauf du Lust hast:';
-		$menu_links = array('Speisekarte' => 'https://amds.at/menu', 'Getränkekarte' => 'https://www.amadeus-hildesheim.de/getraenkekarte.php');
+		$menu_links = array('Speisekarte' => 'https://amds.at/menu', 'Getränkekarte' => 'https://amds.at/drinks');
 	} else {
 		$greeting = 'Hello '.$name.',';
 		$rows     = array('Date' => $date_txt, 'Time' => $time_txt, 'Guests' => (string)$pax, 'Booking number' => $number);
@@ -244,18 +244,19 @@ function bm_build($d) {
 		}
 		$info_h = 'Getting here';
 		$info = array(
-			'By bus' => 'The central stops Rathausstraße and Schuhstraße are right nearby, and almost all lines stop there.',
-			'Parking' => 'Underground car park at Ratsbauhof, Arnekengalerie car park, or the underground car park below the Marktplatz (entrance via Jakobistraße). On the street in Rathausstraße or Osterstraße, parking is free on weekdays from 7 pm and on Saturdays from 4 pm.',
-			'Accessibility' => 'The entrance has two steps. Please call us beforehand'.($phone_contact !== '' ? ' on '.$phone_contact : '').' and we will set up a mobile wheelchair ramp and gladly seat you on the ground floor. A public accessible toilet is only 10 metres away.',
+			'By bus' => 'Stops Rathausstraße and Schuhstraße, served by almost all lines.',
+			'Parking' => 'Underground car parks at Ratsbauhof and below the Marktplatz (entrance Jakobistraße), Arnekengalerie car park. Street parking (Rathaus- and Osterstraße) is free on weekdays from 7 pm and Saturdays from 4 pm.',
+			'Accessibility' => 'Two steps at the entrance. Please call ahead'.($phone_contact !== '' ? ' ('.$phone_contact.')' : '').' and we will set up a wheelchair ramp and seat you on the ground floor. Accessible public toilet 10 metres away.',
 		);
-		$addr_l = 'Address'; $route_l = 'Get directions';
+		$addr_l = 'Address'; $route_l = 'Get directions'; $bus_key = 'By bus'; $bus_l = 'Timetable';
 		$menu_t = 'Take a look at what you fancy:';
-		$menu_links = array('Food menu' => 'https://amds.at/menu', 'Drinks menu' => 'https://www.amadeus-hildesheim.de/getraenkekarte.php');
+		$menu_links = array('Food menu' => 'https://amds.at/menu', 'Drinks menu' => 'https://amds.at/drinks');
 	}
 
 	// the restaurant's own address and a plain destination-only route link: nothing about the guest
 	// (no start, name or booking number) goes into the URL, the guest's phone fills in the start
 	$addr_plain = trim(bm_clean(isset($d['property']['street']) ? $d['property']['street'] : '').', '.bm_clean(isset($d['property']['zip']) ? $d['property']['zip'] : '').' '.bm_clean(isset($d['property']['city']) ? $d['property']['city'] : ''), ' ,');
+	$bus_url = 'https://www.svhi-hildesheim.de/de/Fahrplan/Fahrplanauskunft/';
 	$route_url = $addr_plain !== '' ? 'https://www.google.com/maps/dir/?api=1&destination='.rawurlencode($addr_plain) : '';
 
 	$legal = bm_legal_lines($d['property']);
@@ -266,15 +267,18 @@ function bm_build($d) {
 	$p  = $greeting."\r\n\r\n".$intro."\r\n\r\n".$head."\r\n";
 	foreach ($rows as $k => $v) { $p .= '  '.$k.': '.$v."\r\n"; }
 	$p .= "\r\n";
+	if ($cancel_t !== '') { $p .= $cancel_t."\r\n".$cancel."\r\n\r\n"; }
 	if ($with_info) {
-		$p .= $info_h."\r\n";
-		if ($route_url !== '') { $p .= '- '.$addr_l.': '.$addr_plain."\r\n  ".$route_l.': '.$route_url."\r\n"; }
-		foreach ($info as $k => $v) { $p .= '- '.$k.': '.$v."\r\n"; }
-		$p .= '- '.$menu_t."\r\n";
+		$p .= $menu_t."\r\n";
 		foreach ($menu_links as $k => $v) { $p .= '  '.$k.': '.$v."\r\n"; }
+		$p .= "\r\n".$info_h."\r\n";
+		if ($route_url !== '') { $p .= '- '.$addr_l.': '.$addr_plain."\r\n  ".$route_l.': '.$route_url."\r\n"; }
+		foreach ($info as $k => $v) {
+			$p .= '- '.$k.': '.$v."\r\n";
+			if ($k === $bus_key) { $p .= '  '.$bus_l.': '.$bus_url."\r\n"; }
+		}
 		$p .= "\r\n";
 	}
-	if ($cancel_t !== '') { $p .= $cancel_t."\r\n".$cancel."\r\n\r\n"; }
 	$p .= $contact."\r\n\r\n".$closing."\r\n".$sign."\r\n";
 	$p .= "\r\n--\r\n".$legal_h."\r\n".implode("\r\n", $legal)."\r\n";
 	if ($imprint_url !== '') { $p .= $imprint_l.': '.$imprint_url."\r\n"; }
@@ -305,23 +309,36 @@ function bm_build($d) {
 	if ($imprint_url !== '') { $links[] = '<a href="'.$h($imprint_url).'" style="color:#8a6d3b;">'.$h($imprint_l).'</a>'; }
 	if ($privacy_url !== '') { $links[] = '<a href="'.$h($privacy_url).'" style="color:#8a6d3b;">'.$h($privacy_l).'</a>'; }
 
-	// "getting here" card: one short labelled paragraph per topic, menus as two clear links
+	$label_css = $font.'font-size:12px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;color:#6b5330;';
+	$btn = function ($url, $label) use ($h, $font) {
+		return '<table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td align="center" style="border:2px solid #8a6d3b;border-radius:6px;">'
+			.'<a href="'.$h($url).'" style="'.$font.'display:block;padding:12px 10px;font-size:15px;font-weight:bold;line-height:1.2;color:#6b5330;text-decoration:none;">'.$h($label).'</a></td></tr></table>';
+	};
+	$menu_html = '';
 	$info_html = '';
 	if ($with_info) {
-		$info_html = '<tr><td style="padding:8px 32px 12px;"><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#faf8f3;border-radius:8px;"><tr><td style="padding:18px 20px 6px;">'
-			.'<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:20px;color:#1c1a18;padding-bottom:10px;">'.$h($info_h).'</div>';
+		// menus: two clear buttons side by side
+		$cells = array();
+		foreach ($menu_links as $k => $v) { $cells[] = '<td width="50%" style="padding:0 4px;">'.$btn($v, $k).'</td>'; }
+		$menu_html = '<tr><td style="'.$font.'padding:20px 32px 8px;font-size:16px;line-height:1.6;color:#333333;">'.$h($menu_t).'</td></tr>'
+			.'<tr><td style="padding:0 28px 8px;"><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr>'.implode('', $cells).'</tr></table></td></tr>';
+
+		// arrival: last and compact, one labelled row per topic
+		$irow = function ($label, $body_html) use ($h, $label_css, $font) {
+			return '<tr><td valign="top" style="'.$label_css.'padding:9px 14px 9px 0;width:104px;">'.$h($label).'</td>'
+				.'<td valign="top" style="'.$font.'font-size:15px;line-height:1.55;color:#333333;padding:9px 0;">'.$body_html.'</td></tr>';
+		};
+		$rows_html = '';
 		if ($route_url !== '') {
-			$info_html .= '<div style="'.$font.'font-size:12px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;color:#8a6d3b;padding-top:10px;">'.$h($addr_l).'</div>'
-				.'<div style="'.$font.'font-size:15px;line-height:1.6;color:#333333;padding-bottom:4px;">'.$h($addr_plain).' &middot; <a href="'.$h($route_url).'" style="color:#8a6d3b;font-weight:bold;">'.$h($route_l).'</a></div>';
+			$rows_html .= $irow($addr_l, $h($addr_plain).'<br><a href="'.$h($route_url).'" style="color:#6b5330;font-weight:bold;">'.$h($route_l).'</a>');
 		}
 		foreach ($info as $k => $v) {
-			$info_html .= '<div style="'.$font.'font-size:12px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;color:#8a6d3b;padding-top:10px;">'.$h($k).'</div>'
-				.'<div style="'.$font.'font-size:15px;line-height:1.6;color:#333333;padding-bottom:4px;">'.$tel($h($v)).'</div>';
+			$extra = ($k === $bus_key) ? '<br><a href="'.$h($bus_url).'" style="color:#6b5330;font-weight:bold;">'.$h($bus_l).'</a>' : '';
+			$rows_html .= $irow($k, $tel($h($v)).$extra);
 		}
-		$menu_a = array();
-		foreach ($menu_links as $k => $v) { $menu_a[] = '<a href="'.$h($v).'" style="color:#8a6d3b;font-weight:bold;">'.$h($k).'</a>'; }
-		$info_html .= '<div style="'.$font.'font-size:15px;line-height:1.6;color:#333333;padding:12px 0 14px;">'.$h($menu_t).' '.implode(' &middot; ', $menu_a).'</div>'
-			.'</td></tr></table></td></tr>';
+		$info_html = '<tr><td style="padding:16px 32px 8px;"><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-top:1px solid #e6e0d2;"><tr><td style="padding-top:16px;">'
+			.'<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:20px;color:#1c1a18;padding-bottom:4px;">'.$h($info_h).'</div>'
+			.'<table role="presentation" cellpadding="0" cellspacing="0" width="100%">'.$rows_html.'</table></td></tr></table></td></tr>';
 	}
 	$html ='<!DOCTYPE html><html lang="'.$lang.'"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'.$h($subject).'</title></head>'
 		.'<body style="margin:0;padding:0;background-color:#f4f1ea;">'
@@ -330,9 +347,10 @@ function bm_build($d) {
 		.'<tr><td style="'.$font.'padding:28px 32px 4px;font-size:12px;font-weight:bold;letter-spacing:.16em;text-transform:uppercase;color:#8a6d3b;">'.$h($brand).'</td></tr>'
 		.'<tr><td style="font-family:Georgia,\'Times New Roman\',serif;padding:0 32px 8px;font-size:26px;line-height:1.25;color:#1c1a18;">'.$h($head).'</td></tr>'
 		.'<tr><td style="'.$font.'padding:12px 32px 4px;font-size:16px;line-height:1.6;color:#333333;">'.$h($greeting).'<br><br>'.$h($intro).'</td></tr>'
-		.'<tr><td style="padding:12px 32px;"><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#faf8f3;border-left:3px solid #c9a259;"><tr><td style="padding:12px 18px;"><table role="presentation" cellpadding="0" cellspacing="0">'.$row_html.'</table></td></tr></table></td></tr>'
-		.$info_html
+		.'<tr><td style="padding:12px 32px;"><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#faf8f3;border:1px solid #e6e0d2;border-radius:6px;"><tr><td style="padding:12px 18px;"><table role="presentation" cellpadding="0" cellspacing="0">'.$row_html.'</table></td></tr></table></td></tr>'
 		.($cancel_t !== '' ? '<tr><td style="'.$font.'padding:8px 32px 4px;font-size:16px;line-height:1.6;color:#333333;">'.$h($cancel_t).'<br><a href="'.$h($cancel).'" style="color:#8a6d3b;font-weight:bold;">'.$h($cancel_l).'</a></td></tr>' : '')
+		.$menu_html
+		.$info_html
 		.'<tr><td style="'.$font.'padding:12px 32px 4px;font-size:16px;line-height:1.6;color:#333333;">'.$tel($h($contact)).'</td></tr>'
 		.'<tr><td style="'.$font.'padding:16px 32px 28px;font-size:16px;line-height:1.6;color:#333333;">'.$h($closing).'<br>'.$h($sign).'</td></tr>'
 		.'<tr><td style="'.$font.'padding:16px 32px 24px;border-top:1px solid #e6e0d2;font-size:12px;line-height:1.6;color:#8a8577;"><strong>'.$h($legal_h).'</strong><br>'.$legal_html
@@ -360,24 +378,91 @@ function bm_build($d) {
 	)) : '';
 	$ics_filename = ($de ? 'reservierung' : 'reservation').'-'.$number.'.ics';
 
-	// ---- notification for the restaurant
-	$a_subject = ($mode === 'pending')
-		? ($de ? 'Genehmigung erforderlich: ' : 'Approval needed: ').$name.', '.$pax.($de ? ' Personen, ' : ' guests, ').$date_txt.', '.$time_txt
-		: ($de ? 'Neue Reservierung: ' : 'New reservation: ').$name.', '.$pax.($de ? ' Personen, ' : ' guests, ').$date_txt.', '.$time_txt;
-	$a  = ($mode === 'pending')
-		? ($de ? 'Neue Reservierungsanfrage - bitte im Backend annehmen oder ablehnen' : 'New reservation request - please approve or decline it in the backend')."\r\n\r\n"
-		: ($de ? 'Neue Reservierung' : 'New reservation').($d['origin'] === 'online' ? ' (online)' : ($de ? ' (Backend)' : ' (backend)'))."\r\n\r\n";
-	$a .= ($de ? 'Buchungsnummer' : 'Booking number').': '.$number."\r\n";
-	$a .= ($de ? 'Datum' : 'Date').': '.$date_txt."\r\n";
-	$a .= ($de ? 'Uhrzeit' : 'Time').': '.$time_txt."\r\n";
-	$a .= ($de ? 'Personen' : 'Guests').': '.$pax."\r\n";
+	// ---- notification for the restaurant (plain text + HTML). $d['request_url'] (signed page to
+	// look at and decide a pending request) and $d['backend_url'] (day view in the backend) are optional.
+	$request_url = isset($d['request_url']) ? $d['request_url'] : '';
+	$backend_url = isset($d['backend_url']) ? $d['backend_url'] : '';
+	$pending = ($mode === 'pending');
+	$online  = ($d['origin'] === 'online');
+	$booker  = (!empty($form['reservation_booker_name']) && !$online) ? bm_clean($form['reservation_booker_name']) : '';
+	$a_subject = ($pending
+		? ($de ? 'Entscheidung nötig: ' : 'Decision needed: ')
+		: ($de ? 'Neue Reservierung: ' : 'New reservation: ')).$name.', '.$pax.($de ? ' Personen, ' : ' guests, ').$date_txt.', '.$time_txt;
+
+	$L = $de
+		? array('badge_new' => 'Neue Reservierung', 'badge_req' => 'Entscheidung nötig', 'head_new' => 'Reservierung für '.$pax.' Personen', 'head_req' => 'Anfrage für '.$pax.' Personen',
+			'date' => 'Datum', 'time' => 'Uhrzeit', 'pax' => 'Personen', 'guest' => 'Gast', 'phone' => 'Telefon', 'note' => 'Notiz des Gastes', 'nr' => 'Buchungsnummer',
+			'source' => 'Quelle', 'online' => 'Online-Formular', 'backend' => 'Backend', 'by' => 'Erfasst von',
+			'req_text' => 'Die Plätze sind für diese Anfrage bereits geblockt. Der Gast wartet auf deine Antwort: mit einem Klick bestätigst oder lehnst du ab, und er bekommt automatisch die passende Mail.',
+			'new_text' => 'Der Tisch ist zugesagt, der Gast hat seine Bestätigung bereits erhalten.',
+			'cta_req' => 'Anfrage ansehen & entscheiden', 'cta_new' => 'Im Backend öffnen', 'backend' => 'Backend', 'open_backend' => 'Oder direkt im Backend öffnen',
+			'foot' => 'Automatische Nachricht von mySeat. Wenn du auf diese Mail antwortest, geht die Antwort direkt an den Gast.', 'none' => '-')
+		: array('badge_new' => 'New reservation', 'badge_req' => 'Decision needed', 'head_new' => 'Reservation for '.$pax.' guests', 'head_req' => 'Request for '.$pax.' guests',
+			'date' => 'Date', 'time' => 'Time', 'pax' => 'Guests', 'guest' => 'Guest', 'phone' => 'Phone', 'note' => 'Note from the guest', 'nr' => 'Booking number',
+			'source' => 'Source', 'online' => 'Online form', 'backend' => 'Backend', 'by' => 'Entered by',
+			'req_text' => 'The seats for this request are already blocked. The guest is waiting for your answer: confirm or decline with one click and they automatically get the matching email.',
+			'new_text' => 'The table is confirmed and the guest has already received their confirmation.',
+			'cta_req' => 'View request & decide', 'cta_new' => 'Open in backend', 'backend' => 'Backend', 'open_backend' => 'Or open it directly in the backend',
+			'foot' => 'Automatic message from mySeat. If you reply to this email, the reply goes straight to the guest.', 'none' => '-');
+
+	$a  = $pending
+		? ($de ? 'Neue Reservierungsanfrage - deine Entscheidung ist nötig' : 'New reservation request - your decision is needed')."\r\n\r\n"
+		: ($de ? 'Neue Reservierung' : 'New reservation').($online ? ' (online)' : ($de ? ' (Backend)' : ' (backend)'))."\r\n\r\n";
+	$a .= $L['nr'].': '.$number."\r\n";
+	$a .= $L['date'].': '.$date_txt."\r\n";
+	$a .= $L['time'].': '.$time_txt."\r\n";
+	$a .= $L['pax'].': '.$pax."\r\n";
 	$a .= 'Name: '.$name."\r\n";
-	$a .= ($de ? 'Telefon' : 'Phone').': '.($phone !== '' ? $phone : '-')."\r\n";
+	$a .= $L['phone'].': '.($phone !== '' ? $phone : '-')."\r\n";
 	$a .= 'E-Mail: '.($email !== '' ? $email : '-')."\r\n";
 	if ($notes !== '') { $a .= ($de ? 'Notiz' : 'Note').': '.$notes."\r\n"; }
-	if (!empty($form['reservation_booker_name']) && $d['origin'] !== 'online') { $a .= ($de ? 'Erfasst von' : 'Entered by').': '.bm_clean($form['reservation_booker_name'])."\r\n"; }
+	if ($booker !== '') { $a .= $L['by'].': '.$booker."\r\n"; }
+	if ($pending && $request_url !== '') { $a .= "\r\n".$L['cta_req'].":\r\n".$request_url."\r\n"; }
+	if ($backend_url !== '') { $a .= "\r\n".($pending ? $L['open_backend'] : $L['cta_new']).":\r\n".$backend_url."\r\n"; }
 
-	return array('lang' => $lang, 'subject' => $subject, 'plain' => $p, 'html' => $html, 'admin_subject' => $a_subject, 'admin_text' => $a, 'ics' => $ics, 'ics_filename' => $ics_filename);
+	$primary_url = $pending ? $request_url : $backend_url;
+	$btn = function ($url, $label, $primary) use ($h, $font) {
+		return '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0;"><tr><td align="center" style="border-radius:6px;background-color:'.($primary ? '#8a6d3b' : '#ffffff').';'.($primary ? '' : 'border:2px solid #8a6d3b;').'">'
+			.'<a href="'.$h($url).'" style="'.$font.'display:inline-block;padding:14px 26px;font-size:16px;font-weight:bold;line-height:1.2;color:'.($primary ? '#ffffff' : '#6b5330').';text-decoration:none;border-radius:6px;">'.$h($label).'</a></td></tr></table>';
+	};
+	$fact = function ($label, $value) use ($h, $font) {
+		return '<td valign="top" style="padding:0 20px 0 0;"><div style="'.$font.'font-size:11px;font-weight:bold;letter-spacing:.1em;text-transform:uppercase;color:#8a8577;">'.$h($label).'</div>'
+			.'<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:22px;line-height:1.3;color:#1c1a18;padding-top:2px;white-space:nowrap;">'.$h($value).'</div></td>';
+	};
+	$detail = function ($label, $value_html) use ($h, $font) {
+		return '<tr><td style="'.$font.'font-size:14px;color:#777777;padding:7px 16px 7px 0;vertical-align:top;white-space:nowrap;">'.$h($label).'</td>'
+			.'<td style="'.$font.'font-size:16px;line-height:1.45;color:#1c1a18;padding:7px 0;vertical-align:top;">'.$value_html.'</td></tr>';
+	};
+	$tel_href = preg_replace('/[^\d+]/', '', $phone);
+	if (substr($tel_href, 0, 2) === '00') { $tel_href = '+'.substr($tel_href, 2); } elseif (substr($tel_href, 0, 1) === '0') { $tel_href = '+49'.substr($tel_href, 1); }
+	$details = $detail($L['guest'], '<strong>'.$h($name).'</strong>')
+		.$detail($L['phone'], $phone !== '' ? '<a href="tel:'.$h($tel_href).'" style="color:#6b5330;font-weight:bold;text-decoration:underline;">'.$h($phone).'</a>' : $h($L['none']))
+		.$detail('E-Mail', $email !== '' ? '<a href="mailto:'.$h($email).'" style="color:#6b5330;text-decoration:underline;">'.$h($email).'</a>' : $h($L['none']))
+		.$detail($L['nr'], '<span style="font-weight:bold;letter-spacing:.04em;">'.$h($number).'</span>')
+		.$detail($L['source'], $h($online ? $L['online'] : $L['backend'].($booker !== '' ? ' ('.$L['by'].' '.$booker.')' : '')));
+	$note_html = $notes !== ''
+		? '<tr><td style="padding:4px 32px 12px;"><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#fff8e6;border:1px solid #ecd9a6;border-radius:6px;"><tr><td style="'.$font.'padding:12px 16px;font-size:15px;line-height:1.55;color:#333333;"><strong style="display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#8a6d3b;padding-bottom:3px;">'.$h($L['note']).'</strong>'.nl2br($h($notes)).'</td></tr></table></td></tr>'
+		: '';
+	$badge_bg = $pending ? '#fbe9c0' : '#e4efe1';
+	$badge_fg = $pending ? '#6b4a00' : '#2c5a2a';
+	$a_html = '<!DOCTYPE html><html lang="'.$lang.'"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'.$h($a_subject).'</title></head>'
+		.'<body style="margin:0;padding:0;background-color:#f4f1ea;">'
+		.'<div style="display:none;max-height:0;overflow:hidden;opacity:0;">'.$h($name.', '.$pax.' - '.$date_txt.', '.$time_txt).'</div>'
+		.'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f1ea;"><tr><td align="center" style="padding:24px 12px;">'
+		.'<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px;background-color:#ffffff;border:1px solid #e6e0d2;">'
+		.'<tr><td style="'.$font.'padding:26px 32px 0;"><span style="display:inline-block;padding:5px 12px;border-radius:999px;background-color:'.$badge_bg.';color:'.$badge_fg.';font-size:12px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;">'.$h($pending ? $L['badge_req'] : $L['badge_new']).'</span>'
+		.' <span style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#8a6d3b;font-weight:bold;">&nbsp;'.$h($brand).'</span></td></tr>'
+		.'<tr><td style="font-family:Georgia,\'Times New Roman\',serif;padding:12px 32px 6px;font-size:26px;line-height:1.25;color:#1c1a18;">'.$h($pending ? $L['head_req'] : $L['head_new']).'</td></tr>'
+		.'<tr><td style="padding:10px 32px 16px;"><table role="presentation" cellpadding="0" cellspacing="0"><tr>'.$fact($L['date'], $date_txt).$fact($L['time'], $time_txt).$fact($L['pax'], (string)$pax).'</tr></table></td></tr>'
+		.'<tr><td style="padding:0 32px 8px;"><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-top:1px solid #e6e0d2;"><tr><td style="padding-top:8px;"><table role="presentation" cellpadding="0" cellspacing="0">'.$details.'</table></td></tr></table></td></tr>'
+		.$note_html
+		.'<tr><td style="'.$font.'padding:8px 32px 16px;font-size:15px;line-height:1.6;color:#333333;">'.$h($pending ? $L['req_text'] : $L['new_text']).'</td></tr>'
+		.($primary_url !== '' ? '<tr><td style="padding:0 32px 8px;">'.$btn($primary_url, $pending ? $L['cta_req'] : $L['cta_new'], $pending).'</td></tr>' : '')
+		.($pending && $backend_url !== '' ? '<tr><td style="'.$font.'padding:8px 32px 0;font-size:14px;line-height:1.6;color:#555555;"><a href="'.$h($backend_url).'" style="color:#6b5330;text-decoration:underline;">'.$h($L['open_backend']).'</a></td></tr>' : '')
+		.'<tr><td style="'.$font.'padding:22px 32px 24px;font-size:12px;line-height:1.6;color:#8a8577;">'.$h($L['foot']).'</td></tr>'
+		.'</table></td></tr></table></body></html>';
+
+	return array('lang' => $lang, 'subject' => $subject, 'plain' => $p, 'html' => $html, 'admin_subject' => $a_subject, 'admin_text' => $a, 'admin_html' => $a_html, 'reply_to' => $email, 'ics' => $ics, 'ics_filename' => $ics_filename);
 }
 
 /*
@@ -434,5 +519,44 @@ function bm_send_guest_mail($to_guest, $m, $brand, $admin_email) {
 			$body = $alt;
 		}
 		mail($to_guest, $subject_guest, $body, $headers);
+	}
+}
+
+/*
+ * Send the restaurant notification built by bm_build() (HTML + plain text). Replies go straight
+ * to the guest (Reply-To = guest email) so the team can answer with one click.
+ */
+function bm_send_admin_mail($to_admin, $m, $brand) {
+	global $settings;
+	if ($to_admin === '' || !filter_var($to_admin, FILTER_VALIDATE_EMAIL)) { return; }
+	$reply = (!empty($m['reply_to']) && filter_var($m['reply_to'], FILTER_VALIDATE_EMAIL)) ? $m['reply_to'] : '';
+
+	if (isset($settings['emailSMTP']) && $settings['emailSMTP'] != 'LOCAL') {
+		require_once __DIR__ . '/phpmailer/class.phpmailer.php';
+		$mail = new PHPMailer();
+		if ($settings['emailSMTP'] == 'SMTP') { $mail->IsSMTP(); } else { $mail->IsSendmail(); }
+		$mail->SMTPAuth      = true;
+		$mail->SMTPKeepAlive = true;
+		$mail->CharSet       = 'UTF-8';
+		$mail->Host          = $settings['emailHost'];
+		$mail->Port          = $settings['emailPort'];
+		$mail->Username      = $settings['emailUser'];
+		$mail->Password      = $settings['emailPass'];
+		$mail->SetFrom($to_admin, $brand);
+		$mail->AddReplyTo($reply !== '' ? $reply : $to_admin, $reply !== '' ? '' : $brand);
+		$mail->Subject = $m['admin_subject'];
+		$mail->AltBody = $m['admin_text'];
+		$mail->MsgHTML($m['admin_html']);
+		$mail->AddAddress($to_admin);
+		if (!$mail->Send()) { error_log('mySeat mail to restaurant failed: '.$mail->ErrorInfo); }
+	} else {
+		$boundary = '=_'.md5(uniqid('', true));
+		$from = mb_encode_mimeheader($brand, 'UTF-8', 'B').' <'.$to_admin.'>';
+		$headers  = "MIME-Version: 1.0\r\nFrom: ".$from."\r\nReply-To: ".($reply !== '' ? $reply : $from)."\r\nX-Mailer: mySeat\r\n";
+		$headers .= "Content-Type: multipart/alternative; boundary=\"".$boundary."\"\r\n";
+		$body  = "--".$boundary."\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n".chunk_split(base64_encode($m['admin_text']));
+		$body .= "--".$boundary."\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n".chunk_split(base64_encode($m['admin_html']));
+		$body .= "--".$boundary."--\r\n";
+		mail($to_admin, mb_encode_mimeheader($m['admin_subject'], 'UTF-8', 'B'), $body, $headers);
 	}
 }

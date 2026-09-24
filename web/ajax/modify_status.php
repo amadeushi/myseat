@@ -49,49 +49,12 @@ if (!$r) {
 	exit;
 }
 
-// builds and sends the guest confirmation/decline mail for $r - only called for an actual
-// approve/decline transition, never for routine arrival-status tracking
-function msr_send_guest_mail($r, $mode) {
-	global $dbTables, $general;
-	$link = $GLOBALS['__mysql_compat_link'];
-	$outlet = mysqli_fetch_assoc(mysqli_query($link,
-		"SELECT outlet_name, property_id, avg_duration, confirmation_email FROM `".$dbTables->outlets."` WHERE outlet_id = ".(int)$r['reservation_outlet_id']." LIMIT 1"));
-	$property = $outlet ? mysqli_fetch_assoc(mysqli_query($link,
-		"SELECT * FROM `".$dbTables->properties."` WHERE id = ".(int)$outlet['property_id']." LIMIT 1")) : null;
-	if (!$outlet || !$property) { return; }
-
-	$form = array(
-		'reservation_guest_name' => $r['reservation_guest_name'],
-		'reservation_guest_email' => $r['reservation_guest_email'],
-		'reservation_guest_phone' => $r['reservation_guest_phone'],
-		'reservation_pax' => $r['reservation_pax'],
-		'reservation_notes' => $r['reservation_notes'],
-		'reservation_time' => $r['reservation_time'],
-		'email_type' => (isset($r['reservation_email_lang']) && $r['reservation_email_lang'] === 'en') ? 'en' : 'de',
-	);
-	$cancel_scheme = isset($_SERVER['HTTPS']) ? 'https://' : 'http://';
-	$cancel_url = $cancel_scheme.$_SERVER['SERVER_NAME'].preg_replace('#/(api|web)/.*$#', '', $_SERVER['SCRIPT_NAME'])
-		.'/api/cancel.php?nr='.urlencode($r['reservation_bookingnumber']).'&email='.urlencode($r['reservation_guest_email']).'&lang='.$form['email_type'];
-
-	$m = bm_build(array(
-		'form' => $form, 'outlet' => $outlet, 'property' => $property,
-		'date' => $r['reservation_date'],
-		'date_text' => date($general['dateformat'], strtotime($r['reservation_date'])),
-		'time_text' => formatTime($r['reservation_time'], $general['timeformat']),
-		'booking_number' => $r['reservation_bookingnumber'],
-		'cancel_url' => $cancel_url, 'origin' => 'backend', 'mode' => $mode,
-	));
-	$brand = bm_clean($outlet['outlet_name'] !== '' ? $outlet['outlet_name'] : $property['name']);
-	$admin_email = !empty($outlet['confirmation_email']) ? $outlet['confirmation_email'] : $property['email'];
-	bm_send_guest_mail($r['reservation_guest_email'], $m, $brand, $admin_email);
-}
-
 if ($value === 'CXL') {
 	$was_pending = ($r['reservation_approval'] === 'pending');
 	mysqli_query($link, "UPDATE `".$dbTables->reservations."` SET reservation_hidden='1', reservation_status='CXL'"
 		.($was_pending ? ", reservation_approval='declined'" : '')
 		." WHERE reservation_id=".$id);
-	if ($was_pending) { msr_send_guest_mail($r, 'declined'); }
+	if ($was_pending) { appr_send_guest_mail($r, 'declined'); }
 	echo 'OK';
 	exit;
 }
@@ -106,14 +69,14 @@ if ((int)$r['reservation_hidden'] === 1) {
 	if ($was_declined) {
 		require_once(__DIR__.'/../classes/tableplan_assign.class.php');
 		tp_hook_after_booking($id);
-		msr_send_guest_mail($r, 'approved');
+		appr_send_guest_mail($r, 'approved');
 	}
 } elseif ($r['reservation_approval'] === 'pending') {
 	// first real decision on a still-pending request: approve it
 	mysqli_query($link, "UPDATE `".$dbTables->reservations."` SET reservation_approval='approved' WHERE reservation_id=".$id);
 	require_once(__DIR__.'/../classes/tableplan_assign.class.php');
 	tp_hook_after_booking($id);
-	msr_send_guest_mail($r, 'approved');
+	appr_send_guest_mail($r, 'approved');
 }
 
 mysqli_query($link, "UPDATE `".$dbTables->reservations."` SET reservation_status='".mysqli_real_escape_string($link, $value)."' WHERE reservation_id=".$id);

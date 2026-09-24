@@ -36,6 +36,22 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-09-24 == mySeat v0.2203 == amadeushi - http://github.com/amadeushi/myseat
+
+ * The notification mail to the restaurant is now a proper HTML mail (plain-text fallback kept):
+   badge "Neue Reservierung" or "Entscheidung nötig", date/time/guests at a glance, guest contact
+   as tap-to-call and tap-to-mail links, the guest's note highlighted, and Reply-To set to the guest
+   so a reply goes straight to them
+ * For a large-party request the mail carries the button "Anfrage ansehen & entscheiden". It opens
+   api/request.php, a signed page (HMAC token, no login needed) that shows the request and offers
+   Bestätigen / Ablehnen; the decision is a POST, so mail scanners that open links cannot trigger
+   it, and the guest gets the matching mail. Every mail also links to the day in the backend
+ * Guest mails reordered by importance: reservation details and the cancel link first, then the
+   food and drinks menus as two buttons (drinks now https://amds.at/drinks), the arrival info last
+   and more compact, with a link to the Hildesheim bus timetable (Fahrplanauskunft)
+ * Approve/decline logic and the guest decision mail moved from web/ajax/modify_status.php into
+   web/classes/approval.class.php, shared with the new page
+
 2026-09-24 == mySeat v0.2202 == amadeushi - http://github.com/amadeushi/myseat
 
  * Guest mails rewritten in a warmer, more personal tone, signed "Hamun vom Amadeus-Team"
