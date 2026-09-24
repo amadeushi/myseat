@@ -452,6 +452,7 @@ if($check_web_outlet==1){
 	</main>
 
 </div>
+<?php include __DIR__.'/legal_footer.php'; ?>
 </div><!-- booking-shell end -->
 <?php
 // ** plugin hook

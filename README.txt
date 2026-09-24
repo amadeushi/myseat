@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 1.0.1                         =-=
+=-= Version: 1.0.2                         =-=
 =-= Date:    24.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -45,12 +45,27 @@ commit (git tag vX.Y.Z). Based on mySeat by Bernd Orttenburger and contributors,
 CHANGELOG
 =========
 
-Versions 0.2161 - 1.0.1 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 1.0.2 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-24 == mySeat v1.0.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Imprint and privacy links (from $settings['imprintUrl'] / $settings['privacyUrl'], the same
+   ones the mails use) now sit under every guest page: booking form, confirmation, cancel page
+   and feedback page (api/legal_footer.php). Nothing is shown when a setting is empty
+ * Widget notices (closed day, online reservations blocked, group too big, fully booked) reworked:
+   a clear headline, a line saying what the guest can do, readable type, and buttons to mail or
+   call (number from $settings['mailPhone'] or the property record). No buttons on a closed day.
+   Waitlist and error texts now use the informal "du" like the rest
+ * Backend day list: assigned tables show as small chips (with many tables only the first two plus
+   "+N", full list in the tooltip) instead of one long line that pushed status and buttons out of
+   the row. The hint boxes above the list (day comment such as "keine Passanten einbuchen",
+   online block, events) share one layout; the passerby warning is one compact box listing all
+   times instead of one bright yellow line per time slot
 
 2026-09-24 == mySeat v1.0.1 == amadeushi - http://github.com/amadeushi/myseat
 

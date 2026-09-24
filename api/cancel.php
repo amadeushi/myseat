@@ -246,6 +246,7 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 
 	<?php endif; ?>
 	</div>
+	<?php include __DIR__.'/legal_footer.php'; ?>
 </div>
 </body>
 </html>

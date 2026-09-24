@@ -337,7 +337,17 @@ function tp_table_cell($reservation_id, $free_text, $date) {
 	if ($names === '') {
 		return "<div id='reservation_table-".(int)$reservation_id."' class='inlineedit'>".$free_text."</div>";
 	}
-	return "<a class='tp-tablelabel' href='main_page.php?p=7&selectedDate=".htmlspecialchars($date)."' title='Tischplan'>".htmlspecialchars($names)."</a>";
+	// one small chip per table; with many tables only the first two plus "+N" so the column keeps its width
+	// (the full list stays in the tooltip)
+	$list = explode(' + ', $names);
+	$shown = count($list) > 3 ? array_slice($list, 0, 2) : $list;
+	// the table icon in front already says "table": drop a shared "Tisch " prefix from the chips
+	$all_prefixed = true;
+	foreach ($list as $n) { if (strpos($n, 'Tisch ') !== 0) { $all_prefixed = false; break; } }
+	$chips = '';
+	foreach ($shown as $n) { $chips .= "<span class='tp-tn'>".htmlspecialchars($all_prefixed ? substr($n, 6) : $n)."</span>"; }
+	if (count($list) > count($shown)) { $chips .= "<span class='tp-tn tp-tn-more'>+".(count($list) - count($shown))."</span>"; }
+	return "<a class='tp-tablelabel' href='main_page.php?p=7&selectedDate=".htmlspecialchars($date)."' title='Tischplan: ".htmlspecialchars($names)."'>".$chips."</a>";
 }
 
 // ids of the tables a reservation is assigned to (for the edit form), never throws

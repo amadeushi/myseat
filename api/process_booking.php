@@ -230,7 +230,7 @@ $prp_info = querySQL('property_info');
 		<p class="confirm-text">
 			<?php echo bt('error_text'); ?>
 			<?php if ($contact_email): ?>
-			<?php echo bt('error_retry'); ?> <a href="mailto:<?php echo $contact_email; ?>"><?php echo $contact_email; ?></a>
+			<?php echo bt('error_retry'); ?><br/><a href="mailto:<?php echo htmlspecialchars($contact_email); ?>"><?php echo htmlspecialchars($contact_email); ?></a>
 			<?php endif; ?>
 		</p>
 
@@ -240,6 +240,7 @@ $prp_info = querySQL('property_info');
 
 	<?php endif; ?>
 	</div>
+	<?php include __DIR__.'/legal_footer.php'; ?>
 </div>
 
 </body>

@@ -423,6 +423,28 @@ input.button_dark[disabled], button[disabled] {
 	color: var(--gold);
 }
 
+/* ---- notices above the reservation list: one consistent rhythm (tips, warnings, events) ---- */
+.alert_tip, .alert_info, .alert_warning, .alert_error, .alert_success, .alert_ads {
+	margin: 0 0 12px; padding: 12px 16px; font-size: 14px; line-height: 1.55; cursor: default;
+}
+.alert_warning {
+	background: rgba(226, 168, 80, 0.12); border: 1px solid rgba(226, 168, 80, 0.45); color: #ecc27e;
+	border-radius: 10px; font-family: var(--font-body); text-shadow: none;
+}
+.alert_tip p, .alert_info p, .alert_warning p, .alert_error p, .alert_success p, .alert_ads p {
+	width: auto; margin: 0; font-size: 14px; line-height: 1.55; text-align: left;
+	position: relative; padding-left: 28px; overflow-wrap: anywhere;
+}
+.alert_tip p .ui-ico:first-child, .alert_warning p .ui-ico:first-child, .alert_error p .ui-ico:first-child, .alert_success p .ui-ico:first-child {
+	position: absolute; left: 0; top: 2px; width: 18px; height: 18px;
+}
+.alert_tip p.center, .alert_tip .center { text-align: left; }
+.alert_tip p.margin-bottom-10 { margin-bottom: 0; }
+.alert_info > .ui-ico, .alert_info > .bold { vertical-align: middle; }
+.alert_info p, .alert_ads p { padding-left: 0; margin-top: 6px; }
+.alert_warning strong { color: #f3d79f; font-weight: 600; }
+.alert-times { display: block; margin-top: 2px; color: #ecc27e; font-variant-numeric: tabular-nums; }
+
 /* ---- jQuery UI: datepicker, dialogs, autocomplete ---- */
 .ui-widget, .ui-widget input, .ui-widget select, .ui-widget textarea, .ui-widget button {
 	font-family: var(--font-body);
@@ -1035,10 +1057,12 @@ html { color-scheme: dark; }
 select, option { color-scheme: dark; }
 
 /* assigned tables from the table plan in the reservation lists */
-a.tp-tablelabel { color: var(--gold-strong); font-weight: 600; text-decoration: none; }
-a.tp-tablelabel:hover { text-decoration: underline; }
-/* table column: as wide as its content, the table name never wraps (tables like "Tisch 128", chains like "Tisch 131 + 132") */
-table.global.resv-table-small tbody tr td.tb_nr { min-width: 150px; white-space: nowrap; }
+a.tp-tablelabel { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; vertical-align: middle; max-width: calc(100% - 30px); text-decoration: none; }
+a.tp-tablelabel:hover .tp-tn { border-color: var(--gold); }
+.tp-tn { display: inline-block; padding: 2px 9px; border: 1px solid var(--border, rgba(201,164,89,.22)); border-radius: 999px; background: rgba(201,162,89,.08); color: var(--gold-strong); font-size: 13px; font-weight: 600; line-height: 1.5; white-space: nowrap; }
+.tp-tn-more { color: var(--text-muted); font-weight: 500; }
+/* table column: fixed sensible width, the chips wrap inside it instead of stretching the row */
+table.global.resv-table-small tbody tr td.tb_nr { width: 210px; min-width: 150px; max-width: 240px; }
 table.global.resv-table-small tbody tr td#tb_name { min-width: 180px; }
 table.global.resv-table-small tbody tr td#tb_note { width: 40%; }
 

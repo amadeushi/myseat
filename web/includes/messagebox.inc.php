@@ -9,7 +9,7 @@ include_once 'classes/online_block.class.php';
 $ob_note = ($_SESSION['page'] == 1 || $_SESSION['page'] == 2) ? ob_get($_SESSION['outletID'], $_SESSION['selectedDate']) : false;
 if ($ob_note) {
 	echo "<div class='alert_tip'>
-	<p class='center margin-bottom-10'>Online-Reservierungen sind für diesen Tag gesperrt".($ob_note['reason'] !== '' ? " &ndash; ".htmlspecialchars($ob_note['reason']) : "").". Im Backend können weiterhin Reservierungen erfasst werden.</p>
+	<p class='center margin-bottom-10'>".uiIcon('info')." Online-Reservierungen sind für diesen Tag gesperrt".($ob_note['reason'] !== '' ? " &ndash; ".htmlspecialchars($ob_note['reason']) : "").". Im Backend können weiterhin Reservierungen erfasst werden.</p>
 	</div>";
 }
 
@@ -26,19 +26,17 @@ if (isset($maitre) && trim($maitre['maitre_comment_day']) != "" && $_SESSION['pa
 // Max passerby warning
 $set = 0;
 if (isset($passbyTime) && $_SESSION['passerby_max_pax'] > 0) {
-	$i=1;
+	// one alert with all affected times, not one line per time slot
+	$full_times = array();
 	foreach ($passbyTime as $key => $value) {
 		if ( $_SESSION['passerby_max_pax']-$value <= 0 && $_SESSION['page'] == 2 ) {
-			if($i<=1){
-				echo "<div class='alert_warning'><p>";
-				$set = 1;
-			}
-			echo uiIcon('warning')." ".formatTime($key,$general['timeformat']).": "._sentence_16." <br>";
-			$i++;
-			//if($i==count($passbyTime)){echo "</p></div>";}
+			$full_times[] = formatTime($key,$general['timeformat']);
 		}
 	}
-	if($set == 1){echo "</p></div>";}
+	if ($full_times) {
+		$set = 1;
+		echo "<div class='alert_warning'><p>".uiIcon('warning')." <strong>"._sentence_16."</strong> <span class='alert-times'>".implode(' &middot; ', $full_times)."</span></p></div>";
+	}
 }
 
 // Messages
