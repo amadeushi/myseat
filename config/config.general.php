@@ -67,6 +67,10 @@
  $settings['privacyUrl'] = '';
  $settings['mailPhone']  = '';
 
+ // group pre-order (web/classes/grouporder.class.php): address of the n8n webhook; empty = the default
+ // https://n8n.amds.at/webhook/gruppenbestellung
+ $settings['groupOrderUrl'] = '';
+
 // ** Daylight settings
  // ** noon time
  $daylight_noon = '12:00';

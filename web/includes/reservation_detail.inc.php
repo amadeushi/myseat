@@ -77,6 +77,59 @@
 					}
 				?>
 			</p>
+			<?php
+			// group pre-order (n8n): the guest becomes the organizer and gets the links by mail
+			require_once __DIR__.'/../classes/grouporder.class.php';
+			$go = go_find($row->reservation_id);
+			$go_pickup_ts = strtotime(substr($row->reservation_date, 0, 10).' '.substr($row->reservation_time, 0, 5));
+			// not for cancelled reservations, and not for a visit that is already over (unless a group exists: then just show it)
+			if ( current_user_can('Reservation-Edit') && (int)$row->reservation_hidden === 0 && ($go || $go_pickup_ts > time()) ):
+				$go_email = html_entity_decode(trim($row->reservation_guest_email), ENT_QUOTES, 'UTF-8');
+				// suggested deadline: three days before at noon, or the day before if that is already over
+				$go_default = strtotime('-3 days', $go_pickup_ts); $go_default = mktime(12, 0, 0, date('n', $go_default), date('j', $go_default), date('Y', $go_default));
+				if ($go_default <= time() + 3600) { $go_default = strtotime('-1 day', $go_pickup_ts); $go_default = mktime(12, 0, 0, date('n', $go_default), date('j', $go_default), date('Y', $go_default)); }
+			?>
+			<label>Gruppenbestellung</label>
+			<div id="group-order" data-id="<?php echo (int)$row->reservation_id; ?>" data-token="<?php echo htmlspecialchars($token); ?>">
+			<?php if ($go): ?>
+				<p>Angelegt am <?php echo date('d.m.Y H:i', strtotime($go['created_at'])); ?><br/>
+				<small>Organisator: <?php echo htmlspecialchars($go['organizer_email']); ?><?php echo $go['deadline'] ? ' &middot; Bestellschluss '.date('d.m.Y H:i', strtotime($go['deadline'])) : ''; ?></small></p>
+			<?php elseif (!filter_var($go_email, FILTER_VALIDATE_EMAIL)): ?>
+				<p><small>Dafür braucht die Reservierung eine E-Mail-Adresse des Gastes.</small></p>
+			<?php else: ?>
+				<p><button type="button" class="button_dark" id="go-open">Gruppenbestellung anlegen</button></p>
+				<div id="go-form" hidden>
+					<p><small><?php echo htmlspecialchars($go_email); ?> wird als Organisator eingetragen und erhält per Mail den Link für die Teilnehmer und den vertraulichen Organisatorlink. Besuch: <?php echo date('d.m.Y H:i', $go_pickup_ts); ?> Uhr.</small></p>
+					<p><label class="go-check"><input type="checkbox" id="go-deadline-on"/> Bestellschluss festlegen</label></p>
+					<p id="go-deadline-row" hidden><input type="datetime-local" id="go-deadline" value="<?php echo date('Y-m-d\TH:i', $go_default); ?>" max="<?php echo date('Y-m-d\TH:i', $go_pickup_ts); ?>"/></p>
+					<p><button type="button" class="button_dark" id="go-submit">Anlegen und Mail senden</button> <button type="button" class="go-cancel" id="go-cancel">Abbrechen</button> <span id="go-status" class="detail-status" role="status" aria-live="polite"></span></p>
+				</div>
+			<?php endif; ?>
+			</div>
+			<script>
+			window.addEventListener('load', function () {
+				var $ = window.jQuery, $box = $ && $('#group-order');
+				if (!$box || !$box.length) { return; }
+				var $status = $('#go-status'), $submit = $('#go-submit');
+				$('#go-open').click(function () { $('#go-form').prop('hidden', false); $(this).hide(); });
+				$('#go-cancel').click(function () { $('#go-form').prop('hidden', true); $('#go-open').show(); $status.text(''); });
+				$('#go-deadline-on').change(function () { $('#go-deadline-row').prop('hidden', !this.checked); });
+				$submit.click(function () {
+					$submit.prop('disabled', true);
+					$status.text('Wird angelegt ...').removeClass('is-error');
+					$.ajax({
+						type: 'POST', url: 'ajax/group_order.php', dataType: 'json',
+						data: { id: $box.data('id'), token: $box.data('token'), deadline: $('#go-deadline-on').is(':checked') ? $('#go-deadline').val() : '' },
+						success: function (r) {
+							if (!r || !r.ok) { $status.text((r && r.error) || 'Das hat nicht geklappt.').addClass('is-error'); $submit.prop('disabled', false); return; }
+							$box.html('<p>Angelegt am ' + r.created_at + '<br/><small>' + $('<span>').text(r.message).html() + '</small></p>');
+						},
+						error: function () { $status.text('Das hat nicht geklappt. Bitte versuche es noch einmal.').addClass('is-error'); $submit.prop('disabled', false); }
+					});
+				});
+			});
+			</script>
+			<?php endif; ?>
 			<?php if (!empty($row->reservation_discount) || !empty($row->reservation_parkticket)): ?>
 			<label><?php echo _discount; ?> / <?php echo _parking; ?></label>
 			<p>

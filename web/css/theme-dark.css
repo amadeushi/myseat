@@ -1415,3 +1415,9 @@ select.status_dbox:not([multiple]) option::checkmark { display: inline-block; or
 }
 .save-toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
 @media (prefers-reduced-motion: reduce) { .save-toast { transition: none; } }
+
+/* group pre-order block in the reservation details */
+#group-order [hidden] { display: none !important; }
+#group-order .go-check { display: inline-flex; align-items: center; gap: 8px; }
+#group-order .go-cancel { background: none; border: 0; color: var(--text-muted); cursor: pointer; padding: 8px 10px; font: inherit; }
+#group-order .go-cancel:hover { color: var(--gold-strong); }
