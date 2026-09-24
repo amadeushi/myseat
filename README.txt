@@ -3,9 +3,8 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 0.2202                        =-=
-=-= Date:    23.09.2026                   =-=
-=-= Time:    04:00 GMT                    =-=
+=-= Version: 1.0.0                         =-=
+=-= Date:    24.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 
@@ -26,15 +25,38 @@ News
  * Add Property Vulnerability Workaround - rename and disable web/properties.php when not needed
 
  
+VERSIONING
+==========
+
+From v1.0.0 this fork uses Semantic Versioning (MAJOR.MINOR.PATCH). The old 0.2xxx counter
+came from the upstream project (mySeat, last seen at v0.2166) and was raised with every small
+change; it said nothing about scope. The fork has since grown far beyond it, so the numbering
+starts fresh. The 0.2xxx entries below stay as history.
+
+ * MAJOR (X.0.0)  a large theme, or a change that needs action on the server: new required
+                  settings in config.general.php, a new cron job, a database step
+ * MINOR (1.X.0)  a new feature that needs nothing from you: a new mail, a new backend area
+ * PATCH (1.0.X)  a fix or polish, nothing to do
+
+Every release: update $sw_version in web/main_page.php, add a changelog entry here, tag the
+commit (git tag vX.Y.Z). Based on mySeat by Bernd Orttenburger and contributors, GPL v3.
+
+
 CHANGELOG
 =========
 
-Versions 0.2161 - 0.2202 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 1.0.0 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-24 == mySeat v1.0.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * First release under the new versioning scheme (see VERSIONING above). Content: everything up to
+   and including v0.2204. Server actions since the old counter's last big steps: the two webcron
+   jobs (feedback requests, day-before reminders, same key $settings['feedbackCronKey'])
 
 2026-09-24 == mySeat v0.2204 == amadeushi - http://github.com/amadeushi/myseat
 
