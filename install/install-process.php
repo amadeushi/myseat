@@ -382,9 +382,7 @@ $query = "CREATE TABLE IF NOT EXISTS `$dbTables->plugins` (
   $sql = query($query);
 
   $query = "INSERT INTO `$dbTables->plugins` (`filename`, `action`) VALUES
-  ('local_email_send.plugin.php', 1),
-  ('email_send.plugin.php', 0),
-  ('debug_session.plugin.php', 0);";
+  ('local_email_send.plugin.php', 1);";
   $sql = query($query);
 
 echo "<li>The Plugins table has been created. </li>";

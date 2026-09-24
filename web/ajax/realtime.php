@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../classes/mysql_compat.php';
 session_start();
+require_once __DIR__.'/../includes/require_login.inc.php';
 /*
 **************************************************************************
                          Realtime lookup

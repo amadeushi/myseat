@@ -18,12 +18,14 @@
 							<p><span class='bold'>".$cuisines[($_SESSION['selOutlet']['cuisine_style']-1)]."</strong></p>";
 					echo "</div><div class='outlet-settings'>";
 					echo "<h4 class='outlet-left'>"._settings."</h4>";
-					echo "<p>";
-					$cando = ( current_user_can( 'Daily-Outlet-Edit' ) ) ? 'enabled' : 'disabled';
-					getDayoff_select($dayoff,$maitre['maitre_id'],$cando);
-					echo "</p>";
+					$cando = ( current_user_can( 'Daily-Outlet-Edit' ) );
 			?>
-			<form method="post" action="?q=1" id="edit_maitre_form">
+			<form method="post" action="ajax/save_maitre.php" id="edit_maitre_form">
+			<p class="dayoff-row">
+				<label><input type="checkbox" id="outlet_child_dayoff" <?php echo ($dayoff == 1) ? 'checked="checked"' : ''; ?> <?php echo $cando ? '' : 'disabled="disabled"'; ?>/> <?php echo _day_off; ?></label>
+				<small class="detail-hint">gilt nur für diesen Tag</small>
+			</p>
+			<input type="hidden" name="dayoff_initial" value="<?php echo (int)$dayoff; ?>">
 			<label><?php echo _day_comment;?></label>
 			<p>
 				<?php if ( current_user_can( 'Daily-Outlet-Edit' ) ){
@@ -78,7 +80,7 @@
 				<input type="hidden" name="token" value="<?php echo $token; ?>" />
 				<input type="hidden" name="action" value="save_maitre">
 				<?php if ( current_user_can( 'Daily-Outlet-Edit' ) ){
-						echo'<input type="submit" class="button_dark" value="'._save.'" class="right-side"/>';
+						echo'<input type="submit" class="button_dark" value="'._save.'"/> <span id="maitre-status" class="detail-status" role="status" aria-live="polite"></span>';
 				   }
 				?>
 			</form>

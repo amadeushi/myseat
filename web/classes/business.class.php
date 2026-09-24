@@ -512,6 +512,7 @@ function getWeekdays_select($outlet_closeday, $status=''){
 }
 
 // build checkboxes to select maitre dayoff
+// build checkboxes to select maitre dayoff
 function getDayoff_select($dayoff,$id,$cando){
 		echo "<input type='checkbox' id='outlet_child_dayoff' name='".$id."' value='";
 		echo ($dayoff == 'ON') ? 'ON' : 'OFF';

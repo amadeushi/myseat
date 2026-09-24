@@ -155,9 +155,7 @@ foreach ($table_updates as $table_update) {
 	$sql = query($query);
 
 	$query = "INSERT INTO `$dbTables->plugins` (`filename`, `action`) VALUES
-	('local_email_send.plugin.php', 1),
-	('email_send.plugin.php', 0),
-	('debug_session.plugin.php', 0);";
+	('local_email_send.plugin.php', 1);";
 	$sql = query($query);
 
 	$errorMessage .= "New table 'plugins' has been successfully created.<br/>"; 

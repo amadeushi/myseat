@@ -454,12 +454,6 @@ if($check_web_outlet==1){
 </div>
 <?php include __DIR__.'/legal_footer.php'; ?>
 </div><!-- booking-shell end -->
-<?php
-// ** plugin hook
-if ($hook->hook_exist( 'debug_online' )) {
-	$hook->execute_hook( 'debug_online' );
-}
-?>
   <!-- Javascript at the bottom for fast page loading --> 
 <script>
 	/* utility functions */

@@ -382,13 +382,12 @@ function insertSession($data)
  */
  function logout($redirectTo = '')
  {
-	if ( isset($_COOKIE[$this->remCookieName]) ){
-     	$setCookie = unserialize(base64_decode($_COOKIE[$this->remCookieName]));
+	if ( ($setCookie = $this->cookie_data()) !== false ){
 	 	foreach ($setCookie as $k => $v ) $setCookie[$k] = "'".$this->escape($v)."'";
 		$sql = "DELETE FROM `{$this->dbSession}` WHERE `{$this->tbSessions['key_id']}` = ".$setCookie['key_id'];
    		$this->query($sql,__LINE__);
    		$_SESSION[$this->sessionVariable] = array();
-   		setcookie($this->remCookieName, '', time()-60000);
+   		setcookie($this->remCookieName, '', time()-60000, '/');
    		$this->userData = '';
    		if ( $redirectTo != '' && !headers_sent()){
    			header('Location: '.$redirectTo );
@@ -589,8 +588,7 @@ function salt()
 */
 function autologin_weak()
 {
-	if ( isset($_COOKIE[$this->remCookieName]) ){
-     $setCookie = unserialize(base64_decode($_COOKIE[$this->remCookieName]));
+	if ( ($setCookie = $this->cookie_data()) !== false ){
 	//debugging 
 	//foreach ($setCookie as $k => $v ) echo $k."=".$v."<br/>";
 	 foreach ($setCookie as $k => $v ) $setCookie[$k] = "'".$this->escape($v)."'";
@@ -621,8 +619,7 @@ function autologin_weak()
 */
 function autologin()
 {
-	if ( isset($_COOKIE[$this->remCookieName]) ){
-     $setCookie = unserialize(base64_decode($_COOKIE[$this->remCookieName]));
+	if ( ($setCookie = $this->cookie_data()) !== false ){
 	 //foreach ($setCookie as $k => $v ) echo $k."=".$v."<br/>";
 	 foreach ($setCookie as $k => $v ) $setCookie[$k] = "'".$this->escape($v)."'";
 	$sql = "SELECT * FROM `{$this->dbSession}` 
@@ -662,7 +659,7 @@ function autologin()
 function create_autologin($user_id)
 {
 	$data = array(
-		'key_id' 		=> substr(uniqid(md5(rand().$this->remCookieName), true), 0, 23),
+		'key_id' 		=> substr(bin2hex(random_bytes(12)), 0, 23),
 		'user_id' 		=> $user_id,
 		'user_agent' 	=> substr($_SERVER['HTTP_USER_AGENT'], 0, 149),
 		'last_ip' 		=> $_SERVER['REMOTE_ADDR']
@@ -675,8 +672,33 @@ $cookie = array(
 	'value'		=> base64_encode(serialize($data)),
 	'expire'	=> time()+$this->remTime,
 );		  
-$a = setcookie($cookie['name'], $cookie['value'], $cookie['expire'], '/');
+$a = setcookie($cookie['name'], $cookie['value'], array(
+	'expires'  => $cookie['expire'],
+	'path'     => '/',
+	'secure'   => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+	'httponly' => true,
+	'samesite' => 'Lax',
+));
 
+}
+/**
+	* Reads the login cookie safely: it is user-controlled input, so objects are never
+	* instantiated (allowed_classes) and only the expected scalar fields are accepted.
+	* @return array|false
+   */
+function cookie_data()
+{
+	if ( !isset($_COOKIE[$this->remCookieName]) || !is_string($_COOKIE[$this->remCookieName]) ) return false;
+	$raw = base64_decode($_COOKIE[$this->remCookieName], true);
+	if ( $raw === false ) return false;
+	$data = @unserialize($raw, array('allowed_classes' => false));
+	if ( !is_array($data) || !isset($data['key_id'], $data['user_id']) ) return false;
+	$clean = array();
+	foreach ( $data as $k => $v ) {
+		if ( is_scalar($v) ) $clean[$k] = (string)$v;
+	}
+	if ( !isset($clean['key_id'], $clean['user_id']) ) return false;
+	return $clean;
 }
 /**
 	* Get cookie data
@@ -684,8 +706,7 @@ $a = setcookie($cookie['name'], $cookie['value'], $cookie['expire'], '/');
    */
 function read_cookie()
 {
-	if ( isset($_COOKIE[$this->remCookieName]) ){
-     $setCookie = unserialize(base64_decode($_COOKIE[$this->remCookieName]));
+	if ( ($setCookie = $this->cookie_data()) !== false ){
 	 foreach ($setCookie as $k => $v ) $setCookie[$k] = "'".$this->escape($v)."'";
 	
 	return $setCookie;

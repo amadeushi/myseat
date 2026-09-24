@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__.'/../includes/require_login.inc.php';
 $field = $_GET['filename'];
 
 switch ($_GET['button']) {

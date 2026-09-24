@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 1.0.3                         =-=
+=-= Version: 1.0.5                         =-=
 =-= Date:    24.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -45,12 +45,53 @@ commit (git tag vX.Y.Z). Based on mySeat by Bernd Orttenburger and contributors,
 CHANGELOG
 =========
 
-Versions 0.2161 - 1.0.3 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 1.0.5 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-25 == mySeat v1.0.5 == amadeushi - http://github.com/amadeushi/myseat
+
+ * SECURITY: web/properties.php could be opened without logging in (it granted every visitor a
+   valid session and only turned people away when a non-admin was logged in). It now needs a real
+   login as admin (role 1 or 2); only a fresh installation without any admin can still open it
+ * SECURITY: these backend AJAX endpoints worked without any login and handed out guest data
+   (name, email, phone) or changed data: activate_user, autocomplete, autocomplete_res,
+   check_password, check_username, cxllist, delete, guest_detail, inline_edit, modify_entry,
+   modify_plugins, process_reservation, realtime. All now answer 403 without a backend session
+   (web/includes/require_login.inc.php). The guest widget (api/) and the user activation link
+   (web/confirm.php) stay public on purpose
+ * SECURITY: the login cookie was read with a plain unserialize() (PHP object injection risk). It
+   is now read by flexibleAccess::cookie_data() in PLC/plc.class.php: no objects allowed, only the
+   expected scalar fields, anything else counts as "not logged in". The cookie is now set with
+   HttpOnly, SameSite=Lax and Secure (on HTTPS), is deleted with the same path on logout, and the
+   session key comes from random_bytes() instead of uniqid()/rand(). Existing logins keep working
+ * Backend property page (?p=6&q=5): removed the embedded Google static map (it showed a broken image,
+   since Google answers 403 without an API key, and every visit contacted Google). Also fixed the
+   mis-nested <p><strong> tags on that page
+ * Plugin cleanup: removed the unused plugins email_send (predecessor of the booking mails) and
+   debug_session, the dead second hook list web/includes/plugins.init.php and the debug_online call
+   in the widget; installer/updater now only register local_email_send. The real hook list stays
+   in config/plugins.init.php, now with a note where each hook fires
+
+2026-09-24 == mySeat v1.0.4 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Booking widget: a single closed day set in the backend (day details, "Ruhetag") now shows
+   "An diesem Tag haben wir geschlossen" like a weekly closing day, instead of the misleading
+   "everything is booked". A day marked open there also opens a normally closed weekday for the
+   time selection. Remember: the day setting applies to that one date only; recurring closing
+   days belong in the outlet settings
+ * Backend day details reworked: comment, extra seats/tables, passerby limit and the single-day
+   "Ruhetag" are saved together with the Save button, by AJAX (web/ajax/save_maitre.php), with the
+   result shown next to the button. After a successful save the panel closes and a short
+   confirmation appears on the day. Before, the closed-day checkbox saved on every click and
+   reloaded the page, always stored 'OFF' (so a closed day never got set) and could create
+   duplicate rows. Now: one row per outlet and date, a plain comment is swapped in without
+   reloading, and the page only reloads when the day list changes, i.e. closed
+   day or capacity. Setting a closed day warns if reservations exist for that day. Removed
+   web/ajax/modify_dayoff.php
 
 2026-09-24 == mySeat v1.0.3 == amadeushi - http://github.com/amadeushi/myseat
 

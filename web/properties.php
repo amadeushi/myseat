@@ -25,18 +25,19 @@ $this_page = "property";
 	$user = new flexibleAccess('',$dbAccess);
 
 
+	// only a real login counts (same check as web/main_page.php); nothing is granted to anonymous visitors
+	$logged_in = $user->autologin();
+	if ($logged_in) {
 		$cookie 				= $user->read_cookie();
 		$_SESSION['u_id'] 		= (isset($user->userData[$user->tbFields['userID']])) ? $user->userData[$user->tbFields['userID']] : '';
 		$_SESSION['u_name'] 	= (isset($user->userData[$user->tbFields['login']])) ? $user->userData[$user->tbFields['login']] : '';
 		$_SESSION['u_email'] 	= (isset($user->userData[$user->tbFields['email']])) ? $user->userData[$user->tbFields['email']] : '';
-		$_SESSION['role'] 		= (isset($user->userData['role'])) ? $user->userData['role'] : '';
-		$_SESSION['role'] 		= (isset($_SESSION['role'])) ? $_SESSION['role'] : 6;
+		$_SESSION['role'] 		= (isset($user->userData['role'])) ? $user->userData['role'] : 6;
 		$_SESSION['property'] 	= (isset($user->userData['property_id'])) ? $user->userData['property_id'] : '';
 		$_SESSION['u_time'] 	= date("Y-m-d H:i:s", time());
 		$_SESSION['u_lang'] 	= (isset($user->userData['lang_id'])) ? $user->userData['lang_id'] : '';
 		$_SESSION["valid_user"] = TRUE;
-
-
+	}
 
 // ** database functions
 	include('classes/database.class.php');
@@ -56,12 +57,18 @@ $this_page = "property";
 	include('../config/config.inc.php');
 
 	// ONLY LET SUPERUSER IN AFTER INSTALLATION !
+	// With at least one admin in the system this page needs a logged-in admin (role 1 or 2). Only a fresh
+	// installation without any admin yet may open it, to create the first property and user.
 	$num_admin = querySQL('num_admin');
-
-	if ( $num_admin >= 1 && $_SESSION['role'] > 2 ){
-		$user->logout();
-		header("Location: ../PLC/index.php");
-		exit; //To ensure security
+	if ( $num_admin >= 1 ) {
+		if ( !$logged_in || (int)$_SESSION['role'] > 2 ) {
+			$user->logout();
+			header("Location: ../PLC/index.php");
+			exit; //To ensure security
+		}
+	}else{
+		$_SESSION['role'] = '';
+		$_SESSION["valid_user"] = TRUE;
 	}
 
 // translate to selected language

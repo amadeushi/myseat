@@ -1397,3 +1397,21 @@ select.status_dbox:not([multiple]) option::checkmark { display: inline-block; or
 	.fb-summary { flex-direction: column; gap: 18px; }
 	.fb-summary-avg { text-align: left; }
 }
+
+/* day details panel: save feedback and the single-day closed flag */
+.detail-status { margin-left: 12px; font-size: 14px; color: var(--text-muted); }
+.detail-status.is-error { color: var(--danger); }
+.dayoff-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.dayoff-row label { display: inline-flex; align-items: center; gap: 8px; }
+.detail-hint { color: var(--text-muted); font-size: 12px; }
+
+/* short confirmation after saving the day details */
+.save-toast {
+	position: fixed; left: 50%; bottom: 28px; z-index: 10000; max-width: min(90vw, 520px);
+	padding: 12px 20px; border-radius: 12px; background: var(--surface-2, #1c1a18);
+	border: 1px solid var(--border, rgba(201,164,89,.22)); color: var(--text, #f3ede1);
+	font-size: 14px; line-height: 1.5; box-shadow: 0 8px 28px rgba(0, 0, 0, .45);
+	opacity: 0; transform: translate(-50%, 12px); transition: opacity .3s ease, transform .3s ease;
+}
+.save-toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce) { .save-toast { transition: none; } }

@@ -27,12 +27,11 @@ if (!function_exists('reserve_contact_message')) {
 	}
 }
 
-// is the outlet closed on this weekday at all? (the datepicker already
-// greys these days out client-side, but selectedDate can also arrive
-// via a direct link/URL, so this needs to be enforced here too)
-$selected_weekday = date('w', strtotime($_SESSION['selectedDate']));
-$closed_weekdays = array_filter(explode(',', $_SESSION['selOutlet']['outlet_closeday'] ?? ''), 'strlen');
-$outlet_closed_today = in_array((string)$selected_weekday, $closed_weekdays, true);
+// is the outlet closed on this date? getDayoff() combines the weekly closing days of the outlet with
+// the single-day setting from the backend ("Ruhetag" in the day details, which can also open a day
+// that is normally closed). The datepicker greys these days out client-side, but selectedDate can
+// also arrive via a direct link/URL, so this needs to be enforced here too
+$outlet_closed_today = (getDayoff() == 1);
 
 // is this party bigger than what we take online at all?
 $max_menu = (int)$general['max_menu'];

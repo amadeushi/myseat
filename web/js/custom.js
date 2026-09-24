@@ -244,6 +244,53 @@ $(document).ready(function() {
 	    $('#outlet_detail_slider').slideToggle(500);
 	    return false;
 	});
+	// day details: one AJAX save for comment, extra seats/tables, passerby limit and the single-day
+	// closed flag. On success the panel closes and a short confirmation appears; a plain comment is
+	// swapped in place, the page only reloads when the day list itself changes (closed day, capacity).
+	var $maitreStatus = $('#maitre-status');
+	function showSaveToast(msg) {
+		$('.save-toast').remove();
+		var $t = $('<div class="save-toast" role="status"></div>').text(msg).appendTo('body');
+		setTimeout(function() { $t.addClass('is-visible'); }, 20);
+		setTimeout(function() { $t.removeClass('is-visible'); setTimeout(function() { $t.remove(); }, 400); }, msg.length > 40 ? 8000 : 3500);
+	}
+	try {
+		var savedMsg = sessionStorage.getItem('detailMsg');
+		if (savedMsg) { sessionStorage.removeItem('detailMsg'); showSaveToast(savedMsg); }
+	} catch (e) {}
+	$('#edit_maitre_form').submit(function() {
+		var $f = $(this), $btn = $f.find('input[type=submit]');
+		$btn.prop('disabled', true);
+		$maitreStatus.text('Speichern ...').removeClass('is-error');
+		$.ajax({
+			type: 'POST',
+			url: 'ajax/save_maitre.php',
+			dataType: 'json',
+			data: $f.serialize() + '&outlet_child_dayoff=' + ($('#outlet_child_dayoff').is(':checked') ? 'ON' : 'OFF'),
+			success: function(r) {
+				if (!r || !r.ok) {
+					$maitreStatus.text((r && r.error) || 'Speichern fehlgeschlagen.').addClass('is-error');
+					$btn.prop('disabled', false);
+					return;
+				}
+				if (r.reload) {
+					try { sessionStorage.setItem('detailMsg', r.message); } catch (e) {}
+					location.reload();
+					return;
+				}
+				$('#maitre-note').html(r.note_html);
+				$maitreStatus.text('');
+				$btn.prop('disabled', false);
+				$('#outlet_detail_slider').slideUp(300);
+				showSaveToast(r.message);
+			},
+			error: function() {
+				$maitreStatus.text('Speichern fehlgeschlagen. Bitte versuche es noch einmal.').addClass('is-error');
+				$btn.prop('disabled', false);
+			}
+		});
+		return false;
+	});
 
 	//activate Autocomplete
 	 $("#reservation_guest_name").autocomplete({
@@ -371,23 +418,6 @@ $(document).ready(function() {
 		});
 	}); // Reservation Status dropdownbox END
 
-	/* Dayoff Status checkbox */
-	
-	$("#outlet_child_dayoff").change(function(){ 
-		var status_id = $(this).attr('name');
-		var value = $(this).val();
-		$.ajax({
-		type: "POST",
-		url: "ajax/modify_dayoff.php",
-		data: 'value=' + value + '&id=' + status_id,
-		success: function(result){
-			location.reload();
-		}
-		});
-		return true;
-	}); 
-	
-	
 	/* InlineEdit activation */
 	$("#modaltabletrigger").fancybox();
 	

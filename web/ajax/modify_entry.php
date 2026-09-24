@@ -1,4 +1,5 @@
 <?php 
+require_once __DIR__.'/../includes/require_login.inc.php';
 // ** set configuration
 include('../../config/config.general.php');
 // ** database functions

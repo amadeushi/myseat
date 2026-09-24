@@ -16,6 +16,11 @@ if ($result_rows) {
 $hook->active_plugins = $plugins;
 
 //set multiple hooks to which plugin developers can assign functions
+//where they fire:
+//  after_booking   api/business.class.php (online booking, arg 'confirmed'|'pending'), web/ajax/process_reservation.php (backend booking)
+//  after_del_res / after_alw_res   web/ajax/modify_entry.php
+//  after_del_user / after_del_outlet / after_del_event   web/ajax/delete.php
+//  debug           web/main_page.php
 $hook->set_hooks ( array (
 					'debug', 
 					'after_booking', 

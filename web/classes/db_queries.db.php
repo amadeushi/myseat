@@ -524,18 +524,6 @@ function querySQL($statement){
 							WHERE `reservation_id`='%d'",$value,$id);
 			return $result;	
 		break;
-		case 'update_maitre_dayoff':
-			$result = query("INSERT INTO `$dbTables->maitre`
-				 				(maitre_id,maitre_outlet_id,maitre_date,outlet_child_dayoff,maitre_ip,maitre_author) 
-								VALUES ('%d','%d','%s','%s','%s','%s') 
-								ON DUPLICATE KEY UPDATE 
-								`outlet_child_dayoff`='%s',
-								`maitre_ip`='%s',
-								`maitre_author`='%s'",$id, $_SESSION['outletID'], $_SESSION['selectedDate'], $value,
-					 			$_SERVER['REMOTE_ADDR'], $_SESSION['u_fullname'], $value,
-					 			$_SERVER['REMOTE_ADDR'],$_SESSION['u_fullname']);
-			return $result;
-		break;
 		case 'inline_edit':
 			$result = query("UPDATE `$dbTables->reservations` SET `%s`='%s' WHERE `reservation_id`='%d'",$field,$value,$id);
 			return $result;	

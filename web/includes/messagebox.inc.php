@@ -14,14 +14,13 @@ if ($ob_note) {
 }
 
 // Maitre day comment
+require_once __DIR__.'/../classes/maitre.class.php';
+echo "<div id='maitre-note'>";
 if (isset($maitre) && trim($maitre['maitre_comment_day']) != "" && $_SESSION['page'] == 2 ) {
-	echo "<div class='alert_tip'>
-	<p class='center margin-bottom-10'>".uiIcon('info')." ";
-		// maitre comment
-		echo $maitre['maitre_comment_day']."<br>";
-	echo "</p></div>";
+	echo maitre_note_html($maitre['maitre_comment_day']);
 	$maitre['maitre_comment_day'] = '';	
 }
+echo "</div>";
 
 // Max passerby warning
 $set = 0;
