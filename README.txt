@@ -36,6 +36,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-09-24 == mySeat v0.2204 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Backend datepicker: the "Heute" button now always opens the real current day (it used to jump to
+   the selected date because of gotoCurrent); the date comes from the device clock
+
 2026-09-24 == mySeat v0.2203 == amadeushi - http://github.com/amadeushi/myseat
 
  * The notification mail to the restaurant is now a proper HTML mail (plain-text fallback kept):

@@ -51,21 +51,14 @@
 	
 	<script type="text/javascript">
 	
-	// remember the old datepicker function
-	var _gotoToday = jQuery.datepicker._gotoToday;
-		// datepicker is directly inside the jQuery object, so override that
-		jQuery.datepicker._gotoToday = function(a){
-	    var target = jQuery(a);
-	    var inst = this._getInst(target[0]);
-	    // call the old function, so default behaviour is kept
-	    _gotoToday.call(this, a);
-	    // now do an additional call to _selectDate which will set the date and close
-	    // close the datepicker (if it is not inline)
-	    jQuery.datepicker._selectDate(a, 
-	    jQuery.datepicker._formatDate(inst,inst.selectedDay, inst.selectedMonth, inst.selectedYear));
-	}
-	
-$(document).ready(function() {
+	// "Heute" must always open the real current day. The stock button goes to the selected
+	// date when gotoCurrent is on, so it is replaced: jump straight to today's date
+	jQuery.datepicker._gotoToday = function(a){
+		var d = new Date(), p = function(n){ return (n < 10 ? '0' : '') + n; };
+		window.location.href = '?selectedDate=' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+	};
+
+	$(document).ready(function() {
 		// Change of outlet ID in edit mode
 		$("#reservation_outlet_id").change(function(){
 		    window.location.href='?resedit=1&outletID=' + this.value;
