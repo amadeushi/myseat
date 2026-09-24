@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 1.0.0                         =-=
+=-= Version: 1.0.1                         =-=
 =-= Date:    24.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -45,12 +45,18 @@ commit (git tag vX.Y.Z). Based on mySeat by Bernd Orttenburger and contributors,
 CHANGELOG
 =========
 
-Versions 0.2161 - 1.0.0 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 1.0.1 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-24 == mySeat v1.0.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Backend search finds partial matches anywhere in the name, booking number, phone number or
+   email (e.g. "wald" finds "Anja Finsterwalder"). Several words all have to match, in any
+   order ("finster anja"). Before, it only matched the beginning of the name
 
 2026-09-24 == mySeat v1.0.0 == amadeushi - http://github.com/amadeushi/myseat
 

@@ -297,7 +297,9 @@ $_SESSION['pk_code'] = ( isset($_GET['pk']) ) ? $_GET['pk'] : 'CXL';
 // searchquery
 $searchquery = '';
 if(isset($_POST['searchquery'])){
-	$searchquery = $_POST['searchquery']."%";
+	// an empty search stays non-empty ('%') so the results page still opens; it matches everything
+	$searchquery = trim($_POST['searchquery']);
+	if ($searchquery === '') { $searchquery = '%'; }
 	$q = 4;
 }
 

@@ -416,6 +416,18 @@ function querySQL($statement){
 			return getRowList($result);
 		break;
 		case 'search':
+			// partial match anywhere in name, booking number, phone or email; every word of the
+			// query must match somewhere, in any order ("Finsterwalder", "wald", "Anja Finster")
+			$search_where = '1=1';
+			if ($searchquery !== '%') {
+				$clauses = array();
+				foreach (preg_split('/\s+/', trim($searchquery)) as $word) {
+					if ($word === '') { continue; }
+					$w = addcslashes($word, '%_');
+					$clauses[] = "(`reservation_guest_name` LIKE '%".$w."%' OR `reservation_bookingnumber` LIKE '%".$w."%' OR `reservation_guest_phone` LIKE '%".$w."%' OR `reservation_guest_email` LIKE '%".$w."%')";
+				}
+				if ($clauses) { $search_where = implode(' AND ', $clauses); }
+			}
 			$result = query("SELECT reservation_id, reservation_bookingnumber, reservation_outlet_id,
 			reservation_date, reservation_time, reservation_title,
 			reservation_guest_name, reservation_guest_adress, reservation_guest_city,
@@ -428,11 +440,9 @@ function querySQL($statement){
 			reservation_advertise,reservation_referer, outlet_name 
 				FROM `$dbTables->reservations`
 				INNER JOIN `$dbTables->outlets` ON `outlet_id` = `reservation_outlet_id` 
-				WHERE `property_id` = '%d' 
-				AND (`reservation_guest_name` LIKE '%s' 
-					OR `reservation_bookingnumber` LIKE '%s' 
-					OR `reservation_guest_phone` LIKE '%s') 
-				ORDER BY reservation_guest_name ASC",$_SESSION['propertyID'],$searchquery,$searchquery,$searchquery);
+				WHERE `property_id` = '".(int)$_SESSION['propertyID']."' 
+				AND ".$search_where."
+				ORDER BY reservation_guest_name ASC");
 			return getRowList($result);
 		break;
 		case 'reservation_visits':		
