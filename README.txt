@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 1.0.2                         =-=
+=-= Version: 1.0.3                         =-=
 =-= Date:    24.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -45,12 +45,18 @@ commit (git tag vX.Y.Z). Based on mySeat by Bernd Orttenburger and contributors,
 CHANGELOG
 =========
 
-Versions 0.2161 - 1.0.2 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 1.0.3 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-24 == mySeat v1.0.3 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: saving the day details in the backend (day comment, extra seats/tables, passerby limit)
+   ended on a blank page and stored nothing when "extra seats" was left empty (PHP 8 TypeError in
+   abs() in writeForm). An empty or non-numeric value now counts as 0
 
 2026-09-24 == mySeat v1.0.2 == amadeushi - http://github.com/amadeushi/myseat
 

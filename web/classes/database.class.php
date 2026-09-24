@@ -189,7 +189,7 @@ function writeForm($table =''){
 				
 				// make value always positive
 				$keys[$i] = $key;
-				$values[$i] = "'".abs($value)."'";
+				$values[$i] = "'".abs((int)$value)."'";
 				
 			}else if($key == 'outlet_child_capacity'){	
 
