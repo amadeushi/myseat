@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 1.0.5                         =-=
+=-= Version: 1.0.6                         =-=
 =-= Date:    24.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -45,12 +45,23 @@ commit (git tag vX.Y.Z). Based on mySeat by Bernd Orttenburger and contributors,
 CHANGELOG
 =========
 
-Versions 0.2161 - 1.0.5 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 1.0.6 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-25 == mySeat v1.0.6 == amadeushi - http://github.com/amadeushi/myseat
+
+ * SECURITY: the server had no .htaccess at all and a full .git folder (source code and history)
+   was downloadable from the web root. Added .htaccess files: no directory listings and no .git
+   or README.txt over the web (root); config/, plugins/, web/classes/, web/includes/ and install/
+   are closed to browsers, only PHP includes them; uploads/ can no longer execute scripts; the
+   root also sets X-Content-Type-Options and Referrer-Policy. The widget is unaffected (no
+   X-Frame-Options, it may be embedded). To run the installer or updater again, temporarily
+   remove install/.htaccess. On the server tmp_deploy/ (old deploy leftovers) is blocked too and
+   can be deleted, as can the server's own .git folder (deployment is by copy, not by git)
 
 2026-09-25 == mySeat v1.0.5 == amadeushi - http://github.com/amadeushi/myseat
 
