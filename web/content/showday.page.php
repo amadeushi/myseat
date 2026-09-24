@@ -141,6 +141,7 @@
 						echo "<br/><br/><h3>"._wait_list."</h3>";
 						include('includes/reservations_grid.inc.php');
 					}
+					$_SESSION['wait'] = 0;
 				 }else{
 					echo "<h2 class='dayoff'>"._day_off."</h2>";
 				 }

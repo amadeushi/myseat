@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 0.2201                        =-=
+=-= Version: 0.2202                        =-=
 =-= Date:    23.09.2026                   =-=
 =-= Time:    04:00 GMT                    =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -29,12 +29,38 @@ News
 CHANGELOG
 =========
 
-Versions 0.2161 - 0.2201 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 0.2202 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-24 == mySeat v0.2202 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Guest mails rewritten in a warmer, more personal tone, signed "Hamun vom Amadeus-Team"
+   (optional $settings['mailSignName'] in config.general.php). The table confirmation now carries
+   a "So kommst du gut an" block: bus, parking, accessibility (ramp on request) and links to the
+   food and drinks menus. New mail variant "approved" for a request that staff confirmed
+   ("Gute Nachrichten ..."); request received and decline mails reworded (decline offers to find
+   another date). Feedback request and staff reply mails invite honest criticism instead of just
+   praise
+ * New "see you tomorrow" reminder mail (arrival, parking, menus) the day before a reservation, sent
+   between 10:00 and 20:00, never twice (table tp_reminders, created automatically). Skips cancelled,
+   no-show, waitlisted and undecided/declined requests, and bookings made less than 18 hours
+   earlier. Needs a second webcron job, same key as the feedback cron, every 30-60 minutes:
+   web/cron/send_reminders.php?key=<feedbackCronKey>
+ * Feedback form: after 4-5 stars TripAdvisor is offered first (filled button), Google second;
+   after 1-3 stars the guest gets a direct "write to us" mail link instead of a review push
+ * Reservation requests for large parties (outlet setting "approval_pax_threshold", 0 = off):
+   requests show up in the normal list as "Unbestätigt"; picking "Bestätigt" approves (confirmation
+   mail, table assignment), picking "Storniert" declines (decline mail) and can be undone from the
+   cancelled list. "Storniert" is now stored as status CXL for every cancelled or deleted
+   reservation, so the cancelled list no longer shows a stale "Bestätigt"
+ * Public reviews page paginated (50 per page), average always over all reviews; the site root and
+   /web/ redirect to the guest booking form (outlet 1) instead of the backend login
+ * Cormorant Garamond and Raleway are self-hosted in web/fonts/ - no request to Google servers
+ * modify_status.php now checks login and the Reservation-Edit right
 
 2026-09-23 == mySeat v0.2201 == amadeushi - http://github.com/amadeushi/myseat
 

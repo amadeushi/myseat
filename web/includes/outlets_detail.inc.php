@@ -32,6 +32,10 @@
 	<p>
 		<?php echo $row->outlet_tripadvisor_url !== '' ? $row->outlet_tripadvisor_url : '--';?>
 	</p>
+	<label><?php echo _approval_threshold_label;?></label>
+	<p>
+		<?php echo ((int)$row->approval_pax_threshold > 0) ? (int)$row->approval_pax_threshold : _approval_disabled;?>
+	</p>
 	<label><?php echo _seats;?></label>
 	<p>		 	 	 	 	 	 	
 		<?php echo $row->outlet_max_capacity;?>

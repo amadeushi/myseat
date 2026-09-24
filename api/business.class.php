@@ -106,6 +106,8 @@ function bt($key, $arg = null) {
 				'confirmed'      => 'Reservierung bestätigt',
 				'back_site'      => 'Zurück zur Website',
 				'cancel_res'     => 'Reservierung stornieren',
+				'pending_title'  => 'Anfrage eingegangen',
+				'pending_text'   => 'Vielen Dank für deine Anfrage! Da es sich um eine größere Gruppe handelt, bestätigen wir dir deinen Tisch persönlich. Du erhältst in Kürze eine finale Bestätigung per E-Mail.',
 				'waitlist_text'  => 'Für Ihren Wunschtermin sind aktuell keine Tische mehr frei. Wir haben Sie auf die Warteliste gesetzt und melden uns, sobald ein Platz frei wird.',
 				'error_text'     => 'Ihre Reservierung konnte leider nicht angelegt werden.',
 				'error_retry'    => 'Bitte versuchen Sie es erneut oder kontaktieren Sie uns direkt per E-Mail:',
@@ -130,6 +132,8 @@ function bt($key, $arg = null) {
 				'confirmed'      => 'Reservation confirmed',
 				'back_site'      => 'Back to website',
 				'cancel_res'     => 'Cancel reservation',
+				'pending_title'  => 'Request received',
+				'pending_text'   => 'Thank you for your request! As this is a larger group, we will confirm your table personally. You will receive a final confirmation by email shortly.',
 				'waitlist_text'  => 'There are currently no tables left for your requested time. We have put you on the waiting list and will get in touch as soon as a table becomes available.',
 				'error_text'     => 'Unfortunately your reservation could not be created.',
 				'error_retry'    => 'Please try again or contact us directly by email:',
@@ -544,7 +548,8 @@ function processBooking(){
 			'reservation_outlet_id', 'reservation_time', 'reservation_title',
 			'reservation_guest_name', 'reservation_guest_email', 'reservation_guest_phone',
 			'reservation_pax', 'reservation_hotelguest_yn', 'reservation_booker_name',
-			'reservation_notes', 'reservation_advertise', 'reservation_referer'
+			'reservation_notes', 'reservation_advertise', 'reservation_referer',
+			'reservation_email_lang'
 		);
 		foreach ($allowed_fields as $key) {
 			if (!isset($_POST[$key]) || is_array($_POST[$key])) {
@@ -654,35 +659,49 @@ function processBooking(){
 			}
 			// END Availability
 
+			// Approval layer: outlets can require staff sign-off for large parties. A pending
+			// request still counts fully against capacity (same rows/columns as a confirmed
+			// booking above), it just gets a different guest mail and confirmation page, and
+			// waits for web/ajax/reservation_approval_action.php to approve or decline it.
+			require_once(__DIR__.'/../web/classes/approval.class.php');
+			appr_ensure_schema();
+			$approval_threshold = isset($_SESSION['selOutlet']['approval_pax_threshold']) ? (int)$_SESSION['selOutlet']['approval_pax_threshold'] : 0;
+			$needs_approval = ($waitlist != 1) && $approval_threshold > 0 && (int)$res_pax > $approval_threshold;
+			if ($needs_approval) {
+				$keys[] = 'reservation_approval';
+				$values[] = "'pending'";
+			}
+
 		  if ($waitlist != 1){
 			// enter into database - a new online booking must only ever INSERT,
 			// never update an existing reservation (no ON DUPLICATE KEY UPDATE)
 			$query = "INSERT INTO `$dbTables->reservations` (`".implode('`,`', $keys)."`) VALUES (".implode(',', $values).")";
 			$result = query($query);
 			$_SESSION['result'] = $result;
-			
+
 			// Reservation ID
 	 		$resID = mysql_insert_id();
-		
+
 			// *** send confirmation email
 				// ** PHPMailer class
 				require_once('../web/classes/phpmailer/class.phpmailer.php');
 				// ** plugin hook
 				if ($hook->hook_exist('after_booking')) {
 					$_SESSION['form'] = $_POST;
-					$hook->execute_hook('after_booking');
+					$hook->execute_hook('after_booking', $needs_approval ? 'pending' : 'confirmed');
 				}
-			
+
 			// store new reservation in history
 			$result = query("INSERT INTO `$dbTables->res_history` (reservation_id,author) VALUES ('%d','%s')",$resID,mysql_real_escape_string(isset($_SESSION['author']) ? $_SESSION['author'] : ''));
-			// table plan: put the new reservation on a table (optional, never breaks the booking)
-			if (is_file(__DIR__.'/../web/classes/tableplan_assign.class.php')) {
+			// table plan: put the new reservation on a table (optional, never breaks the booking) -
+			// skipped for a pending request, since staff might still decline it
+			if (!$needs_approval && is_file(__DIR__.'/../web/classes/tableplan_assign.class.php')) {
 				require_once(__DIR__.'/../web/classes/tableplan_assign.class.php');
 				tp_hook_after_booking($resID);
 			}
-			// Reservation was done
-			$waitlist = 2;
-		  }	
+			// Reservation was done - 2 = confirmed, 3 = pending staff approval
+			$waitlist = $needs_approval ? 3 : 2;
+		  }
 			// reservation done, handle back waitlist status
 			return $waitlist;
 	 }

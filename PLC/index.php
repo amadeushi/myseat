@@ -142,8 +142,7 @@ $brand = isset($settings['brandName']) && $settings['brandName'] !== '' ? $setti
 <meta name="theme-color" content="#0c0b0a"/>
 <meta name="robots" content="noindex,nofollow"/>
 <title><?php echo htmlspecialchars($t['title'].' – '.$brand); ?></title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;500&family=Raleway:wght@400;500;600;700&display=swap"/>
+<link rel="stylesheet" href="../web/fonts/fonts.css"/>
 <style>
 :root {
 	--bg: #0c0b0a; --surface: #151312; --surface-2: #1c1a18; --surface-3: #242220;

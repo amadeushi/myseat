@@ -44,6 +44,12 @@ if ($_SESSION['button']==2) {
 		<input type="text" name="outlet_tripadvisor_url" id="outlet_tripadvisor_url" placeholder="https://www.tripadvisor.com/..." title=' ' value="<?php echo htmlspecialchars(isset($row->outlet_tripadvisor_url) ? $row->outlet_tripadvisor_url : ''); ?>"/>
 	</p>
 	<br/>
+	<label><?php echo _approval_settings;?></label>
+	<p>
+		<label style="font-weight:normal;text-transform:none;letter-spacing:0;"><?php echo _approval_threshold_label;?></label>
+		<input type="number" name="approval_pax_threshold" id="approval_pax_threshold" min="0" step="1" placeholder="0" title=' ' value="<?php echo (int)(isset($row->approval_pax_threshold) ? $row->approval_pax_threshold : 0); ?>"/>
+	</p>
+	<br/>
 	<label><?php echo _seats;?></label>
 	&nbsp;<?php echo uiIcon('info', array('class' => 'tipsyold', 'title' => MAN_3)); ?>
 	<p>		 	 	 	 	 	 	

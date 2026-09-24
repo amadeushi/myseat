@@ -23,7 +23,7 @@ $outlet = null;
 $property = null;
 if ($f) {
 	$outlet = mysqli_fetch_assoc(mysqli_query($GLOBALS['__mysql_compat_link'],
-		"SELECT outlet_name, outlet_tripadvisor_url, outlet_google_url, property_id FROM `".$dbTables->outlets."` WHERE outlet_id = ".(int)$f['outlet_id']." LIMIT 1"));
+		"SELECT outlet_name, outlet_tripadvisor_url, outlet_google_url, confirmation_email, property_id FROM `".$dbTables->outlets."` WHERE outlet_id = ".(int)$f['outlet_id']." LIMIT 1"));
 	if ($outlet) {
 		$property = mysqli_fetch_assoc(mysqli_query($GLOBALS['__mysql_compat_link'],
 			"SELECT name FROM `".$dbTables->properties."` WHERE id = ".(int)$outlet['property_id']." LIMIT 1"));
@@ -51,27 +51,27 @@ if ($f && $_SERVER['REQUEST_METHOD'] === 'POST' && $f['status'] === 'requested')
 $t = $de ? array(
 	'title' => 'Dein Feedback', 'invalid' => 'Dieser Link ist ungültig oder abgelaufen.',
 	'already_h' => 'Danke, das haben wir schon!', 'already' => 'Zu dieser Reservierung liegt uns bereits dein Feedback vor.',
-	'heading' => 'Wie war dein Besuch?', 'sub' => 'Deine Meinung hilft uns, noch besser zu werden.',
+	'heading' => 'Wie war dein Besuch?', 'sub' => 'Sag uns ehrlich, was gut lief und was wir besser machen können. Beides hilft uns.',
 	'food' => 'Speisen & Getränke', 'service' => 'Service',
 	'comment_l' => 'Möchtest du uns noch etwas mitteilen? (optional)', 'submit' => 'Feedback senden',
 	'consent_l' => 'Diese Bewertung darf (mit Vorname und Initiale) öffentlich gezeigt werden.',
-	'thanks_high_h' => 'Vielen Dank für dein tolles Feedback!',
-	'thanks_high' => 'Es würde uns riesig freuen, wenn du deine Erfahrung auch öffentlich teilst:',
-	'thanks_low_h' => 'Danke für deine ehrliche Rückmeldung.',
-	'thanks_low' => 'Wir nehmen dein Feedback sehr ernst und werden uns das genau ansehen.',
-	'google' => 'Auf Google bewerten', 'tripadvisor' => 'Auf TripAdvisor bewerten',
+	'thanks_high_h' => 'Das freut uns riesig, danke!',
+	'thanks_high' => 'Wenn du magst, hilft uns eine kurze Bewertung auf TripAdvisor sehr, damit andere uns finden. Es dauert nur eine Minute.',
+	'thanks_low_h' => 'Danke für deine Ehrlichkeit.',
+	'thanks_low' => 'Das tut uns leid, und wir nehmen es ernst. Schreib uns gern kurz, was schiefgelaufen ist, wir melden uns persönlich bei dir.',
+	'google' => 'Auf Google bewerten', 'google_alt' => 'Oder auf Google bewerten', 'tripadvisor' => 'Auf TripAdvisor bewerten', 'write_us' => 'Uns direkt schreiben',
 ) : array(
 	'title' => 'Your feedback', 'invalid' => 'This link is invalid or has expired.',
 	'already_h' => 'Thanks, we already have that!', 'already' => 'We already have your feedback for this reservation.',
-	'heading' => 'How was your visit?', 'sub' => 'Your feedback helps us get even better.',
+	'heading' => 'How was your visit?', 'sub' => 'Tell us honestly what went well and what we can do better. Both help us.',
 	'food' => 'Food & Drinks', 'service' => 'Service',
 	'comment_l' => 'Anything else you would like to tell us? (optional)', 'submit' => 'Send feedback',
 	'consent_l' => 'This review may be shown publicly (with first name and initial).',
-	'thanks_high_h' => 'Thank you so much for your great feedback!',
-	'thanks_high' => 'We would be thrilled if you shared your experience publicly, too:',
-	'thanks_low_h' => 'Thank you for your honest feedback.',
-	'thanks_low' => 'We take this very seriously and will look into it.',
-	'google' => 'Rate us on Google', 'tripadvisor' => 'Rate us on TripAdvisor',
+	'thanks_high_h' => 'That makes us so happy, thank you!',
+	'thanks_high' => 'If you like, a short review on TripAdvisor helps others find us. It only takes a minute.',
+	'thanks_low_h' => 'Thank you for being honest.',
+	'thanks_low' => 'We are sorry, and we take it seriously. Please write to us and tell us what went wrong, we will get back to you personally.',
+	'google' => 'Rate us on Google', 'google_alt' => 'Or rate us on Google', 'tripadvisor' => 'Rate us on TripAdvisor', 'write_us' => 'Write to us directly',
 );
 ?>
 <!DOCTYPE html>
@@ -81,8 +81,7 @@ $t = $de ? array(
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="robots" content="noindex,nofollow"/>
 <title><?php echo htmlspecialchars($t['title'].' – '.$brand); ?></title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;500&family=Raleway:wght@400;500;600;700&display=swap"/>
+<link rel="stylesheet" href="../web/fonts/fonts.css"/>
 <style>
 :root {
 	--bg: #0c0b0a; --surface: #151312; --surface-2: #1c1a18;
@@ -122,6 +121,8 @@ textarea:focus { outline: none; border-color: var(--gold); }
 .ext-links { display: flex; flex-direction: column; gap: 12px; margin-top: 22px; }
 .ext-btn { display: block; text-align: center; padding: 14px; border-radius: 999px; text-decoration: none; font-weight: 700; border: 1px solid var(--border); color: var(--text); }
 .ext-btn:hover { border-color: var(--gold); color: var(--gold-strong); }
+.ext-btn-primary { background: var(--gold); border-color: var(--gold); color: #1a1408; }
+.ext-btn-primary:hover { background: var(--gold-strong); border-color: var(--gold-strong); color: #1a1408; }
 </style>
 </head>
 <body>
@@ -134,17 +135,23 @@ textarea:focus { outline: none; border-color: var(--gold); }
 			<?php if ($submitted_now >= 4): ?>
 				<h1><?php echo htmlspecialchars($t['thanks_high_h']); ?></h1>
 				<p class="sub"><?php echo htmlspecialchars($t['thanks_high']); ?></p>
+				<?php $has_ta = !empty($outlet['outlet_tripadvisor_url']); $has_go = !empty($outlet['outlet_google_url']); ?>
 				<div class="ext-links">
-					<?php if (!empty($outlet['outlet_google_url'])): ?>
-						<a class="ext-btn" href="<?php echo htmlspecialchars($outlet['outlet_google_url']); ?>" target="_blank" rel="noopener"><?php echo htmlspecialchars($t['google']); ?></a>
+					<?php if ($has_ta): ?>
+						<a class="ext-btn ext-btn-primary" href="<?php echo htmlspecialchars($outlet['outlet_tripadvisor_url']); ?>" target="_blank" rel="noopener"><?php echo htmlspecialchars($t['tripadvisor']); ?></a>
 					<?php endif; ?>
-					<?php if (!empty($outlet['outlet_tripadvisor_url'])): ?>
-						<a class="ext-btn" href="<?php echo htmlspecialchars($outlet['outlet_tripadvisor_url']); ?>" target="_blank" rel="noopener"><?php echo htmlspecialchars($t['tripadvisor']); ?></a>
+					<?php if ($has_go): ?>
+						<a class="ext-btn<?php echo $has_ta ? '' : ' ext-btn-primary'; ?>" href="<?php echo htmlspecialchars($outlet['outlet_google_url']); ?>" target="_blank" rel="noopener"><?php echo htmlspecialchars($has_ta ? $t['google_alt'] : $t['google']); ?></a>
 					<?php endif; ?>
 				</div>
 			<?php else: ?>
 				<h1><?php echo htmlspecialchars($t['thanks_low_h']); ?></h1>
 				<p class="sub"><?php echo htmlspecialchars($t['thanks_low']); ?></p>
+				<?php if (!empty($outlet['confirmation_email'])): ?>
+					<div class="ext-links">
+						<a class="ext-btn ext-btn-primary" href="mailto:<?php echo htmlspecialchars($outlet['confirmation_email']); ?>"><?php echo htmlspecialchars($t['write_us']); ?></a>
+					</div>
+				<?php endif; ?>
 			<?php endif; ?>
 
 		<?php elseif ($f['status'] === 'submitted'): ?>

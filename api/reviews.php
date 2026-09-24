@@ -24,16 +24,29 @@ $property = $outlet ? mysqli_fetch_assoc(mysqli_query($GLOBALS['__mysql_compat_l
 $brand = $outlet ? ($outlet['outlet_name'] !== '' ? $outlet['outlet_name'] : ($property ? $property['name'] : 'Restaurant')) : 'Restaurant';
 $brand = html_entity_decode($brand, ENT_QUOTES, 'UTF-8');
 
-$reviews = fb_public_reviews($outlet_id, 50);
-$stats = fb_stats($reviews);
+$per_page = 50;
+$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+$total = fb_public_reviews_count($outlet_id);
+$total_pages = max(1, (int)ceil($total / $per_page));
+$page = min($page, $total_pages);
+$offset = ($page - 1) * $per_page;
+
+$reviews = fb_public_reviews($outlet_id, $per_page, $offset);
+$stats = fb_public_stats($outlet_id); // over ALL public reviews, not just the current page
 
 $t = $de ? array(
 	'title' => 'Bewertungen', 'sub' => 'Was unsere Gäste sagen', 'based_on' => 'basierend auf', 'reviews' => 'Bewertungen',
 	'food' => 'Speisen & Getränke', 'service' => 'Service', 'reply' => 'Antwort vom Restaurant', 'empty' => 'Noch keine öffentlichen Bewertungen.',
+	'prev' => 'Zurück', 'next' => 'Weiter', 'page' => 'Seite',
 ) : array(
 	'title' => 'Reviews', 'sub' => 'What our guests say', 'based_on' => 'based on', 'reviews' => 'reviews',
 	'food' => 'Food & Drinks', 'service' => 'Service', 'reply' => 'Reply from the restaurant', 'empty' => 'No public reviews yet.',
+	'prev' => 'Previous', 'next' => 'Next', 'page' => 'Page',
 );
+
+function fb_page_url($outlet_id, $lang, $page) {
+	return '?outletID='.(int)$outlet_id.($lang === 'en' ? '&lang=en' : '').'&page='.(int)$page;
+}
 
 function fb_stars_static($n, $size = 18) {
 	$n = (int)$n; $out = '';
@@ -47,8 +60,7 @@ function fb_stars_static($n, $size = 18) {
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title><?php echo htmlspecialchars($t['title'].' – '.$brand); ?></title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;500&family=Raleway:wght@400;500;600;700&display=swap"/>
+<link rel="stylesheet" href="../web/fonts/fonts.css"/>
 <style>
 :root {
 	--bg: #0c0b0a; --surface: #151312; --surface-2: #1c1a18;
@@ -81,6 +93,10 @@ body {
 .card-reply { margin-top: 12px; padding: 10px 14px; background: rgba(201,162,89,.08); border-left: 2px solid var(--gold); border-radius: 4px; font-size: 13px; }
 .card-reply strong { color: var(--text); }
 .empty { text-align: center; padding: 40px 0; }
+.pager { display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 24px; font-size: 13px; }
+.pager a { color: var(--gold-strong); text-decoration: none; }
+.pager a:hover { text-decoration: underline; }
+.pager span.disabled { color: var(--text-muted); opacity: .4; }
 </style>
 </head>
 <body>
@@ -116,6 +132,22 @@ body {
 				<?php endif; ?>
 			</div>
 		<?php endforeach; endif; ?>
+
+		<?php if ($total_pages > 1): ?>
+		<div class="pager">
+			<?php if ($page > 1): ?>
+				<a href="<?php echo fb_page_url($outlet_id, $lang, $page - 1); ?>">&laquo; <?php echo htmlspecialchars($t['prev']); ?></a>
+			<?php else: ?>
+				<span class="disabled">&laquo; <?php echo htmlspecialchars($t['prev']); ?></span>
+			<?php endif; ?>
+			<span><?php echo htmlspecialchars($t['page']).' '.$page.' / '.$total_pages; ?></span>
+			<?php if ($page < $total_pages): ?>
+				<a href="<?php echo fb_page_url($outlet_id, $lang, $page + 1); ?>"><?php echo htmlspecialchars($t['next']); ?> &raquo;</a>
+			<?php else: ?>
+				<span class="disabled"><?php echo htmlspecialchars($t['next']); ?> &raquo;</span>
+			<?php endif; ?>
+		</div>
+		<?php endif; ?>
 	</div>
 </body>
 </html>

@@ -131,7 +131,7 @@ $prp_info = querySQL('property_info');
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 	<!-- CSS - Setup -->
-	<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;500;600&family=Raleway:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="../web/fonts/fonts.css"/>
 	<link href="style/style.css?v=<?php echo @filemtime(__DIR__.'/style/style.css'); ?>" rel="stylesheet" type="text/css" />
 
     <title><?php echo _reservations;?> &ndash; <?php echo htmlspecialchars($outlet_name); ?></title>
@@ -165,6 +165,33 @@ $prp_info = querySQL('property_info');
 		<div class="confirm-actions">
 			<a class="submit-button" href="<?php echo $website; ?>"><?php echo bt('back_site'); ?></a>
 			<a class="confirm-secondary" href="cancel.php?nr=<?php echo urlencode($_SESSION['booking_number']); ?>&amp;email=<?php echo urlencode($_POST['reservation_guest_email']); ?>"><?php echo bt('cancel_res'); ?></a>
+		</div>
+
+	<?php elseif ($waitlist == 3): ?>
+
+		<div class="confirm-icon is-waitlist">
+			<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+		</div>
+		<h1 class="confirm-title"><?php echo bt('pending_title'); ?></h1>
+		<p class="confirm-text"><?php echo bt('pending_text'); ?> <strong><?php echo htmlspecialchars($_SESSION['booking_number']); ?></strong></p>
+
+		<div class="wizard-summary">
+			<div class="summary-item">
+				<span class="summary-label"><?php echo _date;?></span>
+				<span class="summary-value"><?php echo buildDate($general['dateformat'],$sd,$sm,$sy); ?></span>
+			</div>
+			<div class="summary-item">
+				<span class="summary-label"><?php echo _time;?></span>
+				<span class="summary-value"><?php echo $bookingtime; ?></span>
+			</div>
+			<div class="summary-item">
+				<span class="summary-label"><?php echo ucfirst(_people_);?></span>
+				<span class="summary-value"><?php echo (int)$_POST['reservation_pax']; ?></span>
+			</div>
+		</div>
+
+		<div class="confirm-actions">
+			<a class="submit-button" href="<?php echo $website; ?>"><?php echo bt('back_site'); ?></a>
 		</div>
 
 	<?php elseif ($waitlist == 1): ?>

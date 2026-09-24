@@ -215,9 +215,7 @@ if($check_web_outlet==1){
 	<link rel="shortcut icon" href="http://www.myseat.us/favicon.ico">
 
 	<!-- CSS - Setup -->
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;500;600&family=Raleway:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="../web/fonts/fonts.css"/>
 	<link href="style/datepicker.css" rel="stylesheet" type="text/css" />
 	<link href="style/style.css?v=<?php echo @filemtime(__DIR__.'/style/style.css'); ?>" rel="stylesheet" type="text/css" />
 

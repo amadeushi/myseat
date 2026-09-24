@@ -23,7 +23,7 @@ This file is part of mySeat.
 /** Login **/
 // ** set configuration
 	//Software version - http://github.com/apmuthu/myseat
-	$sw_version = 'v0.2201';
+	$sw_version = 'v0.2202';
 	
 	include('../config/config.general.php');
 	

@@ -605,6 +605,12 @@ define ( '_feedback_settings', 'Review profiles' );
 define ( '_feedback_tripadvisor', 'TripAdvisor link' );
 define ( '_feedback_google', 'Google Places link' );
 
+define ( '_approval_settings', 'Reservation requests' );
+define ( '_approval_threshold_label', 'From how many guests does the restaurant need to confirm a booking? (0 = disabled)' );
+define ( '_approval_disabled', 'disabled' );
+define ( '_status_pending', 'Unconfirmed' );
+define ( '_status_cancel', 'Cancelled' );
+
 //original text: "I would like to receive informations by email."
 define ( '_reservation_advertise', 'I would like to receive informations by email.' );
 

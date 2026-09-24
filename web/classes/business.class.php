@@ -401,23 +401,42 @@ function getLangList($langTrans, $set, $disabled = 'enabled'){
 }
 
 // print select list with status of reservation
-function getStatusList($id, $title='NYA', $disabled=''){
-		
+// $pending: true for a reservation that is still an unconfirmed large-party request
+// (reservation_approval='pending', see web/classes/approval.class.php) - shown as "Unbestätigt"
+// in place of "Bestätigt" for the same underlying NYA value. Every list also gets a "Storniert"
+// action: it is not a real reservation_status (handled specially in web/ajax/modify_status.php),
+// picking it hides the reservation like the separate cancel button always did, and - only for a
+// still-pending request - sends the guest a decline mail. Reopening a hidden reservation from any
+// status option reverses that (see modify_status.php for the exact mail rules)
+function getStatusList($id, $title='NYA', $disabled='', $pending=false){
+
 		$status = explode( ",", _statuslist);
 		$value	= array('NYA','ARR','STD','PKD','DEP','NSW');
-		
+
 		// icon per status; browsers with customizable selects (Chrome 135+) show it in the list and
 		// in the closed field, all others fall back to the plain text of the options
 		$icon = array('NYA' => 'st_confirmed', 'ARR' => 'st_arrived', 'STD' => 'st_seated', 'PKD' => 'st_bar', 'DEP' => 'check', 'NSW' => 'st_noshow');
 
-		echo"<select name='status_id' id='stat_".$id."' size='1' class='status_dbox st-".htmlspecialchars($title)."' $disabled>";
+		echo"<select name='status_id' id='stat_".$id."' size='1' class='status_dbox ".($pending ? 'st-PEN' : 'st-'.htmlspecialchars($title))."' $disabled>";
 		echo "<button type='button'><selectedcontent></selectedcontent></button>";
+		if ($pending) {
+			// current state only - not a real status to pick, just shows that this reservation is
+			// still awaiting a decision. Picking "Bestätigt" (or any other real status) below is
+			// what actually approves it - it must stay a genuinely separate, always-clickable
+			// option, never just a relabelled/already-selected NYA (that would never fire a
+			// change event, so the approval could only ever be triggered by picking an unrelated
+			// arrival status like "Angekommen")
+			echo "<option value='PEN' class='st-PEN' selected='selected'>".uiIcon('clock')."<span>"._status_pending."</span></option>\n";
+		}
 		// loooping...
 		for ($i=0; $i < 6; $i++) {
 			echo "<option value='".$value[$i]."' class='st-".$value[$i]."' ";
-			echo ($title==$value[$i]) ? "selected='selected'" : "";
+			echo (!$pending && $title==$value[$i]) ? "selected='selected'" : "";
 			echo ">".uiIcon($icon[$value[$i]])."<span>".$status[$i]."</span></option>\n";
 		}
+		echo "<option value='CXL' class='st-CXL' ";
+		echo (!$pending && $title=='CXL') ? "selected='selected'" : "";
+		echo ">".uiIcon('cross')."<span>"._status_cancel."</span></option>\n";
 
 		echo "</select>\n";
 }

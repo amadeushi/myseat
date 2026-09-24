@@ -75,7 +75,7 @@
 				echo "<td class='big tb_nr' id='tb_table'>".uiIcon('table', array('class' => 'tipsy leftside noprint', 'title' => _table, 'alt' => _table)).tp_table_cell($id, $row->reservation_table, $_SESSION['selectedDate'])."</td>";
 			}
 			echo "<td class='noprint'><div>";
-				getStatusList($id, $row->reservation_status);
+				getStatusList($id, $row->reservation_status, '', isset($row->reservation_approval) && $row->reservation_approval === 'pending');
 			echo "</div></td>";
 			echo "<td class='noprint'>";
 			echo "<small>".$row->reservation_booker_name." | ".humanize($row->reservation_timestamp)."</small>";
@@ -87,7 +87,7 @@
 			// WAITLIST ALLOW BUTTON
 			if($_SESSION['wait'] == 1){
 				$leftspace = leftSpace(substr($row->reservation_time,0,5), $availability);
-				if($leftspace >= $row->reservation_pax && $_SESSION['outlet_max_tables']-$tbl_availability[substr($row->reservation_time,0,5)] >= 1){	    
+				if($leftspace >= $row->reservation_pax && $_SESSION['outlet_max_tables']-$tbl_availability[substr($row->reservation_time,0,5)] >= 1){
 					echo"&nbsp;<a href='#' name='".$id."' class='alwbtn'>".uiIcon('check', array('class' => 'help', 'title' => _allow, 'alt' => _allow))."</a>&nbsp;&nbsp;";
 				}
 			}

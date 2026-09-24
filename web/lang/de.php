@@ -603,6 +603,12 @@ define ( '_feedback_settings', 'Bewertungsprofile' );
 define ( '_feedback_tripadvisor', 'TripAdvisor-Link' );
 define ( '_feedback_google', 'Google-Places-Link' );
 
+define ( '_approval_settings', 'Reservierungsanfragen' );
+define ( '_approval_threshold_label', 'Ab wie vielen Personen ist eine Bestätigung durch das Restaurant nötig? (0 = deaktiviert)' );
+define ( '_approval_disabled', 'deaktiviert' );
+define ( '_status_pending', 'Unbestätigt' );
+define ( '_status_cancel', 'Storniert' );
+
 //original text: "I would like to receive informations by email."
 define ( '_reservation_advertise', 'Ich möchte in Zukunft Informationen per Email erhalten.' );
 

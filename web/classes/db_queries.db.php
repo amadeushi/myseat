@@ -1,8 +1,12 @@
 <?php
 require_once __DIR__ . '/mysql_compat.php';
+require_once __DIR__ . '/approval.class.php';
 
 function querySQL($statement){
 	GLOBAL $storno,$wait,$author,$cellid,$repeatid,$id,$value,$field,$searchquery,$dbTables;
+	// self-provisions the approval-layer columns on outlets/reservations before any query that
+	// might reference them (db_outlet_info, reservations_pending_approval) can run
+	appr_ensure_schema();
 	$today 		  = date('Y-m-d');
 	$yesterday	  = date('Y-m-d', time()-86400);
 	$before_yesterday = date('Y-m-d', time()-172800);
@@ -171,8 +175,9 @@ function querySQL($statement){
 			$result = query("SELECT outlet_id, outlet_name, property_id, outlet_description, outlet_description_en,	 
 						cuisine_style, property_id, outlet_max_capacity, outlet_max_tables, outlet_open_time, 	 
 						outlet_close_time, outlet_timestamp, outlet_closeday, saison_start, saison_end,  	  	 
-						saison_year, webform, limit_password, confirmation_email, passerby_max_pax, avg_duration,	 
-						1_open_time,1_close_time, 2_open_time,2_close_time, 	 
+						saison_year, webform, limit_password, confirmation_email, passerby_max_pax, avg_duration,
+						approval_pax_threshold,
+						1_open_time,1_close_time, 2_open_time,2_close_time,
 						3_open_time,3_close_time, 4_open_time,4_close_time, 	 
 						5_open_time, 5_close_time, 6_open_time, 6_close_time, 	 
 						0_open_time, 0_close_time, 1_open_break, 1_close_break, 	 
@@ -375,14 +380,14 @@ function querySQL($statement){
 			reservation_timestamp, reservation_ip, reservation_hidden,
 			reservation_wait, repeat_id, reservation_bill,
 			reservation_discount, reservation_bill_paid, reservation_billet_sent,
-			reservation_parkticket, reservation_table, reservation_status,
+			reservation_parkticket, reservation_table, reservation_status, reservation_approval,
 			reservation_advertise,reservation_referer
-							FROM `$dbTables->reservations` 
-							INNER JOIN `$dbTables->outlets` ON `outlet_id` = `reservation_outlet_id` 
-							WHERE `reservation_hidden` = '%d' 
-							AND `reservation_wait` = '%d' 
-							AND `reservation_outlet_id` = '%d' 
-							AND `reservation_date` = '%s' 
+							FROM `$dbTables->reservations`
+							INNER JOIN `$dbTables->outlets` ON `outlet_id` = `reservation_outlet_id`
+							WHERE `reservation_hidden` = '%d'
+							AND `reservation_wait` = '%d'
+							AND `reservation_outlet_id` = '%d'
+							AND `reservation_date` = '%s'
 							ORDER BY `reservation_time` ASC",
 							$_SESSION['storno'],$_SESSION['wait'],$_SESSION['outletID'],$_SESSION['selectedDate']
 							);
@@ -397,7 +402,7 @@ function querySQL($statement){
 			reservation_timestamp, reservation_ip, reservation_hidden,
 			reservation_wait, repeat_id, reservation_bill,
 			reservation_discount, reservation_bill_paid, reservation_billet_sent,
-			reservation_parkticket, reservation_table, reservation_status,
+			reservation_parkticket, reservation_table, reservation_status, reservation_approval,
 			reservation_advertise,reservation_referer,$dbTables->outlets.outlet_name
 							FROM `$dbTables->reservations` 
 							INNER JOIN `$dbTables->outlets` ON `outlet_id` = `reservation_outlet_id` 
@@ -475,8 +480,8 @@ function querySQL($statement){
 			return getRowListarray($result);
 		break;
 		case 'del_res_single':
-			$result = query("UPDATE `$dbTables->reservations` 
-							SET `reservation_hidden`='1', `reservation_booker_name`='%s',	`reservation_timestamp` = now()
+			$result = query("UPDATE `$dbTables->reservations`
+							SET `reservation_hidden`='1', `reservation_status`='CXL', `reservation_booker_name`='%s',	`reservation_timestamp` = now()
 							WHERE `reservation_id`='%d'",$author,$cellid);
 			return $result;
 		break;
@@ -486,8 +491,8 @@ function querySQL($statement){
 			return $result;
 		break;
 		case 'del_res_multi':
-			$result = query("UPDATE `$dbTables->reservations` 
-							SET `reservation_hidden`='1', `reservation_booker_name`='%s', `reservation_timestamp` = now() 
+			$result = query("UPDATE `$dbTables->reservations`
+							SET `reservation_hidden`='1', `reservation_status`='CXL', `reservation_booker_name`='%s', `reservation_timestamp` = now()
 							WHERE `repeat_id`='%d'",$author,$repeatid);
 			return $result;
 		break;

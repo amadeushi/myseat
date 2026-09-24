@@ -152,9 +152,7 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<meta name="robots" content="noindex,nofollow" />
 
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;500;600&family=Raleway:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="../web/fonts/fonts.css"/>
 	<link href="style/style.css?v=<?php echo @filemtime(__DIR__.'/style/style.css'); ?>" rel="stylesheet" type="text/css" />
 
 	<title><?php echo $h($t['lookup_title']); ?><?php echo $prp_info['name'] ? ' &ndash; '.$prp_info['name'] : ''; ?></title>

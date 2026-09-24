@@ -170,13 +170,33 @@ function fb_public_name($full) {
 }
 
 // approved, public reviews for the embeddable widget / public page - newest first
-function fb_public_reviews($outlet_id, $limit = 20) {
+function fb_public_reviews($outlet_id, $limit = 20, $offset = 0) {
 	fb_ensure_schema();
 	return fb_rows("SELECT guest_name, rating_food, rating_service, rating_overall, comment, reply, visit_date
 			FROM ".fb_t('tp_feedback')."
 			WHERE outlet_id=? AND status='submitted' AND consent_public=1 AND is_public=1
-			ORDER BY visit_date DESC, feedback_id DESC LIMIT ?",
-		'ii', array((int)$outlet_id, (int)$limit));
+			ORDER BY visit_date DESC, feedback_id DESC LIMIT ? OFFSET ?",
+		'iii', array((int)$outlet_id, (int)$limit, (int)$offset));
+}
+
+// total count of publicly visible reviews for an outlet - used for pagination
+function fb_public_reviews_count($outlet_id) {
+	fb_ensure_schema();
+	$row = fb_row("SELECT COUNT(*) c FROM ".fb_t('tp_feedback')."
+			WHERE outlet_id=? AND status='submitted' AND consent_public=1 AND is_public=1",
+		'i', array((int)$outlet_id));
+	return $row ? (int)$row['c'] : 0;
+}
+
+// the average rating and star distribution should always reflect ALL public reviews, not just
+// the current page - fb_stats() is normally called on an already-paginated fb_rows() result, so
+// this pulls the ratings for the whole outlet separately for that purpose
+function fb_public_stats($outlet_id) {
+	fb_ensure_schema();
+	$rows = fb_rows("SELECT rating_overall, rating_food, rating_service FROM ".fb_t('tp_feedback')."
+			WHERE outlet_id=? AND status='submitted' AND consent_public=1 AND is_public=1 AND rating_overall IS NOT NULL",
+		'i', array((int)$outlet_id));
+	return fb_stats($rows);
 }
 
 function fb_reply($feedback_id, $reply) {
@@ -220,25 +240,28 @@ function fb_mail_build($ctx) {
 	$name = $ctx['guest_name'];
 	$url = $ctx['form_url'];
 
+	global $settings;
+	$who = !empty($settings['mailSignName']) ? $settings['mailSignName'] : 'Hamun';
+
 	if ($de) {
-		$subject = 'Wie war dein Besuch im '.$brand.'?';
+		$subject = 'Wie war dein Abend bei uns, '.$name.'?';
 		$greeting = 'Hallo '.$name.',';
-		$intro = 'vielen Dank für deinen Besuch bei uns! Wir würden uns sehr freuen, wenn du dir eine Minute Zeit nimmst und uns dein Feedback gibst.';
-		$cta = 'Jetzt bewerten';
+		$intro = 'schön, dass du bei uns warst! Uns interessiert ehrlich, wie es für dich war: was gut lief und was wir besser machen können. Beides hilft uns. Wenn etwas nicht gepasst hat, ist das keine Störung, sondern genau das, was wir wissen wollen.';
+		$cta = 'Jetzt Feedback geben';
 		$note = 'Dauert nur eine Minute.';
-		$closing = 'Vielen Dank und bis bald!';
-		$sign = 'Dein '.$brand.'-Team';
+		$closing = 'Danke, dass du dir die Zeit nimmst.';
+		$sign = $who.' vom '.$brand.'-Team';
 		$legal_h = 'Angaben zum Anbieter';
 		$imprint_l = 'Impressum'; $privacy_l = 'Datenschutz';
 		$auto = 'Diese E-Mail wurde automatisch nach deinem Besuch versendet.';
 	} else {
-		$subject = 'How was your visit at '.$brand.'?';
+		$subject = 'How was your evening with us, '.$name.'?';
 		$greeting = 'Hello '.$name.',';
-		$intro = 'thank you for visiting us! We would really appreciate it if you could take a minute to share your feedback with us.';
-		$cta = 'Leave feedback';
+		$intro = 'it was lovely to have you! We honestly want to know how it was for you: what went well and what we can do better. Both help us. If something was not right, that is not a bother, it is exactly what we want to know.';
+		$cta = 'Give feedback';
 		$note = 'Takes only a minute.';
-		$closing = 'Thank you and see you again soon!';
-		$sign = 'The '.$brand.' team';
+		$closing = 'Thank you for taking the time.';
+		$sign = $who.' from the '.$brand.' team';
 		$legal_h = 'Provider information';
 		$imprint_l = 'Legal notice'; $privacy_l = 'Privacy policy';
 		$auto = 'This email was sent automatically after your visit.';
@@ -283,21 +306,24 @@ function fb_reply_mail_build($ctx) {
 	$name = $ctx['guest_name'];
 	$reply = $ctx['reply'];
 
+	global $settings;
+	$who = !empty($settings['mailSignName']) ? $settings['mailSignName'] : 'Hamun';
+
 	if ($de) {
-		$subject = 'Antwort auf dein Feedback im '.$brand;
+		$subject = 'Unsere Antwort auf dein Feedback';
 		$greeting = 'Hallo '.$name.',';
-		$intro = 'vielen Dank nochmal für dein Feedback! Wir haben dir darauf geantwortet:';
-		$closing = 'Wir hoffen, dich bald wieder bei uns begrüßen zu dürfen!';
-		$sign = 'Dein '.$brand.'-Team';
+		$intro = 'danke, dass du dir die Zeit genommen hast, uns zu schreiben. Hier ist unsere Antwort:';
+		$closing = 'Wir freuen uns, wenn wir uns bald wiedersehen.';
+		$sign = $who.' vom '.$brand.'-Team';
 		$legal_h = 'Angaben zum Anbieter';
 		$imprint_l = 'Impressum'; $privacy_l = 'Datenschutz';
 		$auto = 'Diese E-Mail wurde automatisch versendet, nachdem das Restaurant auf dein Feedback geantwortet hat.';
 	} else {
-		$subject = 'Reply to your feedback at '.$brand;
+		$subject = 'Our reply to your feedback';
 		$greeting = 'Hello '.$name.',';
-		$intro = 'thank you again for your feedback! Here is our reply:';
-		$closing = 'We hope to welcome you back again soon!';
-		$sign = 'The '.$brand.' team';
+		$intro = 'thank you for taking the time to write to us. Here is our reply:';
+		$closing = 'We look forward to seeing you again soon.';
+		$sign = $who.' from the '.$brand.' team';
 		$legal_h = 'Provider information';
 		$imprint_l = 'Legal notice'; $privacy_l = 'Privacy policy';
 		$auto = 'This email was sent automatically after the restaurant replied to your feedback.';
