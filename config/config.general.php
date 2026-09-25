@@ -70,6 +70,9 @@
  // group pre-order (web/classes/grouporder.class.php): address of the n8n webhook; empty = the default
  // https://n8n.amds.at/webhook/gruppenbestellung
  $settings['groupOrderUrl'] = '';
+ // key of the webhook's machine interface (header X-Api-Key); without it no group can be created.
+ // Keep it only in the server's copy of this file, never in git.
+ $settings['groupOrderApiKey'] = '';
 
 // ** Daylight settings
  // ** noon time

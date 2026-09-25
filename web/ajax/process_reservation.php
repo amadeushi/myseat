@@ -322,6 +322,16 @@ if ($_SESSION['token'] == $_POST['token'] && $compare_pass > 0 ) {
 			
 			// set back selected date
 			$_SESSION['selectedDate'] = $selectedDate;
+
+			// group pre-order (n8n): a moved reservation moves its group too (never breaks the save)
+			if (!empty($_POST['reservation_id'])) {
+				try {
+					require_once(__DIR__.'/../classes/grouporder.class.php');
+					go_sync_pickup((int)$_POST['reservation_id']);
+				} catch (Throwable $e) {
+					error_log('mySeat group order sync: '.$e->getMessage());
+				}
+			}
 		
 			// *** send confirmation email
 			if ( $_POST['email_type'] != 'no' && $new_id != $_POST['reservation_id']) {

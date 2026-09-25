@@ -3,8 +3,8 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 1.1.0                         =-=
-=-= Date:    24.09.2026                   =-=
+=-= Version: 2.0.0                         =-=
+=-= Date:    25.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 
@@ -45,12 +45,31 @@ commit (git tag vX.Y.Z). Based on mySeat by Bernd Orttenburger and contributors,
 CHANGELOG
 =========
 
-Versions 0.2161 - 1.1.0 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 2.0.0 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-25 == mySeat v2.0.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * ACTION NEEDED: new setting $settings['groupOrderApiKey'] in config/config.general.php on the
+   server. The n8n workflow "Gruppenbestellung" no longer lets anyone create groups: mySeat now
+   uses its machine interface with the header X-Api-Key (n8n only keeps the key's SHA-256) and
+   gets JSON back instead of a page. Without the key the block "Gruppenbestellung" reports that it
+   is missing and creates nothing. The key belongs only in the server's copy of the file, not in git.
+ * Group pre-order: the reservation details now show the participant link and the confidential
+   organizer link the guest received. The guest's name is used for the greeting of the invitation;
+   booking number and reservation id go along, so n8n never creates a second group for the same
+   reservation (a retry after a lost answer links the existing group and sends no second mail).
+ * Group pre-order: when a reservation with a group is moved to another date or time, the group
+   moves with it; the order deadline moves by the same number of days and keeps its time of day.
+   Groups created with v1.1.0 have no stored link and are not moved. tp_group_orders gets the
+   columns group_token, participant_url and organizer_url automatically on first use.
+ * n8n side (not part of this repo): the create form of the webhook only opens from the team's
+   management link, and the invitation and the finished list for the restaurant now use the
+   wording and layout of the mySeat mails; replies to the finished list go to the organizer.
 
 2026-09-25 == mySeat v1.1.0 == amadeushi - http://github.com/amadeushi/myseat
 

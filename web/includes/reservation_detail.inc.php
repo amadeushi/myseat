@@ -94,6 +94,10 @@
 			<?php if ($go): ?>
 				<p>Angelegt am <?php echo date('d.m.Y H:i', strtotime($go['created_at'])); ?><br/>
 				<small>Organisator: <?php echo htmlspecialchars($go['organizer_email']); ?><?php echo $go['deadline'] ? ' &middot; Bestellschluss '.date('d.m.Y H:i', strtotime($go['deadline'])) : ''; ?></small></p>
+				<?php if (!empty($go['participant_url'])): ?>
+				<p><small>Teilnehmerlink: <a href="<?php echo htmlspecialchars($go['participant_url']); ?>" target="_blank" rel="noopener"><?php echo htmlspecialchars($go['participant_url']); ?></a><br/>
+				Organisatorlink (vertraulich, gehört dem Gast): <a href="<?php echo htmlspecialchars($go['organizer_url']); ?>" target="_blank" rel="noopener"><?php echo htmlspecialchars($go['organizer_url']); ?></a></small></p>
+				<?php endif; ?>
 			<?php elseif (!filter_var($go_email, FILTER_VALIDATE_EMAIL)): ?>
 				<p><small>Dafür braucht die Reservierung eine E-Mail-Adresse des Gastes.</small></p>
 			<?php else: ?>
@@ -122,7 +126,10 @@
 						data: { id: $box.data('id'), token: $box.data('token'), deadline: $('#go-deadline-on').is(':checked') ? $('#go-deadline').val() : '' },
 						success: function (r) {
 							if (!r || !r.ok) { $status.text((r && r.error) || 'Das hat nicht geklappt.').addClass('is-error'); $submit.prop('disabled', false); return; }
-							$box.html('<p>Angelegt am ' + r.created_at + '<br/><small>' + $('<span>').text(r.message).html() + '</small></p>');
+							var esc = function (t) { return $('<span>').text(t || '').html(); };
+							var link = function (u) { return '<a href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(u) + '</a>'; };
+							$box.html('<p>Angelegt am ' + r.created_at + '<br/><small>' + esc(r.message) + '</small></p>'
+								+ (r.participant_url ? '<p><small>Teilnehmerlink: ' + link(r.participant_url) + '<br/>Organisatorlink (vertraulich, gehört dem Gast): ' + link(r.organizer_url) + '</small></p>' : ''));
 						},
 						error: function () { $status.text('Das hat nicht geklappt. Bitte versuche es noch einmal.').addClass('is-error'); $submit.prop('disabled', false); }
 					});
