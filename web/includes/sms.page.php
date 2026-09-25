@@ -6,7 +6,7 @@ $sm_key = sms_key_info();
 $sm_flag = sms_cfg()['enabled'];
 $sm_ready = sms_enabled();
 $sm_stats = $sm_ready ? sms_stats() : null;
-$sm_errors = $sm_key['source'] !== null ? fb_rows("SELECT event_type, phone, last_error, updated_at FROM ".fb_t('tp_sms_outbox')." WHERE status = 'failed' ORDER BY id DESC LIMIT 5") : array();
+$sm_errors = $sm_key['source'] !== null ? fb_rows("SELECT event_type, phone, text, last_error, updated_at FROM ".fb_t('tp_sms_outbox')." WHERE status = 'failed' ORDER BY id DESC LIMIT 5") : array();
 $sm_link = sms_link_cfg();
 $sm_src = array('settings' => 'aus diesen Einstellungen', 'config' => 'aus der Konfigurationsdatei des Servers');
 ?>
@@ -65,7 +65,9 @@ $sm_src = array('settings' => 'aus diesen Einstellungen', 'config' => 'aus der K
 	<?php endif; ?>
 	<?php if ($sm_errors): ?>
 	<div class="sms-errors"><strong>Letzte Fehler</strong>
-		<ul><?php foreach ($sm_errors as $er): ?><li><?php echo $sm_e(date('d.m. H:i', strtotime($er['updated_at']))); ?> &middot; <?php echo $sm_e($er['event_type']); ?> an <?php echo $sm_e(substr($er['phone'], 0, 5).'***'.substr($er['phone'], -3)); ?>: <?php echo $sm_e($er['last_error']); ?></li><?php endforeach; ?></ul>
+		<ul><?php foreach ($sm_errors as $er): ?><li><?php echo $sm_e(date('d.m. H:i', strtotime($er['updated_at']))); ?> &middot; <?php echo $sm_e($er['event_type']); ?> an <?php echo $sm_e(substr($er['phone'], 0, 5).'***'.substr($er['phone'], -3)); ?>: <?php echo $sm_e($er['last_error']); ?>
+				<?php $sm_odd = array(); foreach (preg_split('//u', (string)$er['text'], -1, PREG_SPLIT_NO_EMPTY) as $ch) { if (strlen($ch) > 1) { $sm_odd[$ch] = sprintf('%s U+%04X', $ch, mb_ord($ch, 'UTF-8')); } } ?>
+				<br/><small>Text (<?php echo (int)mb_strlen($er['text']); ?> Zeichen): <?php echo $sm_e($er['text']); ?><?php echo $sm_odd ? ' &middot; Nicht-ASCII: '.$sm_e(implode(', ', $sm_odd)) : ''; ?></small></li><?php endforeach; ?></ul>
 	</div>
 	<?php endif; ?>
 

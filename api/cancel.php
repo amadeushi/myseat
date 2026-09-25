@@ -111,7 +111,7 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 		if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'cncl_book') {
 			if ($res) {
 				// cancel only after the explicit confirmation click
-				query("UPDATE `$dbTables->reservations` SET `reservation_hidden` = '1' WHERE `reservation_id` = '%d' AND `reservation_hidden` = '0'", (int)$res['reservation_id']);
+				query("UPDATE `$dbTables->reservations` SET `reservation_hidden` = '1', `reservation_status` = 'CXL', `reservation_timestamp` = now() WHERE `reservation_id` = '%d' AND `reservation_hidden` = '0'", (int)$res['reservation_id']);
 				if (mysql_affected_rows() >= 1) {
 					query("INSERT INTO `$dbTables->res_history` (reservation_id,author) VALUES ('%d','Online-Cancel')", (int)$res['reservation_id']);
 					$state = 'done';

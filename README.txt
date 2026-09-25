@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 2.4.0                         =-=
+=-= Version: 2.4.1                         =-=
 =-= Date:    25.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -45,12 +45,20 @@ commit (git tag vX.Y.Z). Based on mySeat by Bernd Orttenburger and contributors,
 CHANGELOG
 =========
 
-Versions 0.2161 - 2.4.0 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 2.4.1 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-25 == mySeat v2.4.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: a reservation cancelled online (link in the mail or SMS, api/cancel.php) now gets the status
+   "cancelled" (CXL) like a cancellation in the backend; before it moved to the cancelled list but the
+   status selector still said "confirmed"
+ * Settings > SMS-Versand: the list of last errors shows the SMS text, its length and any non-ASCII
+   characters, to find out quickly why the gateway refused a text
 
 2026-09-25 == mySeat v2.4.0 == amadeushi - http://github.com/amadeushi/myseat
 
