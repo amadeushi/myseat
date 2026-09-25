@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 2.0.0                         =-=
+=-= Version: 2.1.0                         =-=
 =-= Date:    25.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -45,12 +45,20 @@ commit (git tag vX.Y.Z). Based on mySeat by Bernd Orttenburger and contributors,
 CHANGELOG
 =========
 
-Versions 0.2161 - 2.0.0 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 2.1.0 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-25 == mySeat v2.1.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Group pre-order: new button "Einladung erneut senden" in the reservation details sends the
+   guest the same invitation once more (same links, no new group), for a lost mail. If creating a
+   group finds one from an earlier attempt whose invitation never went out (for example because
+   Gmail failed), mySeat sends it right away. n8n now remembers whether an invitation was sent
+   (new interface action resend_invitation). Nothing to do on the server.
 
 2026-09-25 == mySeat v2.0.0 == amadeushi - http://github.com/amadeushi/myseat
 

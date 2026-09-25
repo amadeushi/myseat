@@ -97,6 +97,7 @@
 				<?php if (!empty($go['participant_url'])): ?>
 				<p><small>Teilnehmerlink: <a href="<?php echo htmlspecialchars($go['participant_url']); ?>" target="_blank" rel="noopener"><?php echo htmlspecialchars($go['participant_url']); ?></a><br/>
 				Organisatorlink (vertraulich, gehört dem Gast): <a href="<?php echo htmlspecialchars($go['organizer_url']); ?>" target="_blank" rel="noopener"><?php echo htmlspecialchars($go['organizer_url']); ?></a></small></p>
+				<p><button type="button" class="go-cancel" id="go-resend">Einladung erneut senden</button> <span id="go-resend-status" class="detail-status" role="status" aria-live="polite"></span></p>
 				<?php endif; ?>
 			<?php elseif (!filter_var($go_email, FILTER_VALIDATE_EMAIL)): ?>
 				<p><small>Dafür braucht die Reservierung eine E-Mail-Adresse des Gastes.</small></p>
@@ -118,6 +119,21 @@
 				$('#go-open').click(function () { $('#go-form').prop('hidden', false); $(this).hide(); });
 				$('#go-cancel').click(function () { $('#go-form').prop('hidden', true); $('#go-open').show(); $status.text(''); });
 				$('#go-deadline-on').change(function () { $('#go-deadline-row').prop('hidden', !this.checked); });
+				// the guest lost the mail, or it never went out: same links, same mail once more
+				$('#go-resend').click(function () {
+					var $b = $(this), $s = $('#go-resend-status');
+					$b.prop('disabled', true);
+					$s.text('Wird gesendet ...').removeClass('is-error');
+					$.ajax({
+						type: 'POST', url: 'ajax/group_order.php', dataType: 'json',
+						data: { id: $box.data('id'), token: $box.data('token'), op: 'resend' },
+						success: function (r) {
+							if (!r || !r.ok) { $s.text((r && r.error) || 'Das hat nicht geklappt.').addClass('is-error'); $b.prop('disabled', false); return; }
+							$s.text(r.message);
+						},
+						error: function () { $s.text('Das hat nicht geklappt. Bitte versuche es noch einmal.').addClass('is-error'); $b.prop('disabled', false); }
+					});
+				});
 				$submit.click(function () {
 					$submit.prop('disabled', true);
 					$status.text('Wird angelegt ...').removeClass('is-error');

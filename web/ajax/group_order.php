@@ -3,6 +3,7 @@
  * Creates the group pre-order for one reservation (see web/classes/grouporder.class.php). The guest
  * becomes the organizer and receives the links by mail; the pickup time is the reservation's date and
  * time, the order deadline is optional. Stores the links n8n returns. Answers JSON.
+ * op=resend sends the invitation of an existing group once more (same links, same template).
  */
 session_start();
 include('../../config/config.general.php');
@@ -38,7 +39,14 @@ if ((int)$r['reservation_hidden'] === 1) { go_out(array('ok' => false, 'error' =
 
 $email = html_entity_decode(trim($r['reservation_guest_email']), ENT_QUOTES, 'UTF-8');
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) { go_out(array('ok' => false, 'error' => 'Für diese Reservierung ist keine gültige E-Mail-Adresse hinterlegt. Der Gast braucht sie, um die Links zu erhalten.')); }
-if (go_find($id)) { go_out(array('ok' => false, 'error' => 'Für diese Reservierung wurde bereits eine Gruppenbestellung angelegt.')); }
+$go = go_find($id);
+if (isset($_POST['op']) && $_POST['op'] === 'resend') {
+	if (!$go || empty($go['group_token'])) { go_out(array('ok' => false, 'error' => 'Zu dieser Reservierung gibt es keine Gruppe, deren Einladung sich erneut senden lässt.')); }
+	$res = go_api(array('action' => 'resend_invitation', 'reservation_id' => (string)$id));
+	if (empty($res['ok'])) { go_out(array('ok' => false, 'error' => (!empty($res['transport']) ? '' : 'n8n: ').(isset($res['error']) ? $res['error'] : 'unbekannter Fehler'))); }
+	go_out(array('ok' => true, 'message' => 'Einladung erneut an '.$go['organizer_email'].' gesendet.'));
+}
+if ($go) { go_out(array('ok' => false, 'error' => 'Für diese Reservierung wurde bereits eine Gruppenbestellung angelegt.')); }
 
 $pickup = substr($r['reservation_date'], 0, 10).' '.substr($r['reservation_time'], 0, 5);
 if ($pickup <= date('Y-m-d H:i')) { go_out(array('ok' => false, 'error' => 'Der Besuch liegt in der Vergangenheit.')); }
@@ -52,6 +60,12 @@ if (!empty($_POST['deadline'])) {
 
 $name = html_entity_decode(trim($r['reservation_guest_name']), ENT_QUOTES, 'UTF-8');
 $res = go_create($r, $name, $email, $pickup, $deadline);
+// the group exists from an earlier attempt whose invitation never went out (e.g. Gmail failed): send it now
+$resent = false;
+if (!empty($res['ok']) && empty($res['created']) && empty($res['invited'])) {
+	$again = go_api(array('action' => 'resend_invitation', 'reservation_id' => (string)$id));
+	$resent = !empty($again['ok']);
+}
 if (empty($res['ok'])) {
 	// a transport problem leaves open whether n8n created the group; n8n never creates it twice, so trying again is safe
 	go_out(array('ok' => false, 'error' => !empty($res['transport'])
@@ -71,5 +85,8 @@ mysqli_stmt_execute($st);
 
 // created = false: n8n already had a group for this reservation (an earlier attempt that got lost), no new mail went out
 go_out(array('ok' => true,
-	'message' => !empty($res['created']) ? 'Gruppenbestellung angelegt. '.$email.' hat die Links per Mail erhalten.' : 'Die Gruppe gab es in n8n schon, sie ist jetzt hier verknüpft. Es ging keine neue Mail raus.',
+	'message' => !empty($res['created']) ? 'Gruppenbestellung angelegt. '.$email.' hat die Links per Mail erhalten.'
+		: ($resent ? 'Die Gruppe gab es in n8n schon, ihre Einladung war aber noch nicht raus. Sie ist jetzt an '.$email.' gesendet.'
+		: (!empty($res['invited']) ? 'Die Gruppe gab es in n8n schon, sie ist jetzt hier verknüpft. Die Einladung war schon raus, es ging keine neue Mail raus.'
+		: 'Die Gruppe gab es in n8n schon und ist jetzt hier verknüpft, die Einladung ließ sich aber nicht senden. Versuche es mit „Einladung erneut senden“.')),
 	'created_at' => date('d.m.Y H:i'), 'participant_url' => $p_url, 'organizer_url' => $o_url));
