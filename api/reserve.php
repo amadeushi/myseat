@@ -431,10 +431,36 @@ if($check_web_outlet==1){
 				</div>
 				<div class="field">
 					<label><?php echo _phone; ?></label>
-					<input type="text" name="reservation_guest_phone" class="required" id="reservation_guest_phone" value="" />
-					<?php require_once __DIR__.'/../web/classes/sms.class.php'; if (sms_enabled()): ?>
-					<small class="field-hint"><?php echo (substr($_SESSION['lang'], 0, 2) === 'en') ? 'With a mobile number we also send the confirmation and a reminder by SMS.' : 'Mit einer Mobilnummer schicken wir dir die Bestätigung und eine Erinnerung auch per SMS.'; ?></small>
+					<input type="text" name="reservation_guest_phone" class="required" id="reservation_guest_phone" value="" inputmode="tel" autocomplete="tel" />
+					<?php require_once __DIR__.'/../web/classes/sms.class.php'; $phone_en = (substr($_SESSION['lang'], 0, 2) === 'en'); if (sms_enabled()): ?>
+					<small class="field-hint" id="phone-hint" data-default="<?php echo $phone_en ? 'With a mobile number we also send the confirmation and a reminder by SMS.' : 'Mit einer Mobilnummer schicken wir dir die Bestätigung und eine Erinnerung auch per SMS.'; ?>" data-mobile="<?php echo $phone_en ? 'Mobile number recognised. You get the confirmation and a reminder by SMS.' : 'Mobilnummer erkannt. Du bekommst die Bestätigung und eine Erinnerung per SMS.'; ?>" data-landline="<?php echo $phone_en ? 'Landline number: we cannot send an SMS to it. Use a mobile number if you would like one.' : 'Festnetznummer: dorthin können wir keine SMS schicken. Mit einer Mobilnummer bekommst du eine.'; ?>"><?php echo $phone_en ? 'With a mobile number we also send the confirmation and a reminder by SMS.' : 'Mit einer Mobilnummer schicken wir dir die Bestätigung und eine Erinnerung auch per SMS.'; ?></small>
 					<?php endif; ?>
+					<script>
+					(function () {
+						var input = document.getElementById('reservation_guest_phone'), hint = document.getElementById('phone-hint');
+						if (!input) { return; }
+						// German/Austrian numbers get the country code: 017622726369 -> +49 176 22726369; other countries stay as typed (00 -> +)
+						function parse(raw) {
+							var t = String(raw || '').trim().replace(/\(\s*0\s*\)\s*/g, ''), d = t.replace(/\D+/g, '');
+							if (d === '') { return { text: '', kind: '' }; }
+							var intl = t;   // the same number with a country code, spacing as typed
+							if (/^00/.test(t)) { intl = '+' + t.replace(/^00\s*/, ''); }
+							else if (/^0/.test(t)) { intl = '+49 ' + t.replace(/^0\s*/, ''); }
+							else if (!/^\+/.test(t)) { return { text: t, kind: '' }; }
+							var n = intl.replace(/\D+/g, ''), cc = n.indexOf('49') === 0 ? '49' : (n.indexOf('43') === 0 ? '43' : ''), nat = cc ? n.slice(2).replace(/^0+/, '') : '';
+							if (cc === '49' && /^1[567]\d{8,9}$/.test(nat)) { return { text: '+49 ' + nat.slice(0, 3) + ' ' + nat.slice(3), kind: 'mobile' }; }
+							if (cc === '43' && /^6\d{7,11}$/.test(nat)) { return { text: '+43 ' + nat.slice(0, 3) + ' ' + nat.slice(3), kind: 'mobile' }; }
+							return { text: intl, kind: (cc === '49' && nat.length >= 6) ? 'landline' : '' };
+						}
+						function showHint() {
+							if (!hint) { return; }
+							var k = parse(input.value).kind;
+							hint.textContent = k === 'mobile' ? hint.dataset.mobile : (k === 'landline' ? hint.dataset.landline : hint.dataset.default);
+						}
+						input.addEventListener('input', showHint);
+						input.addEventListener('blur', function () { var r = parse(input.value); if (r.text !== '') { input.value = r.text; } showHint(); });
+					})();
+					</script>
 				</div>
 
 				<div class="consent-group">

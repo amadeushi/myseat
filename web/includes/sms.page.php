@@ -54,6 +54,7 @@ $sm_src = array('settings' => 'aus diesen Einstellungen', 'config' => 'aus der K
 	<?php if ($sm_key['source'] !== null): ?>
 	<div class="sms-tools">
 		<p><button type="button" class="button_dark" id="sms-health">Verbindung prüfen</button> <small class="offer-help">Testet Gateway und Schlüssel, es wird nichts gesendet.</small></p>
+			<p class="detail-status sms-toolmsg" id="tool-msg" role="status" aria-live="polite"></p>
 		<?php if ($sm_ready): ?>
 		<p class="sms-test"><input type="text" id="sms-phone" inputmode="tel" placeholder="Deine Mobilnummer, z. B. 0151 2345678" autocomplete="off"/> <button type="button" class="button_dark" id="sms-test">Test-SMS senden</button></p>
 		<?php endif; ?>
@@ -86,9 +87,11 @@ $sm_src = array('settings' => 'aus diesen Einstellungen', 'config' => 'aus der K
 window.addEventListener('load', function () {
 	var page = document.querySelector('.sms-page'); if (!page) { return; }
 	var msg = document.getElementById('sms-msg');
-	function say(text, isError) { msg.textContent = text; msg.classList.toggle('is-error', !!isError); }
+	var target = msg;
+	function say(text, isError) { target.textContent = text; target.classList.toggle('is-error', !!isError); }
 	try { var saved = sessionStorage.getItem('smsMsg'); if (saved) { sessionStorage.removeItem('smsMsg'); say(saved, false); } } catch (e) {}
-	function call(op, extra, done) {
+	function call(op, extra, done, where) {
+		target = where || msg; if (where) { msg.textContent = ''; }
 		var fd = new FormData(); fd.append('op', op); fd.append('token', page.dataset.token);
 		for (var k in extra) { if (Object.prototype.hasOwnProperty.call(extra, k)) { fd.append(k, extra[k]); } }
 		say('Einen Moment ...', false);
@@ -121,8 +124,8 @@ window.addEventListener('load', function () {
 	var clear = document.getElementById('sms-clear');
 	if (clear) { clear.addEventListener('click', function () { if (clear.dataset.armed) { call('clear_key', {}, reloadWith); } else { clear.dataset.armed = '1'; clear.textContent = 'Wirklich löschen?'; setTimeout(function () { clear.dataset.armed = ''; clear.textContent = 'Schlüssel löschen'; }, 4000); } }); }
 	var health = document.getElementById('sms-health');
-	if (health) { health.addEventListener('click', function () { call('health', {}, function (r) { say(r.message, !r.health_ok); }); }); }
+	if (health) { health.addEventListener('click', function () { call('health', {}, function (r) { say(r.message, !r.health_ok); }, document.getElementById('tool-msg')); }); }
 	var test = document.getElementById('sms-test');
-	if (test) { test.addEventListener('click', function () { call('test', { phone: document.getElementById('sms-phone').value }, reloadWith); }); }
+	if (test) { test.addEventListener('click', function () { call('test', { phone: document.getElementById('sms-phone').value }, function (r) { say(r.message, false); }, document.getElementById('tool-msg')); }); }
 });
 </script>

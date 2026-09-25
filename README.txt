@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 2.4.1                         =-=
+=-= Version: 2.4.2                         =-=
 =-= Date:    25.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -45,12 +45,21 @@ commit (git tag vX.Y.Z). Based on mySeat by Bernd Orttenburger and contributors,
 CHANGELOG
 =========
 
-Versions 0.2161 - 2.4.1 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 2.4.2 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-25 == mySeat v2.4.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Booking form: the phone number gets its country code when the guest leaves the field (017622726369 ->
+   +49 176 22726369; German/Austrian mobile numbers are grouped, other numbers keep their spacing, 00 -> +).
+   While SMS is on, a hint under the field says whether the number is a mobile number (SMS possible) or a
+   landline (no SMS)
+ * Settings > SMS-Versand: the result of "Verbindung prüfen" and "Test-SMS senden" now shows right below
+   the buttons (it appeared above the form, out of sight, since the cancel-link section was added)
 
 2026-09-25 == mySeat v2.4.1 == amadeushi - http://github.com/amadeushi/myseat
 
