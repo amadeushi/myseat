@@ -87,6 +87,17 @@ function my_email_send_conf($mode = 'confirmed') {
 
 		bm_send_guest_mail($to_guest, $m, $brand, $to_admin);
 		bm_send_admin_mail($to_admin, $m, $brand);
+
+		// SMS confirmation (only a firm table, not a pending request; silent when SMS is off or the number is no mobile number)
+		if ($mode === 'confirmed' && $res_row) {
+			require_once __DIR__ . '/../web/classes/sms.class.php';
+			sms_send_for_reservation('confirmation', array(
+				'reservation_id' => $res_row['reservation_id'], 'phone' => isset($form['reservation_guest_phone']) ? $form['reservation_guest_phone'] : '',
+				'brand' => isset($_SESSION['selOutlet']['outlet_name']) && $_SESSION['selOutlet']['outlet_name'] !== '' ? $_SESSION['selOutlet']['outlet_name'] : $property['name'],
+				'date' => $_SESSION['selectedDate'], 'time' => $form['reservation_time'], 'pax' => $form['reservation_pax'],
+				'number' => $_SESSION['booking_number'], 'restaurant_phone' => !empty($property['phone']) ? $property['phone'] : '',
+			));
+		}
 	} catch (Throwable $e) {
 		// a problem with the mail must never stop the booking itself
 		error_log('mySeat booking mail: '.$e->getMessage());

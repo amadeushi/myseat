@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 2.3.1                         =-=
+=-= Version: 2.4.0                         =-=
 =-= Date:    25.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -45,12 +45,51 @@ commit (git tag vX.Y.Z). Based on mySeat by Bernd Orttenburger and contributors,
 CHANGELOG
 =========
 
-Versions 0.2161 - 2.3.1 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 2.4.0 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-25 == mySeat v2.4.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Cancel link in the SMS: the SMS carries a short link (own YOURLS with the plugin "Expiry") instead of the
+   restaurant's phone number; it expires on the morning after the reservation day, with the random 8-character
+   keyword nobody can guess. If YOURLS is down the SMS still goes out with the phone number. Settings:
+   Einstellungen > SMS-Versand (YOURLS address, signature token stored encrypted, connection test)
+ * api/cancel.php: a signed token (t=...) proves the right to cancel, so bookings entered by hand that only
+   have a mobile number (or nothing) can be cancelled too; the lookup form now also takes the mobile number
+   ("0151 ..." = "+49 151 ..."). The cancellation still needs the confirmation click (POST)
+ * SMS for booking confirmation and day-before reminder, through the own SMS gateway (https://sms.amds.at,
+   the same one the shift planner uses). OFF by default. web/classes/sms.class.php:
+   - confirmation: right after a firm booking (online or in the backend) and when a pending large-party
+     request is approved; the reminder: with the day-before reminder run, in addition to the mail. A guest
+     with a phone number but no email address now gets the reminder by SMS too
+   - only mobile numbers (Germany +49 15x/16x/17x, Austria +43 6xx); landlines are skipped; a leading 0
+     means the default country +49
+   - texts have up to 160 characters and use only the GSM 03.38 alphabet (the gateway sends 160 instead of 70
+     characters then): umlauts and ß are fine, typographic quotes/dashes/"…" are made plain, accents outside
+     the set are dropped, emoji and other characters are left out, ^ { } \ [ ~ ] | and € count twice. Long
+     restaurant names are shortened first. E.g. "Amadeus: Deine Reservierung ist bestätigt! Fr 27.11. um 18:30
+     Uhr, 4 Personen. Buchungsnummer VnZClq. Fragen oder Absage: 05121 69816060. Bis bald!" (147 characters);
+     the reservations on the tp_mail_optout list get no SMS either
+   - queue tp_sms_outbox (created automatically): the gateway takes 10 new jobs per minute and can be down
+     for a moment, so an SMS that is not accepted stays queued and is retried with growing gaps and the
+     same Idempotency-Key (never twice), dropped after 8 attempts or 6 hours; a wrong key (401) is not
+     retried. The same SMS is never queued twice per reservation. Finished entries are deleted after 30 days
+   - the booking form shows one line under the phone field ("Mit einer Mobilnummer ...") only while SMS is on
+ * Settings tab "SMS-Versand" (?p=6&q=9, needs the right for general settings): switch SMS on/off, enter the
+   gateway key, remove it, "Verbindung prüfen" (tests gateway and key, sends nothing), "Test-SMS senden",
+   counters and the last errors. The key is stored ENCRYPTED (AES-256-GCM, secret derived from the database
+   login in config.general.php, table tp_sms_settings), is never shown again (only the last 4 characters)
+   and never logged; a key entered there wins over $settings['smsApiKey'] in config.general.php.
+   The gateway is reachable from the hosting server (checked). To switch it on: (1) on the SMS Pi create a
+   key of its own: sudo sms-project create-project myseat 100; (2) paste it in the settings tab, tick
+   "SMS-Versand aktivieren", save, test with "Test-SMS senden"; (3) add a webcron job every minute:
+   https://<domain>/web/cron/sms_flush.php?key=<feedbackCronKey> (retries; with &health=1 it only tests
+   connection and key). Optional in config.general.php: smsBaseUrl, smsDefaultCountryCode. The privacy
+   policy should mention SMS to the guest's mobile number for the reservation
 
 2026-09-25 == mySeat v2.3.1 == amadeushi - http://github.com/amadeushi/myseat
 

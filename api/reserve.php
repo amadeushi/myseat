@@ -432,6 +432,9 @@ if($check_web_outlet==1){
 				<div class="field">
 					<label><?php echo _phone; ?></label>
 					<input type="text" name="reservation_guest_phone" class="required" id="reservation_guest_phone" value="" />
+					<?php require_once __DIR__.'/../web/classes/sms.class.php'; if (sms_enabled()): ?>
+					<small class="field-hint"><?php echo (substr($_SESSION['lang'], 0, 2) === 'en') ? 'With a mobile number we also send the confirmation and a reminder by SMS.' : 'Mit einer Mobilnummer schicken wir dir die Bestätigung und eine Erinnerung auch per SMS.'; ?></small>
+					<?php endif; ?>
 				</div>
 
 				<div class="consent-group">

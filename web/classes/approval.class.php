@@ -87,6 +87,14 @@ function appr_send_guest_mail($r, $mode) {
 	$brand = bm_clean($outlet['outlet_name'] !== '' ? $outlet['outlet_name'] : $property['name']);
 	$admin_email = !empty($outlet['confirmation_email']) ? $outlet['confirmation_email'] : $property['email'];
 	bm_send_guest_mail($r['reservation_guest_email'], $m, $brand, $admin_email);
+	if ($mode === 'approved') {
+		require_once __DIR__.'/sms.class.php';
+		sms_send_for_reservation('confirmation', array(
+			'reservation_id' => $r['reservation_id'], 'phone' => $r['reservation_guest_phone'], 'brand' => $brand,
+			'date' => $r['reservation_date'], 'time' => $r['reservation_time'], 'pax' => $r['reservation_pax'], 'number' => $r['reservation_bookingnumber'],
+			'restaurant_phone' => !empty($property['phone']) ? $property['phone'] : '',
+		));
+	}
 }
 
 // approve a pending request: table assignment + confirmation mail. Returns false if it was not pending.

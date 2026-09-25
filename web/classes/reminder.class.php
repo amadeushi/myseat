@@ -23,7 +23,8 @@ function rem_ensure_schema() {
  * Reservations for tomorrow that should get a reminder: still on (not cancelled, no-show, waitlisted,
  * or an undecided/declined large-party request), guest email on file, no reminder yet. Bookings made
  * less than 18 hours ago are skipped - the guest just received the confirmation. Only sent between
- * 10:00 and 20:00 so it never lands in the middle of the night.
+ * 10:00 and 20:00 so it never lands in the middle of the night. A guest with only a phone number stays in
+ * the list: the reminder run sends an SMS when SMS is on and the number is a mobile number.
  */
 function rem_find_due() {
 	rem_ensure_schema();
@@ -39,7 +40,7 @@ function rem_find_due() {
 		WHERE o.reservation_id IS NULL AND r.reservation_hidden = 0 AND r.reservation_wait = 0
 		AND r.reservation_status NOT IN ('NSW', 'CXL')
 		AND r.reservation_approval NOT IN ('pending', 'declined')
-		AND r.reservation_guest_email <> ''
+		AND (r.reservation_guest_email <> '' OR r.reservation_guest_phone <> '')
 		AND r.reservation_date = DATE_ADD(CURDATE(), INTERVAL 1 DAY)
 		AND r.reservation_timestamp <= (NOW() - INTERVAL 18 HOUR)
 		AND m.reservation_id IS NULL");

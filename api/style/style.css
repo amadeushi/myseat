@@ -1756,3 +1756,6 @@ button.offer-chip:focus-visible { outline: 2px solid var(--gold); outline-offset
 }
 .offer-dialog .offer-close:hover, .offer-dialog .offer-close:focus-visible { background: var(--gold); color: #1a1408; }
 @media (prefers-reduced-motion: reduce) { button.offer-chip { transition: none; } }
+
+/* short note under a form field */
+.field-hint { display: block; margin-top: 6px; font-size: 12px; line-height: 1.5; color: var(--text-muted); text-shadow: none; }

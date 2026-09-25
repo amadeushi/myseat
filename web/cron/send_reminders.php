@@ -22,6 +22,7 @@ require __DIR__.'/../classes/mysql_compat.php';
 require __DIR__.'/../classes/connect.db.php';
 require __DIR__.'/../classes/reminder.class.php';
 require __DIR__.'/../classes/booking_mail.class.php';
+require __DIR__.'/../classes/sms.class.php';
 
 $link = $GLOBALS['__mysql_compat_link'];
 $tz_row = mysqli_fetch_assoc(mysqli_query($link, "SELECT timezone FROM `".$dbTables->settings."` LIMIT 1"));
@@ -33,6 +34,7 @@ $due = rem_find_due();
 $sent = 0;
 $failed = 0;
 
+$sms_sent = 0;
 foreach ($due as $r) {
 	if (!rem_mark_sent($r['reservation_id'])) { continue; } // another run claimed it
 
@@ -41,28 +43,45 @@ foreach ($due as $r) {
 		"SELECT outlet_name, property_id, avg_duration, confirmation_email FROM `".$dbTables->outlets."` WHERE outlet_id = ".(int)$r['reservation_outlet_id']." LIMIT 1"));
 	$property = $outlet ? mysqli_fetch_assoc(mysqli_query($link,
 		"SELECT * FROM `".$dbTables->properties."` WHERE id = ".(int)$outlet['property_id']." LIMIT 1")) : null;
-	if (!$outlet || !$property || !filter_var($to, FILTER_VALIDATE_EMAIL)) { $failed++; continue; }
+	if (!$outlet || !$property) { $failed++; continue; }
 
-	$lang = ($r['reservation_email_lang'] === 'en') ? 'en' : 'de';
-	$form = array(
-		'reservation_guest_name' => $r['reservation_guest_name'], 'reservation_guest_email' => $to,
-		'reservation_guest_phone' => $r['reservation_guest_phone'], 'reservation_pax' => $r['reservation_pax'],
-		'reservation_notes' => $r['reservation_notes'], 'reservation_time' => $r['reservation_time'], 'email_type' => $lang,
-	);
-	$m = bm_build(array(
-		'form' => $form, 'outlet' => $outlet, 'property' => $property,
-		'date' => $r['reservation_date'],
-		'date_text' => date($date_format, strtotime($r['reservation_date'])),
-		'time_text' => date($time_format, strtotime($r['reservation_time'])),
-		'booking_number' => $r['reservation_bookingnumber'],
-		'cancel_url' => REMINDER_SITE_URL.'/api/cancel.php?nr='.urlencode($r['reservation_bookingnumber']).'&email='.urlencode($to).'&lang='.$lang,
-		'origin' => 'online', 'mode' => 'reminder',
-	));
 	$brand = bm_clean($outlet['outlet_name'] !== '' ? $outlet['outlet_name'] : $property['name']);
-	$admin_email = !empty($outlet['confirmation_email']) ? $outlet['confirmation_email'] : $property['email'];
-	bm_send_guest_mail($to, $m, $brand, $admin_email);
+	$mail_ok = (bool)filter_var($to, FILTER_VALIDATE_EMAIL);
+	// SMS: only when SMS is on and the guest's number is a mobile number (a guest without email can still be reached)
+	$sms_ok = sms_enabled() && sms_normalize_phone(html_entity_decode((string)$r['reservation_guest_phone'], ENT_QUOTES, 'UTF-8')) !== null;
+	if (!$mail_ok && !$sms_ok) { $failed++; continue; }
+
+	if ($mail_ok) {
+		$lang = ($r['reservation_email_lang'] === 'en') ? 'en' : 'de';
+		$form = array(
+			'reservation_guest_name' => $r['reservation_guest_name'], 'reservation_guest_email' => $to,
+			'reservation_guest_phone' => $r['reservation_guest_phone'], 'reservation_pax' => $r['reservation_pax'],
+			'reservation_notes' => $r['reservation_notes'], 'reservation_time' => $r['reservation_time'], 'email_type' => $lang,
+		);
+		$m = bm_build(array(
+			'form' => $form, 'outlet' => $outlet, 'property' => $property,
+			'date' => $r['reservation_date'],
+			'date_text' => date($date_format, strtotime($r['reservation_date'])),
+			'time_text' => date($time_format, strtotime($r['reservation_time'])),
+			'booking_number' => $r['reservation_bookingnumber'],
+			'cancel_url' => REMINDER_SITE_URL.'/api/cancel.php?nr='.urlencode($r['reservation_bookingnumber']).'&email='.urlencode($to).'&lang='.$lang,
+			'origin' => 'online', 'mode' => 'reminder',
+		));
+		$admin_email = !empty($outlet['confirmation_email']) ? $outlet['confirmation_email'] : $property['email'];
+		bm_send_guest_mail($to, $m, $brand, $admin_email);
+	}
+	if ($sms_ok) {
+		$st = sms_send_for_reservation('reminder', array(
+			'reservation_id' => $r['reservation_id'], 'phone' => $r['reservation_guest_phone'], 'brand' => $brand,
+			'date' => $r['reservation_date'], 'time' => $r['reservation_time'], 'pax' => $r['reservation_pax'], 'number' => $r['reservation_bookingnumber'],
+			'restaurant_phone' => !empty($settings['mailPhone']) ? $settings['mailPhone'] : (isset($property['phone']) ? $property['phone'] : ''),
+		));
+		if ($st === 'accepted' || $st === 'queued') { $sms_sent++; }
+	}
 	$sent++;
 }
+// SMS that the gateway could not take yet (limit of 10 per minute) go out on the next runs
+if (sms_enabled()) { sms_flush(8); }
 
-$msg = 'mySeat reminder cron: '.count($due).' due, '.$sent.' sent, '.$failed.' failed.';
+$msg = 'mySeat reminder cron: '.count($due).' due, '.$sent.' sent, '.$failed.' failed'.(sms_enabled() ? ', '.$sms_sent.' SMS' : '').'.';
 if ($is_cli) { echo $msg."\n"; } else { header('Content-Type: text/plain'); echo $msg; }

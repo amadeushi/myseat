@@ -1463,3 +1463,17 @@ select.status_dbox:not([multiple]) option::checkmark { display: inline-block; or
 .offer-cancel, .offer-delete { background: none; border: 0; padding: 10px 12px; font: inherit; color: var(--text-muted); cursor: pointer; }
 .offer-delete { margin-left: auto; color: var(--danger, #e2867c); }
 .offer-cancel:hover, .offer-cancel:focus-visible { color: var(--gold-strong); }
+
+/* ---- Settings > SMS-Versand ---- */
+.sms-page { max-width: 760px; }
+.sms-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 0 0 18px; }
+.sms-badge-on { border-color: var(--success, #8fbf7a); color: var(--success, #8fbf7a); }
+.sms-keyinfo { color: var(--text-muted); font-size: 14px; }
+.sms-form input[type=password], .sms-form input[type=text], .sms-test input[type=text] { width: 100%; max-width: 460px; box-sizing: border-box; }
+.sms-sub { margin: 30px 0 6px; padding-top: 18px; border-top: 1px solid var(--border-soft, rgba(201,164,89,.14)); font-size: 17px; }
+.sms-tools { margin: 22px 0 0; padding-top: 16px; border-top: 1px solid var(--border-soft, rgba(201,164,89,.14)); }
+.sms-test { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.sms-stats { margin: 18px 0 0; color: var(--text-muted); }
+.sms-errors, .sms-howto { margin: 18px 0 0; padding: 14px 18px; border: 1px solid var(--border-soft, rgba(201,164,89,.14)); border-radius: 12px; background: var(--surface-2, #1c1a18); font-size: 14px; line-height: 1.6; }
+.sms-errors ul, .sms-howto ul { margin: 8px 0 0; padding-left: 18px; }
+.sms-page code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; background: rgba(201, 162, 89, .1); padding: 1px 6px; border-radius: 5px; }

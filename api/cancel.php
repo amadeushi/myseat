@@ -20,6 +20,8 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 	include('../config/config.inc.php');
 // ** get superglobal variables
 	include('../web/includes/get_variables.inc.php');
+// ** cancel links (token check, phone comparison)
+	require_once('../web/classes/cancel_link.class.php');
 // translate to selected language
 	$language = $general['language'];
 	if (isset($_GET['lang']) && preg_match('/^[a-z]{2}$/', $_GET['lang'])) {
@@ -36,7 +38,7 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 	$tr = array(
 		'de' => array(
 			'lookup_title' => 'Reservierung stornieren',
-			'lookup_text'  => 'Bitte gib deine Buchungsnummer und die E-Mail-Adresse ein, mit der du reserviert hast.',
+			'lookup_text'  => 'Bitte gib deine Buchungsnummer und die E-Mail-Adresse oder Mobilnummer ein, mit der du reserviert hast.',
 			'lookup_btn'   => 'Reservierung suchen',
 			'confirm_title'=> 'Reservierung stornieren?',
 			'confirm_text' => 'Möchtest du diese Reservierung wirklich stornieren?',
@@ -46,15 +48,15 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 			'done_text'    => 'Deine Reservierung wurde storniert. Wir hoffen, dich bald wieder bei uns zu sehen.',
 			'again'        => 'Neue Reservierung',
 			'nf_title'     => 'Reservierung nicht gefunden',
-			'nf_text'      => 'Zu diesen Angaben gibt es keine aktive Reservierung. Sie wurde eventuell schon storniert. Bitte prüfe Buchungsnummer und E-Mail-Adresse.',
+			'nf_text'      => 'Zu diesen Angaben gibt es keine aktive Reservierung. Sie wurde eventuell schon storniert. Bitte prüfe Buchungsnummer und E-Mail-Adresse oder Mobilnummer.',
 			'contact'      => 'Bei Fragen erreichst du uns direkt per E-Mail:',
 			'booknum'      => 'Buchungsnummer',
-			'email'        => 'E-Mail',
+			'email'        => 'E-Mail oder Mobilnummer',
 			'website'      => 'Zurück zur Website',
 		),
 		'en' => array(
 			'lookup_title' => 'Cancel reservation',
-			'lookup_text'  => 'Please enter your booking number and the email address you reserved with.',
+			'lookup_text'  => 'Please enter your booking number and the email address or mobile number you reserved with.',
 			'lookup_btn'   => 'Find reservation',
 			'confirm_title'=> 'Cancel reservation?',
 			'confirm_text' => 'Do you really want to cancel this reservation?',
@@ -64,10 +66,10 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 			'done_text'    => 'Your reservation has been cancelled. We hope to see you again soon.',
 			'again'        => 'New reservation',
 			'nf_title'     => 'Reservation not found',
-			'nf_text'      => 'There is no active reservation for these details. It may already have been cancelled. Please check your booking number and email address.',
+			'nf_text'      => 'There is no active reservation for these details. It may already have been cancelled. Please check your booking number and email address or mobile number.',
 			'contact'      => 'If you have any questions, reach us directly by email:',
 			'booknum'      => 'Booking number',
-			'email'        => 'Email',
+			'email'        => 'Email or mobile number',
 			'website'      => 'Back to website',
 		),
 	);
@@ -78,24 +80,34 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 // input: from the emailed link / the lookup form (GET) or the confirm button (POST)
 	$src = ($_SERVER['REQUEST_METHOD'] === 'POST') ? $_POST : $_GET;
 	$nr    = isset($src['nr'])    ? trim($src['nr'])    : '';
-	$email = isset($src['email']) ? trim($src['email']) : '';
+	$email = isset($src['email']) ? trim($src['email']) : '';   // e-mail address or mobile number
+	$token = isset($src['t']) && is_string($src['t']) && preg_match('/^[a-f0-9]{24}$/', $src['t']) ? $src['t'] : '';
 
-// find the active reservation belonging to this booking number + email
-	function findActiveReservation($nr, $email) {
+// find the active reservation belonging to this booking number + (signed token | e-mail | mobile number)
+	function findActiveReservation($nr, $email, $token = '') {
 		global $dbTables;
-		if (!preg_match('/^[A-Za-z0-9]{1,12}$/', $nr) || $email === '') {
+		if (!preg_match('/^[A-Za-z0-9]{1,12}$/', $nr) || ($email === '' && $token === '')) {
 			return null;
 		}
-		$result = query("SELECT `reservation_id`, `reservation_outlet_id`, `reservation_date`, `reservation_time`, `reservation_pax` FROM `$dbTables->reservations` WHERE `reservation_bookingnumber` = '%s' AND `reservation_guest_email` = '%s' AND `reservation_hidden` = '0' LIMIT 1",
-			mysql_real_escape_string($nr), mysql_real_escape_string($email));
-		$row = mysql_fetch_assoc($result);
-		return $row ? $row : null;
+		$result = query("SELECT `reservation_id`, `reservation_outlet_id`, `reservation_date`, `reservation_time`, `reservation_pax`, `reservation_guest_email`, `reservation_guest_phone` FROM `$dbTables->reservations` WHERE `reservation_bookingnumber` = '%s' AND `reservation_hidden` = '0'",
+			mysql_real_escape_string($nr));
+		while ($row = mysql_fetch_assoc($result)) {
+			if ($token !== '' && cl_token_ok($row['reservation_id'], $nr, $token)) { return $row; }
+			if ($email === '') { continue; }
+			if (cl_is_email($email)) {
+				if (strcasecmp($row['reservation_guest_email'], $email) === 0) { return $row; }
+			} else {
+				$k = cl_phone_key($email);
+				if ($k !== '' && $k === cl_phone_key($row['reservation_guest_phone'])) { return $row; }
+			}
+		}
+		return null;
 	}
 
 	$state = 'lookup';
 	$res = null;
-	if ($nr !== '' || $email !== '') {
-		$res = findActiveReservation($nr, $email);
+	if ($nr !== '' || $email !== '' || $token !== '') {
+		$res = findActiveReservation($nr, $email, $token);
 		if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'cncl_book') {
 			if ($res) {
 				// cancel only after the explicit confirmation click
@@ -204,6 +216,7 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 			<input type="hidden" name="action" value="cncl_book">
 			<input type="hidden" name="nr" value="<?php echo $h($nr); ?>">
 			<input type="hidden" name="email" value="<?php echo $h($email); ?>">
+			<?php if ($token !== ''): ?><input type="hidden" name="t" value="<?php echo $h($token); ?>"><?php endif; ?>
 			<button type="submit" class="submit-button"><?php echo $h($t['confirm_btn']); ?></button>
 			<a class="confirm-secondary" href="<?php echo $h($website); ?>"><?php echo $h($t['keep']); ?></a>
 		</form>
