@@ -66,7 +66,9 @@ if ($outlet_closed_today) {
 	}
 
 	if ($available_slot_count > 0) {
-		echo $timeslots_html;
+		// offer times (settings > Angebotszeiten): highlight the matching slots, legend chip with a dialog
+		require_once __DIR__.'/../web/classes/offers.class.php';
+		echo offers_decorate($timeslots_html, $_SESSION['outletID'], $_SESSION['selectedDate']);
 	} else {
 		reserve_contact_message(bt('no_tables', (int)$_SESSION['pax']), bt('no_tables_hint'), $contact_email, $contact_phone);
 	}

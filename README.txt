@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 2.2.0                         =-=
+=-= Version: 2.3.0                         =-=
 =-= Date:    25.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -45,12 +45,23 @@ commit (git tag vX.Y.Z). Based on mySeat by Bernd Orttenburger and contributors,
 CHANGELOG
 =========
 
-Versions 0.2161 - 2.2.0 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 2.3.0 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-25 == mySeat v2.3.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Offer times ("Angebotszeiten"): new tab in the settings (?p=6&q=8). An offer has weekdays, a time
+   range (or all day), an optional date range, a title (emoji allowed, quick-pick buttons), an
+   optional text (links only with http:// or https://) and an optional picture (JPG/PNG/WebP/GIF,
+   up to 2 MB, stored in uploads/offers/). In the booking widget the matching time slots are
+   highlighted and a chip above them shows the title and the time range; "Mehr erfahren" opens a
+   dialog with text and picture. An offer can be switched off without deleting it. Table tp_offers
+   (utf8mb4, created automatically), saving by web/ajax/save_offer.php. The end time of an offer
+   counts as part of it (12:00 - 14:45 highlights 14:45 too). Applies to the radio-style time picker
 
 2026-09-25 == mySeat v2.2.0 == amadeushi - http://github.com/amadeushi/myseat
 

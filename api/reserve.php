@@ -462,6 +462,12 @@ if($check_web_outlet==1){
 </div><!-- booking-shell end -->
   <!-- Javascript at the bottom for fast page loading --> 
 <script>
+	/* offer dialog: works for chips that arrive with a reloaded time picker as well */
+	document.addEventListener('click', function (e) {
+		var b = e.target.closest ? e.target.closest('[data-offer-open]') : null;
+		if (b) { var d = document.getElementById(b.getAttribute('data-offer-open')); if (d && d.showModal) { d.showModal(); } return; }
+		if (e.target.classList && e.target.classList.contains('offer-dialog')) { e.target.close(); }
+	});
 	/* utility functions */
 	var unavailableDates = [<?php defineOffDays(); ?>];
 

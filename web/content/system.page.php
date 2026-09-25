@@ -49,6 +49,13 @@
 				</a>
 			</li>
 		<?php endif ?>
+		<?php if ( current_user_can( 'Settings-Outlets' ) ): ?>
+			<li>
+				<a href="?p=6&q=8" <?php if ($q == 8) { echo " class='active'";}?> >
+					<img src='images/menu-icons/ticket.png' class='nav-image'>Angebotszeiten
+				</a>
+			</li>
+		<?php endif ?>
 		<?php if ( current_user_can( 'Settings-General' ) ): ?>
 			<li>
 				<a href="?p=6&q=7" <?php if ($q == 7) { echo " class='active'";}?> >
@@ -85,6 +92,8 @@
 					echo "<h3>"._property." "._info."</h3>";
 				}else if ($q == 7) { 
 					echo "<h3>Plugins</h3>";
+				}else if ($q == 8) { 
+					echo "<h3>Angebotszeiten</h3>";
 				}
 				?>
 			</div>
@@ -266,6 +275,13 @@
 				if ( current_user_can( 'Property-New' ) ){
 					// property
 					include('register/detail.property.page.php');
+				}else{
+					redeclare_access();
+				}	
+				break;
+				case '8':
+				if ( current_user_can( 'Settings-Outlets' ) ){
+					include('includes/offers.page.php');
 				}else{
 					redeclare_access();
 				}	
