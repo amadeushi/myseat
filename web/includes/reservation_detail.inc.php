@@ -202,6 +202,10 @@
 			<p><small>
 				<?php echo humanize($row->reservation_timestamp);?>
 			</small></p>
+			<?php if (trim((string)$row->reservation_referer) !== ''): ?>
+			<label>Herkunft</label>
+			<p><small><?php echo htmlspecialchars(trim($row->reservation_referer)); ?></small></p>
+			<?php endif; ?>
 			<br/>
 		</div></div></div> <!-- end right column -->
 </div>

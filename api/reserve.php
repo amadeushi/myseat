@@ -69,6 +69,12 @@ $_SESSION['resID'] = 0;
 // get and define referer
 	$ref = getHost($_SERVER['HTTP_REFERER']);
 	$_SESSION['referer'] = ($_SESSION['referer']!='') ? $_SESSION['referer'] : $ref;
+	// a source tag in the link (e.g. the Google business profile: ...reserve.php?outletID=1&quelle=google)
+	// wins over the referring host and shows up in the reservation details and the statistics
+	if (isset($_GET['quelle'])) {
+		$quelle = preg_replace('/[^a-z0-9_\-]/', '', strtolower(substr((string)$_GET['quelle'], 0, 30)));
+		if ($quelle !== '') { $_SESSION['referer'] = $quelle; }
+	}
 
 // Check if outlet or property booking
 	if (isset($_SESSION['single_outlet']) && (isset($_GET['outletID']) && empty($_GET['propertyID']))) {

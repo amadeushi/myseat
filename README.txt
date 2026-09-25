@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 2.1.1                         =-=
+=-= Version: 2.2.0                         =-=
 =-= Date:    25.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -45,12 +45,21 @@ commit (git tag vX.Y.Z). Based on mySeat by Bernd Orttenburger and contributors,
 CHANGELOG
 =========
 
-Versions 0.2161 - 2.1.1 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 2.2.0 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-25 == mySeat v2.2.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Booking source tag: a link like https://reservierung.amds.at/api/reserve.php?outletID=1&quelle=google
+   stores "google" as the source of the booking (reservation_referer), instead of the referring
+   website. Only letters, digits, - and _ are kept (30 characters). Without the parameter the
+   referring host is stored as before. The source is now shown in the reservation details
+   ("Herkunft") and counted in the statistics. Meant for the reservation link in the Google business
+   profile, newsletters, QR codes etc.
 
 2026-09-25 == mySeat v2.1.1 == amadeushi - http://github.com/amadeushi/myseat
 
