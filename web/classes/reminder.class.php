@@ -11,6 +11,7 @@ function rem_ensure_schema() {
 	static $done = false;
 	if ($done) { return; }
 	appr_ensure_schema();
+	fb_ensure_schema();
 	mysqli_query(fb_db(), "CREATE TABLE IF NOT EXISTS ".fb_t('tp_reminders')." (
 		`reservation_id` INT NOT NULL PRIMARY KEY,
 		`sent_at` DATETIME NOT NULL
@@ -34,7 +35,8 @@ function rem_find_due() {
 			r.reservation_notes, r.reservation_bookingnumber, r.reservation_email_lang
 		FROM `".$dbTables->reservations."` r
 		LEFT JOIN ".fb_t('tp_reminders')." m ON m.reservation_id = r.reservation_id
-		WHERE r.reservation_hidden = 0 AND r.reservation_wait = 0
+		LEFT JOIN ".fb_t('tp_mail_optout')." o ON o.reservation_id = r.reservation_id
+		WHERE o.reservation_id IS NULL AND r.reservation_hidden = 0 AND r.reservation_wait = 0
 		AND r.reservation_status NOT IN ('NSW', 'CXL')
 		AND r.reservation_approval NOT IN ('pending', 'declined')
 		AND r.reservation_guest_email <> ''

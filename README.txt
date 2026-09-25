@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 2.1.0                         =-=
+=-= Version: 2.1.1                         =-=
 =-= Date:    25.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -45,12 +45,25 @@ commit (git tag vX.Y.Z). Based on mySeat by Bernd Orttenburger and contributors,
 CHANGELOG
 =========
 
-Versions 0.2161 - 2.1.0 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 2.1.1 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-25 == mySeat v2.1.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New table tp_mail_optout (created automatically): reservations listed there get neither the
+   day-before reminder nor the feedback request. Used for the Resmio import: 59 upcoming bookings
+   (25.09. - 30.12.2026) were imported from a Resmio CSV export, marked in reservation_referer as
+   "resmio-import:<Resmio booking number> (<source>)" and in the change history as "Resmio-Import".
+   Cancelled bookings and one duplicate were skipped. The reservations of the first two days
+   (25.09. and 26.09.) are on the opt-out list because Resmio still mails those guests; all others
+   are treated like any other reservation. To release the opt-out later:
+   DELETE FROM tp_mail_optout WHERE reason LIKE 'resmio-import%'; To undo the whole import:
+   delete the reservations whose reservation_referer starts with 'resmio-import:' (and their rows in
+   tp_reservation_tables, res_history, tp_mail_optout)
 
 2026-09-25 == mySeat v2.1.0 == amadeushi - http://github.com/amadeushi/myseat
 

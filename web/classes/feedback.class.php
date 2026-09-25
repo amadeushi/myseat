@@ -50,6 +50,13 @@ function fb_ensure_schema() {
 	$db = fb_db();
 	global $dbTables;
 
+	// reservations that must not get automatic guest mails (reminder, feedback request), e.g. imported
+	// from another system for the days it still mails the guests itself
+	mysqli_query($db, "CREATE TABLE IF NOT EXISTS ".fb_t('tp_mail_optout')." (
+		`reservation_id` INT NOT NULL PRIMARY KEY,
+		`reason` VARCHAR(100) NOT NULL DEFAULT '',
+		`created_at` DATETIME NOT NULL
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 	mysqli_query($db, "CREATE TABLE IF NOT EXISTS ".fb_t('tp_feedback')." (
 		`feedback_id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 		`reservation_id` INT NOT NULL,
@@ -114,7 +121,9 @@ function fb_find_due_reservations($hours_min = 24, $hours_max = 96) {
 			r.reservation_guest_name, r.reservation_guest_email, r.reservation_email_lang
 		FROM `".$dbTables->reservations."` r
 		LEFT JOIN ".fb_t('tp_feedback')." f ON f.reservation_id = r.reservation_id
+		LEFT JOIN ".fb_t('tp_mail_optout')." o ON o.reservation_id = r.reservation_id
 		WHERE r.reservation_hidden = 0
+		AND o.reservation_id IS NULL
 		AND r.reservation_status <> 'NSW'
 		AND r.reservation_guest_email <> ''
 		AND f.feedback_id IS NULL
