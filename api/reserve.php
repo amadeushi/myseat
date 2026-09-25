@@ -464,9 +464,20 @@ if($check_web_outlet==1){
 <script>
 	/* offer dialog: works for chips that arrive with a reloaded time picker as well */
 	document.addEventListener('click', function (e) {
-		var b = e.target.closest ? e.target.closest('[data-offer-open]') : null;
-		if (b) { var d = document.getElementById(b.getAttribute('data-offer-open')); if (d && d.showModal) { d.showModal(); } return; }
-		if (e.target.classList && e.target.classList.contains('offer-dialog')) { e.target.close(); }
+		var t = e.target, b = t.closest ? t.closest('[data-offer-open]') : null;
+		if (b) {
+			var d = document.getElementById(b.getAttribute('data-offer-open'));
+			if (d && d.showModal) {
+				// the dialog sits inside the booking form: move it out (no form-in-form, no form styles), replacing an older copy
+				var id = d.id, old = document.querySelectorAll('body > #' + id);
+				for (var i = 0; i < old.length; i++) { if (old[i] !== d) { old[i].remove(); } }
+				if (d.parentNode !== document.body) { document.body.appendChild(d); }
+				d.showModal();
+			}
+			return;
+		}
+		if (t.closest && t.closest('[data-offer-close]')) { var dd = t.closest('dialog'); if (dd) { dd.close(); } return; }
+		if (t.classList && t.classList.contains('offer-dialog')) { t.close(); }
 	});
 	/* utility functions */
 	var unavailableDates = [<?php defineOffDays(); ?>];

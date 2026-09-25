@@ -110,7 +110,7 @@ function offers_decorate($slots_html, $outlet_id, $date) {
 			$dialogs .= "<dialog class='offer-dialog' id='offer-dlg-$id' aria-labelledby='offer-dlg-t-$id'><h2 id='offer-dlg-t-$id'>".$e($o['title'])."</h2>"
 				.(!empty($o['image']) ? "<img src='../uploads/offers/".$e($o['image'])."' alt=''/>" : '')
 				.(trim((string)$o['description']) !== '' ? "<p>".offers_linkify($o['description'])."</p>" : '')
-				."<form method='dialog'><button class='offer-close'>Schließen</button></form></dialog>";
+				."<button type='button' class='offer-close' data-offer-close autofocus>Schließen</button></dialog>";
 		} else {
 			$chips .= "<span class='offer-chip'>".$inner."</span>";
 		}

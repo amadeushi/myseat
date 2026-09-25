@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 2.3.0                         =-=
+=-= Version: 2.3.1                         =-=
 =-= Date:    25.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -45,12 +45,21 @@ commit (git tag vX.Y.Z). Based on mySeat by Bernd Orttenburger and contributors,
 CHANGELOG
 =========
 
-Versions 0.2161 - 2.3.0 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 2.3.1 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-25 == mySeat v2.3.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix offer dialog in the widget: "Schließen" did nothing because the dialog sat inside the booking
+   form (a form within a form is ignored, the button then acted on the booking form). It is now a
+   plain button, and the dialog is moved out of the form when opened. It carries its own colors and
+   fonts, since outside the widget container it lost its background and used a system font
+ * Fix offer chip in the widget: the old system styles put a white text shadow on buttons, which read as
+   a white outline around the title and time on the dark background. Removed for the chip
 
 2026-09-25 == mySeat v2.3.0 == amadeushi - http://github.com/amadeushi/myseat
 

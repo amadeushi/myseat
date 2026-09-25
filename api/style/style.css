@@ -1712,6 +1712,8 @@ a.contact-item:hover svg {
 .timeslot-offer:hover .radiotext { background: rgba(201, 162, 89, 0.24); }
 .timeslot-offer.timeslot-disabled .radiotext,
 .timeslot-offer input[type="radio"]:disabled + .radiotext { background: transparent; border-color: var(--border-soft); }
+/* the old system styles put a white text shadow on buttons; on the dark widget it reads as a white outline */
+.offer-chip, .offer-chip * { text-shadow: none; }
 .offer-legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
 .offer-chip {
 	display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px;
@@ -1725,17 +1727,30 @@ a.contact-item:hover svg {
 button.offer-chip { cursor: pointer; transition: background 150ms ease; }
 button.offer-chip:hover, button.offer-chip:focus-visible { background: rgba(201, 162, 89, 0.22); }
 button.offer-chip:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+/* the dialog is moved to <body> when opened (outside .booking-shell), so it carries its own tokens */
+.offer-dialog {
+	--surface-2: #1c1a18;
+	--border: rgba(201, 164, 89, 0.22);
+	--gold: #c9a259;
+	--gold-strong: #e2c07f;
+	--text: #f3ede1;
+	--font-display: 'Cormorant Garamond', Georgia, serif;
+	--font-body: 'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
 .offer-dialog {
 	width: min(92vw, 480px); max-height: 88vh; overflow: auto; padding: 28px 26px 22px;
 	background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 16px;
 	font-family: var(--font-body); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
 }
 .offer-dialog::backdrop { background: rgba(0, 0, 0, 0.68); }
+.offer-dialog h2, .offer-dialog p, .offer-dialog a, .offer-dialog button { text-shadow: none; }
+.offer-dialog p, .offer-dialog a, .offer-dialog button { font-family: var(--font-body); }
 .offer-dialog h2 { margin: 0 0 14px; font-family: var(--font-display); font-weight: 500; font-size: 26px; line-height: 1.2; color: var(--gold-strong); }
 .offer-dialog img { display: block; width: 100%; height: auto; max-height: 260px; object-fit: cover; border-radius: 10px; margin: 0 0 14px; }
 .offer-dialog p { margin: 0 0 18px; font-size: 15px; line-height: 1.6; max-width: 60ch; overflow-wrap: anywhere; }
 .offer-dialog a { color: var(--gold); text-underline-offset: 3px; }
 .offer-dialog .offer-close {
+	margin: 0;
 	min-height: 44px; padding: 0 22px; border-radius: 999px; border: 1px solid var(--gold);
 	background: transparent; color: var(--gold); font: inherit; font-weight: 600; cursor: pointer;
 }
