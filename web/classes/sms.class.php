@@ -275,14 +275,46 @@ function sms_yourls_shorten($long_url, $minutes) {
 		$short = isset($j['shorturl']) && is_string($j['shorturl']) ? $j['shorturl'] : '';
 		// "already exists" also delivers the existing short link (same reservation asked twice)
 		if ($short !== '' && preg_match('#^https://[^\s]+$#', $short) && (($j['status'] ?? '') === 'success' || ($j['code'] ?? '') === 'error:url')) {
-			// the Expiry plugin adds 'expiry' to the answer ("60 min expiry set."); without it the link would never expire
+			// the Expiry plugin adds 'expiry' to the answer ("60 min expiry set."). Newer YOURLS versions put a 'code' into
+			// every answer, then the plugin's hook on new links does nothing: set the expiry with a second call instead
 			$exp = isset($j['expiry']) && is_string($j['expiry']) ? substr($j['expiry'], 0, 160) : '';
-			return array('ok' => true, 'short' => $short, 'error' => null, 'expiry' => $exp, 'expiry_ok' => (bool)preg_match('/expiry set/i', $exp));
+			if (($j['status'] ?? '') === 'success' && !preg_match('/expiry set/i', $exp)) {
+				$exp = sms_yourls_set_expiry($short, $minutes);
+			}
+			return array('ok' => true, 'short' => $short, 'error' => null, 'expiry' => $exp, 'expiry_ok' => (bool)preg_match('/expiry set/i', $exp), 'keys' => array_keys($j));
 		}
 		$last = isset($j['message']) && is_string($j['message']) ? substr($j['message'], 0, 120) : 'Fehler (HTTP '.$http.')';
 		if (($j['code'] ?? '') !== 'error:keyword') { break; }
 	}
 	return array('ok' => false, 'short' => null, 'error' => $last);
+}
+
+// set the expiry of an existing short link (action=expiry, needs the signature); postx=none: delete it when expired
+function sms_yourls_set_expiry($short, $minutes) {
+	$c = sms_link_cfg();
+	$ch = curl_init($c['url']);
+	curl_setopt_array($ch, array(CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => false, CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_TIMEOUT => 4,
+		CURLOPT_POSTFIELDS => http_build_query(array('signature' => $c['sig'], 'action' => 'expiry', 'shorturl' => $short, 'format' => 'json',
+			'expiry' => 'clock', 'age' => max(60, (int)$minutes), 'ageMod' => 'min', 'postx' => 'none'))));
+	$raw = curl_exec($ch);
+	curl_close($ch);
+	$j = is_string($raw) ? json_decode($raw, true) : null;
+	if (is_array($j) && isset($j['expiry']) && is_string($j['expiry']) && preg_match('/expiry set/i', $j['expiry']) && (int)($j['statusCode'] ?? 200) < 400) { return substr($j['expiry'], 0, 160); }
+	return is_array($j) && isset($j['message']) && is_string($j['message']) ? substr($j['message'], 0, 160) : '';
+}
+
+// what YOURLS/Expiry says about the expiry of a short link (action=expiry-stats): array('http' => int, 'message' => string, 'keys' => array)
+function sms_yourls_expiry_stats($short) {
+	$c = sms_link_cfg();
+	$ch = curl_init($c['url']);
+	curl_setopt_array($ch, array(CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => false, CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_TIMEOUT => 5,
+		CURLOPT_POSTFIELDS => http_build_query(array('signature' => $c['sig'], 'action' => 'expiry-stats', 'shorturl' => $short, 'format' => 'json'))));
+	$raw = curl_exec($ch);
+	$http = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+	curl_close($ch);
+	$j = is_string($raw) ? json_decode($raw, true) : null;
+	$msg = is_array($j) ? (isset($j['message']) && is_string($j['message']) ? $j['message'] : (isset($j['simple']) && is_string($j['simple']) ? $j['simple'] : '')) : '';
+	return array('http' => $http, 'message' => substr($msg, 0, 200), 'keys' => is_array($j) ? array_keys($j) : array());
 }
 
 /*

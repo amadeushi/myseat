@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 2.4.3                         =-=
+=-= Version: 2.4.4                         =-=
 =-= Date:    25.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -45,12 +45,19 @@ commit (git tag vX.Y.Z). Based on mySeat by Bernd Orttenburger and contributors,
 CHANGELOG
 =========
 
-Versions 0.2161 - 2.4.3 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 2.4.4 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-26 == mySeat v2.4.4 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: short cancel links never got an expiry. Newer YOURLS versions put a 'code' into every answer, and the
+   Expiry plugin's hook for new links does nothing then. The expiry is now set with a second call
+   (action=expiry, postx=none so an expired link is deleted), and "Verbindung prüfen" in Einstellungen >
+   SMS-Versand asks the plugin (expiry-stats) whether the test link really has an expiry
 
 2026-09-26 == mySeat v2.4.3 == amadeushi - http://github.com/amadeushi/myseat
 

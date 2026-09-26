@@ -100,6 +100,12 @@ if ($op === 'test_link') {
 	if (!empty($res['expiry_ok'])) {
 		ss_out(array('ok' => true, 'message' => 'Verbindung und Ablauf in Ordnung. Testlink '.$res['short'].', YOURLS bestätigt: '.$res['expiry']));
 	}
+	// no confirmation in the answer: ask the plugin directly whether the link has an expiry
+	$st = sms_yourls_expiry_stats($res['short']);
+	if (preg_match('/will expire in|clicks left|beyond expiration/i', $st['message'])) {
+		ss_out(array('ok' => true, 'message' => 'Verbindung und Ablauf in Ordnung. Testlink '.$res['short'].', YOURLS meldet: '.$st['message']));
+	}
+	ss_out(array('ok' => false, 'error' => 'Verbindung ok (Testlink '.$res['short'].'), aber es ist KEIN Ablauf gesetzt. Antwort auf die Ablauf-Abfrage (HTTP '.$st['http'].'): '.($st['message'] !== '' ? $st['message'] : 'keine').'. Felder der Erstellungs-Antwort: '.implode(', ', $res['keys']).'.'));
 	ss_out(array('ok' => false, 'error' => 'Verbindung ok (Testlink '.$res['short'].'), aber YOURLS hat KEINEN Ablauf gesetzt'.($res['expiry'] !== '' ? ': '.$res['expiry'] : ' (keine Antwort des Plugins „Expiry“, ist es aktiviert?)').'. Der Link würde nie ablaufen.'));
 }
 
