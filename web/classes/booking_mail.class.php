@@ -113,6 +113,36 @@ function bm_ics_build($ctx) {
 }
 
 /*
+ * Everything a guest needs before the visit, in the guest's language ('de' or anything else = English): menu
+ * links, address with a destination-only route link (nothing about the guest goes into the URL), bus timetable,
+ * parking, accessibility. Used by the mails (bm_build) and by the guest page api/cancel.php.
+ */
+function bm_guest_info($lang, $phone_contact, $property) {
+	$de = ($lang === 'de');
+	if ($de) {
+		$g = array('info_h' => 'So kommst du gut an', 'addr_l' => 'Adresse', 'route_l' => 'Route planen', 'bus_key' => 'Mit dem Bus', 'bus_l' => 'Fahrplanauskunft',
+			'menu_t' => 'Schau vorab, worauf du Lust hast:', 'menu_links' => array('Speisekarte' => 'https://amds.at/menu', 'Getränkekarte' => 'https://amds.at/drinks'),
+			'info' => array(
+				'Mit dem Bus' => 'Haltestellen Rathausstraße und Schuhstraße, fast alle Linien halten dort.',
+				'Parken' => 'Tiefgaragen am Ratsbauhof und unter dem Marktplatz (Zufahrt Jakobistraße), Parkhaus Arnekengalerie. Am Straßenrand (Rathaus- und Osterstraße) kostenlos werktags ab 19 Uhr, samstags ab 16 Uhr.',
+				'Barrierefreiheit' => 'Zwei Stufen am Eingang. Ruf vorab kurz an'.($phone_contact !== '' ? ' ('.$phone_contact.')' : '').', dann bauen wir eine Rollstuhlrampe auf und setzen dich ins Erdgeschoss. Barrierefreie öffentliche Toilette 10 Meter entfernt.',
+			));
+	} else {
+		$g = array('info_h' => 'Getting here', 'addr_l' => 'Address', 'route_l' => 'Get directions', 'bus_key' => 'By bus', 'bus_l' => 'Timetable',
+			'menu_t' => 'Take a look at what you fancy:', 'menu_links' => array('Food menu' => 'https://amds.at/menu', 'Drinks menu' => 'https://amds.at/drinks'),
+			'info' => array(
+				'By bus' => 'Stops Rathausstraße and Schuhstraße, served by almost all lines.',
+				'Parking' => 'Underground car parks at Ratsbauhof and below the Marktplatz (entrance Jakobistraße), Arnekengalerie car park. Street parking (Rathaus- and Osterstraße) is free on weekdays from 7 pm and Saturdays from 4 pm.',
+				'Accessibility' => 'Two steps at the entrance. Please call ahead'.($phone_contact !== '' ? ' ('.$phone_contact.')' : '').' and we will set up a wheelchair ramp and seat you on the ground floor. Accessible public toilet 10 metres away.',
+			));
+	}
+	$g['addr_plain'] = trim(bm_clean(isset($property['street']) ? $property['street'] : '').', '.bm_clean(isset($property['zip']) ? $property['zip'] : '').' '.bm_clean(isset($property['city']) ? $property['city'] : ''), ' ,');
+	$g['bus_url'] = 'https://www.svhi-hildesheim.de/de/Fahrplan/Fahrplanauskunft/';
+	$g['route_url'] = $g['addr_plain'] !== '' ? 'https://www.google.com/maps/dir/?api=1&destination='.rawurlencode($g['addr_plain']) : '';
+	return $g;
+}
+
+/*
  * Build the mails. $d keys: form (the submitted booking form), outlet (selOutlet), property,
  * date (Y-m-d), time_text (formatted time), date_text (formatted date or range), booking_number,
  * cancel_url, origin ('online' | 'backend').
@@ -189,15 +219,6 @@ function bm_build($d) {
 			$cancel_l = 'Reservierung stornieren';
 			$auto     = 'Diese E-Mail wurde automatisch nach deiner Online-Reservierung versendet.';
 		}
-		$info_h = 'So kommst du gut an';
-		$info = array(
-			'Mit dem Bus' => 'Haltestellen Rathausstraße und Schuhstraße, fast alle Linien halten dort.',
-			'Parken' => 'Tiefgaragen am Ratsbauhof und unter dem Marktplatz (Zufahrt Jakobistraße), Parkhaus Arnekengalerie. Am Straßenrand (Rathaus- und Osterstraße) kostenlos werktags ab 19 Uhr, samstags ab 16 Uhr.',
-			'Barrierefreiheit' => 'Zwei Stufen am Eingang. Ruf vorab kurz an'.($phone_contact !== '' ? ' ('.$phone_contact.')' : '').', dann bauen wir eine Rollstuhlrampe auf und setzen dich ins Erdgeschoss. Barrierefreie öffentliche Toilette 10 Meter entfernt.',
-		);
-		$addr_l = 'Adresse'; $route_l = 'Route planen'; $bus_key = 'Mit dem Bus'; $bus_l = 'Fahrplanauskunft';
-		$menu_t = 'Schau vorab, worauf du Lust hast:';
-		$menu_links = array('Speisekarte' => 'https://amds.at/menu', 'Getränkekarte' => 'https://amds.at/drinks');
 	} else {
 		$greeting = 'Hello '.$name.',';
 		$rows     = array('Date' => $date_txt, 'Time' => $time_txt, 'Guests' => (string)$pax, 'Booking number' => $number);
@@ -242,22 +263,12 @@ function bm_build($d) {
 			$cancel_l = 'Cancel reservation';
 			$auto     = 'This email was sent automatically after your online reservation.';
 		}
-		$info_h = 'Getting here';
-		$info = array(
-			'By bus' => 'Stops Rathausstraße and Schuhstraße, served by almost all lines.',
-			'Parking' => 'Underground car parks at Ratsbauhof and below the Marktplatz (entrance Jakobistraße), Arnekengalerie car park. Street parking (Rathaus- and Osterstraße) is free on weekdays from 7 pm and Saturdays from 4 pm.',
-			'Accessibility' => 'Two steps at the entrance. Please call ahead'.($phone_contact !== '' ? ' ('.$phone_contact.')' : '').' and we will set up a wheelchair ramp and seat you on the ground floor. Accessible public toilet 10 metres away.',
-		);
-		$addr_l = 'Address'; $route_l = 'Get directions'; $bus_key = 'By bus'; $bus_l = 'Timetable';
-		$menu_t = 'Take a look at what you fancy:';
-		$menu_links = array('Food menu' => 'https://amds.at/menu', 'Drinks menu' => 'https://amds.at/drinks');
 	}
 
-	// the restaurant's own address and a plain destination-only route link: nothing about the guest
-	// (no start, name or booking number) goes into the URL, the guest's phone fills in the start
-	$addr_plain = trim(bm_clean(isset($d['property']['street']) ? $d['property']['street'] : '').', '.bm_clean(isset($d['property']['zip']) ? $d['property']['zip'] : '').' '.bm_clean(isset($d['property']['city']) ? $d['property']['city'] : ''), ' ,');
-	$bus_url = 'https://www.svhi-hildesheim.de/de/Fahrplan/Fahrplanauskunft/';
-	$route_url = $addr_plain !== '' ? 'https://www.google.com/maps/dir/?api=1&destination='.rawurlencode($addr_plain) : '';
+	// arrival, parking, accessibility, menus, address and route link: one source for the mail and the guest page (api/cancel.php)
+	$gi = bm_guest_info($lang, $phone_contact, $d['property']);
+	$info_h = $gi['info_h']; $info = $gi['info']; $addr_l = $gi['addr_l']; $route_l = $gi['route_l']; $bus_key = $gi['bus_key']; $bus_l = $gi['bus_l'];
+	$menu_t = $gi['menu_t']; $menu_links = $gi['menu_links']; $addr_plain = $gi['addr_plain']; $bus_url = $gi['bus_url']; $route_url = $gi['route_url'];
 
 	$legal = bm_legal_lines($d['property']);
 	$imprint_url = !empty($settings['imprintUrl']) ? $settings['imprintUrl'] : '';

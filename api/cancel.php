@@ -22,6 +22,8 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 	include('../web/includes/get_variables.inc.php');
 // ** cancel links (token check, phone comparison)
 	require_once('../web/classes/cancel_link.class.php');
+// ** shared guest info (menus, arrival, parking ...), the same texts as in the confirmation mail
+	require_once('../web/classes/booking_mail.class.php');
 // translate to selected language
 	$language = $general['language'];
 	if (isset($_GET['lang']) && preg_match('/^[a-z]{2}$/', $_GET['lang'])) {
@@ -53,6 +55,23 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 			'booknum'      => 'Buchungsnummer',
 			'email'        => 'E-Mail oder Mobilnummer',
 			'website'      => 'Zurück zur Website',
+			'title_ok'     => 'Dein Tisch ist reserviert',
+			'lead_ok'      => 'Wir freuen uns auf dich. Hier findest du alles für deinen Besuch.',
+			'title_pend'   => 'Deine Anfrage',
+			'lead_pend'    => 'Wir melden uns so schnell wie möglich mit einer festen Zusage.',
+			'date'         => 'Datum',
+			'time'         => 'Uhrzeit',
+			'guests'       => 'Personen',
+			'note'         => 'Deine Anmerkung',
+			'contact_h'    => 'Fragen oder Änderungen?',
+			'contact_t'    => 'Ruf uns an oder schreib uns, wir helfen gern.',
+			'cancel_h'     => 'Doch verhindert?',
+			'cancel_t'     => 'Sag uns bitte Bescheid, dann kann jemand anderes deinen Platz bekommen.',
+			'cancel_open'  => 'Reservierung stornieren',
+			'cancel_open_p'=> 'Anfrage zurückziehen',
+			'past'         => 'Diese Reservierung liegt in der Vergangenheit und kann nicht mehr storniert werden.',
+			'title_past'   => 'Deine Reservierung',
+			'clock'        => ' Uhr',
 		),
 		'en' => array(
 			'lookup_title' => 'Cancel reservation',
@@ -71,6 +90,23 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 			'booknum'      => 'Booking number',
 			'email'        => 'Email or mobile number',
 			'website'      => 'Back to website',
+			'title_ok'     => 'Your table is reserved',
+			'lead_ok'      => 'We are looking forward to seeing you. Everything for your visit is here.',
+			'title_pend'   => 'Your request',
+			'lead_pend'    => 'We will get back to you as soon as possible with a firm answer.',
+			'date'         => 'Date',
+			'time'         => 'Time',
+			'guests'       => 'Guests',
+			'note'         => 'Your note',
+			'contact_h'    => 'Questions or changes?',
+			'contact_t'    => 'Call us or write to us, we are happy to help.',
+			'cancel_h'     => 'Cannot make it?',
+			'cancel_t'     => 'Please let us know so someone else can take your seat.',
+			'cancel_open'  => 'Cancel reservation',
+			'cancel_open_p'=> 'Withdraw request',
+			'past'         => 'This reservation is in the past and can no longer be cancelled.',
+			'title_past'   => 'Your reservation',
+			'clock'        => '',
 		),
 	);
 	$t = isset($tr[$lang]) ? $tr[$lang] : $tr['en'];
@@ -89,7 +125,7 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 		if (!preg_match('/^[A-Za-z0-9]{1,12}$/', $nr) || ($email === '' && $token === '')) {
 			return null;
 		}
-		$result = query("SELECT `reservation_id`, `reservation_outlet_id`, `reservation_date`, `reservation_time`, `reservation_pax`, `reservation_guest_email`, `reservation_guest_phone` FROM `$dbTables->reservations` WHERE `reservation_bookingnumber` = '%s' AND `reservation_hidden` = '0'",
+		$result = query("SELECT * FROM `$dbTables->reservations` WHERE `reservation_bookingnumber` = '%s' AND `reservation_hidden` = '0'",
 			mysql_real_escape_string($nr));
 		while ($row = mysql_fetch_assoc($result)) {
 			if ($token !== '' && cl_token_ok($row['reservation_id'], $nr, $token)) { return $row; }
@@ -109,7 +145,9 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 	if ($nr !== '' || $email !== '' || $token !== '') {
 		$res = findActiveReservation($nr, $email, $token);
 		if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'cncl_book') {
-			if ($res) {
+			if ($res && $res['reservation_date'] < date('Y-m-d')) {
+				$state = 'view';   // a reservation of the past is not cancelled any more
+			} elseif ($res) {
 				// cancel only after the explicit confirmation click
 				query("UPDATE `$dbTables->reservations` SET `reservation_hidden` = '1', `reservation_status` = 'CXL', `reservation_timestamp` = now() WHERE `reservation_id` = '%d' AND `reservation_hidden` = '0'", (int)$res['reservation_id']);
 				if (mysql_affected_rows() >= 1) {
@@ -122,7 +160,7 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 				$state = 'notfound';
 			}
 		} else {
-			$state = $res ? 'confirm' : 'notfound';
+			$state = $res ? 'view' : 'notfound';
 		}
 	}
 
@@ -156,6 +194,20 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 		$website = "http://".$prp_info['website'];
 	}
 	$contact_email = isset($prp_info['email']) ? $prp_info['email'] : '';
+
+// the guest page: facts of the reservation plus what the confirmation mail says (menus, arrival, contact)
+	if ($state == 'view') {
+		$contact_phone = !empty($settings['mailPhone']) ? $settings['mailPhone'] : (!empty($prp_info['phone']) ? $prp_info['phone'] : '');
+		$gi = bm_guest_info($lang, $contact_phone, $prp_info);
+		$is_pending = (isset($res['reservation_approval']) && $res['reservation_approval'] === 'pending');
+		$is_past = ($res['reservation_date'] < date('Y-m-d'));
+		$brand = $outlet_name !== '' ? $outlet_name : $prp_info['name'];
+		$when = bm_weekday($res['reservation_date'], $lang).', '.date($general['dateformat'], strtotime($res['reservation_date']));
+		$at = formatTime($res['reservation_time'], $general['timeformat']).$t['clock'];
+		$tel_digits = preg_replace('/\D/', '', (string)$contact_phone);
+		$tel_href = strlen($tel_digits) >= 6 ? 'tel:'.(substr($tel_digits, 0, 1) === '0' ? '+49'.substr($tel_digits, 1) : '+'.$tel_digits) : '';
+		$page_title = $is_past ? $t['title_past'] : ($is_pending ? $t['title_pend'] : $t['title_ok']);
+	}
 ?>
 <!DOCTYPE html>
 <html lang="<?php echo $h($lang); ?>">
@@ -167,11 +219,11 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 	<link rel="stylesheet" href="../web/fonts/fonts.css"/>
 	<link href="style/style.css?v=<?php echo @filemtime(__DIR__.'/style/style.css'); ?>" rel="stylesheet" type="text/css" />
 
-	<title><?php echo $h($t['lookup_title']); ?><?php echo $prp_info['name'] ? ' &ndash; '.$prp_info['name'] : ''; ?></title>
+	<title><?php echo $h($state == 'view' ? $page_title : $t['lookup_title']); ?><?php echo $prp_info['name'] ? ' &ndash; '.$prp_info['name'] : ''; ?></title>
 </head>
 <body>
-<div class="booking-shell confirm-shell">
-	<div class="confirm-card">
+<div class="booking-shell <?php echo $state == 'view' ? 'guest-shell' : 'confirm-shell'; ?>">
+	<div class="<?php echo $state == 'view' ? 'guest-page' : 'confirm-card'; ?>">
 		<?php language_navigation($lang, false); ?>
 
 	<?php if ($state == 'done'): ?>
@@ -186,40 +238,77 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 			<a class="confirm-secondary" href="<?php echo $h($website); ?>"><?php echo $h($t['website']); ?></a>
 		</div>
 
-	<?php elseif ($state == 'confirm'): ?>
+	<?php elseif ($state == 'view'): ?>
 
-		<div class="confirm-icon is-waitlist">
-			<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M4 10h16M9 3v4M15 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-		</div>
-		<h1 class="confirm-title"><?php echo $h($t['confirm_title']); ?></h1>
-		<p class="confirm-text">
-			<?php echo $h($t['confirm_text']); ?><br/>
-			<?php if ($outlet_name) { echo $h($outlet_name).' &middot; '; } ?><?php echo $h($t['booknum']); ?> <strong><?php echo $h($nr); ?></strong>
-		</p>
+		<header class="guest-head">
+			<h1 class="guest-title"><?php echo $h($page_title); ?></h1>
+			<p class="guest-lead"><?php echo $h($is_past ? $t['past'] : ($is_pending ? $t['lead_pend'] : $t['lead_ok'])); ?></p>
+			<?php if (!$is_past): ?><a class="guest-jump" href="#g-cancel"><?php echo $h($is_pending ? $t['cancel_open_p'] : $t['cancel_open']); ?></a><?php endif; ?>
+		</header>
 
-		<div class="wizard-summary">
-			<div class="summary-item">
-				<span class="summary-label"><?php echo _date; ?></span>
-				<span class="summary-value"><?php echo $h(date($general['dateformat'], strtotime($res['reservation_date']))); ?></span>
-			</div>
-			<div class="summary-item">
-				<span class="summary-label"><?php echo _time; ?></span>
-				<span class="summary-value"><?php echo $h(formatTime($res['reservation_time'], $general['timeformat'])); ?></span>
-			</div>
-			<div class="summary-item">
-				<span class="summary-label"><?php echo ucfirst(_people_); ?></span>
-				<span class="summary-value"><?php echo (int)$res['reservation_pax']; ?></span>
-			</div>
-		</div>
+		<dl class="guest-facts">
+			<div class="guest-when"><dt><?php echo $h($t['date']); ?></dt><dd><?php echo $h($when); ?></dd></div>
+			<div><dt><?php echo $h($t['time']); ?></dt><dd><?php echo $h($at); ?></dd></div>
+			<div><dt><?php echo $h($t['guests']); ?></dt><dd><?php echo (int)$res['reservation_pax']; ?></dd></div>
+			<div class="guest-nr"><dt><?php echo $h($t['booknum']); ?></dt><dd class="guest-number"><?php echo $h($nr); ?></dd></div>
+			<?php if (trim((string)$res['reservation_notes']) !== ''): ?>
+			<div class="guest-note"><dt><?php echo $h($t['note']); ?></dt><dd><?php echo nl2br($h(trim($res['reservation_notes']))); ?></dd></div>
+			<?php endif; ?>
+		</dl>
 
-		<form method="post" action="cancel.php" class="confirm-actions">
-			<input type="hidden" name="action" value="cncl_book">
-			<input type="hidden" name="nr" value="<?php echo $h($nr); ?>">
-			<input type="hidden" name="email" value="<?php echo $h($email); ?>">
-			<?php if ($token !== ''): ?><input type="hidden" name="t" value="<?php echo $h($token); ?>"><?php endif; ?>
-			<button type="submit" class="submit-button"><?php echo $h($t['confirm_btn']); ?></button>
-			<a class="confirm-secondary" href="<?php echo $h($website); ?>"><?php echo $h($t['keep']); ?></a>
-		</form>
+		<?php if (!$is_pending && !$is_past): ?>
+		<section class="guest-section" aria-labelledby="g-menu">
+			<h2 id="g-menu"><?php echo $h(rtrim($gi['menu_t'], ':')); ?></h2>
+			<div class="guest-buttons">
+				<?php foreach ($gi['menu_links'] as $label => $url): ?><a class="guest-btn" href="<?php echo $h($url); ?>" target="_blank" rel="noopener"><?php echo $h($label); ?></a><?php endforeach; ?>
+			</div>
+		</section>
+
+		<section class="guest-section" aria-labelledby="g-info">
+			<h2 id="g-info"><?php echo $h($gi['info_h']); ?></h2>
+			<dl class="guest-info">
+				<?php if ($gi['route_url'] !== ''): ?>
+				<div><dt><?php echo $h($gi['addr_l']); ?></dt><dd><?php echo $h($gi['addr_plain']); ?><br/><a href="<?php echo $h($gi['route_url']); ?>" target="_blank" rel="noopener"><?php echo $h($gi['route_l']); ?></a></dd></div>
+				<?php endif; ?>
+				<?php foreach ($gi['info'] as $label => $text): if ($label === $gi['bus_key']): ?>
+				<div><dt><?php echo $h($label); ?></dt><dd><?php echo $h($text); ?><br/><a href="<?php echo $h($gi['bus_url']); ?>" target="_blank" rel="noopener"><?php echo $h($gi['bus_l']); ?></a></dd></div>
+				<?php endif; endforeach; ?>
+			</dl>
+			<?php foreach ($gi['info'] as $label => $text): if ($label !== $gi['bus_key']): ?>
+			<details class="guest-fold">
+				<summary><?php echo $h($label); ?></summary>
+				<p><?php echo $h($text); ?></p>
+			</details>
+			<?php endif; endforeach; ?>
+		</section>
+		<?php endif; ?>
+
+		<section class="guest-section" aria-labelledby="g-contact">
+			<h2 id="g-contact"><?php echo $h($t['contact_h']); ?></h2>
+			<p class="guest-text"><?php echo $h($t['contact_t']); ?></p>
+			<p class="guest-contact">
+				<?php if ($tel_href !== ''): ?><a href="<?php echo $h($tel_href); ?>"><?php echo $h($contact_phone); ?></a><?php endif; ?>
+				<?php if ($contact_email): ?><a href="mailto:<?php echo $h($contact_email); ?>"><?php echo $h($contact_email); ?></a><?php endif; ?>
+			</p>
+		</section>
+
+		<?php if (!$is_past): ?>
+		<section class="guest-section guest-cancel" aria-labelledby="g-cancel">
+			<h2 id="g-cancel"><?php echo $h($t['cancel_h']); ?></h2>
+			<p class="guest-text"><?php echo $h($t['cancel_t']); ?></p>
+			<details class="guest-cancel-box">
+				<summary><?php echo $h($is_pending ? $t['cancel_open_p'] : $t['cancel_open']); ?></summary>
+				<form method="post" action="cancel.php">
+					<p class="guest-text"><?php echo $h($t['confirm_text']); ?></p>
+					<input type="hidden" name="action" value="cncl_book">
+					<input type="hidden" name="nr" value="<?php echo $h($nr); ?>">
+					<input type="hidden" name="email" value="<?php echo $h($email); ?>">
+					<?php if ($token !== ''): ?><input type="hidden" name="t" value="<?php echo $h($token); ?>"><?php endif; ?>
+					<button type="submit" class="guest-danger"><?php echo $h($t['confirm_btn']); ?></button>
+				</form>
+			</details>
+		</section>
+		<?php endif; ?>
 
 	<?php else: ?>
 

@@ -218,10 +218,10 @@ function sms_text($event, $r) {
 	$tel = isset($r['phone']) ? trim($r['phone']) : '';
 	$link = isset($r['link']) ? trim($r['link']) : '';
 	if ($event === 'reminder') {
-		$tail = $link !== '' ? ' Schaffst du es nicht? Absage: '.$link : ($tel !== '' ? ' Schaffst du es nicht, sag uns bitte kurz Bescheid: '.$tel.'.' : '');
+		$tail = $link !== '' ? ' Infos und Absage: '.$link : ($tel !== '' ? ' Schaffst du es nicht, sag uns bitte kurz Bescheid: '.$tel.'.' : '');
 		return sms_fit('', $r['brand'], ': Bis morgen! Dein Tisch um '.$t.' Uhr für '.$people.' ist reserviert.'.$tail);
 	}
-	$tail = $link !== '' ? ' Absage: '.$link : ($tel !== '' ? ' Fragen oder Absage: '.$tel.'.' : '');
+	$tail = $link !== '' ? ' Infos und Absage: '.$link : ($tel !== '' ? ' Fragen oder Absage: '.$tel.'.' : '');
 	return sms_fit('', $r['brand'], ': Deine Reservierung ist bestätigt! '.$d.' um '.$t.' Uhr, '.$people.'. Buchungsnummer '.$r['number'].'.'.$tail.' Bis bald!');
 }
 

@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 2.4.4                         =-=
+=-= Version: 2.5.0                         =-=
 =-= Date:    25.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -45,12 +45,28 @@ commit (git tag vX.Y.Z). Based on mySeat by Bernd Orttenburger and contributors,
 CHANGELOG
 =========
 
-Versions 0.2161 - 2.4.4 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 2.5.0 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-26 == mySeat v2.5.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * The guest page (api/cancel.php, the link in the SMS and the mails) now shows the whole reservation instead of
+   only a cancel button: date, time, guests, booking number, the guest's note, menu buttons (food and drinks),
+   how to get here (address with route link, bus with timetable, parking, accessibility), phone and email, and
+   cancelling last, behind a "Reservierung stornieren" button with a confirmation step. So guests without an
+   email address can read up on their visit too. Pending requests show "Deine Anfrage" without the arrival
+   info and can be withdrawn; reservations in the past cannot be cancelled any more (also checked on the server)
+ * The texts for the arrival info and the menu links come from one place (bm_guest_info in
+   web/classes/booking_mail.class.php) for the mails and the page; the mails are unchanged, byte for byte
+ * SMS: "Infos und Absage: <short link>" instead of "Absage: <short link>"
+ * Fix: a light outline around the text of buttons on the booking pages (the old admin theme's white text-shadow on every
+   <button>); the cancel, offer and booking pages have no text-shadow now
+ * Fix: the language switch (EN/DE) on the guest page kept the booking number and email but dropped the signed token of
+   the SMS link, so the guest fell back to the empty lookup form; it keeps the token now
 
 2026-09-26 == mySeat v2.4.4 == amadeushi - http://github.com/amadeushi/myseat
 

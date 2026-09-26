@@ -172,8 +172,9 @@ function tableplanSlotFits($time, $pax = null) {
 function language_navigation($language, $show_cancel = true) {
 		// keep the cancel link's booking number/email when switching language
 		$keep = '';
-		foreach (array('nr', 'email') as $k) {
-			if (isset($_GET[$k]) && $_GET[$k] !== '') {
+		// (nr, email, and the signed token t of the SMS link, which alone identifies the reservation)
+		foreach (array('nr', 'email', 't') as $k) {
+			if (isset($_GET[$k]) && is_string($_GET[$k]) && $_GET[$k] !== '' && ($k !== 't' || preg_match('/^[a-f0-9]{24}$/', $_GET[$k]))) {
 				$keep .= '&'.$k.'='.urlencode($_GET[$k]);
 			}
 		}
