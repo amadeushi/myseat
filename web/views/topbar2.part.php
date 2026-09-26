@@ -1,6 +1,6 @@
 <div class="topbar" id="topbar">
         <div class="container">
-			<a class="brand" href="<?php echo dirname($_SERVER['PHP_SELF']);?>/main_page.php?p=2"><img src="images/logo.png" alt=""/><?php echo htmlspecialchars(isset($settings['brandName']) ? $settings['brandName'] : 'mySeat'); ?></a>
+			<a class="brand" href="<?php echo dirname($_SERVER['PHP_SELF']);?>/main_page.php?p=2"><?php require_once __DIR__.'/../classes/brand.class.php'; echo brand_logo_html(isset($settings['brandName']) ? $settings['brandName'] : 'mySeat', 'brand-logo brand-logo-bar'); ?></a>
        
 			<ul class="nav">
 				<?php

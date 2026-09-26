@@ -14,6 +14,7 @@ $forwardPage = "../web/main_page.php?p=1";
 // ** set configuration
 	include('../config/config.general.php');
 
+require_once __DIR__.'/../web/classes/brand.class.php';
 $brand = isset($settings['brandName']) && $settings['brandName'] !== '' ? $settings['brandName'] : 'mySeat';
 
 	// ** language of the page: ?lang=de|en, otherwise the browser language (German is the default)
@@ -165,6 +166,7 @@ body {
 .lang a { padding: 4px 12px; border-radius: 999px; color: var(--text-muted); font-size: 12px; font-weight: 600; letter-spacing: .08em; text-decoration: none; }
 .lang a[aria-current="true"] { background: var(--gold); color: var(--bg); }
 .lang a:focus-visible { outline: 2px solid var(--gold-strong); outline-offset: 2px; }
+.brand .brand-logo { display: inline-block; height: clamp(64px, 20vw, 92px); width: auto; max-width: 100%; }
 .brand { margin: 0 0 28px; font-family: var(--font-display); font-weight: 300; font-size: clamp(40px, 12vw, 56px); line-height: 1; color: var(--text); text-align: center; }
 .card { width: 100%; max-width: 420px; padding: clamp(22px, 6vw, 36px); background: var(--surface); border: 1px solid var(--border-soft); border-radius: 16px; }
 .card h1 { margin: 0 0 6px; font-family: var(--font-display); font-weight: 500; font-size: 30px; line-height: 1.15; color: var(--text); }
@@ -195,7 +197,7 @@ body {
 		<a href="?lang=en" hreflang="en"<?php echo $lang === 'en' ? ' aria-current="true"' : ''; ?>>EN</a>
 	</nav>
 
-	<div class="brand" role="banner"><?php echo htmlspecialchars($brand); ?></div>
+	<div class="brand" role="banner"><?php echo brand_logo_html($brand, 'brand-logo'); ?></div>
 
 	<main class="card">
 		<h1><?php echo htmlspecialchars($t['heading']); ?></h1>

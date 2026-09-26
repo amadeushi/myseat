@@ -224,7 +224,7 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 <body>
 <div class="booking-shell <?php echo $state == 'view' ? 'guest-shell' : 'confirm-shell'; ?>">
 	<div class="<?php echo $state == 'view' ? 'guest-page' : 'confirm-card'; ?>">
-		<?php language_navigation($lang, false); ?>
+		<div class="brand-row"><?php echo brand_logo_html($prp_info['name']); ?><?php language_navigation($lang, false); ?></div>
 
 	<?php if ($state == 'done'): ?>
 

@@ -169,6 +169,9 @@ function tableplanSlotFits($time, $pax = null) {
 	return tp_online_fits($_SESSION['outletID'], $_SESSION['selectedDate'], $pax, substr((string)$time, 0, 5));
 }
 
+// the restaurant's logo: brand_logo_html() in web/classes/brand.class.php
+require_once __DIR__.'/../web/classes/brand.class.php';
+
 function language_navigation($language, $show_cancel = true) {
 		// keep the cancel link's booking number/email when switching language
 		$keep = '';

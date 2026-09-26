@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 2.5.0                         =-=
+=-= Version: 2.5.1                         =-=
 =-= Date:    25.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -45,12 +45,22 @@ commit (git tag vX.Y.Z). Based on mySeat by Bernd Orttenburger and contributors,
 CHANGELOG
 =========
 
-Versions 0.2161 - 2.5.0 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 2.5.1 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-26 == mySeat v2.5.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * The restaurant's logo (https://www.amadeus-hildesheim.de/images/logo.png, white on transparent) in the booking widget
+   (as its title), on the guest page (next to the language picker), in the backend top bar and on the login page; the
+   name is shown as text if the image cannot load. One helper for all (web/classes/brand.class.php);
+   $settings['logoUrl'] in config.general.php can point to another image
+ * Fix: a light outline around the text of buttons on the booking pages (the old admin theme's white text-shadow on every
+   <button>); the cancel, offer and booking pages have no text-shadow now
+ * SMS: the link is announced as "Reservierungsdetails: <short link>" (v2.5.0 said "Infos und Absage")
 
 2026-09-26 == mySeat v2.5.0 == amadeushi - http://github.com/amadeushi/myseat
 
@@ -63,8 +73,6 @@ config/config.general.php (defaults apply when missing):
  * The texts for the arrival info and the menu links come from one place (bm_guest_info in
    web/classes/booking_mail.class.php) for the mails and the page; the mails are unchanged, byte for byte
  * SMS: "Infos und Absage: <short link>" instead of "Absage: <short link>"
- * Fix: a light outline around the text of buttons on the booking pages (the old admin theme's white text-shadow on every
-   <button>); the cancel, offer and booking pages have no text-shadow now
  * Fix: the language switch (EN/DE) on the guest page kept the booking number and email but dropped the signed token of
    the SMS link, so the guest fell back to the empty lookup form; it keeps the token now
 

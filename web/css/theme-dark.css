@@ -77,8 +77,14 @@ hr {
 	color: var(--text);
 	text-shadow: none;
 }
+.topbar .brand {
+	padding-top: 5px;
+	padding-bottom: 5px;
+}
 .topbar .brand img {
-	display: none;
+	display: block;
+	height: 34px;
+	width: auto;
 }
 .topbar a,
 .topbar div > ul a,

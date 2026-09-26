@@ -2039,3 +2039,31 @@ button.offer-chip:focus-visible { outline: 2px solid var(--gold); outline-offset
 
 /* the old admin theme puts a white text-shadow on every button (and some links); on the dark booking pages it shows as a light outline */
 .booking-shell button, .booking-shell .button, .booking-shell a, .booking-shell summary { text-shadow: none; }
+
+/* ---- logo ---- */
+.brand-logo {
+	display: block;
+	height: 40px;
+	width: auto;
+	max-width: 100%;
+}
+.booking-title .brand-logo-title {
+	height: 64px;
+}
+@media (max-width: 720px) {
+	.booking-title .brand-logo-title {
+		height: 52px;
+		margin: 0 auto;
+	}
+}
+.brand-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	margin-bottom: 8px;
+}
+.booking-shell .brand-row .langnav {
+	margin-bottom: 0;
+	margin-left: auto;
+}

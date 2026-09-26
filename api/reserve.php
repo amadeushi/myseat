@@ -331,7 +331,7 @@ if($check_web_outlet==1){
 
 	<main class="booking-main">
 		<?php language_navigation($lang);?>
-		<h1 class="booking-title"><?php echo $page_title; ?></h1>
+		<h1 class="booking-title"><?php echo brand_logo_html($page_title, 'brand-logo brand-logo-title'); ?></h1>
 		<p class="booking-subtitle"><?php echo bt('subtitle'); ?></p>
 
 		<form action="process_booking.php" method="post" name="contactForm" id="contactForm">
