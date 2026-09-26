@@ -72,6 +72,7 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 			'past'         => 'Diese Reservierung liegt in der Vergangenheit und kann nicht mehr storniert werden.',
 			'title_past'   => 'Deine Reservierung',
 			'clock'        => ' Uhr',
+			'ics'          => 'Zum Kalender hinzufügen',
 		),
 		'en' => array(
 			'lookup_title' => 'Cancel reservation',
@@ -107,6 +108,7 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 			'past'         => 'This reservation is in the past and can no longer be cancelled.',
 			'title_past'   => 'Your reservation',
 			'clock'        => '',
+			'ics'          => 'Add to calendar',
 		),
 	);
 	$t = isset($tr[$lang]) ? $tr[$lang] : $tr['en'];
@@ -182,9 +184,10 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 	$outlet_name = '';
 	$outlet_id = (int)$_SESSION['outletID'];
 	if ($res) {
-		$r = query("SELECT `outlet_name` FROM `$dbTables->outlets` WHERE `outlet_id` = '%d' LIMIT 1", $outlet_id);
+		$r = query("SELECT `outlet_name`, `avg_duration` FROM `$dbTables->outlets` WHERE `outlet_id` = '%d' LIMIT 1", $outlet_id);
 		$row = mysql_fetch_assoc($r);
 		$outlet_name = $row ? $row['outlet_name'] : '';
+		$outlet_avg = ($row && isset($row['avg_duration'])) ? $row['avg_duration'] : '';
 	}
 	$new_url = 'reserve.php'.($outlet_id ? '?outletID='.$outlet_id : '');
 
@@ -206,6 +209,24 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 		$at = formatTime($res['reservation_time'], $general['timeformat']).$t['clock'];
 		$tel_digits = preg_replace('/\D/', '', (string)$contact_phone);
 		$tel_href = strlen($tel_digits) >= 6 ? 'tel:'.(substr($tel_digits, 0, 1) === '0' ? '+49'.substr($tel_digits, 1) : '+'.$tel_digits) : '';
+		// calendar file of this reservation (same event as in the confirmation mail: same UID, so no duplicate)
+		$ics_query = 'nr='.urlencode($nr).($token !== '' ? '&t='.$token : '&email='.urlencode($email)).'&lang='.$lang;
+		if (isset($_GET['ics']) && !$is_past && !$is_pending) {
+			$addr_line = trim(bm_clean(isset($prp_info['street']) ? $prp_info['street'] : '').', '.bm_clean(isset($prp_info['zip']) ? $prp_info['zip'] : '').' '.bm_clean(isset($prp_info['city']) ? $prp_info['city'] : ''), ' ,');
+			$ics = bm_ics_build(array(
+				'lang' => ($lang === 'de' ? 'de' : 'en'), 'brand' => bm_clean($brand), 'address' => trim(bm_clean($brand).($addr_line !== '' ? ', '.$addr_line : ''), ' ,'),
+				'date' => $res['reservation_date'], 'time' => $res['reservation_time'], 'duration' => isset($outlet_avg) ? $outlet_avg : '',
+				'pax' => (int)$res['reservation_pax'], 'number' => $nr, 'notes' => bm_clean((string)$res['reservation_notes']),
+				'cancel_url' => cl_cancel_url($res['reservation_id'], $nr, $lang), 'website_url' => $website, 'uid_domain' => parse_url(cl_site_url(), PHP_URL_HOST),
+			));
+			if ($ics !== '') {
+				header('Content-Type: text/calendar; charset=UTF-8');
+				header('Content-Disposition: attachment; filename="'.($lang === 'de' ? 'reservierung' : 'reservation').'-'.preg_replace('/[^A-Za-z0-9]/', '', $nr).'.ics"');
+				header('Cache-Control: no-store');
+				echo $ics;
+				exit;
+			}
+		}
 		$page_title = $is_past ? $t['title_past'] : ($is_pending ? $t['title_pend'] : $t['title_ok']);
 	}
 ?>
@@ -257,6 +278,8 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 		</dl>
 
 		<?php if (!$is_pending && !$is_past): ?>
+		<a class="guest-btn guest-ics" href="cancel.php?<?php echo $h($ics_query); ?>&amp;ics=1"><?php echo $h($t['ics']); ?></a>
+
 		<section class="guest-section" aria-labelledby="g-menu">
 			<h2 id="g-menu"><?php echo $h(rtrim($gi['menu_t'], ':')); ?></h2>
 			<div class="guest-buttons">

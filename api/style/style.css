@@ -2067,3 +2067,7 @@ button.offer-chip:focus-visible { outline: 2px solid var(--gold); outline-offset
 	margin-bottom: 0;
 	margin-left: auto;
 }
+
+.booking-shell .guest-ics {
+	margin-top: 12px;
+}

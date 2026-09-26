@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 2.5.1                         =-=
+=-= Version: 2.6.0                         =-=
 =-= Date:    25.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -45,12 +45,21 @@ commit (git tag vX.Y.Z). Based on mySeat by Bernd Orttenburger and contributors,
 CHANGELOG
 =========
 
-Versions 0.2161 - 2.5.1 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 2.6.0 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-26 == mySeat v2.6.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Guest page: a button "Zum Kalender hinzufügen" downloads the reservation as a calendar file (.ics), the same event as
+   in the confirmation mail (same UID, so a second import updates it instead of duplicating it). Also for guests
+   without an email address. Not offered for pending requests and past reservations
+ * Calendar file (mail and page): the event's link (URL) now opens the reservation page (details, arrival info, cancelling)
+   instead of the website, and the description says "Reservierungsdetails und Stornierung: <link>"; it carried a cancel
+   link before, now the page behind it is more than a cancel button
 
 2026-09-26 == mySeat v2.5.1 == amadeushi - http://github.com/amadeushi/myseat
 

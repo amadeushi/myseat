@@ -84,7 +84,7 @@ function bm_ics_build($ctx) {
 	$desc[] = ($de ? 'Buchungsnummer' : 'Booking number').': '.$ctx['number'];
 	$desc[] = ($de ? 'Personen' : 'Guests').': '.$ctx['pax'];
 	if ($ctx['notes'] !== '') { $desc[] = ($de ? 'Anmerkung' : 'Note').': '.$ctx['notes']; }
-	if ($ctx['cancel_url'] !== '') { $desc[] = ($de ? 'Stornieren' : 'Cancel').': '.$ctx['cancel_url']; }
+	if ($ctx['cancel_url'] !== '') { $desc[] = ($de ? 'Reservierungsdetails und Stornierung' : 'Reservation details and cancellation').': '.$ctx['cancel_url']; }
 	if ($ctx['website_url'] !== '') { $desc[] = ($de ? 'Webseite' : 'Website').': '.$ctx['website_url']; }
 
 	$lines = array();
@@ -101,7 +101,9 @@ function bm_ics_build($ctx) {
 	$lines[] = 'SUMMARY:'.bm_ics_text($summary);
 	if ($ctx['address'] !== '') { $lines[] = 'LOCATION:'.bm_ics_text($ctx['address']); }
 	$lines[] = 'DESCRIPTION:'.bm_ics_text(implode("\n", $desc));
-	if ($ctx['website_url'] !== '') { $lines[] = 'URL:'.bm_ics_text($ctx['website_url']); }
+	// the calendar app shows this as the event's link: the reservation page (details, arrival, cancelling)
+	if ($ctx['cancel_url'] !== '') { $lines[] = 'URL:'.bm_ics_text($ctx['cancel_url']); }
+	elseif ($ctx['website_url'] !== '') { $lines[] = 'URL:'.bm_ics_text($ctx['website_url']); }
 	$lines[] = 'STATUS:CONFIRMED';
 	$lines[] = 'TRANSP:OPAQUE';
 	$lines[] = 'END:VEVENT';
