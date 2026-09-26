@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__.'/../classes/sms.class.php';
+$rsv_sms = sms_enabled();
 /*
  * "New reservation" form (main_page.php?p=2&q=2). Simple main part (date, time, guests, name,
  * phone, note, table) and a collapsible "Details" part. Saved by ajax/process_reservation.php,
@@ -47,7 +49,7 @@ $rsv_selected = array();
 				<p class="rsv-msg" id="rsv-email-msg" role="alert"></p>
 				<input type="hidden" name="email_type" value="no"/>
 				<input type="hidden" name="reservation_email_lang" value="de"/>
-				<label class="rsv-check"><input type="checkbox" name="email_type" id="rsv-mail-confirm" value="loc" disabled="disabled"/> <span><?php echo rt('email_confirm'); ?></span></label>
+				<label class="rsv-check"><input type="checkbox" name="email_type" id="rsv-mail-confirm" value="loc" disabled="disabled"<?php echo $rsv_sms ? ' data-sms="1"' : ''; ?>/> <span><?php echo rt($rsv_sms ? 'email_confirm_sms' : 'email_confirm'); ?></span></label>
 			</div>
 		</div>
 

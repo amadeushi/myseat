@@ -34,7 +34,7 @@
 		return ok;
 	}
 	if (phone) {
-		phone.addEventListener('input', function () { if (phone.classList.contains('is-invalid')) { checkPhone(true); } });
+		phone.addEventListener('input', function () { if (typeof syncMail === 'function') { syncMail(); } if (phone.classList.contains('is-invalid')) { checkPhone(true); } });
 		phone.addEventListener('blur', function () { checkPhone(true); });
 	}
 
@@ -47,12 +47,23 @@
 		if (emailMsg) { emailMsg.textContent = (!ok && show) ? L.emailBad : ''; }
 		return ok;
 	}
+	// with SMS on, a German/Austrian mobile number is enough for a confirmation too
+	function isMobile(v) {
+		var d = String(v || '').replace(/\(\s*0\s*\)/g, '').replace(/\D/g, '');
+		if (d.indexOf('00') === 0) { d = d.slice(2); } else if (d.charAt(0) === '0') { d = '49' + d.slice(1); }
+		d = d.replace(/^(49|43)0+/, '$1');
+		return /^491[567]\d{8,9}$/.test(d) || /^436\d{7,11}$/.test(d);
+	}
 	function syncMail() {
 		if (!mailBox) { return; }
-		var can = validEmail(email.value);
+		var can = validEmail(email.value) || (mailBox.getAttribute('data-sms') === '1' && phone && isMobile(phone.value));
+		var was = !mailBox.disabled;
 		mailBox.disabled = !can;
 		if (!can) { mailBox.checked = false; }
+		// with SMS on the confirmation is the default as soon as it is possible; unticking it by hand is respected
+		else if (!was && mailBox.getAttribute('data-sms') === '1' && !mailBox.getAttribute('data-touched')) { mailBox.checked = true; }
 	}
+	if (mailBox) { mailBox.addEventListener('change', function () { mailBox.setAttribute('data-touched', '1'); }); }
 	if (email) {
 		email.addEventListener('input', function () { syncMail(); if (email.classList.contains('is-invalid')) { checkEmail(true); } });
 		email.addEventListener('blur', function () { checkEmail(true); });

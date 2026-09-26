@@ -95,9 +95,12 @@ if ($op === 'clear_link_key') {
 if ($op === 'test_link') {
 	$c = sms_link_cfg();
 	if ($c['sig'] === '') { ss_out(array('ok' => false, 'error' => 'Es ist noch kein Signaturschlüssel hinterlegt.')); }
-	$res = sms_yourls_shorten(cl_site_url().'/api/cancel.php?test='.bin2hex(random_bytes(4)), 60, cl_site_url().'/api/cancel.php');
+	$res = sms_yourls_shorten(cl_site_url().'/api/cancel.php?test='.bin2hex(random_bytes(4)), 60);
 	if (!$res['ok']) { ss_out(array('ok' => false, 'error' => 'YOURLS: '.$res['error'])); }
-	ss_out(array('ok' => true, 'message' => 'Verbindung in Ordnung, Testlink '.$res['short'].' (läuft in 1 Stunde ab).'));
+	if (!empty($res['expiry_ok'])) {
+		ss_out(array('ok' => true, 'message' => 'Verbindung und Ablauf in Ordnung. Testlink '.$res['short'].', YOURLS bestätigt: '.$res['expiry']));
+	}
+	ss_out(array('ok' => false, 'error' => 'Verbindung ok (Testlink '.$res['short'].'), aber YOURLS hat KEINEN Ablauf gesetzt'.($res['expiry'] !== '' ? ': '.$res['expiry'] : ' (keine Antwort des Plugins „Expiry“, ist es aktiviert?)').'. Der Link würde nie ablaufen.'));
 }
 
 ss_out(array('ok' => false, 'error' => 'Unbekannte Aktion.'));

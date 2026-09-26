@@ -246,9 +246,9 @@ function sms_link_ready() {
 /*
  * Call YOURLS (action shorturl + Expiry plugin: expiry=clock, age in minutes). The keyword is random (8 characters,
  * ~2.8e12 possibilities) because a guessable short link would let anyone cancel other people's tables.
- * Returns array('ok' => bool, 'short' => url|null, 'error' => string|null). Never throws.
+ * Returns array('ok' => bool, 'short' => url|null, 'error' => string|null, 'expiry' => YOURLS' answer, 'expiry_ok' => bool). Never throws.
  */
-function sms_yourls_shorten($long_url, $minutes, $fallback_url) {
+function sms_yourls_shorten($long_url, $minutes) {
 	$c = sms_link_cfg();
 	if ($c['sig'] === '' || stripos($c['url'], 'https://') !== 0) { return array('ok' => false, 'short' => null, 'error' => 'YOURLS ist nicht eingerichtet'); }
 	$alphabet = 'abcdefghijkmnpqrstuvwxyz23456789';
@@ -262,7 +262,7 @@ function sms_yourls_shorten($long_url, $minutes, $fallback_url) {
 			CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_TIMEOUT => 4,
 			CURLOPT_POSTFIELDS => http_build_query(array(
 				'signature' => $c['sig'], 'action' => 'shorturl', 'format' => 'json', 'url' => $long_url, 'keyword' => $kw,
-				'title' => 'mySeat Absage', 'expiry' => 'clock', 'age' => max(60, (int)$minutes), 'ageMod' => 'min', 'postx' => $fallback_url,
+				'title' => 'mySeat Absage', 'expiry' => 'clock', 'age' => max(60, (int)$minutes), 'ageMod' => 'min',
 			)),
 		));
 		$raw = curl_exec($ch);
@@ -275,12 +275,39 @@ function sms_yourls_shorten($long_url, $minutes, $fallback_url) {
 		$short = isset($j['shorturl']) && is_string($j['shorturl']) ? $j['shorturl'] : '';
 		// "already exists" also delivers the existing short link (same reservation asked twice)
 		if ($short !== '' && preg_match('#^https://[^\s]+$#', $short) && (($j['status'] ?? '') === 'success' || ($j['code'] ?? '') === 'error:url')) {
-			return array('ok' => true, 'short' => $short, 'error' => null);
+			// the Expiry plugin adds 'expiry' to the answer ("60 min expiry set."); without it the link would never expire
+			$exp = isset($j['expiry']) && is_string($j['expiry']) ? substr($j['expiry'], 0, 160) : '';
+			return array('ok' => true, 'short' => $short, 'error' => null, 'expiry' => $exp, 'expiry_ok' => (bool)preg_match('/expiry set/i', $exp));
 		}
 		$last = isset($j['message']) && is_string($j['message']) ? substr($j['message'], 0, 120) : 'Fehler (HTTP '.$http.')';
 		if (($j['code'] ?? '') !== 'error:keyword') { break; }
 	}
 	return array('ok' => false, 'short' => null, 'error' => $last);
+}
+
+/*
+ * Expired short links are deleted by the Expiry plugin when somebody opens them, so links nobody clicks would stay
+ * in YOURLS. The cron therefore asks YOURLS to prune all expired links (action=prune, scope=expired) at most once
+ * an hour. Never throws.
+ */
+function sms_yourls_prune_if_due() {
+	try {
+		if (!sms_link_ready()) { return; }
+		$last = (int)sms_setting('yourls_prune_at');
+		if ($last > time() - 3600) { return; }
+		$c = sms_link_cfg();
+		$ch = curl_init($c['url']);
+		curl_setopt_array($ch, array(CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => false, CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_TIMEOUT => 10,
+			CURLOPT_POSTFIELDS => http_build_query(array('signature' => $c['sig'], 'action' => 'prune', 'scope' => 'expired', 'format' => 'json'))));
+		$raw = curl_exec($ch);
+		$http = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		curl_close($ch);
+		$j = is_string($raw) ? json_decode($raw, true) : null;
+		if ($http === 200 && is_array($j) && (int)($j['statusCode'] ?? 0) < 400) { sms_setting_set('yourls_prune_at', (string)time()); }
+		else { error_log('mySeat YOURLS prune failed (HTTP '.$http.')'); }
+	} catch (Throwable $e) {
+		error_log('mySeat YOURLS prune: '.$e->getMessage());
+	}
 }
 
 // short cancel link for a reservation, valid until the morning after the reservation day; null when off or on any problem
@@ -290,8 +317,11 @@ function sms_cancel_short_link($reservation_id, $booking_number, $date) {
 		$end = strtotime($date.' +1 day 06:00');
 		$minutes = $end ? (int)ceil(($end - time()) / 60) : 0;
 		if ($minutes < 60) { return null; }
-		$res = sms_yourls_shorten(cl_cancel_url($reservation_id, $booking_number), $minutes, cl_site_url().'/api/cancel.php');
+		$res = sms_yourls_shorten(cl_cancel_url($reservation_id, $booking_number), $minutes);
 		if (!$res['ok']) { error_log('mySeat cancel link: '.$res['error']); return null; }
+		// the link still works without an expiry (cancel.php checks the token), but say so in the log
+		if (empty($res['expiry_ok']) && strpos((string)($res['expiry'] ?? ''), 'error:url') === false && ($res['expiry'] ?? '') !== '') { error_log('mySeat cancel link: no expiry set ('.$res['expiry'].')'); }
+		elseif (($res['expiry'] ?? '') === '') { error_log('mySeat cancel link: YOURLS did not confirm an expiry (plugin Expiry active?)'); }
 		return $res['short'];
 	} catch (Throwable $e) {
 		error_log('mySeat cancel link: '.$e->getMessage());
@@ -363,6 +393,7 @@ function sms_flush($limit = 8) {
 	sms_ensure_schema();
 	$ids = fb_rows("SELECT id FROM ".fb_t('tp_sms_outbox')." WHERE status = 'queued' AND next_attempt_at <= NOW() ORDER BY id LIMIT ".max(1, (int)$limit));
 	foreach ($ids as $r) { sms_attempt((int)$r['id']); }
+	sms_yourls_prune_if_due();
 	// the numbers are personal data: keep finished entries for 30 days only
 	mysqli_query(fb_db(), "DELETE FROM ".fb_t('tp_sms_outbox')." WHERE status <> 'queued' AND created_at < (NOW() - INTERVAL 30 DAY)");
 	return count($ids);

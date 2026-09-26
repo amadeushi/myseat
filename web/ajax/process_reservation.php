@@ -16,6 +16,7 @@ translateSite(substr($_SESSION['language'],0,2),'../');
 include('../classes/business.class.php');
 // ** all database queries
 include('../classes/db_queries.db.php');
+require_once('../classes/sms.class.php');
 // ** set configuration
 include('../../config/config.inc.php');
 // ** php hooks class
@@ -63,7 +64,7 @@ if (isset($_POST['reservation_guest_phone']) && !validPhone(html_entity_decode($
 	$rsv_error = rt('phone_bad');
 } elseif ($rsv_email !== '' && !filter_var($rsv_email, FILTER_VALIDATE_EMAIL)) {
 	$rsv_error = rt('email_bad');
-} elseif (isset($_POST['email_type']) && $_POST['email_type'] !== 'no' && $rsv_email === '') {
+} elseif (isset($_POST['email_type']) && $_POST['email_type'] !== 'no' && $rsv_email === '' && !(function_exists('sms_enabled') && sms_enabled() && isset($_POST['reservation_guest_phone']) && sms_normalize_phone(html_entity_decode($_POST['reservation_guest_phone'], ENT_QUOTES, 'UTF-8')) !== null)) {
 	$rsv_error = rt('email_need');
 }
 if ($rsv_error !== '') {

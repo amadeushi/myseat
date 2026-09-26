@@ -35,7 +35,7 @@ $sm_src = array('settings' => 'aus diesen Einstellungen', 'config' => 'aus der K
 	</form>
 
 	<h4 class="sms-sub">Absage-Link in der SMS</h4>
-	<p class="offer-help">Statt der Telefonnummer steht in der SMS ein kurzer Link zum Stornieren (über dein YOURLS mit dem Plugin „Expiry“). Er läuft am Morgen nach dem Reservierungstag ab. Ist YOURLS nicht erreichbar, geht die SMS wie bisher mit der Telefonnummer raus.</p>
+	<p class="offer-help">Statt der Telefonnummer steht in der SMS ein kurzer Link zum Stornieren (über dein YOURLS mit dem Plugin „Expiry“). Er läuft am Morgen nach dem Reservierungstag ab und wird danach aus YOURLS gelöscht (beim Aufruf oder spätestens durch den stündlichen Aufräumlauf des Webcrons). Ist YOURLS nicht erreichbar, geht die SMS wie bisher mit der Telefonnummer raus.</p>
 	<form class="sms-form" id="link-form" autocomplete="off">
 		<label class="offer-check"><input type="checkbox" name="cancel_link" value="1"<?php echo $sm_link['enabled'] ? ' checked' : ''; ?>/> Absage-Link in SMS einfügen</label>
 		<label class="offer-label" for="yourls-url">Adresse der YOURLS-API</label>

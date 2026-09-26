@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 2.4.2                         =-=
+=-= Version: 2.4.3                         =-=
 =-= Date:    25.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -45,12 +45,22 @@ commit (git tag vX.Y.Z). Based on mySeat by Bernd Orttenburger and contributors,
 CHANGELOG
 =========
 
-Versions 0.2161 - 2.4.2 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 2.4.3 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-26 == mySeat v2.4.3 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Backend, new reservation: a confirmation by SMS also works with only a mobile number (the tick box was
+   only usable with an email address before). With SMS on, the box "Bestätigung per E-Mail oder SMS senden"
+   is ticked by default as soon as it is possible; unticking by hand is respected
+ * Cancel link: the short link is created with the Expiry plugin (expiry=clock, age in minutes, ageMod=min) and
+   the answer of YOURLS is checked; "Verbindung prüfen" in Einstellungen > SMS-Versand says whether an expiry
+   was really set. No post-expiry redirect any more: an expired link is deleted by YOURLS, and the cron
+   sms_flush.php asks YOURLS once an hour to prune all expired links (action=prune), so unclicked links do not pile up
 
 2026-09-25 == mySeat v2.4.2 == amadeushi - http://github.com/amadeushi/myseat
 
