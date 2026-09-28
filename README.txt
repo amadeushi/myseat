@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 3.1.0                         =-=
+=-= Version: 3.1.1                         =-=
 =-= Date:    28.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -51,6 +51,13 @@ tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-28 == mySeat v3.1.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: the new-reservation live-insert (web/ajax/reservations_new_rows.php, added in v3.1.0) called
+   tp_table_cell() without including the file that defines it, which would have crashed with a fatal
+   error the first time it actually had a new reservation to insert. Never hit in production; found
+   and fixed the same day while investigating an unrelated, transient 502 from the hosting side
 
 2026-09-28 == mySeat v3.1.0 == amadeushi - http://github.com/amadeushi/myseat
 

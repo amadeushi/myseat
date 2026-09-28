@@ -18,6 +18,7 @@ include('../classes/business.class.php');
 translateSite(substr($_SESSION['language'],0,2),'../');
 include('../classes/db_queries.db.php');
 include('../../config/config.inc.php');
+require_once __DIR__.'/../classes/tableplan.class.php'; // tp_table_cell(), used by render_reservation_row_tr()
 require_once __DIR__.'/../includes/reservation_row_render.inc.php';
 
 header('Content-Type: text/html; charset=utf-8');
