@@ -1,0 +1,1104 @@
+<?php
+/*
+ * Delivery / pickup shop (orders for the kitchen): menu, delivery zones, opening hours, orders. Public pages live in
+ * /order, the staff side is "Bestellungen" (dashboard) and the kitchen monitor in the backend (rights: Reservation-Edit
+ * for the orders, Settings-General for the shop settings).
+ *  - Tables tp_shop_* (utf8mb4), created on first use like the other newer classes of this app.
+ *  - Money is handled in integer cents; the server always recomputes prices from the menu, the browser's cart is
+ *    only a list of choices (product, variation, options, quantity).
+ *  - Nothing in here throws to a caller that renders a page: problems are returned as messages.
+ * Settings (table tp_shop_settings, edited in Einstellungen > Lieferservice): see shop_defaults().
+ */
+require_once __DIR__.'/feedback.class.php';
+require_once __DIR__.'/sms.class.php'; // sms_encrypt / sms_decrypt keep the Mollie key encrypted like the SMS key
+
+// ---- schema
+function shop_ensure_schema() {
+	static $done = false;
+	if ($done) { return; }
+	$db = fb_db();
+	mysqli_query($db, "SET NAMES utf8mb4"); // names and notes of guests may contain emoji
+	$q = function ($sql) use ($db) { mysqli_query($db, $sql); };
+	$opts = "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_settings')." (`k` VARCHAR(40) NOT NULL PRIMARY KEY, `v` MEDIUMTEXT NULL, `updated_at` DATETIME NOT NULL) $opts");
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_categories')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `resmio_id` INT NULL, `name` VARCHAR(120) NOT NULL, `description` VARCHAR(500) NOT NULL DEFAULT '',
+		`sort` DOUBLE NOT NULL DEFAULT 0, `active` TINYINT NOT NULL DEFAULT 1, UNIQUE KEY `resmio` (`resmio_id`)) $opts");
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_products')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `resmio_id` INT NULL, `category_id` INT UNSIGNED NOT NULL, `title` VARCHAR(160) NOT NULL,
+		`description` VARCHAR(800) NOT NULL DEFAULT '', `image_url` VARCHAR(300) NOT NULL DEFAULT '', `price_cents` INT NOT NULL DEFAULT 0,
+		`sort` DOUBLE NOT NULL DEFAULT 0, `active` TINYINT NOT NULL DEFAULT 1, `allergens` VARCHAR(400) NOT NULL DEFAULT '',
+		UNIQUE KEY `resmio` (`resmio_id`), KEY `cat` (`category_id`)) $opts");
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_variations')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `resmio_id` INT NULL, `product_id` INT UNSIGNED NOT NULL, `title` VARCHAR(120) NOT NULL,
+		`price_cents` INT NOT NULL DEFAULT 0, `multiplier` DECIMAL(5,2) NOT NULL DEFAULT 1.00, `sort` DOUBLE NOT NULL DEFAULT 0,
+		UNIQUE KEY `resmio` (`resmio_id`), KEY `prod` (`product_id`)) $opts");
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_modgroups')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `resmio_id` INT NULL, `title` VARCHAR(120) NOT NULL, `min_qty` INT NOT NULL DEFAULT 0,
+		`max_qty` INT NOT NULL DEFAULT 1, `sort` DOUBLE NOT NULL DEFAULT 0, UNIQUE KEY `resmio` (`resmio_id`)) $opts");
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_modifiers')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `resmio_id` INT NULL, `product_id` INT UNSIGNED NOT NULL, `group_id` INT UNSIGNED NOT NULL,
+		`title` VARCHAR(120) NOT NULL, `price_cents` INT NOT NULL DEFAULT 0, `max_qty` INT NOT NULL DEFAULT 1, `sort` DOUBLE NOT NULL DEFAULT 0,
+		UNIQUE KEY `resmio` (`resmio_id`), KEY `prod` (`product_id`)) $opts");
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_zones')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `resmio_id` INT NULL, `name` VARCHAR(80) NOT NULL, `polygon` MEDIUMTEXT NOT NULL,
+		`fee_cents` INT NOT NULL DEFAULT 0, `min_order_cents` INT NOT NULL DEFAULT 0, `active` TINYINT NOT NULL DEFAULT 1, UNIQUE KEY `resmio` (`resmio_id`)) $opts");
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_hours')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `kind` VARCHAR(10) NOT NULL, `weekday` TINYINT NOT NULL, `begins` TIME NOT NULL, `ends` TIME NOT NULL,
+		KEY `kind` (`kind`, `weekday`)) $opts");
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_geocache')." (
+		`h` CHAR(40) NOT NULL PRIMARY KEY, `lat` DOUBLE NULL, `lng` DOUBLE NULL, `created_at` DATETIME NOT NULL) $opts");
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_orders')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `token` CHAR(32) NOT NULL, `number` VARCHAR(12) NOT NULL, `day_no` INT NOT NULL DEFAULT 0,
+		`order_date` DATE NOT NULL, `type` VARCHAR(10) NOT NULL, `status` VARCHAR(12) NOT NULL DEFAULT 'new', `scheduled_at` DATETIME NULL, `eta_at` DATETIME NULL,
+		`customer_name` VARCHAR(120) NOT NULL, `phone` VARCHAR(40) NOT NULL, `email` VARCHAR(160) NOT NULL DEFAULT '',
+		`street` VARCHAR(160) NOT NULL DEFAULT '', `zip` VARCHAR(10) NOT NULL DEFAULT '', `city` VARCHAR(80) NOT NULL DEFAULT '', `address_note` VARCHAR(200) NOT NULL DEFAULT '',
+		`lat` DOUBLE NULL, `lng` DOUBLE NULL, `zone_id` INT UNSIGNED NULL,
+		`ip_hash` CHAR(16) NOT NULL DEFAULT '',
+		`subtotal_cents` INT NOT NULL DEFAULT 0, `fee_cents` INT NOT NULL DEFAULT 0, `tip_cents` INT NOT NULL DEFAULT 0, `total_cents` INT NOT NULL DEFAULT 0,
+		`payment_method` VARCHAR(12) NOT NULL DEFAULT 'cash', `payment_status` VARCHAR(12) NOT NULL DEFAULT 'open', `mollie_id` VARCHAR(40) NULL,
+		`note` VARCHAR(500) NOT NULL DEFAULT '', `lang` VARCHAR(2) NOT NULL DEFAULT 'de', `is_test` TINYINT NOT NULL DEFAULT 0,
+		`created_at` DATETIME NOT NULL, `updated_at` DATETIME NOT NULL, `accepted_at` DATETIME NULL, `ready_at` DATETIME NULL, `done_at` DATETIME NULL,
+		UNIQUE KEY `token` (`token`), UNIQUE KEY `number` (`number`), KEY `status` (`status`, `created_at`), KEY `day` (`order_date`)) $opts");
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_order_items')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `order_id` INT UNSIGNED NOT NULL, `product_id` INT UNSIGNED NULL, `title` VARCHAR(160) NOT NULL,
+		`variation` VARCHAR(120) NOT NULL DEFAULT '', `options` TEXT NULL, `qty` INT NOT NULL DEFAULT 1, `unit_cents` INT NOT NULL DEFAULT 0, `line_cents` INT NOT NULL DEFAULT 0,
+		`note` VARCHAR(200) NOT NULL DEFAULT '', KEY `ord` (`order_id`)) $opts");
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_order_log')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `order_id` INT UNSIGNED NOT NULL, `event` VARCHAR(40) NOT NULL, `detail` VARCHAR(200) NOT NULL DEFAULT '',
+		`at` DATETIME NOT NULL, KEY `ord` (`order_id`)) $opts");
+	// reusable option groups ("Zubehörgruppen"): a group has options and is assigned to any number of dishes
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_group_items')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `group_id` INT UNSIGNED NOT NULL, `title` VARCHAR(120) NOT NULL, `price_cents` INT NOT NULL DEFAULT 0,
+		`max_qty` INT NOT NULL DEFAULT 1, `sort` DOUBLE NOT NULL DEFAULT 0, KEY `grp` (`group_id`)) $opts");
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_product_groups')." (
+		`product_id` INT UNSIGNED NOT NULL, `group_id` INT UNSIGNED NOT NULL, `sort` DOUBLE NOT NULL DEFAULT 0, PRIMARY KEY (`product_id`, `group_id`), KEY `grp` (`group_id`)) $opts");
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_coupons')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `code` VARCHAR(40) NOT NULL, `note` VARCHAR(160) NOT NULL DEFAULT '', `kind` ENUM('percent','fixed') NOT NULL DEFAULT 'percent',
+		`value` INT NOT NULL DEFAULT 0, `max_discount_cents` INT NOT NULL DEFAULT 0, `min_order_cents` INT NOT NULL DEFAULT 0, `applies` ENUM('all','delivery','pickup') NOT NULL DEFAULT 'all',
+		`valid_from` DATETIME NULL, `valid_until` DATETIME NULL, `max_uses` INT NOT NULL DEFAULT 0, `per_guest` TINYINT NOT NULL DEFAULT 0, `used` INT NOT NULL DEFAULT 0,
+		`active` TINYINT NOT NULL DEFAULT 1, `created_at` DATETIME NOT NULL, UNIQUE KEY `code` (`code`)) $opts");
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_coupon_uses')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `coupon_id` INT UNSIGNED NOT NULL, `order_id` INT UNSIGNED NOT NULL, `guest_key` CHAR(40) NOT NULL DEFAULT '', `guest_key2` CHAR(40) NOT NULL DEFAULT '',
+		`discount_cents` INT NOT NULL DEFAULT 0, `created_at` DATETIME NOT NULL, KEY `coupon` (`coupon_id`), KEY `ord` (`order_id`)) $opts");
+	$icol = fb_rows("SHOW INDEX FROM ".fb_t('tp_shop_order_items')." WHERE Key_name = 'prod'");
+	if (!$icol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_order_items')." ADD INDEX `prod` (`product_id`)"); }
+	$ccol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'coupon_code'");
+	if (!$ccol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `coupon_code` VARCHAR(40) NOT NULL DEFAULT '', ADD `discount_cents` INT NOT NULL DEFAULT 0"); }
+	$dcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'driver_at'");
+	if (!$dcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `driver_lat` DOUBLE NULL, ADD `driver_lng` DOUBLE NULL, ADD `driver_at` DATETIME NULL"); }
+	$col = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'ip_hash'");
+	if (!$col) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `ip_hash` CHAR(16) NOT NULL DEFAULT ''"); }
+	// orders imported from a Lieferando receipt PDF (see shop_lieferando.class.php): source tells the kitchen monitor
+	// apart from own-shop orders, external_ref is the Lieferando order code and keeps a re-import from creating it twice
+	$scol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'source'");
+	if (!$scol) {
+		mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `source` VARCHAR(12) NOT NULL DEFAULT 'shop', ADD `external_ref` VARCHAR(20) NULL, ADD UNIQUE KEY `ext_ref` (`external_ref`)");
+	}
+	$done = true;
+	shop_migrate_groups();
+}
+
+// The menu came from an import in which every dish carried its own options. Once: turn that into reusable groups. Groups with
+// the same title and identical options become one group shared by the dishes; a different set under the same title gets its
+// own group ("Soßen zum Dippen (2)"). The old table tp_shop_modifiers stays untouched.
+function shop_migrate_groups() {
+	$db = fb_db();
+	$flag = function () { return fb_row("SELECT v FROM ".fb_t('tp_shop_settings')." WHERE k = 'menu_v2'"); };
+	if ($flag()) { return; }
+	$lock = mysqli_query($db, "SELECT GET_LOCK('".fb_t('tp_shop_menu_v2')."', 20)");
+	if ($flag()) { return; }
+	$clean = function ($t) { return trim(preg_replace('/\s*\((?:eine |1 )?Auswahlm(?:ö|oe)glichkeit(?:en)?\)\s*$/iu', '', (string)$t)); };
+	$rows = fb_rows("SELECT m.product_id, m.group_id, m.title, m.price_cents, m.max_qty, g.title AS gtitle, g.min_qty, g.max_qty AS gmax, g.sort AS gsort
+		FROM ".fb_t('tp_shop_modifiers')." m JOIN ".fb_t('tp_shop_modgroups')." g ON g.id = m.group_id ORDER BY m.product_id, g.sort, g.id, m.sort, m.id");
+	$per = array();
+	foreach ($rows as $r) { $per[(int)$r['product_id']][(int)$r['group_id']][] = $r; }
+	$sigs = array(); $reused = array(); $titleCount = array();
+	foreach ($per as $pid => $groups) {
+		$order = 0;
+		foreach ($groups as $gid => $items) {
+			$sig = $gid.'|'.md5(json_encode(array_map(function ($i) { return array($i['title'], (int)$i['price_cents'], (int)$i['max_qty']); }, $items)));
+			if (!isset($sigs[$sig])) {
+				$t = $clean($items[0]['gtitle']);
+				if (!isset($reused[$gid])) {
+					$reused[$gid] = true; $new = (int)$gid;
+					fb_exec("UPDATE ".fb_t('tp_shop_modgroups')." SET title = ? WHERE id = ?", 'si', array($t, $new));
+				} else {
+					$titleCount[$t] = isset($titleCount[$t]) ? $titleCount[$t] + 1 : 2;
+					fb_exec("INSERT INTO ".fb_t('tp_shop_modgroups')." (resmio_id, title, min_qty, max_qty, sort) VALUES (NULL, ?, ?, ?, ?)", 'siid', array($t.' ('.$titleCount[$t].')', (int)$items[0]['min_qty'], (int)$items[0]['gmax'], (float)$items[0]['gsort']));
+					$new = (int)mysqli_insert_id($db);
+				}
+				$n = 0;
+				foreach ($items as $it) {
+					fb_exec("INSERT INTO ".fb_t('tp_shop_group_items')." (group_id, title, price_cents, max_qty, sort) VALUES (?, ?, ?, ?, ?)", 'isiid', array($new, $it['title'], (int)$it['price_cents'], max(1, (int)$it['max_qty']), ++$n));
+				}
+				$sigs[$sig] = $new;
+			}
+			fb_exec("INSERT IGNORE INTO ".fb_t('tp_shop_product_groups')." (product_id, group_id, sort) VALUES (?, ?, ?)", 'iid', array((int)$pid, $sigs[$sig], ++$order));
+		}
+	}
+	fb_exec("REPLACE INTO ".fb_t('tp_shop_settings')." (k, v, updated_at) VALUES ('menu_v2', '1', NOW())");
+	if ($lock) { mysqli_query($db, "SELECT RELEASE_LOCK('".fb_t('tp_shop_menu_v2')."')"); }
+}
+
+// ---- settings
+function shop_defaults() {
+	return array(
+		'public' => '0',            // the shop pages are visible to guests
+		'accepting' => '0',         // guests may place orders (otherwise browse only)
+		'test_mode' => '0',         // orders are marked as tests: no mails, deletable in the backend
+		'eta_delivery_min' => '45', // shown to the guest for "as soon as possible"
+		'lead_pickup_min' => '30',
+		'slot_min' => '15',         // step of the time choice
+		'days_ahead' => '0',        // 0 = today only
+		'min_order_delivery' => '20.00', 'min_order_pickup' => '0.00',
+		'allow_cash' => '1', 'allow_card_door' => '1', 'allow_online' => '1',
+		'tip_enabled' => '1',
+		'notice' => '',             // one line of text on top of the shop (e.g. "Heute später")
+		'notify_email' => '',       // sender of the order mails and address that gets a mail for every new order
+		'resmio_slug' => 'amadeus-cafe-restaurant-bar',
+		'sms_orders' => '1',        // SMS to the guest when the delivery is on its way / the pickup is ready (only with SMS sending set up)
+		'origin_street' => '', 'origin_zip' => '', 'origin_city' => '', // where the restaurant is (map of the order status)
+	);
+}
+function shop_setting($k) {
+	shop_ensure_schema();
+	$r = fb_row("SELECT v FROM ".fb_t('tp_shop_settings')." WHERE k = ? LIMIT 1", 's', array($k));
+	if ($r !== null) { return $r['v']; }
+	$d = shop_defaults();
+	return isset($d[$k]) ? $d[$k] : null;
+}
+function shop_setting_set($k, $v) {
+	shop_ensure_schema();
+	if ($v === null) { fb_exec("DELETE FROM ".fb_t('tp_shop_settings')." WHERE k = ?", 's', array($k)); return; }
+	fb_exec("REPLACE INTO ".fb_t('tp_shop_settings')." (k, v, updated_at) VALUES (?, ?, NOW())", 'ss', array($k, (string)$v));
+}
+function shop_flag($k) { return shop_setting($k) === '1'; }
+
+function shop_cents($eur) { return (int)round(((float)str_replace(',', '.', (string)$eur)) * 100); }
+function shop_money($cents) { return number_format($cents / 100, 2, ',', '.').' €'; }
+
+// allergen and additive codes of Resmio as the guest reads them
+function shop_allergen_label($code) {
+	static $map = array('CELERY' => 'Sellerie', 'CEREALS_CONTAINING_GLUTEN' => 'glutenhaltiges Getreide', 'CONTAINS_CAFFEINE' => 'koffeinhaltig', 'CRUSTACEANS' => 'Krebstiere',
+		'EGGS' => 'Eier', 'FISH' => 'Fisch', 'MILK' => 'Milch', 'RYE' => 'Roggen', 'SPELT' => 'Dinkel', 'SULPHUR_DIOXIDE' => 'Schwefeldioxid und Sulfite', 'TREE_NUTS' => 'Schalenfrüchte',
+		'WHEAT' => 'Weizen', 'WITH_ANTI-OXIDANT' => 'mit Antioxidationsmittel', 'WITH_FOOD_COLORING' => 'mit Farbstoff', 'WITH_PHOSPHATE' => 'mit Phosphat', 'WITH_PRESERVATIVE' => 'mit Konservierungsstoff',
+		'WITH_SWEETENER' => 'mit Süßungsmittel', 'PEANUTS' => 'Erdnüsse', 'SOY' => 'Soja', 'SOYBEANS' => 'Soja', 'MUSTARD' => 'Senf', 'SESAME' => 'Sesam', 'LUPIN' => 'Lupinen', 'MOLLUSCS' => 'Weichtiere',
+		'BARLEY' => 'Gerste', 'OATS' => 'Hafer', 'KAMUT' => 'Kamut', 'ALMONDS' => 'Mandeln', 'HAZELNUTS' => 'Haselnüsse', 'WALNUTS' => 'Walnüsse');
+	$c = strtoupper(trim((string)$code));
+	return isset($map[$c]) ? $map[$c] : ucfirst(strtolower(str_replace('_', ' ', $c)));
+}
+
+// ---- catalog for the pages
+function shop_catalog() {
+	shop_ensure_schema();
+	$cats = fb_rows("SELECT id, name, description FROM ".fb_t('tp_shop_categories')." WHERE active = 1 ORDER BY sort, id");
+	$prods = fb_rows("SELECT id, category_id, title, description, image_url, price_cents, allergens FROM ".fb_t('tp_shop_products')." WHERE active = 1 ORDER BY sort, id");
+	$vars = fb_rows("SELECT id, product_id, title, price_cents, multiplier FROM ".fb_t('tp_shop_variations')." ORDER BY sort, id");
+	$mods = fb_rows("SELECT gi.id, pg.product_id, g.id AS group_id, gi.title, gi.price_cents, gi.max_qty, g.title AS group_title, g.min_qty, g.max_qty AS group_max
+		FROM ".fb_t('tp_shop_product_groups')." pg JOIN ".fb_t('tp_shop_modgroups')." g ON g.id = pg.group_id JOIN ".fb_t('tp_shop_group_items')." gi ON gi.group_id = g.id
+		ORDER BY pg.sort, g.id, gi.sort, gi.id");
+	$byProduct = array();
+	foreach ($prods as $p) { $p['variations'] = array(); $p['groups'] = array(); $byProduct[(int)$p['id']] = $p; }
+	foreach ($vars as $v) { if (isset($byProduct[(int)$v['product_id']])) { $byProduct[(int)$v['product_id']]['variations'][] = array('id' => (int)$v['id'], 'title' => $v['title'], 'price' => (int)$v['price_cents'], 'mult' => (float)$v['multiplier']); } }
+	foreach ($mods as $m) {
+		$pid = (int)$m['product_id']; $gid = (int)$m['group_id'];
+		if (!isset($byProduct[$pid])) { continue; }
+		if (!isset($byProduct[$pid]['groups'][$gid])) { $byProduct[$pid]['groups'][$gid] = array('id' => $gid, 'title' => $m['group_title'], 'min' => (int)$m['min_qty'], 'max' => (int)$m['group_max'], 'items' => array()); }
+		$byProduct[$pid]['groups'][$gid]['items'][] = array('id' => (int)$m['id'], 'title' => $m['title'], 'price' => (int)$m['price_cents'], 'max' => (int)$m['max_qty']);
+	}
+	foreach ($byProduct as &$p) { $p['groups'] = array_values($p['groups']); } unset($p);
+	return array('categories' => $cats, 'products' => array_values($byProduct));
+}
+
+// ---- one product with everything the guest can choose (loaded when the guest opens it)
+function shop_product_detail($id) {
+	shop_ensure_schema();
+	$all = shop_catalog_product((int)$id);
+	return $all;
+}
+function shop_catalog_product($id) {
+	$p = fb_row("SELECT id, category_id, title, description, image_url, price_cents, allergens FROM ".fb_t('tp_shop_products')." WHERE id = ? AND active = 1", 'i', array((int)$id));
+	if (!$p) { return null; }
+	$p['variations'] = array();
+	foreach (fb_rows("SELECT id, title, price_cents, multiplier FROM ".fb_t('tp_shop_variations')." WHERE product_id = ? ORDER BY sort, id", 'i', array((int)$id)) as $v) {
+		$p['variations'][] = array('id' => (int)$v['id'], 'title' => $v['title'], 'price' => (int)$v['price_cents'], 'mult' => (float)$v['multiplier']);
+	}
+	$groups = array();
+	foreach (fb_rows("SELECT gi.id, g.id AS group_id, gi.title, gi.price_cents, gi.max_qty, g.title AS gtitle, g.min_qty, g.max_qty AS gmax
+		FROM ".fb_t('tp_shop_product_groups')." pg JOIN ".fb_t('tp_shop_modgroups')." g ON g.id = pg.group_id JOIN ".fb_t('tp_shop_group_items')." gi ON gi.group_id = g.id
+		WHERE pg.product_id = ? ORDER BY pg.sort, g.id, gi.sort, gi.id", 'i', array((int)$id)) as $m) {
+		$g = (int)$m['group_id'];
+		if (!isset($groups[$g])) { $groups[$g] = array('id' => $g, 'title' => $m['gtitle'], 'min' => (int)$m['min_qty'], 'max' => (int)$m['gmax'], 'items' => array()); }
+		$groups[$g]['items'][] = array('id' => (int)$m['id'], 'title' => $m['title'], 'price' => (int)$m['price_cents'], 'max' => (int)$m['max_qty']);
+	}
+	$p['groups'] = array_values($groups);
+	$p['price'] = (int)$p['price_cents']; unset($p['price_cents']);
+	return $p;
+}
+
+// ---- price of one cart line, always from the menu. $l: pid, vid (0 = none), opts (modifier id => quantity), qty, note
+function shop_price_line($l) {
+	$pid = (int)(isset($l['pid']) ? $l['pid'] : 0);
+	$qty = max(1, min(50, (int)(isset($l['qty']) ? $l['qty'] : 1)));
+	$p = shop_catalog_product($pid);
+	if (!$p) { return array('ok' => false, 'error' => 'Ein Gericht im Warenkorb ist nicht mehr verfügbar.'); }
+	$base = $p['price']; $mult = 1.0; $vtitle = '';
+	if ($p['variations']) {
+		$vid = (int)(isset($l['vid']) ? $l['vid'] : 0); $found = null;
+		foreach ($p['variations'] as $v) { if ($v['id'] === $vid) { $found = $v; } }
+		if (!$found) { return array('ok' => false, 'error' => 'Bitte eine Größe oder Variante für "'.$p['title'].'" wählen.'); }
+		$base = $found['price']; $mult = $found['mult']; $vtitle = $found['title'];
+	}
+	$opts = (isset($l['opts']) && is_array($l['opts'])) ? $l['opts'] : array();
+	$extras = 0; $chosen = array();
+	foreach ($p['groups'] as $g) {
+		$sum = 0;
+		foreach ($g['items'] as $it) {
+			$q = (int)(isset($opts[$it['id']]) ? $opts[$it['id']] : 0);
+			if ($q <= 0) { continue; }
+			if ($q > $it['max']) { return array('ok' => false, 'error' => '"'.$it['title'].'" kann bei "'.$p['title'].'" höchstens '.$it['max'].' mal gewählt werden.'); }
+			$sum += $q; $extras += $it['price'] * $q;
+			$chosen[] = array('group' => $g['title'], 'title' => $it['title'], 'qty' => $q, 'price' => $it['price']);
+		}
+		if ($sum < $g['min']) { return array('ok' => false, 'error' => 'Bitte bei "'.$p['title'].'" mindestens '.$g['min'].' aus "'.$g['title'].'" wählen.'); }
+		if ($g['max'] > 0 && $sum > $g['max']) { return array('ok' => false, 'error' => 'Bei "'.$p['title'].'" sind höchstens '.$g['max'].' aus "'.$g['title'].'" möglich.'); }
+	}
+	$unit = $base + (int)round($extras * $mult);
+	return array('ok' => true, 'line' => array('product_id' => $pid, 'title' => $p['title'], 'variation' => $vtitle, 'options' => $chosen, 'qty' => $qty, 'unit_cents' => $unit,
+		'line_cents' => $unit * $qty, 'note' => mb_substr(trim((string)(isset($l['note']) ? $l['note'] : '')), 0, 200)));
+}
+
+// ---- opening times (weekday 0 = Monday like Resmio). kind: 'delivery' | 'pickup'
+function shop_windows($kind, $ts) {
+	$wd = (int)date('N', $ts) - 1; $day = date('Y-m-d', $ts); $out = array();
+	foreach (fb_rows("SELECT begins, ends FROM ".fb_t('tp_shop_hours')." WHERE kind = ? AND weekday = ? ORDER BY begins", 'si', array($kind, $wd)) as $h) {
+		$out[] = array(strtotime($day.' '.$h['begins']), strtotime($day.' '.$h['ends']));
+	}
+	return $out;
+}
+
+/*
+ * State of delivery or pickup right now: array(open, until (ts), next (ts or 0), eta_min). "open" also means there is time
+ * left to prepare an order placed now.
+ */
+function shop_state($kind, $now = null) {
+	$now = $now ?: time();
+	$lead = ($kind === 'delivery') ? (int)shop_setting('eta_delivery_min') : (int)shop_setting('lead_pickup_min');
+	foreach (shop_windows($kind, $now) as $w) {
+		if ($now >= $w[0] && $now + $lead * 60 <= $w[1]) { return array('open' => true, 'until' => $w[1], 'next' => 0, 'lead' => $lead); }
+	}
+	$next = 0;
+	for ($d = 0; $d <= 7 && !$next; $d++) {
+		$t = $now + $d * 86400;
+		foreach (shop_windows($kind, $t) as $w) { if ($w[0] > $now) { $next = $w[0]; break; } }
+	}
+	return array('open' => false, 'until' => 0, 'next' => $next, 'lead' => $lead);
+}
+
+// selectable times for a day (Y-m-d): array of 'H:i'. Today starts after the lead time.
+function shop_slots($kind, $date) {
+	$ts = strtotime($date.' 12:00:00');
+	if (!$ts) { return array(); }
+	$step = max(5, (int)shop_setting('slot_min')) * 60;
+	$lead = (($kind === 'delivery') ? (int)shop_setting('eta_delivery_min') : (int)shop_setting('lead_pickup_min')) * 60;
+	$earliest = ($date === date('Y-m-d')) ? time() + $lead : 0;
+	$slots = array();
+	foreach (shop_windows($kind, $ts) as $w) {
+		$t = max($w[0], $earliest);
+		$t = (int)(ceil($t / $step) * $step);
+		for (; $t <= $w[1] - ($kind === 'delivery' ? 0 : 0); $t += $step) { $slots[$t] = date('H:i', $t); }
+	}
+	return array_values($slots);
+}
+
+// ---- delivery zones: address -> coordinates (OpenStreetMap Nominatim, cached) -> zone (point in polygon)
+function shop_geocode($street, $zip, $city) {
+	shop_ensure_schema();
+	$key = sha1(mb_strtolower(trim($street).'|'.trim($zip).'|'.trim($city)));
+	$hit = fb_row("SELECT lat, lng, created_at FROM ".fb_t('tp_shop_geocache')." WHERE h = ?", 's', array($key));
+	if ($hit && ($hit['lat'] !== null || strtotime($hit['created_at']) > time() - 86400)) {
+		return $hit['lat'] !== null ? array((float)$hit['lat'], (float)$hit['lng']) : null;
+	}
+	$url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=de&street='.rawurlencode(trim($street)).'&postalcode='.rawurlencode(trim($zip)).'&city='.rawurlencode(trim($city));
+	$ch = curl_init($url);
+	curl_setopt_array($ch, array(CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => false, CURLOPT_CONNECTTIMEOUT => 4, CURLOPT_TIMEOUT => 8,
+		CURLOPT_USERAGENT => 'mySeat-Lieferservice/1.0 (Amadeus Hildesheim; hamun@amds.at)'));
+	$raw = curl_exec($ch);
+	$http = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+	if ($http !== 200) { return null; } // a problem of the service is not cached
+	$j = json_decode((string)$raw, true);
+	$lat = (is_array($j) && !empty($j[0]['lat'])) ? (float)$j[0]['lat'] : null;
+	$lng = (is_array($j) && !empty($j[0]['lon'])) ? (float)$j[0]['lon'] : null;
+	fb_exec("REPLACE INTO ".fb_t('tp_shop_geocache')." (h, lat, lng, created_at) VALUES (?, ?, ?, NOW())", 'sdd', array($key, $lat, $lng));
+	return $lat !== null ? array($lat, $lng) : null;
+}
+
+function shop_point_in_polygon($lat, $lng, $poly) {
+	$in = false; $n = count($poly);
+	for ($i = 0, $j = $n - 1; $i < $n; $j = $i++) {
+		$yi = $poly[$i][0]; $xi = $poly[$i][1]; $yj = $poly[$j][0]; $xj = $poly[$j][1];
+		if ((($yi > $lat) !== ($yj > $lat)) && ($lng < ($xj - $xi) * ($lat - $yi) / (($yj - $yi) ?: 1e-12) + $xi)) { $in = !$in; }
+	}
+	return $in;
+}
+
+// the zone of an address: array(ok, zone (id, name, fee_cents, min_order_cents), lat, lng, error)
+function shop_find_zone($street, $zip, $city) {
+	if (trim($street) === '' || trim($zip) === '' || trim($city) === '') { return array('ok' => false, 'error' => 'Bitte Straße mit Hausnummer, PLZ und Ort angeben.'); }
+	$pos = shop_geocode($street, $zip, $city);
+	if (!$pos) { return array('ok' => false, 'error' => 'Wir konnten diese Adresse nicht finden. Bitte prüfe Straße, Hausnummer und PLZ, oder wähle Abholung.'); }
+	$best = null;
+	foreach (fb_rows("SELECT id, name, polygon, fee_cents, min_order_cents FROM ".fb_t('tp_shop_zones')." WHERE active = 1 ORDER BY fee_cents, id") as $z) {
+		$poly = json_decode($z['polygon'], true);
+		if (is_array($poly) && shop_point_in_polygon($pos[0], $pos[1], $poly)) { $best = $z; break; }
+	}
+	if (!$best) { return array('ok' => false, 'error' => 'Diese Adresse liegt leider außerhalb unseres Liefergebiets. Du kannst gern bei uns abholen.', 'lat' => $pos[0], 'lng' => $pos[1]); }
+	return array('ok' => true, 'zone' => array('id' => (int)$best['id'], 'name' => $best['name'], 'fee_cents' => (int)$best['fee_cents'], 'min_order_cents' => (int)$best['min_order_cents']), 'lat' => $pos[0], 'lng' => $pos[1]);
+}
+
+// ---- light menu for the list page: products per category with a flag for "has choices" and the lowest price
+function shop_menu() {
+	shop_ensure_schema();
+	$cats = fb_rows("SELECT id, name, description FROM ".fb_t('tp_shop_categories')." WHERE active = 1 ORDER BY sort, id");
+	$prods = fb_rows("SELECT p.id, p.category_id, p.title, p.description, p.image_url, p.price_cents,
+			(SELECT COUNT(*) FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id) AS nvar,
+			(SELECT MIN(v.price_cents) FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id) AS vmin,
+			(SELECT COUNT(*) FROM ".fb_t('tp_shop_product_groups')." pg WHERE pg.product_id = p.id) AS nmod
+		FROM ".fb_t('tp_shop_products')." p WHERE p.active = 1 ORDER BY p.sort, p.id");
+	$by = array();
+	foreach ($prods as $p) { $by[(int)$p['category_id']][] = $p; }
+	$out = array();
+	foreach ($cats as $c) { if (!empty($by[(int)$c['id']])) { $c['products'] = $by[(int)$c['id']]; $out[] = $c; } }
+	return $out;
+}
+
+// ---- orders
+const SHOP_STATUS_LABEL = array('pending' => 'wartet auf Zahlung', 'new' => 'neu', 'accepted' => 'angenommen', 'preparing' => 'in Zubereitung', 'ready' => 'fertig',
+	'delivering' => 'unterwegs', 'done' => 'erledigt', 'cancelled' => 'storniert');
+
+function shop_order_number() {
+	$alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+	for ($try = 0; $try < 10; $try++) {
+		$n = '';
+		for ($i = 0; $i < 6; $i++) { $n .= $alphabet[random_int(0, strlen($alphabet) - 1)]; }
+		if (!fb_row("SELECT 1 AS x FROM ".fb_t('tp_shop_orders')." WHERE number = ?", 's', array($n))) { return $n; }
+	}
+	return strtoupper(bin2hex(random_bytes(3)));
+}
+
+function shop_phone_ok($p) { $d = preg_replace('/\D/', '', (string)$p); return preg_match('/^[+0-9 ()\/.\-]+$/', (string)$p) && strlen($d) >= 6 && strlen($d) <= 16; }
+
+/*
+ * Check everything and store the order. $in: type, lines, name, phone, email, street, zip, city, address_note, when ('asap' or 'Y-m-d H:i'),
+ * payment ('mollie' | 'cash' | 'card_door'), tip (cents), note, ip. Returns array(ok, error) or array(ok, order (row), items).
+ * A guest who pays online gets status 'pending' until the payment arrived; the kitchen sees an order from 'new' on.
+ */
+function shop_create_order($in) {
+	shop_ensure_schema();
+	if (!shop_flag('accepting')) { return array('ok' => false, 'error' => 'Wir nehmen gerade keine Bestellungen an.'); }
+	$type = (isset($in['type']) && $in['type'] === 'pickup') ? 'pickup' : 'delivery';
+	$lines = (isset($in['lines']) && is_array($in['lines'])) ? array_slice($in['lines'], 0, 60) : array();
+	if (!$lines) { return array('ok' => false, 'error' => 'Dein Warenkorb ist leer.'); }
+	$items = array(); $sub = 0;
+	foreach ($lines as $l) {
+		$r = shop_price_line(is_array($l) ? $l : array());
+		if (!$r['ok']) { return array('ok' => false, 'error' => $r['error']); }
+		$items[] = $r['line']; $sub += $r['line']['line_cents'];
+	}
+	// contact
+	$name = mb_substr(trim((string)(isset($in['name']) ? $in['name'] : '')), 0, 120);
+	$phone = mb_substr(trim((string)(isset($in['phone']) ? $in['phone'] : '')), 0, 40);
+	$email = trim((string)(isset($in['email']) ? $in['email'] : ''));
+	if (mb_strlen($name) < 2) { return array('ok' => false, 'error' => 'Bitte gib deinen Namen an.'); }
+	if (!shop_phone_ok($phone)) { return array('ok' => false, 'error' => 'Bitte gib eine Telefonnummer an, unter der wir dich erreichen.'); }
+	if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) { return array('ok' => false, 'error' => 'Die E-Mail-Adresse sieht nicht richtig aus.'); }
+	// address and fee
+	$fee = 0; $zoneId = null; $lat = null; $lng = null; $street = $zip = $city = ''; $addrNote = '';
+	$min = ($type === 'delivery') ? shop_cents(shop_setting('min_order_delivery')) : shop_cents(shop_setting('min_order_pickup'));
+	if ($type === 'delivery') {
+		$street = mb_substr(trim((string)(isset($in['street']) ? $in['street'] : '')), 0, 160);
+		$zip = mb_substr(trim((string)(isset($in['zip']) ? $in['zip'] : '')), 0, 10);
+		$city = mb_substr(trim((string)(isset($in['city']) ? $in['city'] : '')), 0, 80);
+		$addrNote = mb_substr(trim((string)(isset($in['address_note']) ? $in['address_note'] : '')), 0, 200);
+		$z = shop_find_zone($street, $zip, $city);
+		if (!$z['ok']) { return array('ok' => false, 'error' => $z['error']); }
+		$fee = $z['zone']['fee_cents']; $zoneId = $z['zone']['id']; $lat = $z['lat']; $lng = $z['lng'];
+		if ($z['zone']['min_order_cents'] > 0) { $min = $z['zone']['min_order_cents']; }
+	}
+	if ($sub < $min) { return array('ok' => false, 'error' => 'Der Mindestbestellwert ist '.shop_money($min).'.'); }
+	// time
+	$when = isset($in['when']) ? (string)$in['when'] : 'asap';
+	$scheduled = null; $eta = null;
+	if ($when === 'asap') {
+		$st = shop_state($type);
+		if (!$st['open']) { return array('ok' => false, 'error' => 'Zurzeit ist keine Bestellung für sofort möglich. Bitte wähle eine Zeit.'); }
+		$eta = date('Y-m-d H:i:s', time() + $st['lead'] * 60);
+	} else {
+		if (!preg_match('/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})$/', $when, $m)) { return array('ok' => false, 'error' => 'Bitte wähle eine Zeit.'); }
+		if (!in_array($m[2], shop_slots($type, $m[1]), true)) { return array('ok' => false, 'error' => 'Diese Zeit ist leider nicht mehr frei. Bitte wähle eine andere.'); }
+		$scheduled = $when.':00'; $eta = $scheduled;
+	}
+	// payment and tip
+	$pay = isset($in['payment']) ? (string)$in['payment'] : '';
+	$allowed = array('mollie' => shop_flag('allow_online'), 'cash' => shop_flag('allow_cash'), 'card_door' => shop_flag('allow_card_door'));
+	if (empty($allowed[$pay])) { return array('ok' => false, 'error' => 'Diese Zahlungsart ist nicht möglich.'); }
+	$tip = shop_flag('tip_enabled') ? max(0, min(5000, (int)(isset($in['tip']) ? $in['tip'] : 0))) : 0;
+	// coupon: checked again here (the guest's view was only a preview), the discount is never taken from the browser
+	$coupon = null; $discount = 0;
+	$codeIn = shop_coupon_normalize(isset($in['coupon']) ? $in['coupon'] : '');
+	if ($codeIn !== '') {
+		$cr = shop_coupon_check($codeIn, $type, $sub, shop_coupon_guest_keys($phone, $email));
+		if (!$cr['ok']) { return array('ok' => false, 'error' => $cr['error']); }
+		$coupon = $cr['coupon']; $discount = $cr['discount'];
+	}
+	$total = $sub - $discount + $fee + $tip;
+	// a visitor may not flood the kitchen
+	$ip = substr(hash('sha256', (isset($in['ip']) ? $in['ip'] : '').'|myseat-shop'), 0, 16);
+	$recent = fb_row("SELECT COUNT(*) AS n FROM ".fb_t('tp_shop_orders')." WHERE ip_hash = ? AND created_at > ?", 'ss', array($ip, date('Y-m-d H:i:s', time() - 600)));
+	if ($recent && (int)$recent['n'] >= 4) { return array('ok' => false, 'error' => 'Es sind kurz hintereinander mehrere Bestellungen eingegangen. Bitte ruf uns an.'); }
+
+	$db = fb_db();
+	$test = shop_flag('test_mode') ? 1 : 0;
+	// a real order uses up one redemption before the order exists (two guests cannot take the last one together); test orders do not
+	if ($coupon && !$test && !shop_coupon_reserve($coupon['id'])) { return array('ok' => false, 'error' => 'Dieser Gutschein wurde gerade eingelöst und ist jetzt aufgebraucht.'); }
+	$token = bin2hex(random_bytes(16));
+	$number = shop_order_number();
+	$today = date('Y-m-d');
+	$dayNo = (int)(fb_row("SELECT COALESCE(MAX(day_no), 0) + 1 AS n FROM ".fb_t('tp_shop_orders')." WHERE order_date = ?", 's', array($today))['n']);
+	$status = ($pay === 'mollie') ? 'pending' : 'new';
+	$now = date('Y-m-d H:i:s');
+	$ok = fb_exec("INSERT INTO ".fb_t('tp_shop_orders')."
+		(token, number, day_no, order_date, type, status, scheduled_at, eta_at, customer_name, phone, email, street, zip, city, address_note, lat, lng, zone_id,
+		 ip_hash, subtotal_cents, fee_cents, tip_cents, total_cents, payment_method, payment_status, note, lang, is_test, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, 'de', ?, ?, ?)",
+		'ssisssssssssss'.'sddisiiiississ', array($token, $number, $dayNo, $today, $type, $status, $scheduled, $eta, $name, $phone, $email, $street, $zip, $city, $addrNote,
+			$lat === null ? 0 : $lat, $lng === null ? 0 : $lng, $zoneId === null ? 0 : $zoneId, $ip, $sub, $fee, $tip, $total, $pay,
+			mb_substr(trim((string)(isset($in['note']) ? $in['note'] : '')), 0, 500), $test, $now, $now));
+	if (!$ok) {
+		if ($coupon && !$test) { shop_coupon_unreserve($coupon['id']); }
+		return array('ok' => false, 'error' => 'Die Bestellung konnte nicht gespeichert werden. Bitte versuche es noch einmal.');
+	}
+	$id = (int)mysqli_insert_id($db);
+	if ($coupon) {
+		fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET coupon_code = ?, discount_cents = ? WHERE id = ?", 'sii', array($coupon['code'], $discount, $id));
+		if (!$test) {
+			$gk = shop_coupon_guest_keys($phone, $email);
+			fb_exec("INSERT INTO ".fb_t('tp_shop_coupon_uses')." (coupon_id, order_id, guest_key, guest_key2, discount_cents, created_at) VALUES (?, ?, ?, ?, ?, NOW())", 'iissi', array((int)$coupon['id'], $id, $gk[0], $gk[1], $discount));
+		}
+	}
+	foreach ($items as $it) {
+		fb_exec("INSERT INTO ".fb_t('tp_shop_order_items')." (order_id, product_id, title, variation, options, qty, unit_cents, line_cents, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+			'iisssiiis', array($id, $it['product_id'], $it['title'], $it['variation'], json_encode($it['options'], JSON_UNESCAPED_UNICODE), $it['qty'], $it['unit_cents'], $it['line_cents'], $it['note']));
+	}
+	shop_log($id, 'created', $pay);
+	return array('ok' => true, 'order' => shop_order($id), 'items' => shop_order_items($id));
+}
+
+// a test order for trying the monitors and the printing (needs neither the shop to be open nor a payment): marked as test,
+// fake guest, a few dishes with options and notes, status "new" so it shows up for the dispatch first
+function shop_create_demo_order($type) {
+	shop_ensure_schema();
+	$type = ($type === 'pickup') ? 'pickup' : 'delivery';
+	$today = date('Y-m-d'); $now = date('Y-m-d H:i:s');
+	$lines = array(
+		array('Pizza Margherita', 'groß 32 cm', array('Extra Käse', 'Oliven'), 2, 1190, 'gut durchgebacken'),
+		array('Spaghetti Bolognese', '', array(), 1, 1090, ''),
+		array('Cola 0,33 l', '', array(), 2, 350, ''),
+	);
+	$sub = 0; foreach ($lines as $l) { $sub += $l[3] * $l[4]; }
+	$fee = ($type === 'delivery') ? 250 : 0; $total = $sub + $fee;
+	$dayNo = (int)(fb_row("SELECT COALESCE(MAX(day_no), 0) + 1 AS n FROM ".fb_t('tp_shop_orders')." WHERE order_date = ?", 's', array($today))['n']);
+	$ok = fb_exec("INSERT INTO ".fb_t('tp_shop_orders')."
+		(token, number, day_no, order_date, type, status, scheduled_at, eta_at, customer_name, phone, email, street, zip, city, address_note, lat, lng, zone_id,
+		 ip_hash, subtotal_cents, fee_cents, tip_cents, total_cents, payment_method, payment_status, note, lang, is_test, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, 'new', NULL, ?, 'Test Kunde', '05121 000000', '', ?, ?, ?, ?, 0, 0, 0, '', ?, ?, 0, ?, 'cash', 'open', ?, 'de', 1, ?, ?)",
+		'ssisss'.'ssss'.'iii'.'sss', array(bin2hex(random_bytes(16)), shop_order_number(), $dayNo, $today, $type, date('Y-m-d H:i:s', time() + 30 * 60),
+			$type === 'delivery' ? 'Teststraße 1' : '', $type === 'delivery' ? '31134' : '', $type === 'delivery' ? 'Hildesheim' : '', $type === 'delivery' ? '2. Stock links' : '',
+			$sub, $fee, $total, 'Testbestellung zum Ausprobieren des Drucks', $now, $now));
+	if (!$ok) { return 0; }
+	$id = (int)mysqli_insert_id(fb_db());
+	foreach ($lines as $l) {
+		fb_exec("INSERT INTO ".fb_t('tp_shop_order_items')." (order_id, product_id, title, variation, options, qty, unit_cents, line_cents, note) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?)",
+			'isssiiis', array($id, $l[0], $l[1], json_encode(array_map(function ($t) { return array('title' => $t, 'qty' => 1); }, $l[2]), JSON_UNESCAPED_UNICODE), $l[3], $l[4], $l[3] * $l[4], $l[5]));
+	}
+	shop_log($id, 'created', 'demo');
+	return $id;
+}
+
+function shop_log($orderId, $event, $detail = '') {
+	fb_exec("INSERT INTO ".fb_t('tp_shop_order_log')." (order_id, event, detail, at) VALUES (?, ?, ?, ?)", 'isss', array((int)$orderId, $event, mb_substr($detail, 0, 200), date('Y-m-d H:i:s')));
+}
+function shop_order($id) { return fb_row("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE id = ?", 'i', array((int)$id)); }
+function shop_order_by_token($token) { return fb_row("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE token = ?", 's', array((string)$token)); }
+function shop_order_items($id) {
+	$rows = fb_rows("SELECT * FROM ".fb_t('tp_shop_order_items')." WHERE order_id = ? ORDER BY id", 'i', array((int)$id));
+	foreach ($rows as &$r) { $r['options'] = json_decode((string)$r['options'], true) ?: array(); } unset($r);
+	return $rows;
+}
+
+// staff or the payment provider move an order on. Timestamps are kept for the statistics.
+function shop_set_status($id, $status, $by = '', $etaMinutes = 0) {
+	if (!isset(SHOP_STATUS_LABEL[$status])) { return false; }
+	$now = date('Y-m-d H:i:s');
+	$set = "status = ?, updated_at = ?"; $types = 'ss'; $params = array($status, $now);
+	if ($status === 'accepted') { $set .= ", accepted_at = ?"; $types .= 's'; $params[] = $now; if ($etaMinutes > 0) { $set .= ", eta_at = ?"; $types .= 's'; $params[] = date('Y-m-d H:i:s', time() + $etaMinutes * 60); } }
+	if ($status === 'ready') { $set .= ", ready_at = ?"; $types .= 's'; $params[] = $now; }
+	if ($status === 'done' || $status === 'cancelled') { $set .= ", done_at = ?"; $types .= 's'; $params[] = $now; }
+	$types .= 'i'; $params[] = (int)$id;
+	$st = fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET $set WHERE id = ?", $types, $params);
+	if ($st) { shop_log($id, 'status', $status.($by !== '' ? ' ('.$by.')' : '')); shop_sms_status((int)$id, $status); if ($status === 'cancelled') { shop_coupon_release((int)$id); } }
+	return (bool)$st;
+}
+
+// ---- Mollie (online payment). The key is stored encrypted (tp_shop_settings.mollie_key), a test_ key works in test mode.
+function shop_mollie_key() {
+	$blob = shop_setting('mollie_key');
+	$k = $blob ? sms_decrypt($blob) : null;
+	return ($k !== null && preg_match('/^(test|live)_[A-Za-z0-9]{20,}$/', $k)) ? $k : '';
+}
+function shop_mollie_info() {
+	$k = shop_mollie_key();
+	return array('set' => $k !== '', 'mode' => $k === '' ? '' : (strpos($k, 'test_') === 0 ? 'test' : 'live'), 'masked' => $k === '' ? '' : '••••'.substr($k, -4));
+}
+function shop_mollie_request($method, $path, $data = null) {
+	$key = shop_mollie_key();
+	if ($key === '') { return array('http' => 0, 'body' => null, 'error' => 'Kein Mollie-Schlüssel hinterlegt'); }
+	$ch = curl_init('https://api.mollie.com/v2'.$path);
+	$headers = array('Authorization: Bearer '.$key, 'Accept: application/json');
+	$opts = array(CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => false, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_TIMEOUT => 20, CURLOPT_USERAGENT => 'mySeat-Lieferservice');
+	if ($method === 'POST') { $opts[CURLOPT_POST] = true; $opts[CURLOPT_POSTFIELDS] = json_encode($data); $headers[] = 'Content-Type: application/json'; }
+	$opts[CURLOPT_HTTPHEADER] = $headers;
+	curl_setopt_array($ch, $opts);
+	$raw = curl_exec($ch);
+	$errno = curl_errno($ch); $err = $errno ? curl_error($ch) : null;
+	$http = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+	$j = is_string($raw) ? json_decode($raw, true) : null;
+	return array('http' => $errno ? 0 : $http, 'body' => is_array($j) ? $j : null, 'error' => $err);
+}
+function shop_mollie_describe($r) {
+	if ($r['http'] === 0) { return 'Mollie nicht erreichbar'.($r['error'] ? ' ('.$r['error'].')' : ''); }
+	$detail = isset($r['body']['detail']) && is_string($r['body']['detail']) ? $r['body']['detail'] : '';
+	return substr(($r['http'] === 401 ? 'Der Schlüssel wird von Mollie nicht akzeptiert' : ($detail !== '' ? $detail : 'Fehler')).' (HTTP '.$r['http'].')', 0, 250);
+}
+function shop_mollie_test() {
+	$r = shop_mollie_request('GET', '/methods');
+	if ($r['http'] !== 200) { return array('ok' => false, 'error' => shop_mollie_describe($r)); }
+	$names = array();
+	foreach ((array)($r['body']['_embedded']['methods'] ?? array()) as $m) { $names[] = $m['description']; }
+	return array('ok' => true, 'methods' => $names);
+}
+
+// start the online payment of an order: returns array(ok, url) - the guest is sent to Mollie's page
+function shop_mollie_create($order, $baseUrl) {
+	$brand = 'Amadeus';
+	$r = shop_mollie_request('POST', '/payments', array(
+		'amount' => array('currency' => 'EUR', 'value' => number_format($order['total_cents'] / 100, 2, '.', '')),
+		'description' => 'Bestellung '.$order['number'].' - '.$brand,
+		'redirectUrl' => $baseUrl.'/order/status.php?t='.$order['token'],
+		'webhookUrl' => $baseUrl.'/order/mollie_webhook.php',
+		'locale' => 'de_DE',
+		'metadata' => array('order' => $order['number']),
+	));
+	if (!in_array($r['http'], array(200, 201), true) || empty($r['body']['id']) || empty($r['body']['_links']['checkout']['href'])) {
+		shop_log((int)$order['id'], 'mollie_error', shop_mollie_describe($r));
+		return array('ok' => false, 'error' => 'Die Online-Zahlung ist gerade nicht erreichbar. Bitte wähle eine andere Zahlungsart oder versuche es gleich noch einmal.');
+	}
+	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET mollie_id = ?, updated_at = ? WHERE id = ?", 'ssi', array($r['body']['id'], date('Y-m-d H:i:s'), (int)$order['id']));
+	shop_log((int)$order['id'], 'mollie_created', $r['body']['id']);
+	return array('ok' => true, 'url' => $r['body']['_links']['checkout']['href']);
+}
+
+// ask Mollie what happened to the payment of this order and update it (called by the webhook and when the guest returns)
+function shop_mollie_sync($order) {
+	if (empty($order['mollie_id']) || $order['payment_method'] !== 'mollie') { return $order; }
+	if (in_array($order['payment_status'], array('paid'), true)) { return $order; }
+	$r = shop_mollie_request('GET', '/payments/'.rawurlencode($order['mollie_id']));
+	if ($r['http'] !== 200 || empty($r['body']['status'])) { return $order; }
+	$st = $r['body']['status']; // open, pending, authorized, paid, canceled, expired, failed
+	$map = array('paid' => 'paid', 'authorized' => 'paid', 'canceled' => 'canceled', 'expired' => 'expired', 'failed' => 'failed');
+	if (isset($map[$st]) && $map[$st] !== $order['payment_status']) {
+		fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET payment_status = ?, updated_at = ? WHERE id = ?", 'ssi', array($map[$st], date('Y-m-d H:i:s'), (int)$order['id']));
+		shop_log((int)$order['id'], 'payment', $map[$st]);
+		if ($map[$st] === 'paid' && $order['status'] === 'pending') { shop_set_status((int)$order['id'], 'new', 'Zahlung'); shop_after_order_placed((int)$order['id']); }
+		return shop_order((int)$order['id']);
+	}
+	return $order;
+}
+
+// an order reached the kitchen (cash/card orders at once, online orders when they are paid): notifications go here
+function shop_after_order_placed($orderId) {
+	$o = shop_order((int)$orderId);
+	if (!$o || !empty($o['is_test'])) { return; }
+	if (function_exists('shop_notify_order')) { try { shop_notify_order($o); } catch (Throwable $e) { error_log('mySeat shop notify: '.$e->getMessage()); } }
+}
+
+// an online order that was not paid within 45 minutes is given up (the kitchen never saw it)
+function shop_expire_pending() {
+	$rows = fb_rows("SELECT id FROM ".fb_t('tp_shop_orders')." WHERE status = 'pending' AND created_at < ?", 's', array(date('Y-m-d H:i:s', time() - 2700)));
+	foreach ($rows as $r) { shop_set_status((int)$r['id'], 'cancelled', 'Zahlung nicht eingegangen'); }
+}
+
+// ---- staff side: board of open orders, day list, numbers
+function shop_orders_with_items($rows) {
+	if (!$rows) { return array(); }
+	$ids = array_map(function ($r) { return (int)$r['id']; }, $rows);
+	$items = array();
+	foreach (fb_rows("SELECT * FROM ".fb_t('tp_shop_order_items')." WHERE order_id IN (".implode(',', $ids).") ORDER BY id") as $it) {
+		$opts = array();
+		foreach ((json_decode((string)$it['options'], true) ?: array()) as $o) { $opts[] = ($o['qty'] > 1 ? $o['qty'].'× ' : '').$o['title']; }
+		$items[(int)$it['order_id']][] = array('qty' => (int)$it['qty'], 'title' => $it['title'], 'variation' => $it['variation'], 'options' => $opts, 'note' => $it['note'], 'line' => (int)$it['line_cents']);
+	}
+	$out = array();
+	foreach ($rows as $r) {
+		$due = $r['scheduled_at'] ?: ($r['eta_at'] ?: $r['created_at']);
+		$out[] = array(
+			'id' => (int)$r['id'], 'number' => $r['number'], 'day_no' => (int)$r['day_no'], 'type' => $r['type'], 'status' => $r['status'], 'test' => (int)$r['is_test'],
+			'source' => $r['source'],
+			'created' => substr($r['created_at'], 11, 5), 'created_ts' => strtotime($r['created_at']), 'scheduled' => $r['scheduled_at'] ? substr($r['scheduled_at'], 11, 5) : '',
+			'due' => substr($due, 11, 5), 'due_date' => substr($due, 0, 10), 'name' => $r['customer_name'], 'phone' => $r['phone'], 'email' => $r['email'],
+			'address' => $r['type'] === 'delivery' ? trim($r['street'].', '.$r['zip'].' '.$r['city']) : '', 'address_note' => $r['address_note'], 'note' => $r['note'],
+			'pay' => $r['payment_method'], 'pay_status' => $r['payment_status'], 'total' => (int)$r['total_cents'], 'fee' => (int)$r['fee_cents'], 'tip' => (int)$r['tip_cents'], 'subtotal' => (int)$r['subtotal_cents'],
+			'items' => isset($items[(int)$r['id']]) ? $items[(int)$r['id']] : array(), 'coupon' => (string)$r['coupon_code'], 'discount' => (int)$r['discount_cents'],
+			'token' => $r['token'], 'dkey' => ($r['type'] === 'delivery' && $r['source'] !== 'lieferando') ? shop_driver_key($r) : '',
+			'driver_age' => ($dp = shop_driver_position($r)) ? $dp['age'] : null,
+		);
+	}
+	return $out;
+}
+
+// what the kitchen has to do: everything from "new" to "delivering", by due time
+function shop_board() {
+	shop_ensure_schema();
+	shop_expire_pending();
+	$rows = fb_rows("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE status IN ('new', 'accepted', 'preparing', 'ready', 'delivering') ORDER BY COALESCE(scheduled_at, created_at), id");
+	return shop_orders_with_items($rows);
+}
+
+// orders of one day (created that day or planned for it), newest first; filter 'open' = not finished
+function shop_day_orders($date, $filter = 'all') {
+	shop_ensure_schema();
+	shop_expire_pending();
+	$rows = fb_rows("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE (order_date = ? OR DATE(scheduled_at) = ?) AND status <> 'pending' ".($filter === 'open' ? "AND status IN ('new', 'accepted', 'preparing', 'ready', 'delivering')" : '')." ORDER BY id DESC LIMIT 300", 'ss', array($date, $date));
+	return shop_orders_with_items($rows);
+}
+
+function shop_day_stats($date) {
+	$r = fb_row("SELECT COUNT(*) AS n, COALESCE(SUM(total_cents), 0) AS sum, COALESCE(SUM(type = 'delivery'), 0) AS deliveries, COALESCE(SUM(type = 'pickup'), 0) AS pickups,
+			COALESCE(SUM(status IN ('new', 'accepted', 'preparing', 'ready', 'delivering')), 0) AS open_n,
+			COALESCE(SUM(payment_method = 'mollie' AND payment_status = 'paid'), 0) AS paid_online
+		FROM ".fb_t('tp_shop_orders')." WHERE order_date = ? AND status NOT IN ('pending', 'cancelled') AND is_test = 0", 's', array($date));
+	$prep = fb_row("SELECT AVG(TIMESTAMPDIFF(MINUTE, created_at, ready_at)) AS m FROM ".fb_t('tp_shop_orders')." WHERE order_date = ? AND ready_at IS NOT NULL AND is_test = 0", 's', array($date));
+	return array('orders' => (int)$r['n'], 'revenue' => (int)$r['sum'], 'deliveries' => (int)$r['deliveries'], 'pickups' => (int)$r['pickups'], 'open' => (int)$r['open_n'], 'paid_online' => (int)$r['paid_online'],
+		'avg_ready_min' => ($prep && $prep['m'] !== null) ? (int)round($prep['m']) : null);
+}
+
+// staff may cancel any order; test orders can be deleted for good
+function shop_delete_test_order($id) {
+	$o = shop_order((int)$id);
+	if (!$o || !(int)$o['is_test']) { return false; }
+	fb_exec("DELETE FROM ".fb_t('tp_shop_order_items')." WHERE order_id = ?", 'i', array((int)$id));
+	fb_exec("DELETE FROM ".fb_t('tp_shop_order_log')." WHERE order_id = ?", 'i', array((int)$id));
+	fb_exec("DELETE FROM ".fb_t('tp_shop_orders')." WHERE id = ?", 'i', array((int)$id));
+	return true;
+}
+
+// what the kitchen screen needs and nothing more: no name, phone, address or payment of the guest
+function shop_kitchen_board() {
+	shop_ensure_schema();
+	$rows = fb_rows("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE status IN ('accepted', 'preparing') ORDER BY COALESCE(scheduled_at, eta_at, created_at), id");
+	$accepted = array();
+	foreach ($rows as $r) { $accepted[(int)$r['id']] = $r['accepted_at'] ? strtotime($r['accepted_at']) : strtotime($r['created_at']); }
+	$out = array();
+	foreach (shop_orders_with_items($rows) as $o) {
+		$out[] = array('id' => $o['id'], 'day_no' => $o['day_no'], 'number' => $o['number'], 'type' => $o['type'], 'status' => $o['status'], 'test' => $o['test'], 'source' => $o['source'],
+			'due' => $o['due'], 'scheduled' => $o['scheduled'], 'accepted_ts' => $accepted[$o['id']], 'note' => $o['note'], 'items' => $o['items']);
+	}
+	return $out;
+}
+
+// ---- menu editor (backend, page p=10). Every save returns the changed row so the page can update itself.
+function shop_me_group_rows() {
+	$groups = array();
+	foreach (fb_rows("SELECT g.id, g.title, g.min_qty, g.max_qty, (SELECT COUNT(*) FROM ".fb_t('tp_shop_product_groups')." pg WHERE pg.group_id = g.id) AS used
+		FROM ".fb_t('tp_shop_modgroups')." g WHERE EXISTS (SELECT 1 FROM ".fb_t('tp_shop_group_items')." i WHERE i.group_id = g.id)
+			OR EXISTS (SELECT 1 FROM ".fb_t('tp_shop_product_groups')." pg WHERE pg.group_id = g.id) OR g.resmio_id IS NULL ORDER BY g.title, g.id") as $g) {
+		$groups[(int)$g['id']] = array('id' => (int)$g['id'], 'title' => $g['title'], 'min' => (int)$g['min_qty'], 'max' => (int)$g['max_qty'], 'used' => (int)$g['used'], 'items' => array());
+	}
+	foreach (fb_rows("SELECT id, group_id, title, price_cents, max_qty FROM ".fb_t('tp_shop_group_items')." ORDER BY sort, id") as $i) {
+		if (isset($groups[(int)$i['group_id']])) { $groups[(int)$i['group_id']]['items'][] = array('id' => (int)$i['id'], 'title' => $i['title'], 'price' => (int)$i['price_cents'], 'max' => (int)$i['max_qty']); }
+	}
+	return $groups;
+}
+function shop_me_products($onlyId = 0) {
+	$where = $onlyId ? "WHERE id = ".(int)$onlyId : '';
+	$out = array();
+	foreach (fb_rows("SELECT id, category_id, title, description, image_url, price_cents, allergens, active FROM ".fb_t('tp_shop_products')." $where ORDER BY sort, id") as $p) {
+		$out[(int)$p['id']] = array('id' => (int)$p['id'], 'category_id' => (int)$p['category_id'], 'title' => $p['title'], 'description' => $p['description'], 'image_url' => $p['image_url'],
+			'price' => (int)$p['price_cents'], 'allergens' => $p['allergens'], 'active' => (int)$p['active'], 'variations' => array(), 'groups' => array());
+	}
+	if ($out) {
+		foreach (fb_rows("SELECT id, product_id, title, price_cents, multiplier FROM ".fb_t('tp_shop_variations')." ORDER BY sort, id") as $v) {
+			if (isset($out[(int)$v['product_id']])) { $out[(int)$v['product_id']]['variations'][] = array('id' => (int)$v['id'], 'title' => $v['title'], 'price' => (int)$v['price_cents'], 'mult' => (float)$v['multiplier']); }
+		}
+		foreach (fb_rows("SELECT product_id, group_id FROM ".fb_t('tp_shop_product_groups')." ORDER BY sort, group_id") as $l) {
+			if (isset($out[(int)$l['product_id']])) { $out[(int)$l['product_id']]['groups'][] = (int)$l['group_id']; }
+		}
+	}
+	return $out;
+}
+function shop_me_load() {
+	shop_ensure_schema();
+	$cats = array();
+	foreach (fb_rows("SELECT id, name, description, active FROM ".fb_t('tp_shop_categories')." ORDER BY sort, id") as $c) {
+		$cats[] = array('id' => (int)$c['id'], 'name' => $c['name'], 'description' => $c['description'], 'active' => (int)$c['active']);
+	}
+	return array('categories' => $cats, 'products' => array_values(shop_me_products()), 'groups' => array_values(shop_me_group_rows()), 'coupons' => shop_me_coupons());
+}
+
+function shop_me_renumber($table, $scopeCol, $scopeVal) {
+	$sql = "SELECT id FROM ".fb_t($table).($scopeCol ? " WHERE $scopeCol = ".(int)$scopeVal : '')." ORDER BY sort, id";
+	$n = 0;
+	foreach (fb_rows($sql) as $r) { fb_exec("UPDATE ".fb_t($table)." SET sort = ? WHERE id = ?", 'di', array(++$n, (int)$r['id'])); }
+}
+function shop_me_move($table, $id, $dir, $scopeCol = '') {
+	$id = (int)$id;
+	$row = fb_row("SELECT id".($scopeCol ? ", $scopeCol AS scope" : '')." FROM ".fb_t($table)." WHERE id = ?", 'i', array($id));
+	if (!$row) { return false; }
+	$scope = $scopeCol ? (int)$row['scope'] : 0;
+	shop_me_renumber($table, $scopeCol, $scope);
+	$ids = array_map(function ($r) { return (int)$r['id']; }, fb_rows("SELECT id FROM ".fb_t($table).($scopeCol ? " WHERE $scopeCol = $scope" : '')." ORDER BY sort, id"));
+	$i = array_search($id, $ids, true); $j = $i + ($dir < 0 ? -1 : 1);
+	if ($i === false || $j < 0 || $j >= count($ids)) { return true; }
+	fb_exec("UPDATE ".fb_t($table)." SET sort = ? WHERE id = ?", 'di', array($j + 1, $ids[$i]));
+	fb_exec("UPDATE ".fb_t($table)." SET sort = ? WHERE id = ?", 'di', array($i + 1, $ids[$j]));
+	return true;
+}
+
+function shop_me_save_category($d) {
+	$id = (int)(isset($d['id']) ? $d['id'] : 0);
+	$name = mb_substr(trim((string)(isset($d['name']) ? $d['name'] : '')), 0, 120);
+	if ($name === '') { return array('ok' => false, 'error' => 'Bitte gib der Kategorie einen Namen.'); }
+	$desc = mb_substr(trim((string)(isset($d['description']) ? $d['description'] : '')), 0, 500);
+	$active = empty($d['active']) ? 0 : 1;
+	if ($id) {
+		if (!fb_row("SELECT id FROM ".fb_t('tp_shop_categories')." WHERE id = ?", 'i', array($id))) { return array('ok' => false, 'error' => 'Diese Kategorie gibt es nicht mehr.'); }
+		fb_exec("UPDATE ".fb_t('tp_shop_categories')." SET name = ?, description = ?, active = ? WHERE id = ?", 'ssii', array($name, $desc, $active, $id));
+	} else {
+		$max = fb_row("SELECT COALESCE(MAX(sort), 0) AS m FROM ".fb_t('tp_shop_categories'));
+		fb_exec("INSERT INTO ".fb_t('tp_shop_categories')." (name, description, sort, active) VALUES (?, ?, ?, ?)", 'ssdi', array($name, $desc, (float)$max['m'] + 1, $active));
+		$id = (int)mysqli_insert_id(fb_db());
+	}
+	return array('ok' => true, 'category' => array('id' => $id, 'name' => $name, 'description' => $desc, 'active' => $active));
+}
+function shop_me_delete_category($id) {
+	$n = fb_row("SELECT COUNT(*) AS n FROM ".fb_t('tp_shop_products')." WHERE category_id = ?", 'i', array((int)$id));
+	if ($n && (int)$n['n'] > 0) { return array('ok' => false, 'error' => 'Die Kategorie enthält noch '.(int)$n['n'].' Gerichte. Verschiebe oder lösche sie zuerst.'); }
+	fb_exec("DELETE FROM ".fb_t('tp_shop_categories')." WHERE id = ?", 'i', array((int)$id));
+	return array('ok' => true);
+}
+
+function shop_me_save_product($d) {
+	$id = (int)(isset($d['id']) ? $d['id'] : 0);
+	$title = mb_substr(trim((string)(isset($d['title']) ? $d['title'] : '')), 0, 160);
+	if ($title === '') { return array('ok' => false, 'error' => 'Bitte gib dem Gericht einen Namen.'); }
+	$cat = (int)(isset($d['category_id']) ? $d['category_id'] : 0);
+	if (!fb_row("SELECT id FROM ".fb_t('tp_shop_categories')." WHERE id = ?", 'i', array($cat))) { return array('ok' => false, 'error' => 'Bitte wähle eine Kategorie.'); }
+	$price = shop_cents(isset($d['price']) ? $d['price'] : 0);
+	if ($price < 0 || $price > 100000) { return array('ok' => false, 'error' => 'Der Preis ist nicht sinnvoll.'); }
+	$image = trim((string)(isset($d['image_url']) ? $d['image_url'] : ''));
+	if ($image !== '' && !preg_match('#^https://[^\s"<>]+$#i', $image)) { return array('ok' => false, 'error' => 'Die Bildadresse muss mit https:// beginnen.'); }
+	$desc = mb_substr(trim((string)(isset($d['description']) ? $d['description'] : '')), 0, 800);
+	$all = mb_substr(trim((string)(isset($d['allergens']) ? $d['allergens'] : '')), 0, 400);
+	$active = empty($d['active']) ? 0 : 1;
+	$vars = array();
+	foreach ((isset($d['variations']) && is_array($d['variations'])) ? array_slice($d['variations'], 0, 20) : array() as $v) {
+		$vt = mb_substr(trim((string)(isset($v['title']) ? $v['title'] : '')), 0, 120);
+		if ($vt === '') { continue; }
+		$vp = shop_cents(isset($v['price']) ? $v['price'] : 0); $vm = (float)str_replace(',', '.', (string)(isset($v['mult']) ? $v['mult'] : 1));
+		if ($vp < 0 || $vp > 100000) { return array('ok' => false, 'error' => 'Der Preis der Variante "'.$vt.'" ist nicht sinnvoll.'); }
+		$vars[] = array('id' => (int)(isset($v['id']) ? $v['id'] : 0), 'title' => $vt, 'price' => $vp, 'mult' => ($vm >= 0.1 && $vm <= 10) ? $vm : 1.0);
+	}
+	$groups = array();
+	foreach ((isset($d['groups']) && is_array($d['groups'])) ? array_slice($d['groups'], 0, 30) : array() as $g) {
+		$g = (int)$g;
+		if ($g && !in_array($g, $groups, true) && fb_row("SELECT id FROM ".fb_t('tp_shop_modgroups')." WHERE id = ?", 'i', array($g))) { $groups[] = $g; }
+	}
+	if ($id) {
+		if (!fb_row("SELECT id FROM ".fb_t('tp_shop_products')." WHERE id = ?", 'i', array($id))) { return array('ok' => false, 'error' => 'Dieses Gericht gibt es nicht mehr.'); }
+		fb_exec("UPDATE ".fb_t('tp_shop_products')." SET category_id = ?, title = ?, description = ?, image_url = ?, price_cents = ?, allergens = ?, active = ? WHERE id = ?", 'isssisii', array($cat, $title, $desc, $image, $price, $all, $active, $id));
+	} else {
+		$max = fb_row("SELECT COALESCE(MAX(sort), 0) AS m FROM ".fb_t('tp_shop_products')." WHERE category_id = ?", 'i', array($cat));
+		fb_exec("INSERT INTO ".fb_t('tp_shop_products')." (category_id, title, description, image_url, price_cents, allergens, active, sort) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", 'isssisid', array($cat, $title, $desc, $image, $price, $all, $active, (float)$max['m'] + 1));
+		$id = (int)mysqli_insert_id(fb_db());
+	}
+	// variations: keep the ids that stay, add new ones, drop the rest
+	$keep = array(); $n = 0;
+	foreach ($vars as $v) {
+		$n++;
+		$own = $v['id'] ? fb_row("SELECT id FROM ".fb_t('tp_shop_variations')." WHERE id = ? AND product_id = ?", 'ii', array($v['id'], $id)) : null;
+		if ($own) { fb_exec("UPDATE ".fb_t('tp_shop_variations')." SET title = ?, price_cents = ?, multiplier = ?, sort = ? WHERE id = ?", 'sidii', array($v['title'], $v['price'], $v['mult'], $n, $v['id'])); $keep[] = $v['id']; }
+		else { fb_exec("INSERT INTO ".fb_t('tp_shop_variations')." (product_id, title, price_cents, multiplier, sort) VALUES (?, ?, ?, ?, ?)", 'isidi', array($id, $v['title'], $v['price'], $v['mult'], $n)); $keep[] = (int)mysqli_insert_id(fb_db()); }
+	}
+	foreach (fb_rows("SELECT id FROM ".fb_t('tp_shop_variations')." WHERE product_id = ?", 'i', array($id)) as $r) {
+		if (!in_array((int)$r['id'], $keep, true)) { fb_exec("DELETE FROM ".fb_t('tp_shop_variations')." WHERE id = ?", 'i', array((int)$r['id'])); }
+	}
+	fb_exec("DELETE FROM ".fb_t('tp_shop_product_groups')." WHERE product_id = ?", 'i', array($id));
+	foreach ($groups as $i => $g) { fb_exec("INSERT INTO ".fb_t('tp_shop_product_groups')." (product_id, group_id, sort) VALUES (?, ?, ?)", 'iid', array($id, $g, $i + 1)); }
+	$rows = shop_me_products($id);
+	return array('ok' => true, 'product' => $rows[$id], 'groups' => array_values(shop_me_group_rows()));
+}
+function shop_me_delete_product($id) {
+	$id = (int)$id;
+	fb_exec("DELETE FROM ".fb_t('tp_shop_variations')." WHERE product_id = ?", 'i', array($id));
+	fb_exec("DELETE FROM ".fb_t('tp_shop_product_groups')." WHERE product_id = ?", 'i', array($id));
+	fb_exec("DELETE FROM ".fb_t('tp_shop_products')." WHERE id = ?", 'i', array($id)); // placed orders keep name and price in their own rows
+	return array('ok' => true, 'groups' => array_values(shop_me_group_rows()));
+}
+
+function shop_me_save_group($d) {
+	$id = (int)(isset($d['id']) ? $d['id'] : 0);
+	$title = mb_substr(trim((string)(isset($d['title']) ? $d['title'] : '')), 0, 120);
+	if ($title === '') { return array('ok' => false, 'error' => 'Bitte gib der Gruppe einen Namen.'); }
+	$min = max(0, min(20, (int)(isset($d['min']) ? $d['min'] : 0))); $max = max(0, min(50, (int)(isset($d['max']) ? $d['max'] : 0)));
+	if ($max > 0 && $min > $max) { return array('ok' => false, 'error' => 'Mindestens darf nicht größer sein als höchstens.'); }
+	$items = array();
+	foreach ((isset($d['items']) && is_array($d['items'])) ? array_slice($d['items'], 0, 200) : array() as $i) {
+		$t = mb_substr(trim((string)(isset($i['title']) ? $i['title'] : '')), 0, 120);
+		if ($t === '') { continue; }
+		$pc = shop_cents(isset($i['price']) ? $i['price'] : 0);
+		if ($pc < 0 || $pc > 50000) { return array('ok' => false, 'error' => 'Der Preis von "'.$t.'" ist nicht sinnvoll.'); }
+		$items[] = array('id' => (int)(isset($i['id']) ? $i['id'] : 0), 'title' => $t, 'price' => $pc, 'max' => max(1, min(9, (int)(isset($i['max']) ? $i['max'] : 1))));
+	}
+	if ($min > 0 && count($items) < $min) { return array('ok' => false, 'error' => 'Für "mindestens '.$min.'" braucht die Gruppe mindestens '.$min.' Optionen.'); }
+	if ($id) {
+		if (!fb_row("SELECT id FROM ".fb_t('tp_shop_modgroups')." WHERE id = ?", 'i', array($id))) { return array('ok' => false, 'error' => 'Diese Gruppe gibt es nicht mehr.'); }
+		fb_exec("UPDATE ".fb_t('tp_shop_modgroups')." SET title = ?, min_qty = ?, max_qty = ? WHERE id = ?", 'siii', array($title, $min, $max, $id));
+	} else {
+		fb_exec("INSERT INTO ".fb_t('tp_shop_modgroups')." (resmio_id, title, min_qty, max_qty, sort) VALUES (NULL, ?, ?, ?, 0)", 'sii', array($title, $min, $max));
+		$id = (int)mysqli_insert_id(fb_db());
+	}
+	$keep = array(); $n = 0;
+	foreach ($items as $it) {
+		$n++;
+		$own = $it['id'] ? fb_row("SELECT id FROM ".fb_t('tp_shop_group_items')." WHERE id = ? AND group_id = ?", 'ii', array($it['id'], $id)) : null;
+		if ($own) { fb_exec("UPDATE ".fb_t('tp_shop_group_items')." SET title = ?, price_cents = ?, max_qty = ?, sort = ? WHERE id = ?", 'siidi', array($it['title'], $it['price'], $it['max'], $n, $it['id'])); $keep[] = $it['id']; }
+		else { fb_exec("INSERT INTO ".fb_t('tp_shop_group_items')." (group_id, title, price_cents, max_qty, sort) VALUES (?, ?, ?, ?, ?)", 'isiid', array($id, $it['title'], $it['price'], $it['max'], $n)); $keep[] = (int)mysqli_insert_id(fb_db()); }
+	}
+	foreach (fb_rows("SELECT id FROM ".fb_t('tp_shop_group_items')." WHERE group_id = ?", 'i', array($id)) as $r) {
+		if (!in_array((int)$r['id'], $keep, true)) { fb_exec("DELETE FROM ".fb_t('tp_shop_group_items')." WHERE id = ?", 'i', array((int)$r['id'])); }
+	}
+	$rows = shop_me_group_rows();
+	return array('ok' => true, 'group' => $rows[$id], 'groups' => array_values($rows));
+}
+function shop_me_copy_group($id) {
+	$rows = shop_me_group_rows(); $g = isset($rows[(int)$id]) ? $rows[(int)$id] : null;
+	if (!$g) { return array('ok' => false, 'error' => 'Diese Gruppe gibt es nicht mehr.'); }
+	$g['id'] = 0; $g['title'] = mb_substr($g['title'], 0, 100).' (Kopie)';
+	foreach ($g['items'] as &$i) { $i['id'] = 0; $i['price'] = number_format($i['price'] / 100, 2, '.', ''); } unset($i);
+	return shop_me_save_group($g);
+}
+function shop_me_delete_group($id) {
+	$id = (int)$id;
+	fb_exec("DELETE FROM ".fb_t('tp_shop_product_groups')." WHERE group_id = ?", 'i', array($id));
+	fb_exec("DELETE FROM ".fb_t('tp_shop_group_items')." WHERE group_id = ?", 'i', array($id));
+	fb_exec("DELETE FROM ".fb_t('tp_shop_modgroups')." WHERE id = ?", 'i', array($id));
+	return array('ok' => true, 'products' => array_values(shop_me_products()), 'groups' => array_values(shop_me_group_rows()));
+}
+
+// ---- tracking: where the restaurant is, the driver link and the driver's position
+function shop_origin() {
+	$st = trim((string)shop_setting('origin_street')); $zip = trim((string)shop_setting('origin_zip')); $city = trim((string)shop_setting('origin_city'));
+	if ($st === '' || $city === '') { return null; }
+	return shop_geocode($st, $zip, $city);
+}
+// key in the link that is given to the driver (opens the driver page of exactly this order)
+function shop_driver_key($o) {
+	require_once __DIR__.'/cancel_link.class.php';
+	return substr(hash_hmac('sha256', 'driver|'.$o['token'].'|'.(int)$o['id'], cl_secret()), 0, 20);
+}
+function shop_driver_order($token, $key) {
+	$o = shop_order_by_token((string)$token);
+	return ($o && $o['type'] === 'delivery' && is_string($key) && hash_equals(shop_driver_key($o), $key)) ? $o : null;
+}
+function shop_driver_position($o) {
+	if ($o['driver_at'] === null || $o['driver_lat'] === null || !in_array($o['status'], array('ready', 'delivering'), true)) { return null; }
+	$age = time() - strtotime($o['driver_at']);
+	return ($age < 600) ? array('lat' => (float)$o['driver_lat'], 'lng' => (float)$o['driver_lng'], 'age' => max(0, $age)) : null;
+}
+
+// ---- SMS to the guest at the two moments that matter: the delivery is on its way (with the link to follow it), the pickup is ready.
+// Only for real orders with a mobile number, once per order, and only when SMS sending is set up (Einstellungen > SMS).
+function shop_site_url() {
+	if (function_exists('shop_base_url')) { return shop_base_url(); } // order pages
+	require_once __DIR__.'/cancel_link.class.php';
+	return cl_site_url();
+}
+function shop_sms_text($event, $brand, $number, $link) {
+	$long = strlen($link) > 40; // the full status link (YOURLS not available) leaves less room: shorter sentences
+	if ($event === 'order_delivering') { return sms_fit('', $brand, $long ? ': Dein Essen ist unterwegs! Live verfolgen: '.$link : ': Dein Essen ist unterwegs! Gleich klingelt es bei dir. Live verfolgen: '.$link); }
+	return sms_fit('', $brand, $long ? ': Bestellung '.$number.' ist abholbereit! Details: '.$link : ': Deine Bestellung '.$number.' ist abholbereit. Wir freuen uns auf dich! Details: '.$link);
+}
+function shop_sms_status($id, $status) {
+	if (!in_array($status, array('delivering', 'ready'), true)) { return; }
+	try {
+		$o = shop_order($id);
+		if (!$o || (int)$o['is_test'] || !shop_flag('sms_orders')) { return; }
+		$event = ($status === 'delivering' && $o['type'] === 'delivery') ? 'order_delivering' : (($status === 'ready' && $o['type'] === 'pickup') ? 'order_ready' : '');
+		if ($event === '' || !sms_enabled()) { return; }
+		$mobile = sms_normalize_phone((string)$o['phone']);
+		if ($mobile === null) { return; }
+		global $settings;
+		$brand = html_entity_decode(!empty($settings['brandName']) ? (string)$settings['brandName'] : 'Amadeus', ENT_QUOTES, 'UTF-8');
+		$link = shop_site_url().'/order/status.php?t='.$o['token'];
+		if (sms_link_ready()) { $r = sms_yourls_shorten($link, 24 * 60, 'mySeat Bestellung'); if (!empty($r['ok']) && !empty($r['short'])) { $link = $r['short']; } }
+		// the order id shares the "reservation" column of the outbox: an offset keeps the two apart and makes every text go out once
+		sms_enqueue(1000000000 + (int)$o['id'], $mobile, $event, shop_sms_text($event, $brand, $o['number'], $link));
+	} catch (Throwable $e) {
+		error_log('mySeat order sms: '.$e->getMessage());
+	}
+}
+
+// ---- coupons ("Gutscheine"): percent or fixed amount off the goods (never the fee or tip), once or many times, limited in time.
+// Codes are upper case letters, digits and "-". A redemption is used up when the order is placed and given back when it is cancelled.
+function shop_coupon_normalize($code) { return substr(preg_replace('/[^A-Z0-9\-]/', '', strtoupper((string)$code)), 0, 40); }
+function shop_coupon_guest_keys($phone, $email) {
+	$d = preg_replace('/\D/', '', (string)$phone); $d = strlen($d) > 9 ? substr($d, -9) : $d; // 0176 123456 and +49 176 123456 are the same guest
+	$e = strtolower(trim((string)$email));
+	return array($d !== '' ? sha1('phone|'.$d) : '', $e !== '' ? sha1('mail|'.$e) : '');
+}
+function shop_coupon_by_code($code) { return fb_row("SELECT * FROM ".fb_t('tp_shop_coupons')." WHERE code = ?", 's', array((string)$code)); }
+function shop_coupon_describe($c) {
+	return ($c['kind'] === 'percent' ? (int)$c['value'].' %' : shop_money((int)$c['value'])).' Rabatt';
+}
+// $type: delivery|pickup, $sub: goods in cents, $keys: guest keys (or array('', '') for a preview). Returns ok, error, coupon, discount.
+function shop_coupon_check($code, $type, $sub, $keys = array('', '')) {
+	shop_ensure_schema();
+	$no = function ($msg) { return array('ok' => false, 'error' => $msg, 'coupon' => null, 'discount' => 0); };
+	$c = shop_coupon_by_code(shop_coupon_normalize($code));
+	if (!$c || !(int)$c['active']) { return $no('Diesen Gutscheincode kennen wir nicht. Bitte prüfe die Schreibweise.'); }
+	$now = time();
+	if ($c['valid_from'] && strtotime($c['valid_from']) > $now) { return $no('Dieser Gutschein ist erst ab '.date('d.m.Y', strtotime($c['valid_from'])).' gültig.'); }
+	if ($c['valid_until'] && strtotime($c['valid_until']) < $now) { return $no('Dieser Gutschein ist leider abgelaufen.'); }
+	if ((int)$c['max_uses'] > 0 && (int)$c['used'] >= (int)$c['max_uses']) { return $no((int)$c['max_uses'] === 1 ? 'Dieser Gutschein wurde schon eingelöst.' : 'Dieser Gutschein ist leider aufgebraucht.'); }
+	if ($c['applies'] !== 'all' && $c['applies'] !== $type) { return $no($c['applies'] === 'delivery' ? 'Dieser Gutschein gilt nur bei Lieferung.' : 'Dieser Gutschein gilt nur bei Abholung.'); }
+	if ((int)$c['min_order_cents'] > 0 && $sub < (int)$c['min_order_cents']) { return $no('Dieser Gutschein gilt ab einem Warenwert von '.shop_money((int)$c['min_order_cents']).'. Dir fehlen noch '.shop_money((int)$c['min_order_cents'] - $sub).'.'); }
+	if ((int)$c['per_guest'] && ($keys[0] !== '' || $keys[1] !== '')) {
+		$hit = fb_row("SELECT id FROM ".fb_t('tp_shop_coupon_uses')." WHERE coupon_id = ? AND ((guest_key <> '' AND guest_key = ?) OR (guest_key2 <> '' AND guest_key2 = ?)) LIMIT 1", 'iss', array((int)$c['id'], $keys[0], $keys[1]));
+		if ($hit) { return $no('Du hast diesen Gutschein schon eingelöst. Er gilt pro Person nur einmal.'); }
+	}
+	$d = $c['kind'] === 'percent' ? (int)round($sub * (int)$c['value'] / 100) : (int)$c['value'];
+	if ($c['kind'] === 'percent' && (int)$c['max_discount_cents'] > 0) { $d = min($d, (int)$c['max_discount_cents']); }
+	$d = max(0, min($d, $sub));
+	if ($d <= 0) { return $no('Dieser Gutschein bringt bei deiner Bestellung keinen Rabatt.'); }
+	return array('ok' => true, 'error' => '', 'coupon' => $c, 'discount' => $d);
+}
+function shop_coupon_reserve($id) {
+	$st = fb_exec("UPDATE ".fb_t('tp_shop_coupons')." SET used = used + 1 WHERE id = ? AND active = 1 AND (max_uses = 0 OR used < max_uses)", 'i', array((int)$id));
+	if (!$st) { return false; }
+	$n = mysqli_stmt_affected_rows($st); mysqli_stmt_close($st);
+	return $n === 1; // the check and the count are one statement: the last redemption goes to exactly one guest
+}
+function shop_coupon_unreserve($id) { fb_exec("UPDATE ".fb_t('tp_shop_coupons')." SET used = GREATEST(used - 1, 0) WHERE id = ?", 'i', array((int)$id)); }
+function shop_coupon_release($orderId) {
+	foreach (fb_rows("SELECT id, coupon_id FROM ".fb_t('tp_shop_coupon_uses')." WHERE order_id = ?", 'i', array((int)$orderId)) as $u) {
+		fb_exec("DELETE FROM ".fb_t('tp_shop_coupon_uses')." WHERE id = ?", 'i', array((int)$u['id']));
+		shop_coupon_unreserve((int)$u['coupon_id']);
+	}
+}
+
+// ---- coupons in the backend editor
+function shop_me_coupon_row($c) {
+	$dt = function ($v) { return $v ? str_replace(' ', 'T', substr($v, 0, 16)) : ''; };
+	return array('id' => (int)$c['id'], 'code' => $c['code'], 'note' => $c['note'], 'kind' => $c['kind'], 'value' => (int)$c['value'], 'max_discount' => (int)$c['max_discount_cents'], 'min_order' => (int)$c['min_order_cents'],
+		'applies' => $c['applies'], 'valid_from' => $dt($c['valid_from']), 'valid_until' => $dt($c['valid_until']), 'max_uses' => (int)$c['max_uses'], 'per_guest' => (int)$c['per_guest'],
+		'used' => (int)$c['used'], 'active' => (int)$c['active'],
+		'state' => !(int)$c['active'] ? 'off' : (($c['valid_until'] && strtotime($c['valid_until']) < time()) ? 'expired' : (((int)$c['max_uses'] > 0 && (int)$c['used'] >= (int)$c['max_uses']) ? 'used' : (($c['valid_from'] && strtotime($c['valid_from']) > time()) ? 'soon' : 'on'))));
+}
+function shop_me_coupons() {
+	$out = array();
+	foreach (fb_rows("SELECT * FROM ".fb_t('tp_shop_coupons')." ORDER BY active DESC, created_at DESC, id DESC") as $c) { $out[] = shop_me_coupon_row($c); }
+	return $out;
+}
+function shop_me_save_coupon($d) {
+	$id = (int)(isset($d['id']) ? $d['id'] : 0);
+	$code = shop_coupon_normalize(isset($d['code']) ? $d['code'] : '');
+	if (strlen($code) < 3) { return array('ok' => false, 'error' => 'Der Code braucht mindestens 3 Zeichen (Buchstaben, Ziffern, Bindestrich).'); }
+	$dup = fb_row("SELECT id FROM ".fb_t('tp_shop_coupons')." WHERE code = ? AND id <> ?", 'si', array($code, $id));
+	if ($dup) { return array('ok' => false, 'error' => 'Diesen Code gibt es schon.'); }
+	$kind = (isset($d['kind']) && $d['kind'] === 'fixed') ? 'fixed' : 'percent';
+	$value = $kind === 'percent' ? (int)round((float)str_replace(',', '.', (string)(isset($d['value']) ? $d['value'] : 0))) : shop_cents(isset($d['value']) ? $d['value'] : 0);
+	if ($kind === 'percent' && ($value < 1 || $value > 100)) { return array('ok' => false, 'error' => 'Der Rabatt in Prozent muss zwischen 1 und 100 liegen.'); }
+	if ($kind === 'fixed' && ($value < 1 || $value > 50000)) { return array('ok' => false, 'error' => 'Der Rabatt in Euro muss zwischen 0,01 und 500 liegen.'); }
+	$maxd = $kind === 'percent' ? max(0, shop_cents(isset($d['max_discount']) ? $d['max_discount'] : 0)) : 0;
+	$min = max(0, shop_cents(isset($d['min_order']) ? $d['min_order'] : 0));
+	$applies = (isset($d['applies']) && in_array($d['applies'], array('delivery', 'pickup'), true)) ? $d['applies'] : 'all';
+	$from = (isset($d['valid_from']) && preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/', (string)$d['valid_from'])) ? str_replace('T', ' ', $d['valid_from']).':00' : null;
+	$until = (isset($d['valid_until']) && preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/', (string)$d['valid_until'])) ? str_replace('T', ' ', $d['valid_until']).':59' : null;
+	if ($from && $until && $from > $until) { return array('ok' => false, 'error' => '"Gültig bis" liegt vor "gültig ab".'); }
+	$maxUses = max(0, min(1000000, (int)(isset($d['max_uses']) ? $d['max_uses'] : 0)));
+	$perGuest = empty($d['per_guest']) ? 0 : 1; $active = empty($d['active']) ? 0 : 1;
+	$note = mb_substr(trim((string)(isset($d['note']) ? $d['note'] : '')), 0, 160);
+	if ($id) {
+		if (!fb_row("SELECT id FROM ".fb_t('tp_shop_coupons')." WHERE id = ?", 'i', array($id))) { return array('ok' => false, 'error' => 'Diesen Gutschein gibt es nicht mehr.'); }
+		fb_exec("UPDATE ".fb_t('tp_shop_coupons')." SET code = ?, note = ?, kind = ?, value = ?, max_discount_cents = ?, min_order_cents = ?, applies = ?, valid_from = ?, valid_until = ?, max_uses = ?, per_guest = ?, active = ? WHERE id = ?",
+			'sssiiisssiiii', array($code, $note, $kind, $value, $maxd, $min, $applies, $from, $until, $maxUses, $perGuest, $active, $id));
+	} else {
+		fb_exec("INSERT INTO ".fb_t('tp_shop_coupons')." (code, note, kind, value, max_discount_cents, min_order_cents, applies, valid_from, valid_until, max_uses, per_guest, active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())",
+			'sssiiisssiii', array($code, $note, $kind, $value, $maxd, $min, $applies, $from, $until, $maxUses, $perGuest, $active));
+		$id = (int)mysqli_insert_id(fb_db());
+	}
+	return array('ok' => true, 'coupon' => shop_me_coupon_row(fb_row("SELECT * FROM ".fb_t('tp_shop_coupons')." WHERE id = ?", 'i', array($id))));
+}
+function shop_me_delete_coupon($id) {
+	fb_exec("DELETE FROM ".fb_t('tp_shop_coupon_uses')." WHERE coupon_id = ?", 'i', array((int)$id));
+	fb_exec("DELETE FROM ".fb_t('tp_shop_coupons')." WHERE id = ?", 'i', array((int)$id)); // placed orders keep the code and amount in their own row
+	return array('ok' => true);
+}
+
+// ---- upsell ("Noch etwas dazu?"): learns from past real orders which dishes are bought together with what is in the cart.
+// Needs enough order history before it trusts the data; until then the caller falls back to its own heuristic.
+function shop_upsell_candidates($cartProductIds, $limit = 3) {
+	shop_ensure_schema();
+	$cartIds = array_values(array_unique(array_filter(array_map('intval', (array)$cartProductIds))));
+	$totalOrders = (int)fb_row("SELECT COUNT(*) AS n FROM ".fb_t('tp_shop_orders')." WHERE is_test = 0 AND status <> 'cancelled'")['n'];
+	$learned = $totalOrders >= 15; // a handful of test clicks should not steer real suggestions
+	$found = array();
+	if ($learned && $cartIds) {
+		$in = implode(',', $cartIds);
+		// dishes that showed up in the same past orders as something already in this cart, most often first
+		$rows = fb_rows("SELECT oi2.product_id AS pid, COUNT(DISTINCT oi1.order_id) AS n
+			FROM ".fb_t('tp_shop_order_items')." oi1
+			JOIN ".fb_t('tp_shop_order_items')." oi2 ON oi2.order_id = oi1.order_id AND oi2.product_id IS NOT NULL AND oi2.product_id NOT IN ($in)
+			JOIN ".fb_t('tp_shop_orders')." o ON o.id = oi1.order_id
+			WHERE oi1.product_id IN ($in) AND o.is_test = 0 AND o.status <> 'cancelled'
+			GROUP BY oi2.product_id HAVING n >= 2 ORDER BY n DESC LIMIT 20");
+		foreach ($rows as $r) { $found[] = (int)$r['pid']; }
+	}
+	if (count($found) < $limit) {
+		// fill up with the overall bestsellers the guest does not have yet
+		$skip = array_merge($cartIds, $found); $skip[] = 0;
+		$pop = fb_rows("SELECT oi.product_id AS pid, COUNT(DISTINCT oi.order_id) AS n FROM ".fb_t('tp_shop_order_items')." oi
+			JOIN ".fb_t('tp_shop_orders')." o ON o.id = oi.order_id
+			WHERE oi.product_id IS NOT NULL AND oi.product_id NOT IN (".implode(',', $skip).") AND o.is_test = 0 AND o.status <> 'cancelled'
+			GROUP BY oi.product_id ORDER BY n DESC LIMIT 20");
+		foreach ($pop as $r) { $found[] = (int)$r['pid']; }
+	}
+	$found = array_slice(array_unique($found), 0, $limit + 5);
+	$items = array();
+	if ($found) {
+		$prods = fb_rows("SELECT id, title, price_cents,
+				(SELECT MIN(price_cents) FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id) AS vmin,
+				(SELECT COUNT(*) FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id) AS nvar,
+				(SELECT COUNT(*) FROM ".fb_t('tp_shop_product_groups')." pg WHERE pg.product_id = p.id) AS ngroup
+			FROM ".fb_t('tp_shop_products')." p WHERE p.id IN (".implode(',', $found).") AND p.active = 1");
+		$byId = array(); foreach ($prods as $p) { $byId[(int)$p['id']] = $p; }
+		foreach ($found as $pid) {
+			if (!isset($byId[$pid]) || count($items) >= $limit) { continue; }
+			$p = $byId[$pid];
+			$choices = ((int)$p['nvar'] > 0 || (int)$p['ngroup'] > 0);
+			$items[] = array('id' => (int)$p['id'], 'title' => $p['title'], 'price' => ($choices && (int)$p['nvar'] > 0) ? min((int)$p['price_cents'], (int)$p['vmin']) : (int)$p['price_cents'], 'choices' => $choices);
+		}
+	}
+	return array('learned' => $learned, 'items' => $items);
+}

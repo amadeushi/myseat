@@ -763,6 +763,7 @@ function uiIcon($name, $opt = array()) {
 		'box_on'  => "<rect x='4' y='4' width='16' height='16' rx='3'/><path d='M8.2 12.3l2.6 2.6 5-5.4'/>",
 		'box_off' => "<rect x='4' y='4' width='16' height='16' rx='3'/>",
 		'clock'   => "<circle cx='12' cy='12' r='9'/><path d='M12 7v5.2l3.4 2'/>",
+		'print'   => "<path d='M7 9V4h10v5M7 17H5a1.5 1.5 0 0 1-1.5-1.5v-5A1.5 1.5 0 0 1 5 9h14a1.5 1.5 0 0 1 1.5 1.5v5A1.5 1.5 0 0 1 19 17h-2M7 14h10v6H7z'/>",
 		// reservation status
 		'st_confirmed' => "<rect x='3.5' y='5' width='17' height='15' rx='2'/><path d='M3.5 10h17M8 3v4M16 3v4M9 14.6l2.2 2.2 3.9-4.3'/>",
 		'st_arrived'   => "<path d='M12 21s7-6.2 7-11.5a7 7 0 1 0-14 0C5 14.8 12 21 12 21z'/><path d='M9 9.8l2.2 2.2 3.8-4'/>",

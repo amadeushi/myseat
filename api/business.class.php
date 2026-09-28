@@ -117,6 +117,12 @@ function bt($key, $arg = null) {
 				'error_text'     => 'Deine Reservierung konnte leider nicht angelegt werden.',
 				'error_retry'    => 'Bitte versuche es noch einmal oder schreib uns direkt:',
 				'retry'          => 'Erneut versuchen',
+				'step1_label'    => 'Termin',
+				'step2_label'    => 'Details',
+				'step3_label'    => 'Kontakt',
+				'steps_remaining_plural' => 'Noch %d Schritte',
+				'steps_remaining_one'    => 'Noch 1 Schritt',
+				'steps_done'             => 'Letzter Schritt',
 			),
 			'en' => array(
 				'subtitle'       => 'Online reservation',
@@ -148,6 +154,12 @@ function bt($key, $arg = null) {
 				'error_text'     => 'Unfortunately your reservation could not be created.',
 				'error_retry'    => 'Please try again or write to us directly:',
 				'retry'          => 'Try again',
+				'step1_label'    => 'Date',
+				'step2_label'    => 'Details',
+				'step3_label'    => 'Contact',
+				'steps_remaining_plural' => '%d steps to go',
+				'steps_remaining_one'    => '1 step to go',
+				'steps_done'             => 'Last step',
 			),
 		);
 	}

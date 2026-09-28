@@ -91,6 +91,10 @@
 					echo"&nbsp;<a href='#' name='".$id."' class='alwbtn'>".uiIcon('check', array('class' => 'help', 'title' => _allow, 'alt' => _allow))."</a>&nbsp;&nbsp;";
 				}
 			}
+			// TABLE SIGN on the receipt printer
+			if ( current_user_can('Reservation-Edit') && $q!=3 ){
+				echo "<a href='#' class='resbon' data-url='reservation_bon.php?id=".$id."'>".uiIcon('print', array('class' => 'help', 'title' => 'Reservierungsschild drucken', 'alt' => 'Drucken'))."</a>&nbsp;&nbsp;";
+			}
 			// EDIT/DETAIL BUTTON
 			echo "<a href='?p=102&resID=".$id."'>".uiIcon('pen', array('class' => 'help', 'title' => _detail, 'alt' => _detail))."</a>&nbsp;&nbsp;";
 			// DELETE BUTTON
@@ -119,4 +123,20 @@
 		</tr>
 	</tfoot>
 </table>
+<script>
+// table sign: the page of the sign prints itself in a hidden frame (Chrome with --kiosk-printing: straight to the receipt printer)
+(function () {
+	if (window.resBonReady) { return; } window.resBonReady = true;
+	document.addEventListener('click', function (ev) {
+		var a = ev.target.closest ? ev.target.closest('a.resbon, a.resbon-day') : null; if (!a) { return; }
+		ev.preventDefault();
+		var old = document.getElementById('resbon-frame'); if (old) { old.parentNode.removeChild(old); }
+		var f = document.createElement('iframe'); f.id = 'resbon-frame'; f.setAttribute('aria-hidden', 'true'); f.tabIndex = -1;
+		f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+		f.onload = function () { try { var d = f.contentDocument; if (d && !d.querySelector('.slip')) { alert((d.body.textContent || 'Drucken nicht möglich.').trim()); } } catch (e) {} };
+		f.src = a.getAttribute('data-url');
+		document.body.appendChild(f);
+	});
+})();
+</script>
 <!-- End reservation table data -->

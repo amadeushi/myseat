@@ -23,7 +23,7 @@ This file is part of mySeat.
 /** Login **/
 // ** set configuration
 	//Software version - http://github.com/apmuthu/myseat
-	$sw_version = 'v2.6.0';
+	$sw_version = 'v3.0.0';
 	
 	include('../config/config.general.php');
 	
@@ -158,6 +158,22 @@ echo "<body>";
 			// guest feedback
 			if ( current_user_can( 'Page-Feedback' ) ){
 				include('content/feedback.page.php');
+			}else{
+				redeclare_access();
+			}
+		break;
+		case '9':
+			// orders of the delivery service (dashboard); the dispatch view is web/disposition.php, the kitchen screen web/kitchen_screen.php
+			if ( current_user_can( 'Reservation-Edit' ) ){
+				include('content/orders.page.php');
+			}else{
+				redeclare_access();
+			}
+		break;
+		case '10':
+			// menu editor of the delivery service (categories, dishes, option groups)
+			if ( current_user_can( 'Settings-General' ) ){
+				include('content/menu.page.php');
 			}else{
 				redeclare_access();
 			}

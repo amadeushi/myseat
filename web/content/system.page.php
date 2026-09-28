@@ -65,6 +65,13 @@
 		<?php endif ?>
 		<?php if ( current_user_can( 'Settings-General' ) ): ?>
 			<li>
+				<a href="?p=6&q=10" <?php if ($q == 10) { echo " class='active'";}?> >
+					<img src='images/menu-icons/store.png' class='nav-image'>Lieferservice
+				</a>
+			</li>
+		<?php endif ?>
+		<?php if ( current_user_can( 'Settings-General' ) ): ?>
+			<li>
 				<a href="?p=6&q=7" <?php if ($q == 7) { echo " class='active'";}?> >
 					<img src='images/menu-icons/jar.png' class='nav-image'>Plugins
 				</a>
@@ -103,6 +110,8 @@
 					echo "<h3>Angebotszeiten</h3>";
 				}else if ($q == 9) { 
 					echo "<h3>SMS-Versand</h3>";
+				}else if ($q == 10) { 
+					echo "<h3>Lieferservice</h3>";
 				}
 				?>
 			</div>
@@ -284,6 +293,13 @@
 				if ( current_user_can( 'Property-New' ) ){
 					// property
 					include('register/detail.property.page.php');
+				}else{
+					redeclare_access();
+				}	
+				break;
+				case '10':
+				if ( current_user_can( 'Settings-General' ) ){
+					include('includes/shop.page.php');
 				}else{
 					redeclare_access();
 				}	

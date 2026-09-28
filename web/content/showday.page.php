@@ -72,8 +72,7 @@
 				</li>
 				<?php if ($q == 1){ ?>
 				<li>
-					<a href="javascript:window.print()">
-						<!-- <img src="images/menu-icons/printer.png" alt="Print"> -->
+					<a href="<?php echo current_user_can('Reservation-Edit') ? '#' : 'javascript:window.print()'; ?>" class="<?php echo current_user_can('Reservation-Edit') ? 'resbon-day' : ''; ?>" title="Alle Reservierungen des Tages als Schilder auf dem Bondrucker drucken" data-url="reservation_bon.php?date=<?php echo urlencode($_SESSION['selectedDate']); ?>&amp;outlet=<?php echo (int)$_SESSION['outletID']; ?>">
 						<?php echo _print;?>
 					</a>
 				</li>

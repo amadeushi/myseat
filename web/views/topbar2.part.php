@@ -19,6 +19,13 @@
 					</a>
 				</li>
 				<?php endif ?>
+				<?php if ( current_user_can( 'Reservation-Edit' ) ): ?>
+				<li>
+					<a href="main_page.php?p=9" <?php if($_SESSION['page']=='9'){echo "class='active'";} ?> >
+						Bestellungen
+					</a>
+				</li>
+				<?php endif ?>
 				<?php if ( current_user_can( 'Page-Statistic' ) ): ?>
 				<li>
 					<a href="main_page.php?p=3" <?php if($_SESSION['page']=='3'){echo "class='active'";} ?> >

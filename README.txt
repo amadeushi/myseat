@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 2.6.0                         =-=
+=-= Version: 3.0.0                         =-=
 =-= Date:    25.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -45,12 +45,72 @@ commit (git tag vX.Y.Z). Based on mySeat by Bernd Orttenburger and contributors,
 CHANGELOG
 =========
 
-Versions 0.2161 - 2.6.0 are maintained in http://github.com/amadeushi/myseat.
+Versions 0.2161 - 3.0.0 are maintained in http://github.com/amadeushi/myseat.
 No manual database update is needed for any of them (the table plan (v0.2171, v0.2172) creates its own
 tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-26 == mySeat v3.0.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Delivery service (new module): order page for guests at /order/ (menu by category, product dialog with sizes and
+   options, cart, checkout with delivery address check against the delivery areas, time choice, pay online with
+   Mollie or cash/card on delivery/pickup, tip), order status page for the guest (secret link), confirmation mails.
+   Needs: web/classes/shop.class.php (tables tp_shop_*, created automatically), order/, web/disposition.php
+ * Backend: "Bestellungen" (dashboard: numbers of the day, all orders, next step as a button, test orders deletable),
+   Disposition (web/disposition.php: full screen, three columns new / in the kitchen / ready, accept with 20/30/45/60
+   minutes, reject, hand over), Kitchen screen (web/kitchen_screen.php: for the cooks, 4 or 5 tall columns with one
+   order each, no guest data, no rejecting, one button "Fertig, ausgegeben", slip on paper via web/bon.php: 72 mm kitchen
+   slip and a delivery slip with guest data and the amount to collect; automatic slip for new orders optional),
+   sound on both monitors (web/js/monitor_sound.js: six sounds, volume, repeat once/3/5 times/until somebody reacts), Einstellungen > Lieferservice (switches, times, minimum order value, order mail
+   address, Mollie key stored encrypted, delivery areas with fee and minimum order, opening times)
+ * Menu, delivery areas and opening times were taken over once from the old ordering system (Resmio public JSON);
+   prices for delivery and pickup are Resmio's takeaway prices. Address check: OpenStreetMap Nominatim
+   (cached) and the polygons of the delivery areas. Off by default: the shop is invisible until switched on in the settings
+ * Order tracking: the status page of a delivery shows a map (OpenStreetMap tiles, Leaflet stored in order/vendor/leaflet)
+   with the restaurant (address in Einstellungen > Lieferservice > Standort des Restaurants), the delivery address and, while
+   the driver shares his position, the driver. The dispatch copies or sends (WhatsApp) a driver link (order/driver.php, key bound
+   to the order) from the "Fertig" and "Unterwegs" cards; the driver opens it on his phone: "Losfahren und Standort teilen",
+   sees address, phone and the amount to collect, "Zugestellt" ends the trip. The position is only visible while the phone
+   shares it (screen on, page open) and disappears when the order is delivered. Pickup orders show where the restaurant is
+ * Cart: lines with choices can be changed (dialog opens with the choices set), progress bar to the minimum order value,
+   "Noch etwas dazu?" (drinks, sides, desserts), what is already in the cart is marked in the menu; checkout remembers the
+   details on the device (optional), shows clock times and the amount on the button; the status page shows the estimate in
+   big letters, a text per step and a note when it takes longer. Confirmation mail to the guest rewritten (time first,
+   payment note, link to follow the order)
+* Search on the order page ignores small typos (a letter swap, one missing/extra/wrong letter), word by word, no server round trip; a field above the categories filters the dishes already on the page by name and description
+  (no server round trip), hides empty categories, shows a note when nothing matches. Esc or the × clears it
+* Upsell "Noch etwas dazu?" now learns from real, finished orders (never test orders) which dishes were bought together
+   with what is in the cart, and suggests those first; falls back to popular dishes, then to the previous guess by category
+   name, until at least 15 real orders exist. Runs server-side (order/api.php op=upsell), no guest data leaves the order
+ * Coupons ("Gutscheine", tab in the menu editor): code, percent or fixed euro amount off the goods (never fee or tip),
+   optional highest discount, minimum goods value, only delivery / only pickup, valid from / until, once (one redemption in
+   total), many times (limit or unlimited), once per guest (recognised by phone number or e-mail). The guest enters the
+   code at the checkout (checkout.php?code=XYZ fills it from a link); the server checks it again with the order. A redemption is
+   used up when the order is placed and given back when the order is cancelled or unpaid; test orders do not use it up.
+   Shown on the status page, in the mail and in the dashboard
+ * Menu editor (backend page "Speisekarte", needs Settings-General): create, change, move and delete categories and dishes
+   (name, price, description, allergens, picture, visible, sizes/variants), and option groups ("Zubehörgruppen": rule
+   "required / optional, at least / at most", options with surcharge) that are assigned to any number of dishes. The
+   options of the import were converted once into shared groups (identical sets became one group). In the shop the
+   required choices of a dish come first in a highlighted block, optional extras are collapsed below
+   Server side: Mollie needs https and a reachable /order/mollie_webhook.php; no cron job needed
+ * Table-sign printing fixed: printing the whole day's signs at once sent them as one multi-page job, so the printer
+   never cut between signs ("endless roll"). Each sign now fires as its own separate print job
+ * Lieferando order import (order/lieferando_import.php, web/classes/shop_lieferando.class.php): an n8n workflow
+   watches a Nextcloud folder for the order receipt PDF that is printed when the order is accepted on the Lieferando
+   tablet, and posts it to this endpoint (header X-Api-Key, $settings['lieferandoApiKey']). The PDF is parsed
+   (needs the new vendor/ folder, Composer package smalot/pdfparser) for pickup/delivery, dishes with options and the
+   guest's note, and turned into a normal order (source "lieferando") that shows on the kitchen monitor with its own
+   badge; the exact delivery address is intentionally not read (only in a QR code) since delivery keeps going through
+   Lieferando's own courier app. The same order code is never imported twice
+ * Reservation widget: a progress bar above the three steps shows how many steps are left ("Noch 2 Schritte" / "Noch
+   1 Schritt" / "Letzter Schritt"), in German and English
+ * Checkout: a visible completion indicator ("Fast geschafft - noch X Angaben") shows what is still missing (address,
+   time, contact, payment) before the order can be placed; below 900px width it floats above the bottom edge so it
+   stays visible while filling in the form, not only once scrolled all the way down. Tip is now a percentage of the
+   order (Keins/5/10/15/20 %) or a free amount ("Wunschbetrag"), no longer fixed euro steps
 
 2026-09-26 == mySeat v2.6.0 == amadeushi - http://github.com/amadeushi/myseat
 

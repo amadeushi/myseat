@@ -350,6 +350,16 @@ if($check_web_outlet==1){
 			<input type="hidden" name="email_type" id="email_type" value="<?php echo $lang; ?>"/>
 			<input type="hidden" name="reservation_email_lang" value="<?php echo $lang; ?>"/>
 
+			<div class="wizard-progress" role="group" aria-label="<?php echo bt('subtitle'); ?>">
+				<ol class="wizard-progress-steps">
+					<li class="wizard-progress-step is-active" data-step="1"><span class="wizard-progress-dot">1</span><span class="wizard-progress-label"><?php echo bt('step1_label'); ?></span></li>
+					<li class="wizard-progress-step" data-step="2"><span class="wizard-progress-dot">2</span><span class="wizard-progress-label"><?php echo bt('step2_label'); ?></span></li>
+					<li class="wizard-progress-step" data-step="3"><span class="wizard-progress-dot">3</span><span class="wizard-progress-label"><?php echo bt('step3_label'); ?></span></li>
+				</ol>
+				<div class="wizard-progress-track"><div class="wizard-progress-fill" id="wizard-progress-fill"></div></div>
+				<p class="wizard-progress-remaining" id="wizard-progress-remaining" role="status" aria-live="polite"></p>
+			</div>
+
 			<!-- Step 1: date, time, party size -->
 			<div class="wizard-step" data-step="1">
 				<?php if ($num_outlets > 1): ?>
@@ -675,10 +685,27 @@ if($check_web_outlet==1){
 			}
 		}
 
+		// ---- progress bar: filled bar + dots done/active + "N steps to go" text ----
+		var wizardStepRemaining = {
+			1: <?php echo json_encode(bt('steps_remaining_plural', 2)); ?>,
+			2: <?php echo json_encode(bt('steps_remaining_one')); ?>,
+			3: <?php echo json_encode(bt('steps_done')); ?>
+		};
+		var wizardTotalSteps = 3;
+		function updateWizardProgress(n) {
+			$("#wizard-progress-fill").css("transform", "scaleX(" + (n / wizardTotalSteps) + ")");
+			$(".wizard-progress-step").each(function () {
+				var s = $(this).data("step");
+				$(this).toggleClass("is-active", s == n).toggleClass("is-done", s < n);
+			});
+			$("#wizard-progress-remaining").text(wizardStepRemaining[n] || "");
+		}
+
 		// ---- multi-step wizard navigation ----
 		function showWizardStep(n) {
 			$(".wizard-step").addClass("wizard-step-hidden");
 			$(".wizard-step[data-step='" + n + "']").removeClass("wizard-step-hidden");
+			updateWizardProgress(n);
 			if (n == 3) {
 				// always show the real date in the summary, even when the
 				// picker itself currently displays "Heute"
@@ -719,6 +746,7 @@ if($check_web_outlet==1){
 			$("#timeslot-error").removeClass("wizard-error-visible");
 		});
 
+		updateWizardProgress(1);
 		restoreWizardState();
     });
 </script>

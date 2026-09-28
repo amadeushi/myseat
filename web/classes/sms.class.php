@@ -248,7 +248,7 @@ function sms_link_ready() {
  * ~2.8e12 possibilities) because a guessable short link would let anyone cancel other people's tables.
  * Returns array('ok' => bool, 'short' => url|null, 'error' => string|null, 'expiry' => YOURLS' answer, 'expiry_ok' => bool). Never throws.
  */
-function sms_yourls_shorten($long_url, $minutes) {
+function sms_yourls_shorten($long_url, $minutes, $title = 'mySeat Absage') {
 	$c = sms_link_cfg();
 	if ($c['sig'] === '' || stripos($c['url'], 'https://') !== 0) { return array('ok' => false, 'short' => null, 'error' => 'YOURLS ist nicht eingerichtet'); }
 	$alphabet = 'abcdefghijkmnpqrstuvwxyz23456789';
@@ -262,7 +262,7 @@ function sms_yourls_shorten($long_url, $minutes) {
 			CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_TIMEOUT => 4,
 			CURLOPT_POSTFIELDS => http_build_query(array(
 				'signature' => $c['sig'], 'action' => 'shorturl', 'format' => 'json', 'url' => $long_url, 'keyword' => $kw,
-				'title' => 'mySeat Absage', 'expiry' => 'clock', 'age' => max(60, (int)$minutes), 'ageMod' => 'min',
+				'title' => $title, 'expiry' => 'clock', 'age' => max(60, (int)$minutes), 'ageMod' => 'min',
 			)),
 		));
 		$raw = curl_exec($ch);
