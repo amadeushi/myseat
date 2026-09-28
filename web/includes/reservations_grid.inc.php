@@ -1,128 +1,23 @@
 <!-- Begin reservation table data -->
-<br/>
-<table class="global resv-table-small" cellpadding="0" cellspacing="0">
-	<tbody>
-		<tr></tr>
-		<?php
-		// Clear reservation variable
-		$reservations ='';
-		
-		if ($_SESSION['page'] == 1) {
-			$reservations =	querySQL('all_reservations');
-		}else{
-			$reservations =	querySQL('reservations');
-		}
-		
-		// reset total counters
-		$tablesum = 0;
-		$guestsum = 0;
-			
-		if ($reservations) {
-			
-			//start printing out reservation grid
-			foreach($reservations as $row) {
-				// reservation ID
-				$id = $row->reservation_id;
-				$_SESSION['reservation_guest_name'] = $row->reservation_guest_name;
-				// check if reservation is tautologous
-				$tautologous = querySQL('tautologous');
-				
-			echo "<tr id='res-".$id."'>";
-			echo "<td";
-			// daylight coloring
-			$shift = daytimeKind($row->reservation_time, $_SESSION['outletID'], $_SESSION['selectedDate']);
-			if ($shift == 'evening'){
-				echo " class='evening noprint'";
-			}else if ($shift == 'sun'){
-				echo " class='afternoon noprint'";
-			}else{
-				echo " class='morning noprint'";
-			}
-			
-			echo " style='width:10px !important; padding:0px;'>&nbsp;</td>";
-			echo "<td id='tb_time'";
-			// reservation after maitre message
-			if ($row->reservation_timestamp > $maitre['maitre_timestamp'] && $maitre['maitre_comment_day']!='') {
-				echo " class='tautologous' title='"._sentence_13."' ";
-			}
-			echo ">";
-			echo "<strong>".formatTime($row->reservation_time,$general['timeformat'])."</strong></td>";
-			echo "<td id='tb_pax'><strong class='big'>".$row->reservation_pax."</strong></td><td id='tb_name'>";
-			$sal = printTitle($row->reservation_title);
-			if ($sal !== '') { echo "<span class='noprint'>".$sal." </span>"; }
-			echo "<strong><a id='detlbuttontrigger' href='ajax/guest_detail.php?id=".$id."'"; 
-			// color guest name if tautologous
-			if($tautologous>1){echo" class='tautologous tipsy' title='"._tautologous_booking."'";}
-			echo ">".$row->reservation_guest_name."</a></strong>";
-			
-			// old reservations symbol
-			if( (strtotime($row->reservation_timestamp) + $general['old_days']*86400) <= time() ){
-				echo uiIcon('clock', array('class' => 'help tipsyold dt-old', 'title' => _sentence_11, 'alt' => _sentence_11));
-			}
-			// recurring symbol
-			if ($row->repeat_id !=0) {
-	            echo "&nbsp;".uiIcon('loop', array('class' => 'tipsy', 'title' => _recurring, 'alt' => _recurring));
-	        }
-	
-			echo"</td><td id='tb_note'>";
-				if ($_SESSION['page'] == 1) {
-			 		echo $row->outlet_name;
-			 	}else{
-					echo $row->reservation_notes;
-				}
-			echo "</td>";
-			if($_SESSION['wait'] == 0){
-				echo "<td class='big tb_nr' id='tb_table'>".uiIcon('table', array('class' => 'tipsy leftside noprint', 'title' => _table, 'alt' => _table)).tp_table_cell($id, $row->reservation_table, $_SESSION['selectedDate'])."</td>";
-			}
-			echo "<td class='noprint'><div>";
-				getStatusList($id, $row->reservation_status, '', isset($row->reservation_approval) && $row->reservation_approval === 'pending');
-			echo "</div></td>";
-			echo "<td class='noprint'>";
-			echo "<small>".$row->reservation_booker_name." | ".humanize($row->reservation_timestamp)."</small>";
-			echo "</td>";
-			echo "<td class='noprint'>";
-			// MOVE BUTTON
-			//	echo "<a href=''><img src='images/icons/arrow.png' alt='move' class='help' title='"._move_reservation_to."'/></a>";
-			
-			// WAITLIST ALLOW BUTTON
-			if($_SESSION['wait'] == 1){
-				$leftspace = leftSpace(substr($row->reservation_time,0,5), $availability);
-				if($leftspace >= $row->reservation_pax && $_SESSION['outlet_max_tables']-$tbl_availability[substr($row->reservation_time,0,5)] >= 1){
-					echo"&nbsp;<a href='#' name='".$id."' class='alwbtn'>".uiIcon('check', array('class' => 'help', 'title' => _allow, 'alt' => _allow))."</a>&nbsp;&nbsp;";
-				}
-			}
-			// TABLE SIGN on the receipt printer
-			if ( current_user_can('Reservation-Edit') && $q!=3 ){
-				echo "<a href='#' class='resbon' data-url='reservation_bon.php?id=".$id."'>".uiIcon('print', array('class' => 'help', 'title' => 'Reservierungsschild drucken', 'alt' => 'Drucken'))."</a>&nbsp;&nbsp;";
-			}
-			// EDIT/DETAIL BUTTON
-			echo "<a href='?p=102&resID=".$id."'>".uiIcon('pen', array('class' => 'help', 'title' => _detail, 'alt' => _detail))."</a>&nbsp;&nbsp;";
-			// DELETE BUTTON
-			if ( current_user_can( 'Reservation-Delete' ) && $q!=3 ){
-		    	echo"<a href='#modalsecurity' name='".$row->repeat_id."' id='".$id."' class='delbtn'>
-					".uiIcon('cross', array('class' => 'help', 'title' => _delete, 'alt' => _cancelled))."</a>";
-			}
-		echo"</td></tr>";
-		$tablesum ++;
-		$guestsum += $row->reservation_pax;
-			}
-		}
-		?>
-	</tbody>
-	<tfoot>
-		<tr style="border:1px #000;">
-			<td class=" noprint"></td><td></td>
-			<td colspan="2" class="bold"><?php echo $guestsum;?>&nbsp;&nbsp;<?php echo _guest_summary;?></td>
-			<td></td>
-			<td colspan="2" class="bold"><?php echo $tablesum;?>&nbsp;&nbsp;<?php echo _tables_summary;?></td>
-			<?php
-			if($_SESSION['wait'] == 0){
-				//echo "<td></td>";
-			}
-			?>
-		</tr>
-	</tfoot>
-</table>
+<?php
+// Highlighter for reservations that just came in (today's view only, never the cancelled list): a
+// reservation less than an hour old gets a "res-new" row so staff notice it needs attention. The
+// live sound/banner watcher below (once per page, on the confirmed pass) plays only once. $q is not
+// set at all when this include runs from the dashboard, so it must not be required to exist.
+$resHighlightToday = (!isset($q) || $q != 3) && isset($_SESSION['selectedDate']) && $_SESSION['selectedDate'] === $today_date;
+?>
+<?php if ($resHighlightToday && $_SESSION['wait'] == 0): ?>
+<div class="res-sound-mount" id="res-sound-mount"></div>
+<div class="alert_warning res-alert" id="res-new-alert" hidden role="status" aria-live="polite">
+	<p><span id="res-new-alert-text"></span>
+		<button type="button" class="res-alert-x" id="res-new-alert-dismiss" aria-label="Schließen">&times;</button>
+	</p>
+</div>
+<script src="js/monitor_sound.js"></script>
+<?php endif; ?>
+<div id="res-grid-table">
+<?php include('reservations_table.inc.php'); ?>
+</div>
 <script>
 // table sign: the page of the sign prints itself in a hidden frame (Chrome with --kiosk-printing: straight to the receipt printer)
 (function () {
@@ -139,4 +34,93 @@
 	});
 })();
 </script>
+<?php if ($resHighlightToday && $_SESSION['wait'] == 0): ?>
+<script>
+// new-reservation highlighter: fades the "res-new" row exactly an hour after it was created, and
+// watches for reservations arriving while this page stays open. A genuinely new confirmed reservation
+// is fetched already rendered (ajax/reservations_new_rows.php, same markup as the full table) and
+// inserted at the top of the table right away - no click, no page reload. Waitlisted arrivals still
+// ring the bell and show the banner (ajax/reservations_since.php counts both) but are not inserted
+// here, since they belong to the separate waitlist table further down the page; they appear on the
+// next real refresh, same as before this feature existed. "pending" = not yet dismissed.
+(function () {
+	if (window.__resNewWatch) { return; } window.__resNewWatch = true;
+	document.querySelectorAll('tr.res-new[data-created]').forEach(function (tr) {
+		var ms = (parseInt(tr.dataset.created, 10) + 3600) * 1000 - Date.now();
+		if (ms > 0) { setTimeout(function () { tr.classList.remove('res-new'); }, ms); } else { tr.classList.remove('res-new'); }
+	});
+	var since = Math.floor(Date.now() / 1000), pending = 0, hideTimer = null;
+	var alertBox = document.getElementById('res-new-alert'), alertText = document.getElementById('res-new-alert-text');
+	var tbody = document.getElementById('res-tbody');
+	var mount = document.getElementById('res-sound-mount');
+	var sound = (window.MonitorSound && mount) ? MonitorSound.create({ key: 'reservations', mount: mount, pending: function () { return pending; } }) : null;
+
+	function showBanner(text) {
+		alertText.textContent = text;
+		alertBox.hidden = false;
+		if (hideTimer) { clearTimeout(hideTimer); }
+		hideTimer = setTimeout(dismiss, 8000);
+	}
+	function dismiss() {
+		pending = 0; alertBox.hidden = true; if (sound) { sound.ack(); }
+		if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+	}
+	document.getElementById('res-new-alert-dismiss').addEventListener('click', dismiss);
+
+	// the new row's own icons/buttons need the same one-time setup the page does for everything else
+	// on load (web/js/custom.js runs only once, at document ready) - scoped to the fresh <tr>s only,
+	// copied verbatim from custom.js, so existing rows keep exactly the bindings they already have
+	function activate($rows) {
+		if (!window.jQuery || !$rows.length) { return; }
+		var $ = window.jQuery;
+		$rows.find('.tipsy').tipsy();
+		$rows.find('.tipsyold').tipsy({ gravity: 'w' });
+		if (!$.fn.fancybox) { return; }
+		$rows.find('.delbtn').fancybox({
+			'titleShow': false, 'modal': true,
+			onStart: function (selectedArray, selectedIndex) {
+				window.del_id = selectedArray[selectedIndex].id;
+				window.del_rep = selectedArray[selectedIndex].name;
+				window.del_row = $('#' + window.del_id).parents('tr:first');
+				if (window.del_rep == 0) { $('#button_al').css('display', 'none'); }
+			}
+		});
+		$rows.find('a#detlbuttontrigger').fancybox({ 'hideOnContentClick': true });
+		$rows.find('.alwbtn').click(function () {
+			var id = $(this).attr('name');
+			$.ajax({ url: 'ajax/modify_entry.php', data: 'action=ALW&cellid=' + id, type: 'post', cache: false, dataType: 'html', success: function () { location.reload(); } });
+		});
+		$rows.find('.status_dbox').change(function () {
+			var statusId = $(this).attr('id').substring(5, 30), selected = $(this).val();
+			$.ajax({ type: 'POST', url: 'ajax/modify_status.php', data: 'value=' + selected + '&id=' + statusId, success: function () { location.reload(); } });
+		});
+	}
+
+	function poll() {
+		fetch('ajax/reservations_since.php?since=' + since, { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) {
+			if (!r || !r.ok || r.count <= 0) { return; }
+			var newSince = r.now || since;
+			fetch('ajax/reservations_new_rows.php?since=' + since, { credentials: 'same-origin' }).then(function (resp) { return resp.text(); }).then(function (html) {
+				since = newSince;
+				pending += r.count;
+				var inserted = 0;
+				if (html && tbody) {
+					var tmp = document.createElement('tbody');
+					tmp.innerHTML = html;
+					var rows = Array.prototype.slice.call(tmp.querySelectorAll('tr'));
+					inserted = rows.length;
+					rows.forEach(function (tr) { tbody.insertBefore(tr, tbody.firstChild.nextSibling || null); });
+					if (window.jQuery && rows.length) { activate(window.jQuery(rows)); }
+				}
+				var text = pending === 1 ? 'Eine neue Reservierung ist eingegangen.' : pending + ' neue Reservierungen sind eingegangen.';
+				if (inserted < pending) { text += ' (Warteliste: bitte aktualisieren.)'; }
+				showBanner(text);
+				if (sound) { sound.notify(); }
+			}).catch(function () { since = newSince; });
+		}).catch(function () {});
+	}
+	setInterval(poll, 20000);
+})();
+</script>
+<?php endif; ?>
 <!-- End reservation table data -->

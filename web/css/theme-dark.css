@@ -946,6 +946,36 @@ td.evening   { color: #7a5c2e; background: transparent; }
 .tautologous {
 	color: var(--gold-strong) !important;
 }
+/* newly arrived reservation (today, less than ~an hour old): needs attention */
+table.global.resv-table-small tbody tr.res-new td {
+	background: rgba(232, 176, 74, 0.14);
+	animation: resNewPulse 1.8s ease-in-out 3;
+}
+table.global.resv-table-small tbody tr.res-new td:first-child {
+	box-shadow: inset 4px 0 0 #e8b04a;
+}
+@keyframes resNewPulse {
+	0%, 100% { background-color: rgba(232, 176, 74, 0.14); }
+	50% { background-color: rgba(232, 176, 74, 0.32); }
+}
+@media (prefers-reduced-motion: reduce) {
+	table.global.resv-table-small tbody tr.res-new td { animation: none; }
+}
+/* new-reservation banner + its sound-settings button (web/js/monitor_sound.js, reused from the kitchen monitor) */
+.res-alert p { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.res-alert button { min-height: 32px; padding: 0 14px; font-size: 13px; }
+.res-alert-x { background: transparent !important; color: var(--text-muted) !important; padding: 0 6px !important; font-size: 18px !important; line-height: 1 !important; }
+.res-alert-x:hover { color: var(--text) !important; }
+.res-sound-mount { display: inline-block; margin-bottom: 10px; }
+.res-sound-mount .ms-wrap { position: relative; display: inline-block; }
+.res-sound-mount .ms-panel { position: absolute; left: 0; top: calc(100% + 8px); width: 280px; z-index: 60; padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6); display: grid; gap: 12px; }
+.res-sound-mount .ms-panel[hidden] { display: none; }
+.res-sound-mount .ms-row { display: grid; gap: 6px; font-size: 13px; color: var(--text-muted); font-weight: 600; }
+.res-sound-mount .ms-row b { color: var(--text); }
+.res-sound-mount .ms-check { display: flex; align-items: center; gap: 10px; color: var(--text); font-size: 14px; }
+.res-sound-mount .ms-check input { width: 18px; height: 18px; accent-color: var(--gold); }
+.res-sound-mount .ms-row select { min-height: 38px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; font-size: 14px; padding: 0 10px; }
+.res-sound-mount .ms-row input[type=range] { width: 100%; accent-color: var(--gold); }
 .grey {
 	color: var(--text-muted) !important;
 }

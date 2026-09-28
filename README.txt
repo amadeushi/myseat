@@ -3,8 +3,8 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 3.0.0                         =-=
-=-= Date:    25.09.2026                   =-=
+=-= Version: 3.1.0                         =-=
+=-= Date:    28.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 
@@ -51,6 +51,16 @@ tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-28 == mySeat v3.1.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New-reservation highlighter (day view "Reservierungen" and the dashboard): a reservation for today
+   less than an hour old gets a pulsing highlighted row so staff notice it needs attention, fading on
+   its own an hour after it came in. While the page stays open, a background check announces genuinely
+   new arrivals with a sound (the same settings panel as the kitchen monitor: choice of sound, volume,
+   repeat until acknowledged) and a brief banner, and inserts a newly confirmed reservation into the
+   table immediately, no click or page reload needed. A new waitlist reservation still rings the bell
+   but appears in its own table on the next refresh, same as before this feature
 
 2026-09-26 == mySeat v3.0.0 == amadeushi - http://github.com/amadeushi/myseat
 
