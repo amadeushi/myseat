@@ -47,8 +47,8 @@ $rsv_pick_date = date('Y-m-d', strtotime($row->reservation_date));
 					value="<?php echo htmlspecialchars(isset($_SESSION['reservation_guest_name']) ? $_SESSION['reservation_guest_name'] : $row->reservation_guest_name, ENT_QUOTES, 'UTF-8', false); ?>"/>
 			</div>
 			<div class="rsv-field">
-				<label for="reservation_guest_phone"><?php echo rt('phone'); ?></label>
-				<input type="tel" inputmode="tel" name="reservation_guest_phone" id="reservation_guest_phone" autocomplete="off" placeholder="+49 151 2345678" aria-describedby="rsv-phone-msg"
+				<label for="reservation_guest_phone"><?php echo rt('phone'); ?> *</label>
+				<input type="tel" inputmode="tel" name="reservation_guest_phone" id="reservation_guest_phone" class="required" title=" " autocomplete="off" placeholder="+49 151 2345678" aria-describedby="rsv-phone-msg"
 					value="<?php echo htmlspecialchars($row->reservation_guest_phone, ENT_QUOTES, 'UTF-8', false); ?>"/>
 				<p class="rsv-msg" id="rsv-phone-msg" role="alert"></p>
 			</div>

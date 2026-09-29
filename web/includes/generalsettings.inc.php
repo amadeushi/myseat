@@ -64,6 +64,14 @@
 				dateformatDropdown($value,2);	
 			echo "\n</div></p><br/>";
 
+		}else if ($key == 'reservation_min_lead'){
+			echo "<p><label>"._reservation_min_lead."</label><br/>
+					<input type='number' min='0' step='5' name='".$key."' id='".$key."' value='".$value."' class='required digits' title=' '/>
+					<br/><small>"._reservation_min_lead_hint."</small></p><br/>";
+		}else if ($key == 'reservation_retention_days'){
+			echo "<p><label>"._reservation_retention_days."</label><br/>
+					<input type='number' min='1' step='1' name='".$key."' id='".$key."' value='".$value."' class='required digits' title=' '/>
+					<br/><small>"._reservation_retention_days_hint."</small></p><br/>";
 		}else if ($key == 'language'){
 			echo "<p><label>"._language."</label><br/><div ><div class='text'></div>";
 			getLangList($langTrans, $general['language'], 'enabled');

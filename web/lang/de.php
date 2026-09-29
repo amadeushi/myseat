@@ -663,4 +663,10 @@ define ( '_login', 'Login' );
 
 
 define ( '_closed', ' ist geschlossen am ' );
+
+define ( '_reservation_min_lead', 'Mindestvorlauf für Online-Reservierungen (Minuten)' );
+define ( '_reservation_min_lead_hint', 'Gäste können über die Reservierungsseite frühestens so viele Minuten vor dem gewünschten Termin buchen.' );
+
+define ( '_reservation_retention_days', 'Aufbewahrungsfrist für Reservierungsdaten (Tage)' );
+define ( '_reservation_retention_days_hint', 'So viele Tage nach dem Besuchsdatum werden Name, Telefonnummer, E-Mail-Adresse und Notizen der Reservierung automatisch gelöscht (Gästefeedback ist davon ausgenommen).' );
 ?>

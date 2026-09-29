@@ -3,8 +3,8 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 3.1.1                         =-=
-=-= Date:    28.09.2026                   =-=
+=-= Version: 4.0.0                         =-=
+=-= Date:    29.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 
@@ -51,6 +51,24 @@ tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-29 == mySeat v4.0.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Minimum lead time for online reservations: guests can no longer book a slot minutes before it
+   starts. New setting in Einstellungen > Allgemein ("Mindestvorlauf für Online-Reservierungen"),
+   default 15 minutes, applies only to the guest-facing widget (staff can still book any time from
+   the backend). Needs a database step: `ALTER TABLE settings ADD COLUMN reservation_min_lead
+   SMALLINT UNSIGNED NOT NULL DEFAULT 15;`
+ * DSGVO/GDPR data minimization for reservations: a new daily cron job (web/cron/purge_reservation_data.php)
+   wipes the guest-identifying fields (name, phone, email, address, city, notes, booking IP/referer) off
+   reservations once their visit date is older than a configurable retention period - new setting in
+   Einstellungen > Allgemein ("Aufbewahrungsfrist für Reservierungsdaten"), default 30 days. The
+   reservation row itself (date, time, pax, table, status, billing figures) stays for statistics and the
+   legally required bookkeeping retention (GoBD); guest feedback (tp_feedback) is explicitly excluded and
+   kept. Also scrubs the guest's number from the SMS log and the organizer e-mail of a linked group order.
+   Needs a database step (`ALTER TABLE settings ADD COLUMN reservation_retention_days SMALLINT UNSIGNED
+   NOT NULL DEFAULT 30;`) and a new cron entry (webcron or shell, same key as the existing feedback/reminder
+   crons, once a day)
 
 2026-09-28 == mySeat v3.1.1 == amadeushi - http://github.com/amadeushi/myseat
 

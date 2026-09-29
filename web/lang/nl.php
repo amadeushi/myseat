@@ -630,4 +630,10 @@ define ( '_HG', 'Huisgast' );
 define ( '_PASS', 'Passant' );
 define ( '_WALK', 'Walk in' );
 define ( '_login', 'Inloggen' );
+
+define ( '_reservation_min_lead', 'Minimum lead time for online reservations (minutes)' );
+define ( '_reservation_min_lead_hint', 'Guests can book on the reservation page no earlier than this many minutes before the requested time.' );
+
+define ( '_reservation_retention_days', 'Data retention period for reservations (days)' );
+define ( '_reservation_retention_days_hint', 'This many days after the visit date, the guest\'s name, phone number, email address and notes are automatically deleted (guest feedback is not affected).' );
 ?>

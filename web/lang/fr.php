@@ -628,4 +628,10 @@ define ( '_reservation_terms', 'J\'accepte les conditions d\'utilisation du rest
 define ( '_login', 'Entrer' );
 
 define ( '_closed', ' est fermé le ' );
+
+define ( '_reservation_min_lead', 'Minimum lead time for online reservations (minutes)' );
+define ( '_reservation_min_lead_hint', 'Guests can book on the reservation page no earlier than this many minutes before the requested time.' );
+
+define ( '_reservation_retention_days', 'Data retention period for reservations (days)' );
+define ( '_reservation_retention_days_hint', 'This many days after the visit date, the guest\'s name, phone number, email address and notes are automatically deleted (guest feedback is not affected).' );
 ?>

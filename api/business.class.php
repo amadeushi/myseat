@@ -275,7 +275,7 @@ function timeList($format,$intervall,$field='',$select='',$open_time='00:00:00',
 		// not to book past times
 		// Blocking reservations x hour(s) before an outlet starts
 		// in second e.g. 3600 = 1 hour
-		$before_start = 0;
+		$before_start = (int)$general['reservation_min_lead'] * 60;
 		if ($_SESSION['selectedDate'] == date('Y-m-d') && date('H:i:s',time()+$before_start) > $open_time) {
 				//Set opentime to rounded actual time
 				$minutes = ceil(date('i')/$general['timeintervall'])*$general['timeintervall'];
@@ -368,7 +368,7 @@ function timeFields($format,$intervall,$field='',$select='',$open_time='00:00:00
 		// not to book past times
 		// Blocking reservations x hour(s) before an outlet starts
 		// in second e.g. 3600 = 1 hour
-		$before_start = 0;
+		$before_start = (int)$general['reservation_min_lead'] * 60;
 		if ($_SESSION['selectedDate'] == date('Y-m-d') && date('H:i:s',time()+$before_start) > $open_time) {
 				//Set opentime to rounded actual time
 				$minutes = ceil(date('i')/$general['timeintervall'])*$general['timeintervall'];

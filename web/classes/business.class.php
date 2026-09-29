@@ -676,7 +676,8 @@ function rt($key, $arg = null) {
 			'de' => array(
 				'date' => 'Datum', 'time' => 'Zeit', 'pax' => 'Personen', 'name' => 'Name', 'phone' => 'Telefon',
 				'phone_bad' => 'Bitte eine gültige Telefonnummer eingeben (z. B. +49 151 2345678 oder 0512 1234567).',
-				'phone_hint' => 'optional, wird auf Gültigkeit geprüft',
+				'phone_hint' => 'wird auf Gültigkeit geprüft',
+				'need_phone' => 'Bitte eine Telefonnummer eintragen.',
 				'email_bad' => 'Bitte eine gültige E-Mail-Adresse eingeben.',
 				'email_confirm' => 'Bestätigung per E-Mail senden',
 				'email_confirm_sms' => 'Bestätigung per E-Mail oder SMS senden',
@@ -703,7 +704,8 @@ function rt($key, $arg = null) {
 			'en' => array(
 				'date' => 'Date', 'time' => 'Time', 'pax' => 'Guests', 'name' => 'Name', 'phone' => 'Phone',
 				'phone_bad' => 'Please enter a valid phone number (e.g. +49 151 2345678 or 0512 1234567).',
-				'phone_hint' => 'optional, checked for validity',
+				'phone_hint' => 'checked for validity',
+				'need_phone' => 'Please enter a phone number.',
 				'email_bad' => 'Please enter a valid email address.',
 				'email_confirm' => 'Send confirmation by email',
 				'email_confirm_sms' => 'Send confirmation by email or SMS',

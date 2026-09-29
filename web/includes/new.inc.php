@@ -39,8 +39,8 @@ $rsv_selected = array();
 				<input type="text" name="reservation_guest_name" id="reservation_guest_name" class="required" title=" " minlength="2" autocomplete="off"/>
 			</div>
 			<div class="rsv-field">
-				<label for="reservation_guest_phone"><?php echo rt('phone'); ?></label>
-				<input type="tel" inputmode="tel" name="reservation_guest_phone" id="reservation_guest_phone" autocomplete="off" placeholder="+49 151 2345678" aria-describedby="rsv-phone-msg"/>
+				<label for="reservation_guest_phone"><?php echo rt('phone'); ?> *</label>
+				<input type="tel" inputmode="tel" name="reservation_guest_phone" id="reservation_guest_phone" class="required" title=" " autocomplete="off" placeholder="+49 151 2345678" aria-describedby="rsv-phone-msg"/>
 				<p class="rsv-msg" id="rsv-phone-msg" role="alert"></p>
 			</div>
 			<div class="rsv-field">

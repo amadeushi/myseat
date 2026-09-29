@@ -56,15 +56,18 @@ if($_SESSION['selOutlet']['limit_password']!=""){
 }
 
 
-// a phone number / email address that was typed in must be plausible, and a confirmation mail
-// needs an address (the form checks this too)
+// a phone number is now required (reliable SMS reminders/cancel links); a typed-in phone number /
+// email address must be plausible, and a confirmation mail needs an address (the form checks this too)
 $rsv_email = isset($_POST['reservation_guest_email']) ? trim(html_entity_decode($_POST['reservation_guest_email'], ENT_QUOTES, 'UTF-8')) : '';
+$rsv_phone = isset($_POST['reservation_guest_phone']) ? trim(html_entity_decode($_POST['reservation_guest_phone'], ENT_QUOTES, 'UTF-8')) : '';
 $rsv_error = '';
-if (isset($_POST['reservation_guest_phone']) && !validPhone(html_entity_decode($_POST['reservation_guest_phone'], ENT_QUOTES, 'UTF-8'))) {
+if ($rsv_phone === '') {
+	$rsv_error = rt('need_phone');
+} elseif (!validPhone($rsv_phone)) {
 	$rsv_error = rt('phone_bad');
 } elseif ($rsv_email !== '' && !filter_var($rsv_email, FILTER_VALIDATE_EMAIL)) {
 	$rsv_error = rt('email_bad');
-} elseif (isset($_POST['email_type']) && $_POST['email_type'] !== 'no' && $rsv_email === '' && !(function_exists('sms_enabled') && sms_enabled() && isset($_POST['reservation_guest_phone']) && sms_normalize_phone(html_entity_decode($_POST['reservation_guest_phone'], ENT_QUOTES, 'UTF-8')) !== null)) {
+} elseif (isset($_POST['email_type']) && $_POST['email_type'] !== 'no' && $rsv_email === '' && !(function_exists('sms_enabled') && sms_enabled() && sms_normalize_phone($rsv_phone) !== null)) {
 	$rsv_error = rt('email_need');
 }
 if ($rsv_error !== '') {
