@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-29T13:41:44Z",
+  "title": "Design System: mySeat",
+  "extensions": {
+    "colorMeta": {
+      "candlelight-gold": { "role": "primary", "displayName": "Kerzengold", "canonical": "#c9a259", "tonalRamp": ["#231b0f", "#3c2f19", "#5c4924", "#84672f", "#a9843e", "#c9a259", "#d9b878", "#e2c07f"] },
+      "candlelight-gold-strong": { "role": "primary", "displayName": "Kerzengold, hell", "canonical": "#e2c07f" },
+      "charcoal-anthracite": { "role": "neutral", "displayName": "Kohle-Anthrazit", "canonical": "#0c0b0a", "tonalRamp": ["#0c0b0a", "#151312", "#1c1a18", "#242220", "#4a463f", "#6f6a5f", "#a89e8c", "#f3ede1"] },
+      "surface": { "role": "neutral", "displayName": "Oberfläche", "canonical": "#151312" },
+      "surface-2": { "role": "neutral", "displayName": "Oberfläche 2", "canonical": "#1c1a18" },
+      "surface-3": { "role": "neutral", "displayName": "Oberfläche 3", "canonical": "#242220" },
+      "border": { "role": "neutral", "displayName": "Rand, goldgetönt", "canonical": "rgba(201, 164, 89, 0.22)" },
+      "border-soft": { "role": "neutral", "displayName": "Rand, weich", "canonical": "rgba(245, 240, 230, 0.08)" },
+      "ink": { "role": "neutral", "displayName": "Tinte", "canonical": "#f3ede1" },
+      "ink-muted": { "role": "neutral", "displayName": "Tinte, gedämpft", "canonical": "#a89e8c" },
+      "danger": { "role": "status", "displayName": "Warnrot", "canonical": "#e2867c" },
+      "success": { "role": "status", "displayName": "Salbeigrün", "canonical": "#8fbf7a" },
+      "ink-strong": { "role": "neutral", "displayName": "Tinte, stark", "canonical": "#1a1408" },
+      "daypart-morning": { "role": "accent", "displayName": "Tageszeit: Morgens", "canonical": "#d8c9a6" },
+      "daypart-evening": { "role": "accent", "displayName": "Tageszeit: Abends", "canonical": "#7a5c2e" },
+      "status-new": { "role": "status", "displayName": "Reservierungsstatus: Neu", "canonical": "#62b6cb" },
+      "status-arrived": { "role": "status", "displayName": "Reservierungsstatus: Angekommen", "canonical": "#5fc5a2" },
+      "status-seated": { "role": "status", "displayName": "Reservierungsstatus: Sitzt", "canonical": "#a99be8" },
+      "status-parked": { "role": "status", "displayName": "Reservierungsstatus: Reserviert", "canonical": "#e2b56b" },
+      "status-noshow": { "role": "status", "displayName": "Reservierungsstatus: No-Show", "canonical": "#9ba6c0" },
+      "status-pending": { "role": "status", "displayName": "Reservierungsstatus: Ausstehend", "canonical": "#e0a458" },
+      "status-cancelled": { "role": "status", "displayName": "Reservierungsstatus: Storniert", "canonical": "#e0685f" },
+      "capacity-full": { "role": "status", "displayName": "Kapazität: Voll", "canonical": "#c65a4f" },
+      "capacity-low": { "role": "status", "displayName": "Kapazität: Frei", "canonical": "#6f9c5f" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display (Cormorant Garamond)", "purpose": "Seitentitel, Kartentitel, große Überschriften im Gästewidget." },
+      "title": { "displayName": "Title (Cormorant Garamond, 18px)", "purpose": "Dialog-Titel, Abschnittsüberschriften, hervorgehobene Werte." },
+      "body": { "displayName": "Body (Raleway, 14px)", "purpose": "Formularfelder, Dropdowns, Hinweistexte." },
+      "caption": { "displayName": "Caption (Raleway, 13px)", "purpose": "Sekundärer, gedämpfter Fließtext." },
+      "emphasis": { "displayName": "Emphasis (Raleway, 15px, fett)", "purpose": "Kategorienamen, Unterabschnitts-Label." },
+      "label": { "displayName": "Label (Raleway, Versalien, 12px)", "purpose": "Feldbeschriftungen, Tabs, Zeitstempel, Badges." }
+    },
+    "shadows": [
+      { "name": "schwebend", "value": "0 16px 40px rgba(0,0,0,0.6)", "purpose": "Dropdown-Panels und Popover, die über dem Seiteninhalt liegen. Nie für ruhende Karten/Buttons." }
+    ],
+    "motion": [
+      { "name": "state-transition", "value": "150ms ease", "purpose": "Standard-Übergang für Hover/Fokus auf Buttons, Chips, Nav-Elementen." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "600px" },
+      { "name": "md", "value": "820px" },
+      { "name": "lg", "value": "940px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Haupt-Aktion (Speichern, Weiter, Reservieren) — Pillenform, volles Gold.",
+      "html": "<button class=\"ds-btn-primary\">Speichern</button>",
+      "css": ".ds-btn-primary { min-height: 48px; padding: 0 34px; border: 0; border-radius: 999px; background: #c9a259; color: #0c0b0a; font-family: Raleway, sans-serif; font-size: 16px; font-weight: 700; cursor: pointer; transition: background 150ms ease; } .ds-btn-primary:hover { background: #e2c07f; } .ds-btn-primary:focus-visible { outline: 2px solid #c9a259; outline-offset: 2px; }"
+    },
+    {
+      "name": "Icon Button",
+      "kind": "button",
+      "refersTo": "button-icon",
+      "description": "Kreisförmiger Icon-Button (Datumsnavigation, Stepper) — Hover invertiert Farben statt nur aufzuhellen.",
+      "html": "<button class=\"ds-btn-icon\" aria-label=\"Vorheriger Tag\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\"><polyline points=\"15 5, 8 12, 15 19\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></button>",
+      "css": ".ds-btn-icon { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(201,164,89,.22); background: #1c1a18; color: #c9a259; cursor: pointer; transition: background 150ms ease, color 150ms ease, transform 150ms ease; } .ds-btn-icon:hover { background: #c9a259; color: #1a1408; transform: scale(1.06); } .ds-btn-icon:focus-visible { outline: 2px solid #c9a259; outline-offset: 2px; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Standard-Container: flach, goldgetönter Rand, keine Schatten im Ruhezustand.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-label\">Datum</div><div class=\"ds-card-body\">29.09.2026</div></div>",
+      "css": ".ds-card { background: #151312; border: 1px solid rgba(201,164,89,.22); border-radius: 10px; padding: 22px; box-sizing: border-box; } .ds-card-label { font-family: Raleway, sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #a89e8c; margin-bottom: 6px; } .ds-card-body { font-family: Raleway, sans-serif; font-size: 17px; font-weight: 600; color: #f3ede1; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Eingabefeld mit 16px-Schrift (iOS-Zoom-Schutz) und Gold-Fokusrand.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"+49 151 2345678\" />",
+      "css": ".ds-input { width: 100%; min-height: 46px; padding: 10px 14px; font-family: Raleway, sans-serif; font-size: 16px; background: #1c1a18; color: #f3ede1; border: 1px solid rgba(245,240,230,.08); border-radius: 8px; box-sizing: border-box; } .ds-input:focus { outline: none; border-color: #c9a259; } .ds-input.ds-input-error { border-color: #e2867c; background: rgba(226,134,124,.10); }"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Auswahl-Kapsel (z. B. Tisch-Auswahl) — ausgewählt kehrt zu vollem Gold um.",
+      "html": "<button class=\"ds-chip ds-chip-selected\">Tisch 12 <span class=\"ds-chip-seats\">4</span></button>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; background: #1c1a18; color: #f3ede1; border: 1px solid rgba(201,164,89,.22); border-radius: 8px; font-family: Raleway, sans-serif; font-size: 14px; cursor: pointer; } .ds-chip-selected { background: #c9a259; border-color: #e2c07f; color: #0c0b0a; font-weight: 600; } .ds-chip-seats { font-size: 12px; color: inherit; opacity: .7; padding: 1px 7px; border-radius: 999px; background: rgba(12,11,10,.18); }"
+    },
+    {
+      "name": "Active Nav Tab",
+      "kind": "nav",
+      "refersTo": "nav-active",
+      "description": "Aktiver Tab in der Tab-Leiste — volles Gold statt nur Unterstreichung.",
+      "html": "<nav class=\"ds-tabs\"><a class=\"ds-tab ds-tab-active\" href=\"#\">Reservierungen</a><a class=\"ds-tab\" href=\"#\">Neu</a></nav>",
+      "css": ".ds-tabs { display: flex; gap: 8px; } .ds-tab { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border: 1px solid rgba(245,240,230,.08); border-radius: 999px; color: #a89e8c; text-decoration: none; font-family: Raleway, sans-serif; font-size: 14px; box-sizing: border-box; } .ds-tab-active { background: #c9a259; border-color: #c9a259; color: #1a1408; font-weight: 600; } .ds-tab:hover { border-color: rgba(201,164,89,.22); color: #e2c07f; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Das vergoldete Service-Handbuch",
+    "overview": "mySeat ist kein Marketing-Produkt, sondern das Arbeitswerkzeug eines Restaurants: ein Reservierungsbuch, das gelernt hat, online zu sein. Die Bildsprache ist die eines gehobenen, aber gearbeiteten Handbuchs — fast schwarzer Grund, gedämpftes Gold als einzige Auszeichnungsfarbe, eine seriöse Serife für Überschriften und eine klare Grotesk für alles, was gelesen und bedient werden muss. Nichts an der Oberfläche behauptet, ein Erlebnis zu sein; sie organisiert eines.\n\nDas System spricht mit zwei Stimmen, die aus derselben Familie stammen, aber unterschiedliche Prioritäten haben: Das Gästewidget (api/) ist die einladende, warme Stimme — großzügigere Radien, präsenteres Gold, Fließtext, der zum Verweilen einlädt. Das Backend (web/) ist die knappe, präzise Stimme fürs Personal — Scanbarkeit, Tempo und Dichte schlagen Atmosphäre, Gold wird sparsamer und funktionaler eingesetzt (Aktionen, Status, Fokus). Beide teilen dieselben Farb-, Typo- und Formwerte; nur ihre Dosierung unterscheidet sich.",
+    "keyCharacteristics": [
+      "Fast schwarzer Grund mit gestuften, warmgrauen Oberflächen (surface / surface-2 / surface-3) statt Schatten",
+      "Gedämpftes Kerzengold als einzige Akzentfarbe — sparsam, nie flächig",
+      "Serifen-Display (Cormorant Garamond) für Überschriften, Grotesk (Raleway) für alles Funktionale",
+      "Formsprache: weiche 10px-Karten/-Felder, Pillenform für Haupt-Aktionen, Kreis für Icon-Buttons",
+      "Flach bei Ruhe; Tiefe entsteht nur bei schwebenden Elementen (Overlays, Dropdowns), nie bei ruhenden Flächen"
+    ],
+    "rules": [
+      { "name": "The One Accent Rule", "body": "Gold ist die einzige Akzentfarbe im System. Eine zweite Farbe außerhalb des Warnrot/Salbeigrün-Ampelsets bedeutet, dass ein neues Bedeutungssystem eingeführt wird, keine Dekoration.", "section": "colors" },
+      { "name": "The 16px Form Rule", "body": "Jedes Eingabefeld, das auf einem Touchgerät fokussierbar ist, bleibt bei mindestens 16px Schriftgröße — kleiner löst den ungewollten iOS-Zoom aus.", "section": "typography" },
+      { "name": "The Flat-At-Rest Rule", "body": "Eine Karte, ein Button, ein Eingabefeld im Ruhezustand bekommt nie einen Schatten — nur Fläche, Rand, Farbe. Schatten ist ausschließlich der Beweis, dass ein Element gerade über etwas anderem schwebt.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do Kerzengold als einzige Akzentfarbe behandeln — Status-Ampel (Warnrot/Salbeigrün) ausgenommen.",
+      "Do neue rundliche Flächen auf 10px Radius bringen (6px für kleine Chips, Pille für Haupt-Aktionen, Kreis für Icon-Buttons).",
+      "Do box-sizing: border-box explizit setzen, wenn eine Komponente min-height/height mit Padding kombiniert.",
+      "Do dichte Datenreihen (z. B. stündliche Auslastung) bei schmalen Bildschirmen horizontal scrollen lassen statt die Schrift unter die Lesbarkeitsgrenze zu skalieren.",
+      "Do SVG-Icons in einem Strich (currentColor, ~1.6–2.2px Stroke) verwenden, nie Unicode-Pfeile/Emoji als Icon-Ersatz."
+    ],
+    "donts": [
+      "Don't eine zweite Akzentfarbe einführen, auch nicht \"nur für diese eine Kachel\".",
+      "Don't einem ruhenden Element (Karte, Button, Feld) einen Schatten geben.",
+      "Don't ein mehrspaltiges Formular-Grid unterhalb von 820px beibehalten, wenn eine Spalte darin auf unter ~50px Breite fällt.",
+      "Don't eine feste HTML-<table> mit Pixel-width-Attributen ohne mobile Reflow-Regel verwenden.",
+      "Don't neue Radius-, Breakpoint- oder Abstandswerte \"nach Gefühl\" ergänzen."
+    ]
+  }
+}

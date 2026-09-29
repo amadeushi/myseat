@@ -1,0 +1,103 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "sfmono-regular",
+        "createdAt": "2026-09-29T13:43:53.833Z"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "24px",
+        "createdAt": "2026-09-29T14:21:00.727Z"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "26px",
+        "createdAt": "2026-09-29T14:21:00.753Z"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "56px",
+        "createdAt": "2026-09-29T14:21:00.781Z"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "30px",
+        "createdAt": "2026-09-29T14:21:00.806Z"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "48px",
+        "createdAt": "2026-09-29T14:21:00.831Z"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "16px",
+        "createdAt": "2026-09-29T14:21:00.855Z"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "20px",
+        "createdAt": "2026-09-29T14:21:00.879Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#000",
+        "createdAt": "2026-09-29T14:21:00.903Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "rgba(0, 0, 0, 0.5)",
+        "createdAt": "2026-09-29T14:21:00.928Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#c65a4f",
+        "createdAt": "2026-09-29T14:21:00.954Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#6f9c5f",
+        "createdAt": "2026-09-29T14:21:00.979Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#62b6cb",
+        "createdAt": "2026-09-29T14:21:01.005Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#5fc5a2",
+        "createdAt": "2026-09-29T14:21:01.029Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#a99be8",
+        "createdAt": "2026-09-29T14:21:01.054Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#e2b56b",
+        "createdAt": "2026-09-29T14:21:01.079Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#9ba6c0",
+        "createdAt": "2026-09-29T14:21:01.104Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#e0a458",
+        "createdAt": "2026-09-29T14:21:01.129Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#e0685f",
+        "createdAt": "2026-09-29T14:21:01.154Z"
+      }
+    ]
+  }
+}

@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 4.0.2                         =-=
+=-= Version: 4.0.3                         =-=
 =-= Date:    29.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -51,6 +51,28 @@ tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-29 == mySeat v4.0.3 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Backend design hardening pass (DESIGN.md, .impeccable/design.json): documented the existing
+   dark/gold theme and consolidated accidental value drift found while doing so, with no visual
+   redesign - same look, fewer inconsistent values behind it
+ * Fix: nav chevron buttons and dropdown toggles had an oversized 65px touch target on mobile
+   instead of the intended 44px (missing box-sizing: border-box)
+ * Fix: the reservation form's Personen-Stepper squeezed its number almost invisible on phones
+   because Zeit and Personen shared one row below 820px - now one field per row on mobile
+ * Fix: the table-occupancy timeline (Dashboard) shrank its labels down to an illegible ~8px on
+   narrow screens - now a fixed readable size with horizontal scroll instead
+ * Fix: the Statistik page's numbers table overflowed off-screen on mobile - now reflows into
+   stacked cards below 820px
+ * Consolidated ~50 hardcoded border-radius values into three tokens (--radius-sm/md/pill, 10px
+   base), unified stray 11px/17px/20px font sizes into a six-step type scale, merged three
+   independently-chosen near-duplicate amber tones into the existing gold-strong token, fixed an
+   internal inconsistency in the Vormittag/Nachmittag/Abend colour markers, and normalized
+   floating-shadow opacity to one value - all purely internal, no visible change intended beyond
+   the mobile fixes above
+ * Removed dead legacy font-family declarations (Trebuchet MS, DroidSansBold) in the guest
+   widget's stylesheet, fully overridden already and unused
 
 2026-09-29 == mySeat v4.0.2 == amadeushi - http://github.com/amadeushi/myseat
 
