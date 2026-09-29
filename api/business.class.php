@@ -277,9 +277,13 @@ function timeList($format,$intervall,$field='',$select='',$open_time='00:00:00',
 		// in second e.g. 3600 = 1 hour
 		$before_start = (int)$general['reservation_min_lead'] * 60;
 		if ($_SESSION['selectedDate'] == date('Y-m-d') && date('H:i:s',time()+$before_start) > $open_time) {
-				//Set opentime to rounded actual time
-				$minutes = ceil(date('i')/$general['timeintervall'])*$general['timeintervall'];
-				$open_time = date('H',time()+$before_start).":".$minutes;
+				//Set opentime to rounded actual time, using the lead-adjusted timestamp for both
+				//the hour AND the minute (not just the hour) - otherwise the lead time has no
+				//effect on which slot is offered first, and a rollover (e.g. 14:50 + 15min) can
+				//round the minutes up to an invalid "60"
+				$eff_ts = time()+$before_start;
+				$minutes = ceil(date('i',$eff_ts)/$general['timeintervall'])*$general['timeintervall'];
+				$open_time = date('H:i', mktime((int)date('H',$eff_ts), (int)$minutes, 0, (int)date('n',$eff_ts), (int)date('j',$eff_ts), (int)date('Y',$eff_ts)));
 		}
 		// floor($min/60*4)/4*60
 
@@ -370,9 +374,13 @@ function timeFields($format,$intervall,$field='',$select='',$open_time='00:00:00
 		// in second e.g. 3600 = 1 hour
 		$before_start = (int)$general['reservation_min_lead'] * 60;
 		if ($_SESSION['selectedDate'] == date('Y-m-d') && date('H:i:s',time()+$before_start) > $open_time) {
-				//Set opentime to rounded actual time
-				$minutes = ceil(date('i')/$general['timeintervall'])*$general['timeintervall'];
-				$open_time = date('H',time()+$before_start).":".$minutes;
+				//Set opentime to rounded actual time, using the lead-adjusted timestamp for both
+				//the hour AND the minute (not just the hour) - otherwise the lead time has no
+				//effect on which slot is offered first, and a rollover (e.g. 14:50 + 15min) can
+				//round the minutes up to an invalid "60"
+				$eff_ts = time()+$before_start;
+				$minutes = ceil(date('i',$eff_ts)/$general['timeintervall'])*$general['timeintervall'];
+				$open_time = date('H:i', mktime((int)date('H',$eff_ts), (int)$minutes, 0, (int)date('n',$eff_ts), (int)date('j',$eff_ts), (int)date('Y',$eff_ts)));
 		}
 		// floor($min/60*4)/4*60
 

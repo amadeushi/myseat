@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 4.0.0                         =-=
+=-= Version: 4.0.1                         =-=
 =-= Date:    29.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -51,6 +51,13 @@ tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-29 == mySeat v4.0.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: the minimum reservation lead time (v4.0.0) had no real effect - the minute rounding for
+   "earliest bookable slot today" used the current time instead of the lead-adjusted time, so the
+   widget kept offering the very next slot. Also fixes a related edge case where the old code could
+   produce an invalid time like "15:60" across an hour boundary
 
 2026-09-29 == mySeat v4.0.0 == amadeushi - http://github.com/amadeushi/myseat
 
