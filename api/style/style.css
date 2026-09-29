@@ -1061,6 +1061,16 @@ a.contact-item:hover svg {
 	color: #1a1408;
 }
 
+.date-picker-field {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	cursor: pointer;
+}
+.date-picker-icon {
+	flex: none;
+	color: var(--gold);
+}
 .date-picker #reservation_date {
 	background: transparent;
 	border: 0;
@@ -1072,6 +1082,25 @@ a.contact-item:hover svg {
 	padding: 0;
 	line-height: 24px;
 	cursor: pointer;
+}
+.date-today-btn {
+	display: inline-block;
+	margin-top: 6px;
+	padding: 3px 10px;
+	border-radius: 11px;
+	border: 1px solid var(--border);
+	background: transparent;
+	color: var(--gold);
+	font-family: var(--font-body);
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	cursor: pointer;
+	transition: background 150ms ease, color 150ms ease;
+}
+.date-today-btn:hover {
+	background: var(--gold);
+	color: #1a1408;
 }
 .ui-datepicker-trigger {
 	display: none;

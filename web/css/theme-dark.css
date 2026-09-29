@@ -226,8 +226,58 @@ hr {
 .second_level_tab li.disabled a {
 	opacity: 0.45;
 }
+.date-nav {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	float: left;
+}
 .navgroup {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	float: none;
+	width: 34px;
+	height: 34px;
+	margin: 0;
+	border-radius: 50%;
+	border: 1px solid var(--border);
+	background: var(--surface-2);
 	color: var(--gold);
+	font-size: 18px;
+	line-height: 1;
+	text-decoration: none !important;
+	transition: background 150ms ease, border-color 150ms ease, color 150ms ease, transform 150ms ease;
+}
+.navgroup:hover {
+	background: var(--gold);
+	border-color: var(--gold);
+	color: #1a1408;
+	transform: scale(1.06);
+}
+.navgroup:focus-visible {
+	outline: 2px solid var(--gold);
+	outline-offset: 2px;
+}
+.today-btn {
+	display: inline-flex;
+	align-items: center;
+	height: 34px;
+	padding: 0 14px;
+	border-radius: 17px;
+	border: 1px solid var(--border);
+	background: transparent;
+	color: var(--gold-strong);
+	font-size: 13px;
+	font-weight: 600;
+	text-decoration: none !important;
+	white-space: nowrap;
+	transition: background 150ms ease, color 150ms ease;
+}
+.today-btn:hover {
+	background: var(--gold);
+	border-color: var(--gold);
+	color: #1a1408;
 }
 .dategroup, .date {
 	color: var(--text);

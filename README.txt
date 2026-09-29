@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 4.0.1                         =-=
+=-= Version: 4.0.2                         =-=
 =-= Date:    29.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -51,6 +51,16 @@ tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-29 == mySeat v4.0.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Reservation widget (api/reserve.php): the date field now shows a small calendar icon so it reads
+   as clickable, and a "Today"/"Heute" button appears next to it whenever another date is selected,
+   jumping straight back to today
+ * Backend date navigation (Reservierungen day view, Dashboard): the old "<<"/">>" text arrows are
+   now proper round buttons with a hover/focus state, replaced with modern chevron icons instead of
+   the "<<"/">>" characters, and a matching "Today" button (outside the date picker) appears next to
+   them whenever another date is selected
 
 2026-09-29 == mySeat v4.0.1 == amadeushi - http://github.com/amadeushi/myseat
 

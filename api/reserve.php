@@ -379,9 +379,20 @@ if($check_web_outlet==1){
 					</div>
 					<div class="picker date-picker">
 						<span class="picker-label"><?php echo _date;?></span>
-						<input type="hidden" name="dbdate" id="dbdate" value="<?php echo $_SESSION['selectedDate']; ?>"/>
-						<input id="reservation_date" name="reservation_date" readonly="readonly" value="<?php echo $_SESSION['selectedDate'];?>">
-						<input type="hidden" name="recurring_dbdate" value="<?php echo $_SESSION['selectedDate']; ?>"/>
+						<div class="date-picker-field">
+							<svg class="date-picker-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+								<rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/>
+								<line x1="3" y1="9.5" x2="21" y2="9.5" stroke="currentColor" stroke-width="1.6"/>
+								<line x1="7.5" y1="3" x2="7.5" y2="6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+								<line x1="16.5" y1="3" x2="16.5" y2="6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+							</svg>
+							<input type="hidden" name="dbdate" id="dbdate" value="<?php echo $_SESSION['selectedDate']; ?>"/>
+							<input id="reservation_date" name="reservation_date" readonly="readonly" value="<?php echo $_SESSION['selectedDate'];?>">
+							<input type="hidden" name="recurring_dbdate" value="<?php echo $_SESSION['selectedDate']; ?>"/>
+						</div>
+						<?php if ($_SESSION['selectedDate'] != date('Y-m-d')): ?>
+						<button type="button" id="date-today-btn" class="date-today-btn"><?php echo _today; ?></button>
+						<?php endif; ?>
 					</div>
 				</div>
 
@@ -568,6 +579,9 @@ if($check_web_outlet==1){
 	     	$("#reservation_date").val("<?php echo _today; ?>");
 	     	<?php endif; ?>
 	     	$("#ui-datepicker-div").hide();
+	     	$("#date-today-btn").on("click", function(){
+	     		window.location.href = "?selectedDate=<?php echo date('Y-m-d'); ?>";
+	     	});
 	     	$("#reservation_outlet_id").on("change", function(){
 	    		window.location.href='?propertyID=<?php echo $_SESSION['property'];?>&outletID=' + this.value;
 	  	 	});
