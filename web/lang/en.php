@@ -600,6 +600,7 @@ define ( '_feedback_reply', 'Reply' );
 define ( '_feedback_reply_placeholder', 'Reply to the guest (not shown publicly)' );
 define ( '_feedback_send_reply', 'Save reply' );
 define ( '_feedback_no_entries', 'No feedback for this period yet.' );
+define ( '_reservations_no_entries', 'No reservations for this day yet.' );
 define ( '_feedback_from', 'on' );
 define ( '_feedback_settings', 'Review profiles' );
 define ( '_feedback_tripadvisor', 'TripAdvisor link' );

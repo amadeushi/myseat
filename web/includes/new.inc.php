@@ -36,16 +36,16 @@ $rsv_selected = array();
 		<div class="rsv-grid rsv-grid-guest">
 			<div class="rsv-field">
 				<label for="reservation_guest_name"><?php echo rt('name'); ?> *</label>
-				<input type="text" name="reservation_guest_name" id="reservation_guest_name" class="required" title=" " minlength="2" autocomplete="off"/>
+				<input type="text" name="reservation_guest_name" id="reservation_guest_name" class="required" title=" " minlength="2" maxlength="100" autocomplete="off"/>
 			</div>
 			<div class="rsv-field">
 				<label for="reservation_guest_phone"><?php echo rt('phone'); ?> *</label>
-				<input type="tel" inputmode="tel" name="reservation_guest_phone" id="reservation_guest_phone" class="required" title=" " autocomplete="off" placeholder="+49 151 2345678" aria-describedby="rsv-phone-msg"/>
+				<input type="tel" inputmode="tel" name="reservation_guest_phone" id="reservation_guest_phone" class="required" title=" " maxlength="50" autocomplete="off" placeholder="+49 151 2345678" aria-describedby="rsv-phone-msg"/>
 				<p class="rsv-msg" id="rsv-phone-msg" role="alert"></p>
 			</div>
 			<div class="rsv-field">
 				<label for="reservation_guest_email"><?php echo rt('email'); ?></label>
-				<input type="email" name="reservation_guest_email" id="reservation_guest_email" autocomplete="off" aria-describedby="rsv-email-msg"/>
+				<input type="email" name="reservation_guest_email" id="reservation_guest_email" maxlength="100" autocomplete="off" aria-describedby="rsv-email-msg"/>
 				<p class="rsv-msg" id="rsv-email-msg" role="alert"></p>
 				<input type="hidden" name="email_type" value="no"/>
 				<input type="hidden" name="reservation_email_lang" value="de"/>

@@ -281,11 +281,20 @@ function tp_assign($outlet_id, $res_id, $table_ids, $confirm) {
 		return array('ok' => false, 'error' => 'Reservierung nicht gefunden');
 	}
 	$date = $row['reservation_date'];
+
+	// hold the whole day's table layout for this outlet while reading occupancy and judging
+	// conflicts, so two staff assigning overlapping tables at the same instant can't both pass
+	$tp_lock_key = 'myseat_tp_'.(int)$outlet_id.'_'.$date;
+	if (!myseat_get_lock($tp_lock_key, 3)) {
+		return array('ok' => false, 'error' => 'Tischplan gerade in Bearbeitung, bitte erneut versuchen');
+	}
+
 	$ctx = tp_day_context($outlet_id, $date);
 	$ids = array();
 	foreach ((array)$table_ids as $t) {
 		$t = (int)$t;
 		if (!isset($ctx['tables'][$t])) {
+			myseat_release_lock($tp_lock_key);
 			return array('ok' => false, 'error' => 'Unbekannter Tisch');
 		}
 		$ids[$t] = $t;
@@ -293,12 +302,15 @@ function tp_assign($outlet_id, $res_id, $table_ids, $confirm) {
 	$ids = array_values($ids);
 	$j = tp_judge($ctx, (int)$res_id, (int)$row['reservation_pax'], tp_ctx_min($ctx, $row['reservation_time']), $ids);
 	if ($j['errors']) {
+		myseat_release_lock($tp_lock_key);
 		return array('ok' => false, 'error' => implode('. ', $j['errors']));
 	}
 	if ($j['warnings'] && !$confirm) {
+		myseat_release_lock($tp_lock_key);
 		return array('ok' => false, 'needs_confirm' => true, 'warnings' => $j['warnings']);
 	}
 	tp_write_assignment($res_id, $ids, (bool)$j['warnings']);
+	myseat_release_lock($tp_lock_key);
 	return array('ok' => true, 'date' => $date);
 }
 
@@ -375,16 +387,29 @@ function tp_find_tables($ctx, $res_id, $pax, $min) {
 function tp_auto_assign($outlet_id, $res_id) {
 	$row = tp_reservation_row($outlet_id, $res_id);
 	if (!$row || !$row['reservation_date']) { return null; }
+	// same per-outlet-per-day lock as tp_assign(), so an automatic assignment right after a
+	// booking can't race a manual one (or another automatic one) for the same table
+	$tp_lock_key = 'myseat_tp_'.(int)$outlet_id.'_'.$row['reservation_date'];
+	if (!myseat_get_lock($tp_lock_key, 3)) { return null; }
 	$ctx = tp_day_context($outlet_id, $row['reservation_date']);
-	if (!isset($ctx['res'][(int)$res_id]) || $ctx['res'][(int)$res_id]['tables'] || !$ctx['tables']) { return null; }
+	if (!isset($ctx['res'][(int)$res_id]) || $ctx['res'][(int)$res_id]['tables'] || !$ctx['tables']) {
+		myseat_release_lock($tp_lock_key);
+		return null;
+	}
 	$found = tp_find_tables($ctx, (int)$res_id, (int)$row['reservation_pax'], tp_ctx_min($ctx, $row['reservation_time']));
-	if (!$found) { return null; }
+	if (!$found) {
+		myseat_release_lock($tp_lock_key);
+		return null;
+	}
 	tp_write_assignment($res_id, $found, false);
+	myseat_release_lock($tp_lock_key);
 	return $found;
 }
 
 // automatic assignment of all unassigned reservations of a day, larger parties first
 function tp_auto_assign_day($outlet_id, $date) {
+	$tp_lock_key = 'myseat_tp_'.(int)$outlet_id.'_'.$date;
+	if (!myseat_get_lock($tp_lock_key, 3)) { return array('assigned' => 0, 'open' => 0); }
 	$ctx = tp_day_context($outlet_id, $date);
 	$todo = array_filter($ctx['res'], function ($r) { return !$r['tables']; });
 	uasort($todo, function ($a, $b) {
@@ -399,6 +424,7 @@ function tp_auto_assign_day($outlet_id, $date) {
 		$ctx['res'][$r['id']]['tables'] = $found;
 		$done++;
 	}
+	myseat_release_lock($tp_lock_key);
 	return array('assigned' => $done, 'open' => $open);
 }
 

@@ -73,6 +73,16 @@ config/config.general.php (defaults apply when missing):
    the mobile fixes above
  * Removed dead legacy font-family declarations (Trebuchet MS, DroidSansBold) in the guest
    widget's stylesheet, fully overridden already and unused
+ * Fix: the new/edit reservation forms double-HTML-encoded the guest's name/phone/email when
+   redisplayed (e.g. "O'Brien" showed up as "O&amp;#039;Brien" in the edit form)
+ * Fix: the Speichern/save button on both reservation forms and the guest widget's booking
+   button no longer accept a second click while the first save is still in flight
+ * Fix: the day view showed a silently empty table with zero reservations instead of saying so
+ * Added a maxlength to the name/phone/email fields matching the database column limits, and
+   wrapped instead of overflowing an unusually long guest name in the reservation list
+ * Fix: two bookings for the same last free slot (or two staff assigning the same table) at the
+   same instant could both succeed, double-booking it - the capacity check and the table
+   assignment now hold a short database lock for the moment they decide and write
 
 2026-09-29 == mySeat v4.0.2 == amadeushi - http://github.com/amadeushi/myseat
 

@@ -216,5 +216,10 @@
 			return;
 		}
 		if (formMsg) { formMsg.textContent = ''; }
+		var submitBtn = byId('submit_btn');
+		if (submitBtn && !submitBtn.disabled) {
+			submitBtn.disabled = true;
+			submitBtn.classList.add('is-saving');
+		}
 	}, true);
 })();

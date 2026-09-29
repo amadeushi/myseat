@@ -444,15 +444,15 @@ if($check_web_outlet==1){
 
 				<div class="field">
 					<label><?php echo _name; ?></label>
-					<input type="text" name="reservation_guest_name" class="required" id="reservation_guest_name" value="<?php if(isset($me['last_name'])){echo $me['last_name'].", ".$me['first_name'];} ?>" />
+					<input type="text" name="reservation_guest_name" class="required" id="reservation_guest_name" maxlength="100" value="<?php if(isset($me['last_name'])){echo $me['last_name'].", ".$me['first_name'];} ?>" />
 				</div>
 				<div class="field">
 					<label><?php echo _email; ?></label>
-					<input type="text" name="reservation_guest_email" class="required email" id="reservation_guest_email" value="<?php if(isset($me['last_name'])){echo $me['email'];} ?>" />
+					<input type="text" name="reservation_guest_email" class="required email" id="reservation_guest_email" maxlength="100" value="<?php if(isset($me['last_name'])){echo $me['email'];} ?>" />
 				</div>
 				<div class="field">
 					<label><?php echo _phone; ?></label>
-					<input type="text" name="reservation_guest_phone" class="required" id="reservation_guest_phone" value="" inputmode="tel" autocomplete="tel" />
+					<input type="text" name="reservation_guest_phone" class="required" id="reservation_guest_phone" maxlength="50" value="" inputmode="tel" autocomplete="tel" />
 					<?php require_once __DIR__.'/../web/classes/sms.class.php'; $phone_en = (substr($_SESSION['lang'], 0, 2) === 'en'); if (sms_enabled()): ?>
 					<small class="field-hint" id="phone-hint" data-default="<?php echo $phone_en ? 'With a mobile number we also send the confirmation and a reminder by SMS.' : 'Mit einer Mobilnummer schicken wir dir die Bestätigung und eine Erinnerung auch per SMS.'; ?>" data-mobile="<?php echo $phone_en ? 'Mobile number recognised. You get the confirmation and a reminder by SMS.' : 'Mobilnummer erkannt. Du bekommst die Bestätigung und eine Erinnerung per SMS.'; ?>" data-landline="<?php echo $phone_en ? 'Landline number: we cannot send an SMS to it. Use a mobile number if you would like one.' : 'Festnetznummer: dorthin können wir keine SMS schicken. Mit einer Mobilnummer bekommst du eine.'; ?>"><?php echo $phone_en ? 'With a mobile number we also send the confirmation and a reminder by SMS.' : 'Mit einer Mobilnummer schicken wir dir die Bestätigung und eine Erinnerung auch per SMS.'; ?></small>
 					<?php endif; ?>
@@ -501,7 +501,7 @@ if($check_web_outlet==1){
 
 				<div class="wizard-nav">
 					<button type="button" class="wizard-btn wizard-back" data-goto="2"><?php echo bt('back'); ?></button>
-					<button class="submit-button wizard-btn" type="submit"><?php echo _create; ?></button>
+					<button class="submit-button wizard-btn" type="submit" id="reservation_submit_btn"><?php echo _create; ?></button>
 				</div>
 			</div>
 		</form>

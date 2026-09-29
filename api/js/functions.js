@@ -6,11 +6,13 @@ $(document).ready(function(){
     
     if($("#contactForm").length){
 
-		$("#contactForm").on("submit", function(){ 
+		$("#contactForm").on("submit", function(){
 		    var ContactForm = $(this),
 		    	errors = 0,
 		        loader = $("#loader"),
 		        result = $("#result");
+
+		    if (ContactForm.data("submitting")) { return false; }
 		        
 		    loader.fadeIn();
 		    result.find(".fail, .success").hide();
@@ -36,6 +38,8 @@ $(document).ready(function(){
 		    });
 		    //If there are no errors, send the form
 		    if(errors === 0){
+			ContactForm.data("submitting", true);
+			$("#reservation_submit_btn").prop("disabled", true).addClass("is-saving");
 			ContactForm[0].submit();
 		    }else{
 		    	// else, nudge the incorrect fields

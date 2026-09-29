@@ -343,6 +343,19 @@ table.global th,
 	border-color: var(--border-soft);
 	color: var(--text-muted);
 }
+/* an unusually long pasted guest name wraps within its cell instead of stretching the whole
+   row - truncating it would hide information staff need, so this wraps rather than clips */
+#tb_name {
+	max-width: 220px;
+	overflow-wrap: break-word;
+	word-break: break-word;
+}
+.rsv-empty-state td {
+	padding: 24px 16px;
+	text-align: center;
+	color: var(--text-muted);
+	font-style: italic;
+}
 table.global tbody tr:hover td,
 .bordered-table tbody tr:hover td,
 .resv-table-small tbody tr:hover td {

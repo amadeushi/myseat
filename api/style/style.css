@@ -1421,6 +1421,12 @@ a.contact-item:hover svg {
 .submit-button:active {
 	transform: translateY(0);
 }
+.submit-button:disabled,
+.submit-button.is-saving {
+	opacity: .6;
+	cursor: default;
+	transform: none;
+}
 
 .booking-shell .alert_error,
 .booking-shell .alert_success,

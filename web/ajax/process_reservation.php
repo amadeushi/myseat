@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../classes/mysql_compat.php'; session_start();
+require_once __DIR__ . '/../classes/tableplan.class.php';
 require_once __DIR__.'/../includes/require_login.inc.php';
 
 // ** set configuration
@@ -239,34 +240,42 @@ if ($_SESSION['token'] == $_POST['token'] && $compare_pass > 0 ) {
 			
 			//Check Availability
 			// =-=-=-=-=-=-=-=-=
-			
+
+			// hold the slot while checking and writing, so a second booking racing for the
+			// same slot at the same instant can't both read "still room" before either writes
+			$cap_lock_key = 'myseat_cap_'.(int)$_SESSION['outletID'].'_'.$_SESSION['selectedDate'].'_'.$startvalue;
+			$cap_lock_ok = myseat_get_lock($cap_lock_key, 3);
+
 			// get Pax by timeslot
 			$resbyTime = reservationsByTime('pax');
 			$tblbyTime = reservationsByTime('tbl');
 			// get availability by timeslot
 			$occupancy = getAvailability($resbyTime,$general['timeintervall']);
-			$tbl_occupancy = getAvailability($tblbyTime,$general['timeintervall']);				  
-			
-			$val_capacity = $_SESSION['outlet_max_capacity']-$occupancy[$startvalue];
-			$tbl_capacity = $_SESSION['outlet_max_tables']-$tbl_occupancy[$startvalue]; 
+			$tbl_occupancy = getAvailability($tblbyTime,$general['timeintervall']);
 
-			if( $res_pax > $val_capacity || $tbl_capacity  < 1 ){
-				//prevent double array entry 	
+			$val_capacity = $_SESSION['outlet_max_capacity']-$occupancy[$startvalue];
+			$tbl_capacity = $_SESSION['outlet_max_tables']-$tbl_occupancy[$startvalue];
+
+			// a timed-out lock is treated the same as "no room" - never insert without the lock held
+			if( !$cap_lock_ok || $res_pax > $val_capacity || $tbl_capacity  < 1 ){
+				//prevent double array entry
 				$index = array_search('reservation_wait',$keys);
 				if($index>0){
 					if ($values[$index] == '0') {
 					  // error on edit entry
 					  $_SESSION['errors'][] = date($general['dateformat'],strtotime($_SESSION['selectedDate']))." "._wait_list;
-					}				
+					}
 					  $values[$index] = '1'; // = waitlist
 				}else{
 					  // error on new entry
 					  $keys[] = 'reservation_wait';
 					  $values[] = '1'; // = waitlist
-					  $_SESSION['errors'][] = date($general['dateformat'],strtotime($_SESSION['selectedDate']))." "._wait_list;	
+					  $_SESSION['errors'][] = date($general['dateformat'],strtotime($_SESSION['selectedDate']))." "._wait_list;
 				}
 			}
 			// END Availability
+			// the write below (insert or ON DUPLICATE KEY UPDATE) always runs here, whether the
+			// slot was full or not, so the lock is held straight through to right after it runs
 
 			// number of database fields
 			$max_keys = count($keys);
@@ -281,12 +290,14 @@ if ($_SESSION['token'] == $_POST['token'] && $compare_pass > 0 ) {
 					$max_keys++;
 				}
 			}
-			// run sql query 
-			//echo "Query: ".$query;				
-			$query = substr($query,0,-1);				   
+			// run sql query
+			//echo "Query: ".$query;
+			$query = substr($query,0,-1);
 			$result = query($query);
 			$new_id = mysql_insert_id();
 			$_SESSION['result'] = $result;
+			// the row is written now, so the next request's availability check will see it
+			if ($cap_lock_ok) { myseat_release_lock($cap_lock_key); }
 			
 			// setup the right ID
 			if( isset($new_id) || $new_id != $_POST['reservation_id']){

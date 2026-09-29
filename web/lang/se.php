@@ -636,4 +636,5 @@ define ( '_reservation_min_lead_hint', 'Guests can book on the reservation page 
 
 define ( '_reservation_retention_days', 'Data retention period for reservations (days)' );
 define ( '_reservation_retention_days_hint', 'This many days after the visit date, the guest\'s name, phone number, email address and notes are automatically deleted (guest feedback is not affected).' );
+define ( '_reservations_no_entries', 'No reservations for this day yet.' );
 ?>

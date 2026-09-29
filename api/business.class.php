@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../web/classes/mysql_compat.php';
+require_once __DIR__ . '/../web/classes/tableplan.class.php';
 function getHost($Address) {
    $parseUrl = parse_url(trim($Address));
    if (!empty($parseUrl['host'])) {
@@ -655,33 +656,39 @@ function processBooking(){
 			
 			//Check Availability
 			// =-=-=-=-=-=-=-=-=
-			
+
+			//cut both " ' " from reservation_pax
+			$res_pax = substr($_SESSION['reservation_pax'], 0, -1);
+			$res_pax = substr($_SESSION['reservation_pax'], 1);
+
+			$startvalue = $_SESSION['reservation_time'];
+			//cut both " ' " from reservation_time
+			$startvalue = substr($startvalue, 0, -1);
+			$startvalue = substr($startvalue, 1);
+
+			// hold the slot while checking and writing, so a second booking racing for the
+			// same slot at the same instant can't both read "still room" before either inserts
+			$cap_lock_key = 'myseat_cap_'.(int)$_SESSION['outletID'].'_'.$_SESSION['selectedDate'].'_'.$startvalue;
+			$cap_lock_ok = myseat_get_lock($cap_lock_key, 3);
+
 			// get Pax by timeslot
 			$resbyTime = reservationsByTime('pax');
 			$tblbyTime = reservationsByTime('tbl');
 			// get availability by timeslot
 			$occupancy = getAvailability($resbyTime,$general['timeintervall']);
 			$tbl_occupancy = getAvailability($tblbyTime,$general['timeintervall']);
-			
-			//cut both " ' " from reservation_pax
-			$res_pax = substr($_SESSION['reservation_pax'], 0, -1);
-			$res_pax = substr($_SESSION['reservation_pax'], 1);
-			
-			$startvalue = $_SESSION['reservation_time'];
-			//cut both " ' " from reservation_time
-			$startvalue = substr($startvalue, 0, -1);
-			$startvalue = substr($startvalue, 1);
-			
+
 			  $val_capacity = $_SESSION['outlet_max_capacity']-$occupancy[$startvalue];
-			  $tbl_capacity = $_SESSION['outlet_max_tables']-$tbl_occupancy[$startvalue]; 
+			  $tbl_capacity = $_SESSION['outlet_max_tables']-$tbl_occupancy[$startvalue];
 
 			// table plan decides when it is switched on (null = counter logic)
 			$tp_fit = tableplanSlotFits($startvalue, (int)$res_pax);
-			$is_full = ($tp_fit !== null) ? !$tp_fit : ((int)$res_pax > $val_capacity || $tbl_capacity < 1);
+			// a timed-out lock is treated the same as "no room" - never insert without the lock held
+			$is_full = !$cap_lock_ok || (($tp_fit !== null) ? !$tp_fit : ((int)$res_pax > $val_capacity || $tbl_capacity < 1));
 			if( $is_full ){
-				//prevent double entry 	
+				//prevent double entry
 				$index = array_search('reservation_wait',$keys);
-				if($index>0){			
+				if($index>0){
 					  $values[$index] = '1'; // = waitlist
 					  $waitlist = '1';
 				}else{
@@ -690,6 +697,8 @@ function processBooking(){
 					  $values[] = '1'; // = waitlist
 					  $waitlist = '1';
 				}
+				// no insert will happen on this path, so the slot is free for the next request now
+				if ($cap_lock_ok) { myseat_release_lock($cap_lock_key); }
 			}
 			// END Availability
 
@@ -715,6 +724,8 @@ function processBooking(){
 
 			// Reservation ID
 	 		$resID = mysql_insert_id();
+			// the row exists now, so the next request's availability check will see it - release
+			if ($cap_lock_ok) { myseat_release_lock($cap_lock_key); }
 
 			// *** send confirmation email
 				// ** PHPMailer class

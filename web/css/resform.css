@@ -95,6 +95,7 @@
 	background: var(--gold, #c9a259); color: var(--bg, #0c0b0a); font-size: 16px; font-weight: 700;
 }
 .rsv-save:hover { background: var(--gold-strong, #e2c07f); }
+.rsv-save:disabled, .rsv-save.is-saving { opacity: .6; cursor: default; }
 .rsv-event { margin-top: 12px; text-align: right; }
 
 /* mobile */

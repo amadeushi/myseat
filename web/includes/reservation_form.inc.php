@@ -43,19 +43,19 @@ $rsv_pick_date = date('Y-m-d', strtotime($row->reservation_date));
 		<div class="rsv-grid rsv-grid-guest">
 			<div class="rsv-field">
 				<label for="reservation_guest_name"><?php echo rt('name'); ?> *</label>
-				<input type="text" name="reservation_guest_name" id="reservation_guest_name" class="required" title=" " minlength="2" autocomplete="off"
-					value="<?php echo htmlspecialchars(isset($_SESSION['reservation_guest_name']) ? $_SESSION['reservation_guest_name'] : $row->reservation_guest_name, ENT_QUOTES, 'UTF-8', false); ?>"/>
+				<input type="text" name="reservation_guest_name" id="reservation_guest_name" class="required" title=" " minlength="2" maxlength="100" autocomplete="off"
+					value="<?php echo isset($_SESSION['reservation_guest_name']) ? $_SESSION['reservation_guest_name'] : $row->reservation_guest_name; ?>"/>
 			</div>
 			<div class="rsv-field">
 				<label for="reservation_guest_phone"><?php echo rt('phone'); ?> *</label>
-				<input type="tel" inputmode="tel" name="reservation_guest_phone" id="reservation_guest_phone" class="required" title=" " autocomplete="off" placeholder="+49 151 2345678" aria-describedby="rsv-phone-msg"
-					value="<?php echo htmlspecialchars($row->reservation_guest_phone, ENT_QUOTES, 'UTF-8', false); ?>"/>
+				<input type="tel" inputmode="tel" name="reservation_guest_phone" id="reservation_guest_phone" class="required" title=" " maxlength="50" autocomplete="off" placeholder="+49 151 2345678" aria-describedby="rsv-phone-msg"
+					value="<?php echo $row->reservation_guest_phone; ?>"/>
 				<p class="rsv-msg" id="rsv-phone-msg" role="alert"></p>
 			</div>
 			<div class="rsv-field">
 				<label for="reservation_guest_email"><?php echo rt('email'); ?></label>
-				<input type="email" name="reservation_guest_email" id="reservation_guest_email" autocomplete="off" aria-describedby="rsv-email-msg"
-					value="<?php echo htmlspecialchars($row->reservation_guest_email, ENT_QUOTES, 'UTF-8', false); ?>"/>
+				<input type="email" name="reservation_guest_email" id="reservation_guest_email" maxlength="100" autocomplete="off" aria-describedby="rsv-email-msg"
+					value="<?php echo $row->reservation_guest_email; ?>"/>
 				<p class="rsv-msg" id="rsv-email-msg" role="alert"></p>
 			</div>
 		</div>

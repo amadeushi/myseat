@@ -598,6 +598,7 @@ define ( '_feedback_reply', 'Antwort' );
 define ( '_feedback_reply_placeholder', 'Antwort an den Gast (nicht öffentlich sichtbar)' );
 define ( '_feedback_send_reply', 'Antwort speichern' );
 define ( '_feedback_no_entries', 'Für diesen Zeitraum liegt noch kein Feedback vor.' );
+define ( '_reservations_no_entries', 'Für diesen Tag liegen noch keine Reservierungen vor.' );
 define ( '_feedback_from', 'vom' );
 define ( '_feedback_settings', 'Bewertungsprofile' );
 define ( '_feedback_tripadvisor', 'TripAdvisor-Link' );

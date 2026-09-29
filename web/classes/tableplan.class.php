@@ -19,6 +19,19 @@ function tp_db() {
 	return $GLOBALS['__mysql_compat_link'];
 }
 
+// serializes the narrow "check availability, then insert/assign" window against a second
+// request racing for the same slot/table (two guests booking the last table at the same
+// instant, or a guest and a staff member colliding) - short timeout so a stuck lock degrades
+// to "treat as full" instead of hanging the request. Named locks live on the connection, so
+// they are released automatically even if the request dies before calling myseat_release_lock().
+function myseat_get_lock($key, $timeout = 3) {
+	$row = tp_rows('SELECT GET_LOCK(?, ?) AS got', 'si', array($key, $timeout));
+	return !empty($row) && (int)$row[0]['got'] === 1;
+}
+function myseat_release_lock($key) {
+	tp_rows('SELECT RELEASE_LOCK(?) AS done', 's', array($key));
+}
+
 function tp_t($name) {
 	global $settings;
 	$prefix = isset($settings['dbTablePrefix']) ? $settings['dbTablePrefix'] : '';

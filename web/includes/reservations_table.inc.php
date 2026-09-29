@@ -35,6 +35,8 @@ require_once __DIR__.'/reservation_row_render.inc.php';
 				$tablesum ++;
 				$guestsum += $row->reservation_pax;
 			}
+		}else{
+			echo "<tr class='rsv-empty-state'><td colspan='9'>"._reservations_no_entries."</td></tr>";
 		}
 		?>
 	</tbody>
