@@ -3,8 +3,8 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 4.0.5                         =-=
-=-= Date:    29.09.2026                   =-=
+=-= Version: 4.1.0                         =-=
+=-= Date:    30.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 
@@ -51,6 +51,15 @@ tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-30 == mySeat v4.1.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Backend day view (Reservierungen), the last finding from the /impeccable critique pass:
+ * Feature: the pax count in the reservation list can now be edited inline, the same click-to-edit
+   pattern the table-number cell already used, instead of always requiring the full edit form
+ * This builds on the SQL-injection fix already shipped separately for web/ajax/inline_edit.php
+   (whitelisted column names); the pax field is validated server-side as an integer, 1-500,
+   matching the bound already used for the guest-facing pax stepper
 
 2026-09-29 == mySeat v4.0.5 == amadeushi - http://github.com/amadeushi/myseat
 

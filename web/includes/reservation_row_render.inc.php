@@ -38,7 +38,7 @@ function render_reservation_row_tr($row) {
 	}
 	echo ">";
 	echo "<strong>".formatTime($row->reservation_time,$general['timeformat'])."</strong></td>";
-	echo "<td id='tb_pax'><strong class='big'>".$row->reservation_pax."</strong></td><td id='tb_name'>";
+	echo "<td id='tb_pax' class='big'>".tp_pax_cell($id, $row->reservation_pax)."</td><td id='tb_name'>";
 	$sal = printTitle($row->reservation_title);
 	if ($sal !== '') { echo "<span class='noprint'>".$sal." </span>"; }
 	echo "<strong><a id='detlbuttontrigger' href='ajax/guest_detail.php?id=".$id."'";

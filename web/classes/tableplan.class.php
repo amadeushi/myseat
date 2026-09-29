@@ -343,6 +343,12 @@ function tp_assigned_table_names($reservation_id) {
 	}
 }
 
+// the cell content for the "pax" column of a reservation list: an inline-editable number,
+// same .inlineedit/ajax/inline_edit.php pattern as tp_table_cell() below
+function tp_pax_cell($reservation_id, $pax) {
+	return "<div id='reservation_pax-".(int)$reservation_id."' class='inlineedit'>".(int)$pax."</div>";
+}
+
 // the cell content for the "table" column of a reservation list: plan tables (link to the plan of
 // the day) or, without an assignment, the free text field that can still be edited inline
 function tp_table_cell($reservation_id, $free_text, $date) {

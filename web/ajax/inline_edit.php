@@ -16,10 +16,10 @@ if (!current_user_can('Reservation-Edit')) {
 	exit;
 }
 
-// only column ever targeted by the live .inlineedit UI (the free-text table cell,
-// see tableplan.class.php tp_table_cell()) - never trust the column name from $_POST directly,
-// query()'s %s does not quote/escape SQL identifiers
-$allowed_fields = array('reservation_table');
+// columns ever targeted by the live .inlineedit UI (the free-text table cell from
+// tableplan.class.php tp_table_cell(), and the pax cell) - never trust the column
+// name from $_POST directly, query()'s %s does not quote/escape SQL identifiers
+$allowed_fields = array('reservation_table', 'reservation_pax');
 
 if ($_POST['id']) {
 	// prevent dangerous input
@@ -33,6 +33,13 @@ if ($_POST['id']) {
 	$id = (int)$exid[1];
 
 	if (!in_array($field, $allowed_fields, true) || $id <= 0) {
+		http_response_code(400);
+		exit;
+	}
+
+	// pax is a capacity number, not free text - same 1-500 bound used for the
+	// guest-facing pax stepper in api/reserve.php
+	if ($field === 'reservation_pax' && (!ctype_digit((string)$value) || (int)$value < 1 || (int)$value > 500)) {
 		http_response_code(400);
 		exit;
 	}
