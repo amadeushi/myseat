@@ -362,11 +362,49 @@
 		Object.keys(extra || {}).forEach(function (k) { a[k] = extra[k]; });
 		return el('button', a);
 	}
+	// single-stroke SVG icons, same visual language as business.class.php's uiIcon() -
+	// used instead of Unicode glyphs ('‹', '›', '×') for the icon-only buttons below
+	var ICON_PATHS = {
+		chevron_left: "<path d='M15 5l-7 7 7 7'/>",
+		chevron_right: "<path d='M9 5l7 7-7 7'/>",
+		cross: "<path d='M6 6l12 12M18 6L6 18'/>"
+	};
+	function icon(name) {
+		var span = el('span', { 'class': 'tp-icon', 'aria-hidden': 'true' });
+		span.innerHTML = "<svg viewBox='0 0 24 24' width='14' height='14' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>" + ICON_PATHS[name] + "</svg>";
+		return span;
+	}
+	function btnIcon(iconName, cls, fn, extra) {
+		var a = { 'class': cls, type: 'button', onclick: fn };
+		Object.keys(extra || {}).forEach(function (k) { a[k] = extra[k]; });
+		return el('button', a, [icon(iconName)]);
+	}
 
 	function renderPanel() {
 		while (panel.firstChild) { panel.removeChild(panel.firstChild); }
+		if (st.confirm) { renderConfirmPanel(); return; }
 		if (!st.edit) { renderDayPanel(); return; }
 		renderEditPanel();
+	}
+
+	// inline replacement for window.confirm() - matches the same pattern already used
+	// for the online-block reason form on the dashboard, so consequential actions never
+	// interrupt with a native browser dialog
+	function askConfirm(message, onYes) {
+		st.confirm = { message: message, onYes: onYes };
+		render();
+	}
+	function renderConfirmPanel() {
+		panel.appendChild(el('h3', { text: 'Bitte bestätigen' }));
+		panel.appendChild(el('p', { text: st.confirm.message }));
+		panel.appendChild(el('div', { 'class': 'tp-actions' }, [
+			btn('Ja, wirklich', 'tp-danger', function () {
+				var onYes = st.confirm.onYes;
+				st.confirm = null;
+				onYes();
+			}),
+			btn('Abbrechen', 'button_dark', function () { st.confirm = null; render(); })
+		]));
 	}
 
 	/* --- assignment view --- */
@@ -375,9 +413,9 @@
 		var dateIn = el('input', { type: 'date', value: st.date, 'aria-label': 'Datum' });
 		dateIn.addEventListener('change', function () { if (dateIn.value) { setDate(dateIn.value); } });
 		panel.appendChild(el('div', { 'class': 'tp-daynav' }, [
-			btn('‹', 'button_dark', function () { setDate(addDays(st.date, -1)); }, { 'aria-label': 'Vortag', title: 'Vortag' }),
+			btnIcon('chevron_left', 'button_dark', function () { setDate(addDays(st.date, -1)); }, { 'aria-label': 'Vortag', title: 'Vortag' }),
 			dateIn,
-			btn('›', 'button_dark', function () { setDate(addDays(st.date, 1)); }, { 'aria-label': 'Folgetag', title: 'Folgetag' }),
+			btnIcon('chevron_right', 'button_dark', function () { setDate(addDays(st.date, 1)); }, { 'aria-label': 'Folgetag', title: 'Folgetag' }),
 			btn('Heute', 'button_dark', function () { setDate(cfg.today); })
 		]));
 		if (!d) { panel.appendChild(el('p', { 'class': 'tp-hint', text: 'Lade …' })); return; }
@@ -442,8 +480,8 @@
 				if (!t) { return; }
 				chips.appendChild(el('span', { 'class': 'tp-chip' }, [
 					el('span', { text: t.table_name + ' (' + t.seats + ')' }),
-					el('button', { type: 'button', title: 'Tisch entfernen', 'aria-label': 'Tisch ' + t.table_name + ' entfernen', text: '×',
-						onclick: function (e) { e.stopPropagation(); toggleTable(r.id, id); } })
+					el('button', { type: 'button', title: 'Tisch entfernen', 'aria-label': 'Tisch ' + t.table_name + ' entfernen',
+						onclick: function (e) { e.stopPropagation(); toggleTable(r.id, id); } }, [icon('cross')])
 				]));
 			});
 			detail.appendChild(chips);
@@ -506,7 +544,7 @@
 			if (!o) { return; }
 			linkBox.appendChild(el('span', { 'class': 'tp-chip' }, [
 				el('span', { text: o.table_name }),
-				el('button', { type: 'button', title: 'Verbindung entfernen', 'aria-label': 'Verbindung zu ' + o.table_name + ' entfernen', text: '×', onclick: function () { toggleLink(sel.table_id, id); } })
+				el('button', { type: 'button', title: 'Verbindung entfernen', 'aria-label': 'Verbindung zu ' + o.table_name + ' entfernen', onclick: function () { toggleLink(sel.table_id, id); } }, [icon('cross')])
 			]));
 		});
 		panel.appendChild(linkBox);
@@ -521,7 +559,7 @@
 	function renderAreaPanel() {
 		var ar = areaById(st.area);
 		panel.appendChild(el('h3', { text: 'Plan bearbeiten' }));
-		panel.appendChild(el('p', { 'class': 'tp-hint', text: 'Tische ziehen, an der Ecke vergrößern, anklicken zum Bearbeiten.' }));
+		panel.appendChild(el('p', { 'class': 'tp-hint', text: 'Tische ziehen, an der Ecke vergrößern, anklicken zum Bearbeiten. Per Tastatur: Tisch anklicken, dann Pfeiltasten zum Verschieben, Umschalt+Pfeiltasten zum Vergrößern/Verkleinern.' }));
 		panel.appendChild(btn('+ Neuer Tisch', 'button_dark tp-primary', addTable));
 		if (!ar) { return; }
 
@@ -532,8 +570,8 @@
 			el('h3', { text: 'Bereich' }),
 			field('Name', aname),
 			el('div', { 'class': 'tp-actions' }, [
-				btn('←', 'button_dark', function () { moveArea(ar, -1); }, { title: 'Reiter nach links', 'aria-label': 'Bereich nach links', disabled: idx === 0 ? 'disabled' : null }),
-				btn('→', 'button_dark', function () { moveArea(ar, 1); }, { title: 'Reiter nach rechts', 'aria-label': 'Bereich nach rechts', disabled: idx === st.areas.length - 1 ? 'disabled' : null }),
+				btnIcon('chevron_left', 'button_dark', function () { moveArea(ar, -1); }, { title: 'Reiter nach links', 'aria-label': 'Bereich nach links', disabled: idx === 0 ? 'disabled' : null }),
+				btnIcon('chevron_right', 'button_dark', function () { moveArea(ar, 1); }, { title: 'Reiter nach rechts', 'aria-label': 'Bereich nach rechts', disabled: idx === st.areas.length - 1 ? 'disabled' : null }),
 				btn('Bereich löschen', 'tp-danger', function () { removeArea(ar); })
 			])
 		]);
@@ -553,13 +591,19 @@
 			el('option', { value: 'tables', text: 'Nach Tischplan' })
 		]);
 		mode.value = st.availabilityMode;
-		mode.addEventListener('change', function () {
-			var want = mode.value;
-			if (want === 'tables' && !window.confirm('Ab sofort entscheidet der Tischplan, welche Zeiten Gäste online buchen können. Die Sitzplatz- und Tischgrenzen des Outlets gelten online nicht mehr.\n\nJetzt umschalten?')) { mode.value = st.availabilityMode; return; }
+		function applyAvailabilityMode(want) {
 			api('setting_save', { availabilityMode: want }).then(function (r) {
-				if (!r.ok) { say(r.error || 'Umschalten fehlgeschlagen', true); mode.value = st.availabilityMode; return; }
+				if (!r.ok) { say(r.error || 'Umschalten fehlgeschlagen', true); render(); return; }
 				st.availabilityMode = r.availabilityMode; st.preview = null; render(); say('Online-Verfügbarkeit: ' + (r.availabilityMode === 'tables' ? 'nach Tischplan' : 'nach Zählung'));
 			});
+		}
+		mode.addEventListener('change', function () {
+			var want = mode.value;
+			if (want === 'tables') {
+				askConfirm('Ab sofort entscheidet der Tischplan, welche Zeiten Gäste online buchen können. Die Sitzplatz- und Tischgrenzen des Outlets gelten online nicht mehr.\n\nJetzt umschalten?', function () { applyAvailabilityMode(want); });
+				return;
+			}
+			applyAvailabilityMode(want);
 		});
 		var c = st.counter;
 		panel.appendChild(el('div', { 'class': 'tp-areabox' }, [
@@ -616,7 +660,7 @@
 					el('span', { 'class': 'tp-closure-range', text: range }),
 					el('span', { 'class': 'tp-closure-meta', text: (c.yearly ? 'jährlich' : '') + (c.yearly && c.note ? ' · ' : '') + (c.note || '') })
 				]),
-				el('button', { type: 'button', title: 'Sperrzeitraum entfernen', 'aria-label': 'Sperrzeitraum ' + range + ' entfernen', text: '×', onclick: function () { deleteClosure(c); } })
+				el('button', { type: 'button', title: 'Sperrzeitraum entfernen', 'aria-label': 'Sperrzeitraum ' + range + ' entfernen', onclick: function () { deleteClosure(c); } }, [icon('cross')])
 			]));
 		});
 		var from = el('input', { type: 'date' });
@@ -657,7 +701,7 @@
 	function assignTables(resId, ids, confirmed) {
 		return api('assign', { reservation_id: resId, table_ids: ids, confirm: confirmed }).then(function (r) {
 			if (r.needs_confirm) {
-				if (window.confirm(r.warnings.join('\n') + '\n\nTrotzdem zuweisen?')) { return assignTables(resId, ids, true); }
+				askConfirm(r.warnings.join('\n') + '\n\nTrotzdem zuweisen?', function () { assignTables(resId, ids, true); });
 				return null;
 			}
 			if (!r.ok) { say(r.error || 'Zuweisung fehlgeschlagen', true); return null; }
@@ -753,13 +797,14 @@
 			say('Der Bereich enthält noch Tische - bitte zuerst löschen oder in einen anderen Bereich verschieben', true);
 			return;
 		}
-		if (!window.confirm('Bereich „' + a.area_name + '“ wirklich löschen?')) { return; }
-		api('area_delete', { area_id: a.area_id }).then(function (r) {
-			if (!r.ok) { say(r.error || 'Löschen fehlgeschlagen', true); return; }
-			st.areas = normAreas(r.areas);
-			st.closures = st.closures.filter(function (c) { return c.area_id !== a.area_id; });
-			selectArea(st.areas[0].area_id);
-			say('Bereich gelöscht');
+		askConfirm('Bereich „' + a.area_name + '“ wirklich löschen?', function () {
+			api('area_delete', { area_id: a.area_id }).then(function (r) {
+				if (!r.ok) { say(r.error || 'Löschen fehlgeschlagen', true); return; }
+				st.areas = normAreas(r.areas);
+				st.closures = st.closures.filter(function (c) { return c.area_id !== a.area_id; });
+				selectArea(st.areas[0].area_id);
+				say('Bereich gelöscht');
+			});
 		});
 	}
 
@@ -800,15 +845,16 @@
 	}
 
 	function removeTable(t) {
-		if (!window.confirm('Tisch „' + t.table_name + '“ wirklich löschen? Zuweisungen und Verbindungen gehen verloren.')) { return; }
-		api('table_delete', { table_id: t.table_id }).then(function (r) {
-			if (!r.ok) { say(r.error || 'Löschen fehlgeschlagen', true); return; }
-			st.tables = st.tables.filter(function (x) { return x.table_id !== t.table_id; });
-			st.links = st.links.filter(function (l) { return l.table_a !== t.table_id && l.table_b !== t.table_id; });
-			st.selected = null;
-			render();
-			say('Tisch gelöscht');
-			loadDay();
+		askConfirm('Tisch „' + t.table_name + '“ wirklich löschen? Zuweisungen und Verbindungen gehen verloren.', function () {
+			api('table_delete', { table_id: t.table_id }).then(function (r) {
+				if (!r.ok) { say(r.error || 'Löschen fehlgeschlagen', true); return; }
+				st.tables = st.tables.filter(function (x) { return x.table_id !== t.table_id; });
+				st.links = st.links.filter(function (l) { return l.table_a !== t.table_id && l.table_b !== t.table_id; });
+				st.selected = null;
+				render();
+				say('Tisch gelöscht');
+				loadDay();
+			});
 		});
 	}
 
@@ -911,9 +957,40 @@
 	});
 	canvas.addEventListener('keydown', function (e) {
 		var node = e.target.closest ? e.target.closest('.tp-table') : null;
-		if (!node || (e.key !== 'Enter' && e.key !== ' ')) { return; }
+		if (!node) { return; }
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			if (st.edit) { st.selected = parseInt(node.getAttribute('data-id'), 10); render(); } else { tableClicked(node); }
+			return;
+		}
+		// keyboard equivalent of the pointer drag/resize above: arrows move, Shift+arrows resize.
+		// Mutates the node directly (no render()) so repeated presses keep DOM focus on the same
+		// table instead of losing it on every keystroke; the change is persisted after a short pause.
+		if (!st.edit || st.linkMode) { return; }
+		var dirs = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+		var dir = dirs[e.key];
+		if (!dir) { return; }
+		var t = byId(parseInt(node.getAttribute('data-id'), 10));
+		if (!t || st.selected !== t.table_id) { return; }
 		e.preventDefault();
-		if (st.edit) { st.selected = parseInt(node.getAttribute('data-id'), 10); render(); } else { tableClicked(node); }
+		var dx = dir[0] * GRID, dy = dir[1] * GRID;
+		if (e.shiftKey) {
+			t.w = clamp(t.w + dx, 40, 400);
+			t.h = clamp(t.h + dy, 40, 400);
+			node.style.width = t.w + 'px'; node.style.height = t.h + 'px';
+		} else {
+			t.x = clamp(t.x + dx, 0, cfg.canvasW - t.w);
+			t.y = clamp(t.y + dy, 0, cfg.canvasH - t.h);
+			node.style.left = t.x + 'px'; node.style.top = t.y + 'px';
+		}
+		renderLinks();
+		clearTimeout(st.keyMoveTimer);
+		st.keyMoveTimer = setTimeout(function () {
+			persist(tableData(t)).then(function () {
+				var fresh = canvas.querySelector('.tp-table[data-id="' + t.table_id + '"]');
+				if (fresh) { fresh.focus(); }
+			});
+		}, 500);
 	});
 
 	// drag a reservation card onto a table

@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 4.2.0                         =-=
+=-= Version: 4.3.0                         =-=
 =-= Date:    30.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -51,6 +51,23 @@ tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-30 == mySeat v4.3.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Table plan editor (Tischplan), following an /impeccable audit:
+ * Fix: moving/resizing a table was mouse/touch only - the selected table can now be moved with
+   arrow keys and resized with Shift+arrow keys, matching the existing pointer-drag behavior
+ * Fix: 4 destructive/consequential actions (delete table, delete area, switch online-availability
+   mode, assign-with-warnings) used window.confirm() - replaced with the same inline confirmation
+   pattern used for the dashboard's online-block toggle
+ * Fix: several icon-only buttons (chip/closure remove, day-nav, area move) were below the 44px
+   touch-target guideline - enlarged their hit areas
+ * Fix: 4 undocumented border-radius values (8px, 3px, 12px, 4px) replaced with the existing
+   --radius-sm/--radius-md/--radius-pill tokens
+ * Fix: Unicode glyphs ('‹', '›', '←', '→', '×') used as icon buttons replaced with the same
+   single-stroke SVG icon style used throughout the rest of the backend
+ * Fix: the area tab's reservation count had a borderline-failing contrast ratio (~4.43:1) from an
+   added opacity - removed, now uses the full text color
 
 2026-09-30 == mySeat v4.2.0 == amadeushi - http://github.com/amadeushi/myseat
 
