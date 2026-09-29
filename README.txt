@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 4.0.3                         =-=
+=-= Version: 4.0.5                         =-=
 =-= Date:    29.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -51,6 +51,45 @@ tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-29 == mySeat v4.0.5 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Backend day view (Reservierungen), following an /impeccable critique pass:
+ * Fix: the delete-confirmation dialog's "Löschen" and "Alle Einträge löschen" buttons were
+   unstyled and visually identical (a leftover .send-button class with no matching CSS anywhere) -
+   the series-delete option is now styled as a clear warning, carries a plain-language consequence
+   note, and stays disabled until a separate confirmation checkbox is ticked
+ * Removed a dead placeholder ("This is a test.") left in the cancelled-reservations dialog markup
+ * A routine status change (Angekommen, Platziert, An der Bar, Fertig, No-Show) now updates the row
+   in place instead of reloading the whole page - Storniert and approving a pending request still
+   reload, since those change more than the one row (visibility, footer totals, table assignment)
+ * "Storniert" is now visually set apart from the routine statuses in the dropdown with a divider
+   and a warning tint, instead of sitting in the list as if it were equally reversible
+ * The reservation list now reads as cards up to 820px instead of only below 600px, closing a gap
+   where the note/table/status column visually detached from the guest's name/time/pax at the
+   tablet width staff actually use during service
+ * Found but deliberately not touched: a dead but reachable endpoint (web/ajax/inline_edit.php)
+   builds its SQL column name from unvalidated input - flagged as a separate security fix rather
+   than folded into this design pass
+
+2026-09-29 == mySeat v4.0.4 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Guest reservation widget (api/reserve.php), following an /impeccable critique pass:
+ * Fix: the party-size "-" button could reach 0 and the booking would still go through the
+   time-slot lookup with zero guests; the floor is now 1, matching the server-side check that was
+   already there
+ * Fix: a failed field on the contact step (Name/E-Mail/Telefon) turned solid light pink, a leftover
+   from the old light admin theme that overrode the dark theme's own error styling; it now uses the
+   theme's own muted red, plus a concrete message under the field instead of color alone
+ * The submit button now says "Jetzt reservieren"/"Reserve now" instead of reusing the backend's
+   generic "Anlegen"/"Create" label
+ * The Personen/Datum fields in step 1 now have a real associated label, and every contact field
+   shows a visible gold focus ring when tabbed to - both were silently unreachable for screen
+   readers/keyboard users before
+ * Changing the party size no longer silently drops an already-picked time slot; it's restored if
+   still available, or the guest is told it's no longer free for the new group size
+ * The time-slot grid is now grouped under Mittag/Nachmittag/Abend sub-headers instead of a single
+   wall of ~36 identical buttons
 
 2026-09-29 == mySeat v4.0.3 == amadeushi - http://github.com/amadeushi/myseat
 

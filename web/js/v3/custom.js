@@ -324,20 +324,35 @@ $(document).ready(function() {
 
 	// delete button modal message
 	$(".delbtn").fancybox({
-		'titleShow' : false,        
+		'titleShow' : false,
 		'modal' : true,
-		onStart  :   function(selectedArray, 
+		onStart  :   function(selectedArray,
 		selectedIndex, selectedOpts) {
-				del_id  = selectedArray[ selectedIndex ].id; 
+				del_id  = selectedArray[ selectedIndex ].id;
 				del_rep = selectedArray[ selectedIndex ].name;
 				del_row	= $("#" + del_id).parents('tr:first');
-				
-				/* hide 'delete series' button at single entry */
+
+				// reset every time the (shared, reused) modal opens, so a previous row's
+				// checked state can never carry over and silently enable "delete series"
+				$('#confirm-delete-all').prop('checked', false);
+				$('#button_al').prop('disabled', true);
+
+				/* hide 'delete series' button at single entry; otherwise warn and require an
+				   explicit second confirmation before the series-delete button can be used */
 				if (del_rep == 0 ) {
 					$('#button_al').css("display","none");
+					$('#modal-danger-note, #modal-confirm-all-label').css("display","none");
+				} else {
+					$('#button_al').css("display","");
+					$('#modal-danger-note, #modal-confirm-all-label').css("display","block");
 				}
 	        }
     });// delete button END
+
+	// the series-delete button stays disabled until its own confirmation checkbox is ticked
+	$('#confirm-delete-all').on('change', function () {
+		$('#button_al').prop('disabled', !this.checked);
+	});
 
 	// Delete action
 	 $('#modalsecurity .send-button').click(function () {
@@ -404,16 +419,31 @@ $(document).ready(function() {
 	});// Modal message send form END
 	
 	/* Reservation Status dropdownbox */
-	$(".status_dbox").change(function(){ 
-		var status_id = $(this).attr('id');
-		var selected = $(this).val();
+	$(".status_dbox").change(function(){
+		var $select = $(this);
+		var status_id = $select.attr('id');
+		var selected = $select.val();
+		var wasPending = $select.hasClass('st-PEN');
 		status_id = status_id.substring(5,30);
 		$.ajax({
 		type: "POST",
 		url: "ajax/modify_status.php",
 		data: 'value=' + selected + '&id=' + status_id,
 		success: function(result){
-			location.reload();
+			if ($.trim(result) !== 'OK') { location.reload(); return; }
+			// Storniert hides the reservation from this list entirely (and the footer's guest/table
+			// totals need recalculating), and approving a still-pending request can trigger a table
+			// auto-assignment - both change more than this one row, so they keep the full refresh.
+			// A routine progression status (Angekommen, Platziert, ...) only ever repaints this one
+			// dropdown, so those update in place instead of reloading the whole page for a click
+			// staff make dozens of times a shift.
+			if (selected === 'CXL' || wasPending) {
+				location.reload();
+				return;
+			}
+			$select.removeClass(function (i, cls) {
+				return (cls.match(/(^|\s)st-\S+/g) || []).join(' ');
+			}).addClass('st-' + selected);
 		}
 		});
 	}); // Reservation Status dropdownbox END

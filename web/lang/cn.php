@@ -499,6 +499,8 @@ define ( '_statuslist', '未选择,已到,已就坐,已停车,已离开,未赴�
 
 //original text: "delete series"
 define ( '_delete_all_entries', '删除连续预约记录' );
+define ( '_delete_all_warning', 'This deletes every date in this recurring series - this cannot be undone.' );
+define ( '_delete_all_confirm_checkbox', 'I really want to delete the whole series.' );
 
 //original text: "Settings"
 define ( '_settings', '设定' );

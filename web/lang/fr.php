@@ -499,6 +499,8 @@ define ( '_statuslist', 'Pas encore arrivé,Arrivé,Assis,Garé,En départ,No sh
 
 //original text: "delete series"
 define ( '_delete_all_entries', 'effacer les entrées' );
+define ( '_delete_all_warning', 'This deletes every date in this recurring series - this cannot be undone.' );
+define ( '_delete_all_confirm_checkbox', 'I really want to delete the whole series.' );
 
 //original text: "Settings"
 define ( '_settings', 'réglages' );

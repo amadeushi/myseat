@@ -370,7 +370,7 @@ if($check_web_outlet==1){
 
 				<div class="picker-row">
 					<div class="picker pax-picker">
-						<span class="picker-label"><?php echo ucfirst(_people_);?></span>
+						<label class="picker-label" for="reservation_pax"><?php echo ucfirst(_people_);?></label>
 						<div class="pax-stepper">
 							<a href="javascript:void(0);" class="dec btn_pax" aria-label="<?php echo bt('pax_less'); ?>">–</a>
 							<input type="text" name="reservation_pax" id="reservation_pax" value="<?php echo $_SESSION['pax'];?>"/>
@@ -378,7 +378,7 @@ if($check_web_outlet==1){
 						</div>
 					</div>
 					<div class="picker date-picker">
-						<span class="picker-label"><?php echo _date;?></span>
+						<label class="picker-label" for="reservation_date"><?php echo _date;?></label>
 						<div class="date-picker-field">
 							<svg class="date-picker-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
 								<rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/>
@@ -398,10 +398,10 @@ if($check_web_outlet==1){
 
 				<div class="timeslot-section">
 					<span class="picker-label"><?php echo _time;?></span>
-					<div id="timeslot-results">
+					<div id="timeslot-results" data-daypart-midday="<?php echo htmlspecialchars(bt('daypart_midday')); ?>" data-daypart-afternoon="<?php echo htmlspecialchars(bt('daypart_afternoon')); ?>" data-daypart-evening="<?php echo htmlspecialchars(bt('daypart_evening')); ?>">
 					<?php include 'timeslot_fragment.inc.php'; ?>
 					</div>
-					<p class="wizard-error" id="timeslot-error"><?php echo bt('pick_time'); ?></p>
+					<p class="wizard-error" id="timeslot-error" data-default-msg="<?php echo htmlspecialchars(bt('pick_time')); ?>" data-lost-msg="<?php echo htmlspecialchars(bt('time_lost')); ?>"><?php echo bt('pick_time'); ?></p>
 				</div>
 
 				<div class="wizard-nav">
@@ -443,16 +443,19 @@ if($check_web_outlet==1){
 				</div>
 
 				<div class="field">
-					<label><?php echo _name; ?></label>
-					<input type="text" name="reservation_guest_name" class="required" id="reservation_guest_name" maxlength="100" value="<?php if(isset($me['last_name'])){echo $me['last_name'].", ".$me['first_name'];} ?>" />
+					<label for="reservation_guest_name"><?php echo _name; ?></label>
+					<input type="text" name="reservation_guest_name" class="required" id="reservation_guest_name" maxlength="100" data-msg="<?php echo htmlspecialchars(bt('name_invalid')); ?>" aria-describedby="name-error" value="<?php if(isset($me['last_name'])){echo $me['last_name'].", ".$me['first_name'];} ?>" />
+					<p class="field-error" id="name-error" role="alert"></p>
 				</div>
 				<div class="field">
-					<label><?php echo _email; ?></label>
-					<input type="text" name="reservation_guest_email" class="required email" id="reservation_guest_email" maxlength="100" value="<?php if(isset($me['last_name'])){echo $me['email'];} ?>" />
+					<label for="reservation_guest_email"><?php echo _email; ?></label>
+					<input type="text" name="reservation_guest_email" class="required email" id="reservation_guest_email" maxlength="100" data-msg="<?php echo htmlspecialchars(bt('email_invalid')); ?>" aria-describedby="email-error" value="<?php if(isset($me['last_name'])){echo $me['email'];} ?>" />
+					<p class="field-error" id="email-error" role="alert"></p>
 				</div>
 				<div class="field">
-					<label><?php echo _phone; ?></label>
-					<input type="text" name="reservation_guest_phone" class="required" id="reservation_guest_phone" maxlength="50" value="" inputmode="tel" autocomplete="tel" />
+					<label for="reservation_guest_phone"><?php echo _phone; ?></label>
+					<input type="text" name="reservation_guest_phone" class="required" id="reservation_guest_phone" maxlength="50" data-msg="<?php echo htmlspecialchars(bt('phone_invalid')); ?>" aria-describedby="phone-error" value="" inputmode="tel" autocomplete="tel" />
+					<p class="field-error" id="phone-error" role="alert"></p>
 					<?php require_once __DIR__.'/../web/classes/sms.class.php'; $phone_en = (substr($_SESSION['lang'], 0, 2) === 'en'); if (sms_enabled()): ?>
 					<small class="field-hint" id="phone-hint" data-default="<?php echo $phone_en ? 'With a mobile number we also send the confirmation and a reminder by SMS.' : 'Mit einer Mobilnummer schicken wir dir die Bestätigung und eine Erinnerung auch per SMS.'; ?>" data-mobile="<?php echo $phone_en ? 'Mobile number recognised. You get the confirmation and a reminder by SMS.' : 'Mobilnummer erkannt. Du bekommst die Bestätigung und eine Erinnerung per SMS.'; ?>" data-landline="<?php echo $phone_en ? 'Landline number: we cannot send an SMS to it. Use a mobile number if you would like one.' : 'Festnetznummer: dorthin können wir keine SMS schicken. Mit einer Mobilnummer bekommst du eine.'; ?>"><?php echo $phone_en ? 'With a mobile number we also send the confirmation and a reminder by SMS.' : 'Mit einer Mobilnummer schicken wir dir die Bestätigung und eine Erinnerung auch per SMS.'; ?></small>
 					<?php endif; ?>
@@ -501,7 +504,7 @@ if($check_web_outlet==1){
 
 				<div class="wizard-nav">
 					<button type="button" class="wizard-btn wizard-back" data-goto="2"><?php echo bt('back'); ?></button>
-					<button class="submit-button wizard-btn" type="submit" id="reservation_submit_btn"><?php echo _create; ?></button>
+					<button class="submit-button wizard-btn" type="submit" id="reservation_submit_btn"><?php echo bt('reserve_now'); ?></button>
 				</div>
 			</div>
 		</form>
@@ -586,9 +589,39 @@ if($check_web_outlet==1){
 	    		window.location.href='?propertyID=<?php echo $_SESSION['property'];?>&outletID=' + this.value;
 	  	 	});
 	
+		// groups the flat, chronological time-slot list into Mittag/Nachmittag/Abend sub-headers,
+		// so the guest scans three short groups instead of a wall of ~36 identical buttons.
+		// Re-run after every render (initial + AJAX refresh); it clears its own old headers first,
+		// so it stays correct however many times the slot list changes underneath it.
+		function groupTimeslotsByDaypart() {
+			var $results = $("#timeslot-results");
+			var $slots = $results.find(".timeslot");
+			if (!$slots.length) { return; }
+			$results.find(".daypart-header").remove();
+			var labels = {
+				midday: $results.attr("data-daypart-midday"),
+				afternoon: $results.attr("data-daypart-afternoon"),
+				evening: $results.attr("data-daypart-evening")
+			};
+			var lastBucket = null;
+			$slots.each(function () {
+				var timeVal = $(this).find("input[name='reservation_time']").val() || "";
+				var hour = parseInt(timeVal.split(":")[0], 10);
+				var bucket = (hour < 15) ? "midday" : (hour < 18 ? "afternoon" : "evening");
+				if (bucket !== lastBucket) {
+					$(this).before("<div class='daypart-header daypart-" + bucket + "'>" + labels[bucket] + "</div>");
+					lastBucket = bucket;
+				}
+			});
+		}
+
 		// refresh the time-slot grid for a new guest count without reloading the page
 		function refreshTimeslotsForPax(newVal) {
 			var $results = $("#timeslot-results");
+			var $err = $("#timeslot-error");
+			// remember the guest's current pick so it can be restored after the re-render,
+			// instead of silently vanishing when the guest is only adjusting the party size
+			var prevTime = $results.find("input[name='reservation_time']:checked").val();
 			$results.css("opacity", 0.5);
 			$.ajax({
 				url: "ajax_timeslots.php",
@@ -596,6 +629,15 @@ if($check_web_outlet==1){
 				success: function(html) {
 					$results.html(html);
 					$results.css("opacity", 1);
+					groupTimeslotsByDaypart();
+					if (prevTime) {
+						var $prev = $results.find("input[name='reservation_time'][value='" + prevTime + "']");
+						if ($prev.length && !$prev.prop("disabled")) {
+							$prev.prop("checked", true);
+						} else {
+							$err.text($err.attr("data-lost-msg")).addClass("wizard-error-visible");
+						}
+					}
 				},
 				error: function() {
 					// fall back to the old behaviour if the request itself fails
@@ -612,8 +654,8 @@ if($check_web_outlet==1){
 		if ($button.text() == "+") {
 				  var newVal = parseFloat(oldValue) + 1;
 		        } else {
-		          // Don't allow decrementing below zero
-		          if (oldValue >= 1) {
+		          // a table can't be booked for zero people, so 1 is the floor
+		          if (oldValue > 1) {
 		              var newVal = parseFloat(oldValue) - 1;
 		          }else{
 					  var newVal = parseFloat(oldValue);
@@ -740,12 +782,13 @@ if($check_web_outlet==1){
 		$(".wizard-next").on("click", function() {
 			var gotoStep = $(this).data("goto");
 			if (gotoStep == 2) {
+				var $err = $("#timeslot-error");
 				// require a time slot before leaving step 1
 				if ($("input[name='reservation_time']:checked").length === 0) {
-					$("#timeslot-error").addClass("wizard-error-visible");
+					$err.text($err.attr("data-default-msg")).addClass("wizard-error-visible");
 					return;
 				}
-				$("#timeslot-error").removeClass("wizard-error-visible");
+				$err.removeClass("wizard-error-visible");
 			}
 			showWizardStep(gotoStep);
 		});
@@ -762,6 +805,7 @@ if($check_web_outlet==1){
 
 		updateWizardProgress(1);
 		restoreWizardState();
+		groupTimeslotsByDaypart();
     });
 </script>
 

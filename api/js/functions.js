@@ -51,25 +51,35 @@ $(document).ready(function(){
 	        return false;    
 	    });
 	
+	    // shows/clears this field's inline error message, if it has one
+	    function setFieldMsg($field, show) {
+	    	var $msg = $field.closest(".field").find(".field-error");
+	    	if ($msg.length) { $msg.text(show ? ($field.attr("data-msg") || "") : ""); }
+	    }
+
 	    //Content length validation
 	    $.fn.validateLength = function(l){
 	        if( this.val().length < l || this.val() == this.attr("placeholder") ) {
 	        	this.addClass("notRight");
+	        	setFieldMsg(this, true);
 	        	return 1;
 	        } else {
 	            this.removeClass('error');
+	            setFieldMsg(this, false);
 	            return 0;
 	        }
 	    };
-	
+
 		//email validation
 		$.fn.validateEmail = function(){
 			var filter = /^[a-zA-Z0-9]+[a-zA-Z0-9_.-]+[a-zA-Z0-9_-]+@[a-zA-Z0-9]+[a-zA-Z0-9.-]+[a-zA-Z0-9]+.[a-z]{2,4}$/;
 			if(filter.test(this.val())){
 				this.removeClass("error");
+				setFieldMsg(this, false);
 				return 0;
 			}else{
 				this.addClass("notRight");
+				setFieldMsg(this, true);
 				return 1;
 			}
 		}

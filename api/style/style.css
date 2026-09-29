@@ -746,6 +746,8 @@ span.hide { display:none; }
 	--text-muted: #a89e8c;
 	--danger: #e2867c;
 	--success: #8fbf7a;
+	--daypart-morning: #d8c9a6;
+	--daypart-evening: #7a5c2e;
 	--radius: 10px;
 	--font-display: 'Cormorant Garamond', Georgia, serif;
 	--font-body: 'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -1170,6 +1172,22 @@ a.contact-item:hover svg {
 	color: var(--danger);
 }
 
+/* daypart sub-headers inside the time grid (#timefield is display:grid, 3 columns; .elem1/.elem2
+   are display:contents so these headers land as direct grid items and need to span all columns) */
+.daypart-header {
+	grid-column: 1 / -1;
+	margin: 4px 0 -2px;
+	font-family: var(--font-body);
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+}
+.daypart-header:first-child { margin-top: 0; }
+.daypart-header.daypart-midday { color: var(--gold); }
+.daypart-header.daypart-afternoon { color: var(--daypart-morning); }
+.daypart-header.daypart-evening { color: var(--daypart-evening); }
+
 .wizard-step .field {
 	margin-bottom: 16px;
 }
@@ -1200,11 +1218,13 @@ a.contact-item:hover svg {
 .wizard-step textarea:focus,
 .wizard-step select:focus {
 	border-color: var(--gold);
-	outline: none;
+	outline: 2px solid var(--gold);
+	outline-offset: 1px;
 }
 .wizard-step input.error,
 .wizard-step textarea.error {
-	border-color: var(--danger);
+	border-color: var(--danger) !important;
+	background: rgba(226, 134, 124, .10) !important;
 }
 .wizard-step textarea {
 	resize: vertical;
@@ -1867,6 +1887,10 @@ button.offer-chip:focus-visible { outline: 2px solid var(--gold); outline-offset
 
 /* short note under a form field */
 .field-hint { display: block; margin-top: 6px; font-size: 12px; line-height: 1.5; color: var(--text-muted); text-shadow: none; }
+
+/* inline validation message under a form field - empty and collapsed until a validator fills it */
+.field-error { display: block; margin: 6px 0 0; font-size: 12px; line-height: 1.5; color: var(--danger); text-shadow: none; }
+.field-error:empty { display: none; }
 
 /* ---- Guest page (api/cancel.php): the reservation, menus, arrival, contact, and cancelling last ---- */
 .booking-shell.guest-shell {

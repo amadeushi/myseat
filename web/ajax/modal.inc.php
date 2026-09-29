@@ -9,12 +9,19 @@
 	<div id='error_msg'></div><br/>
 	<label><?php echo _author;?></label>
 	<input type="text" id="conf-author" value=""/>
-	<br/><br/><br/>
+	<br/><br/>
+	<p class="modal-danger-note" id="modal-danger-note" style="display:none;">
+		<?php echo _delete_all_warning; ?>
+	</p>
+	<label class="modal-confirm-all" id="modal-confirm-all-label" style="display:none;">
+		<input type="checkbox" id="confirm-delete-all"/> <?php echo _delete_all_confirm_checkbox; ?>
+	</label>
+	<br/>
 	<p style='text-align:center;'>
 		<button type='submit' class='send-button' id='button_sg' name='single' value ='single'>
 			<?php echo ucfirst(_delete);?>
 		</button>
-		<button type='submit' class='send-button' id='button_al' name='all' value='all'>
+		<button type='submit' class='send-button send-button-danger' id='button_al' name='all' value='all' disabled='disabled'>
 			<?php echo ucfirst(_delete_all_entries);?>
 		</button>
 		<button onclick="$.fancybox.close();"> <?php echo _no_;?> </button>
@@ -59,9 +66,5 @@
 <div id="cxllist" style='background:#FFF;' width='400px;'>
 	<h2>CXL <?php echo _overview; ?></h2>
 	<br/>
-	<p class='center'><strong>
-		This is a test.
-	</strong></p>
-	<br/><br/>
 </div>
 </div>

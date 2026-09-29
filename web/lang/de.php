@@ -499,6 +499,8 @@ define ( '_statuslist', 'Bestätigt,Angekommen,Platziert,An der Bar,Fertig,No-Sh
 
 //original text: "delete series"
 define ( '_delete_all_entries', 'Serie löschen' );
+define ( '_delete_all_warning', 'Löscht alle Termine dieser Wiederholungsserie - das lässt sich nicht rückgängig machen.' );
+define ( '_delete_all_confirm_checkbox', 'Ich möchte wirklich die ganze Serie löschen.' );
 
 //original text: "Settings"
 define ( '_settings', 'Einstellungen' );
