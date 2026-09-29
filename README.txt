@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 4.1.0                         =-=
+=-= Version: 4.2.0                         =-=
 =-= Date:    30.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -51,6 +51,24 @@ tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-30 == mySeat v4.2.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Backend dashboard (Startbildschirm nach dem Login), following an /impeccable critique pass:
+ * Fix: the Statistics tab was styled as disabled (dimmed, "li.disabled") but was actually a fully
+   working link - the richest per-timeslot view on the page looked unavailable
+ * Fix: the Week/Month/Statistics tabs never showed which view was active, even though the CSS rule
+   already existed and the same pattern is already used in the top navigation
+ * Fix: "Online sperren" looked like an ordinary link before being clicked (the button_dark class it
+   used has no effect on <a> elements) - it now has its own gold-outlined look before, danger-outlined
+   after
+ * Fix: blocking/unblocking online bookings used window.prompt()/window.alert() instead of the page's
+   own alert system - replaced with an inline reason form and the existing .alert_error/.alert_success
+   styling
+ * Fix: the occupancy sparkline's numbers had no context (no time, and the metric silently switches
+   between "tables free" and "seats free") - each cell now has a tooltip stating both
+ * Fix: 8 hardcoded German strings around the online-block feature (including icon tooltips that never
+   switched to English) now go through the translation system, in all 9 language files
 
 2026-09-30 == mySeat v4.1.0 == amadeushi - http://github.com/amadeushi/myseat
 

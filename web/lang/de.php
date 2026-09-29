@@ -672,4 +672,18 @@ define ( '_reservation_min_lead_hint', 'Gäste können über die Reservierungsse
 
 define ( '_reservation_retention_days', 'Aufbewahrungsfrist für Reservierungsdaten (Tage)' );
 define ( '_reservation_retention_days_hint', 'So viele Tage nach dem Besuchsdatum werden Name, Telefonnummer, E-Mail-Adresse und Notizen der Reservierung automatisch gelöscht (Gästefeedback ist davon ausgenommen).' );
+
+define ( '_online_block', 'Online sperren' );
+define ( '_online_unblock', 'Online wieder freigeben' );
+define ( '_online_block_reason_label', 'Grund (optional, nur intern):' );
+define ( '_online_block_reason_placeholder', 'z. B. Geschlossene Gesellschaft' );
+define ( '_online_blocked_note', 'Online-Reservierungen sind für diesen Tag gesperrt' );
+define ( '_online_blocked_backend_note', 'Im Backend können weiterhin Reservierungen erfasst werden.' );
+define ( '_online_blocked_week_label', 'Online gesperrt' );
+define ( '_online_block_short', 'online sperren' );
+define ( '_online_unblock_short', 'freigeben' );
+define ( '_online_block_save_failed', 'Speichern fehlgeschlagen' );
+define ( '_online_block_server_unreachable', 'Server nicht erreichbar' );
+
+define ( '_online_block_saved', 'Gespeichert.' );
 ?>

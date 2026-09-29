@@ -85,16 +85,22 @@ foreach($outlets as $row) {
 					$val_capacity = $pax_capacity;
 					$val_by_time = $pax_by_time;
 					$txt_capacity = $val_capacity;
+					$val_unit = _pax;
 				}else{
 					$val_capacity = $tbl_capacity;
 					$val_by_time = $tbl_by_time;
+					$val_unit = _tables;
 				}
 
 				// Generating the sparkline graph
 				if( $value <= $open_break || ($value >= $close_break && $value<=$endtime) ){
 
-					echo "<span class='index'><span class='count";
-					
+					// each cell's title states the time slot and which metric (pax vs. tables,
+					// whichever is tighter) the shown number and color refer to - the metric
+					// switches silently between slots, so it must be spelled out per cell
+					$slot_title = date('H:i',$value)." \xe2\x80\x94 ".$val_capacity." ".$val_unit;
+					echo "<span class='index' title='".htmlspecialchars($slot_title, ENT_QUOTES)."'><span class='count";
+
 					if($val_by_time >= 100){
 						echo " full";
 					}else if($val_by_time >= 60){
@@ -105,9 +111,9 @@ foreach($outlets as $row) {
 						echo " free";
 						$val_by_time = 5;
 					}
-					
+
 					echo "' style='height: ".$val_by_time."% !important;'>".$val_capacity."</span>\n</span>\n";
-				}	
+				}
 				// increase time
 				$value = mktime($h1+0,$m1+$i*$general['timeintervall'],0,date("m"),$day,date("Y")); 
 				$i++;

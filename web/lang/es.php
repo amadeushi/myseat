@@ -646,4 +646,18 @@ define ( '_reservation_min_lead_hint', 'Guests can book on the reservation page 
 define ( '_reservation_retention_days', 'Data retention period for reservations (days)' );
 define ( '_reservation_retention_days_hint', 'This many days after the visit date, the guest\'s name, phone number, email address and notes are automatically deleted (guest feedback is not affected).' );
 define ( '_reservations_no_entries', 'No reservations for this day yet.' );
+
+define ( '_online_block', 'Block online booking' );
+define ( '_online_unblock', 'Re-enable online booking' );
+define ( '_online_block_reason_label', 'Reason (optional, internal only):' );
+define ( '_online_block_reason_placeholder', 'e.g. private event' );
+define ( '_online_blocked_note', 'Online reservations are blocked for this day' );
+define ( '_online_blocked_backend_note', 'Reservations can still be entered in the backend.' );
+define ( '_online_blocked_week_label', 'Online blocked' );
+define ( '_online_block_short', 'block online' );
+define ( '_online_unblock_short', 'unblock' );
+define ( '_online_block_save_failed', 'Save failed' );
+define ( '_online_block_server_unreachable', 'Server unreachable' );
+
+define ( '_online_block_saved', 'Saved.' );
 ?>

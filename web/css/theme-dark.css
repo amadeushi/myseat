@@ -1219,8 +1219,88 @@ h5 {
 .ob-cell { margin-top: 4px; font-size: 12px; line-height: 1.3; color: var(--danger); }
 .ob-mini { display: block; margin-top: 4px; font-size: 12px; color: var(--text-muted); text-decoration: underline; }
 .ob-mini:hover { color: var(--gold-strong); }
-a.button_dark.ob-toggle.is-blocked { border-color: var(--danger); color: var(--danger); }
 .ob-cell { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* online-block toggle: outlined gold before the click (a deliberate action, not a routine link),
+   outlined danger once already blocked - never plain .second_level_tab li a styling */
+.second_level_tab li a.ob-toggle {
+	border-color: var(--gold);
+	color: var(--gold-strong);
+}
+.second_level_tab li a.ob-toggle:hover {
+	background: var(--gold);
+	border-color: var(--gold);
+	color: var(--ink-strong);
+}
+.second_level_tab li a.ob-toggle.is-blocked {
+	border-color: var(--danger);
+	color: var(--danger);
+}
+.second_level_tab li a.ob-toggle.is-blocked:hover {
+	background: var(--danger);
+	border-color: var(--danger);
+	color: var(--ink-strong);
+}
+.ob-reason-panel {
+	margin-top: 10px;
+	padding: 12px 14px;
+	background: var(--surface-2);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+}
+/* the [hidden] attribute and the class selector above share specificity (0,1,0);
+   without this, source order lets display:flex win and the panel never hides */
+.ob-reason-panel[hidden] {
+	display: none;
+}
+.ob-reason-panel label {
+	font-size: 13px;
+	color: var(--text-muted);
+	white-space: nowrap;
+}
+.ob-reason-panel input[type='text'] {
+	flex: 1 1 220px;
+	min-width: 160px;
+	background: var(--surface-3);
+	border: 1px solid var(--border-soft);
+	border-radius: var(--radius-sm);
+	color: var(--text);
+	padding: 8px 10px;
+	font-size: 16px;
+}
+.ob-reason-panel input[type='text']:focus {
+	border-color: var(--gold);
+	outline: 2px solid var(--gold);
+	outline-offset: 1px;
+}
+.ob-reason-actions {
+	display: flex;
+	gap: 8px;
+}
+.ob-reason-cancel {
+	background: transparent;
+	border: 1px solid var(--border-soft);
+	color: var(--text-muted);
+	border-radius: var(--radius-sm);
+	padding: 8px 14px;
+}
+.ob-reason-cancel:hover {
+	background: transparent;
+	border-color: var(--border);
+	color: var(--gold-strong);
+	transform: none;
+}
+#ob-feedback:empty {
+	display: none;
+}
+#ob-feedback .alert_error,
+#ob-feedback .alert_success {
+	margin-top: 10px;
+}
 
 /* legacy datepicker styles give the cell of today / the hovered cell a light grey background */
 .ui-datepicker td,

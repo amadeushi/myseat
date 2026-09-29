@@ -9,7 +9,7 @@ include_once 'classes/online_block.class.php';
 $ob_note = ($_SESSION['page'] == 1 || $_SESSION['page'] == 2) ? ob_get($_SESSION['outletID'], $_SESSION['selectedDate']) : false;
 if ($ob_note) {
 	echo "<div class='alert_tip'>
-	<p class='center margin-bottom-10'>".uiIcon('info')." Online-Reservierungen sind für diesen Tag gesperrt".($ob_note['reason'] !== '' ? " &ndash; ".htmlspecialchars($ob_note['reason']) : "").". Im Backend können weiterhin Reservierungen erfasst werden.</p>
+	<p class='center margin-bottom-10'>".uiIcon('info')." "._online_blocked_note.($ob_note['reason'] !== '' ? " &ndash; ".htmlspecialchars($ob_note['reason']) : "").". "._online_blocked_backend_note."</p>
 	</div>";
 }
 

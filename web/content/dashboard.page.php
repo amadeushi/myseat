@@ -27,8 +27,8 @@
 			include_once 'classes/online_block.class.php';
 			if (empty($_SESSION['ob_token'])) { $_SESSION['ob_token'] = bin2hex(random_bytes(16)); }
 			$ob_day = ob_get($_SESSION['outletID'], $_SESSION['selectedDate']);
-			echo "<li><a href='#' class='button_dark ob-toggle".($ob_day ? " is-blocked" : "")."' data-outlet='".(int)$_SESSION['outletID']."' data-date='".htmlspecialchars($_SESSION['selectedDate'])."' data-blocked='".($ob_day ? 1 : 0)."'>"
-				.($ob_day ? "Online wieder freigeben" : "Online sperren")."</a></li>";
+			echo "<li><a href='#' class='ob-toggle".($ob_day ? " is-blocked" : "")."' data-outlet='".(int)$_SESSION['outletID']."' data-date='".htmlspecialchars($_SESSION['selectedDate'])."' data-blocked='".($ob_day ? 1 : 0)."'>"
+				.($ob_day ? _online_unblock : _online_block)."</a></li>";
 		}
 		?>
 		<li>
@@ -36,6 +36,17 @@
 			</a>
 		<li/>
 	</ul>
+	<?php if ($ob_can && !$ob_day): ?>
+	<div class='ob-reason-panel' id='ob-reason-panel' hidden>
+		<label for='ob-reason-input'><?php echo _online_block_reason_label; ?></label>
+		<input type='text' id='ob-reason-input' maxlength='80' placeholder='<?php echo htmlspecialchars(_online_block_reason_placeholder, ENT_QUOTES); ?>'/>
+		<div class='ob-reason-actions'>
+			<button type='button' class='button_dark' id='ob-reason-save'><?php echo _save; ?></button>
+			<button type='button' class='ob-reason-cancel' id='ob-reason-cancel'><?php echo _cancel; ?></button>
+		</div>
+	</div>
+	<?php endif; ?>
+	<div id='ob-feedback'></div>
 	<!-- End 2nd level tab -->
  </div>
 <div id='content_wrapper'>
@@ -67,19 +78,19 @@
 			?>
 						<!-- Begin 2nd level tab -->
 			<ul class="second_level_tab noprint">
-				<li class='disabled'>
+				<li<?php echo ($q=='3') ? " class='active'" : ""; ?>>
 					<a href="main_page.php?p=1&q=3">
-						<?php echo uiIcon('bars', array('alt' => 'Statistics')); ?>
+						<?php echo uiIcon('bars', array('title' => $de_lang ? 'Statistik' : 'Statistics', 'alt' => $de_lang ? 'Statistik' : 'Statistics')); ?>
 					</a>
 				</li>
-				<li>
+				<li<?php echo ($q=='1') ? " class='active'" : ""; ?>>
 					<a href="main_page.php?p=1&q=1">
-						<?php echo uiIcon('cal_week', array('alt' => 'Week')); ?>
+						<?php echo uiIcon('cal_week', array('title' => $de_lang ? 'Woche' : 'Week', 'alt' => $de_lang ? 'Woche' : 'Week')); ?>
 					</a>
 				</li>
-				<li>
+				<li<?php echo ($q=='2') ? " class='active'" : ""; ?>>
 					<a href="main_page.php?p=1&q=2">
-						<?php echo uiIcon('cal_month', array('alt' => 'Month')); ?>
+						<?php echo uiIcon('cal_month', array('title' => $de_lang ? 'Monat' : 'Month', 'alt' => $de_lang ? 'Monat' : 'Month')); ?>
 					</a>
 				</li>
 			</ul>
@@ -135,24 +146,62 @@
 <script type="text/javascript">
 (function () {
 	var token = <?php echo json_encode($_SESSION['ob_token']); ?>;
-	document.addEventListener('click', function (e) {
-		var a = e.target.closest ? e.target.closest('.ob-toggle') : null;
-		if (!a) { return; }
-		e.preventDefault();
-		var blocked = a.getAttribute('data-blocked') === '1';
-		var reason = '';
-		if (!blocked) {
-			reason = window.prompt('Online-Reservierungen für ' + a.getAttribute('data-date').split('-').reverse().join('.') + ' sperren.\nGrund (optional, nur intern), z. B. Geschlossene Gesellschaft:', '');
-			if (reason === null) { return; }
-		}
+	var msgSaveFailed = <?php echo json_encode(_online_block_save_failed); ?>;
+	var msgServerUnreachable = <?php echo json_encode(_online_block_server_unreachable); ?>;
+	var msgSaved = <?php echo json_encode(_online_block_saved); ?>;
+	var reasonPanel = document.getElementById('ob-reason-panel');
+	var reasonInput = document.getElementById('ob-reason-input');
+	var feedback = document.getElementById('ob-feedback');
+	var pendingToggle = null;
+
+	function showFeedback(kind, text) {
+		if (!feedback) { return; }
+		feedback.innerHTML = '';
+		var box = document.createElement('div');
+		box.className = kind;
+		var p = document.createElement('p');
+		p.textContent = text;
+		box.appendChild(p);
+		feedback.appendChild(box);
+	}
+
+	function submitBlock(a, blocked, reason) {
 		fetch('ajax/online_block.php', {
 			method: 'POST', credentials: 'same-origin',
 			headers: { 'Content-Type': 'application/json', 'X-OB-Token': token },
 			body: JSON.stringify({ outlet_id: a.getAttribute('data-outlet'), date: a.getAttribute('data-date'), blocked: !blocked, reason: reason })
 		}).then(function (r) { return r.json(); }).then(function (j) {
-			if (!j.ok) { window.alert(j.error || 'Speichern fehlgeschlagen'); return; }
-			window.location.reload();
-		}, function () { window.alert('Server nicht erreichbar'); });
+			if (!j.ok) { showFeedback('alert_error', j.error || msgSaveFailed); return; }
+			showFeedback('alert_success', msgSaved);
+			window.setTimeout(function () { window.location.reload(); }, 700);
+		}, function () { showFeedback('alert_error', msgServerUnreachable); });
+	}
+
+	document.addEventListener('click', function (e) {
+		var toggle = e.target.closest ? e.target.closest('.ob-toggle') : null;
+		if (toggle) {
+			e.preventDefault();
+			var blocked = toggle.getAttribute('data-blocked') === '1';
+			if (blocked) { submitBlock(toggle, true, ''); return; }
+			pendingToggle = toggle;
+			if (reasonPanel) {
+				reasonPanel.hidden = false;
+				reasonInput.value = '';
+				reasonPanel.scrollIntoView({ block: 'nearest' });
+				reasonInput.focus();
+			}
+			return;
+		}
+		if (e.target.id === 'ob-reason-cancel') {
+			reasonPanel.hidden = true;
+			pendingToggle = null;
+			return;
+		}
+		if (e.target.id === 'ob-reason-save') {
+			if (pendingToggle) { submitBlock(pendingToggle, false, reasonInput.value); }
+			reasonPanel.hidden = true;
+			pendingToggle = null;
+		}
 	});
 })();
 </script>

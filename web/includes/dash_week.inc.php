@@ -50,11 +50,11 @@ foreach($outlets as $row) {
 		  // online booking block of the day (closed party, sold out) with a toggle for staff
 		  $ob_week_blocked = isset($ob_week[$_SESSION['statistic_week']]);
 		  if ($ob_week_blocked) {
-			$ob_text = "Online gesperrt".($ob_week[$_SESSION['statistic_week']] !== '' ? ": ".htmlspecialchars($ob_week[$_SESSION['statistic_week']], ENT_QUOTES) : "");
+			$ob_text = _online_blocked_week_label.($ob_week[$_SESSION['statistic_week']] !== '' ? ": ".htmlspecialchars($ob_week[$_SESSION['statistic_week']], ENT_QUOTES) : "");
 			echo "<div class='ob-cell' title='".$ob_text."'>".$ob_text."</div>";
 		  }
 		  if (!empty($ob_can)) {
-			echo "<a href='#' class='ob-toggle ob-mini' data-outlet='".(int)$_SESSION['selOutlet']['outlet_id']."' data-date='".$_SESSION['statistic_week']."' data-blocked='".($ob_week_blocked ? 1 : 0)."'>".($ob_week_blocked ? "freigeben" : "online sperren")."</a>";
+			echo "<a href='#' class='ob-toggle ob-mini' data-outlet='".(int)$_SESSION['selOutlet']['outlet_id']."' data-date='".$_SESSION['statistic_week']."' data-blocked='".($ob_week_blocked ? 1 : 0)."'>".($ob_week_blocked ? _online_unblock_short : _online_block_short)."</a>";
 		  }
 		  echo "</td>";
 		  $i++;
