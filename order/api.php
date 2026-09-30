@@ -55,10 +55,16 @@ if ($op === 'zone') {
 	$_SESSION['shop_zone_hits'] = array_values(array_filter($_SESSION['shop_zone_hits'], function ($t) { return $t > time() - 3600; }));
 	if (count($_SESSION['shop_zone_hits']) >= 30) { api_out(array('ok' => false, 'error' => 'Zu viele Adressprüfungen. Bitte versuche es später noch einmal oder ruf uns an.')); }
 	$_SESSION['shop_zone_hits'][] = time();
-	$r = shop_find_zone(mb_substr((string)(isset($body['street']) ? $body['street'] : ''), 0, 120), mb_substr((string)(isset($body['zip']) ? $body['zip'] : ''), 0, 10), mb_substr((string)(isset($body['city']) ? $body['city'] : ''), 0, 80));
-	if (!$r['ok']) { api_out(array('ok' => false, 'error' => $r['error'])); }
+	// a what3words code (an escape hatch offered only once a typed address was not found) replaces street/zip/city
+	$words = mb_substr((string)(isset($body['words']) ? $body['words'] : ''), 0, 40);
+	$r = ($words !== '')
+		? shop_find_zone_w3w($words)
+		: shop_find_zone(mb_substr((string)(isset($body['street']) ? $body['street'] : ''), 0, 120), mb_substr((string)(isset($body['zip']) ? $body['zip'] : ''), 0, 10), mb_substr((string)(isset($body['city']) ? $body['city'] : ''), 0, 80));
+	if (!$r['ok']) {
+		api_out(array('ok' => false, 'error' => $r['error'], 'reason' => isset($r['reason']) ? $r['reason'] : '', 'w3w_available' => shop_w3w_key() !== ''));
+	}
 	$min = $r['zone']['min_order_cents'] > 0 ? $r['zone']['min_order_cents'] : shop_cents(shop_setting('min_order_delivery'));
-	api_out(array('ok' => true, 'zone' => array('id' => $r['zone']['id'], 'name' => $r['zone']['name'], 'fee' => $r['zone']['fee_cents'], 'min' => $min)));
+	api_out(array('ok' => true, 'zone' => array('id' => $r['zone']['id'], 'name' => $r['zone']['name'], 'fee' => $r['zone']['fee_cents'], 'min' => $min), 'lat' => $r['lat'], 'lng' => $r['lng'], 'words' => isset($r['words']) ? $r['words'] : ''));
 }
 
 if ($op === 'upsell') {

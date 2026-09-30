@@ -47,6 +47,15 @@
 .shop-zone-result:empty { display: none; }
 .shop-zone-result.ok { color: var(--success); }
 .shop-zone-result.bad { color: var(--danger); }
+/* the what3words escape hatch: a muted secondary link that only appears once a typed address is
+   not found (shop.js), for a location with no real street (a field, an event site) */
+.shop-zone-w3w-toggle { display: flex; align-items: center; border: 0; background: transparent; padding: 0; margin-top: 14px; min-height: 44px; color: var(--text-muted); font-size: 13px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; text-align: left; }
+.shop-zone-w3w-toggle:hover { color: var(--gold); }
+/* explicit [hidden] overrides: this toggle's own display:flex, and the box's .co-grid
+   display:grid, both have the same specificity as the browser's default [hidden]{display:none}
+   and would otherwise win by source order, showing them even while hidden is set */
+.shop-zone-w3w-toggle[hidden], #sz-w3w-box[hidden], #co-w3w-box[hidden] { display: none; }
+#sz-w3w-box, #co-w3w-box { margin-top: 10px; }
 .shop-zone-box { position: absolute; top: 100%; right: 16px; margin-top: 8px; z-index: 40; width: 320px; max-width: calc(100vw - 32px); padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45); }
 .shop-zone-box .co-grid { margin: 0; }
 .shop-zone-backdrop { position: fixed; inset: 0; z-index: 25; background: rgba(0, 0, 0, 0.5); }

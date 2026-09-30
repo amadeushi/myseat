@@ -312,7 +312,8 @@ function shop_slots($kind, $date) {
 	return array_values($slots);
 }
 
-// ---- delivery zones: address -> coordinates (OpenStreetMap Nominatim, cached) -> zone (point in polygon)
+// ---- delivery zones: address -> coordinates (OpenStreetMap Nominatim, cached, Google as a paid fallback for
+// addresses Nominatim's data misses) -> zone (point in polygon)
 function shop_geocode($street, $zip, $city) {
 	shop_ensure_schema();
 	$key = sha1(mb_strtolower(trim($street).'|'.trim($zip).'|'.trim($city)));
@@ -330,8 +331,98 @@ function shop_geocode($street, $zip, $city) {
 	$j = json_decode((string)$raw, true);
 	$lat = (is_array($j) && !empty($j[0]['lat'])) ? (float)$j[0]['lat'] : null;
 	$lng = (is_array($j) && !empty($j[0]['lon'])) ? (float)$j[0]['lon'] : null;
+	// Nominatim's German address data occasionally misses real addresses (new builds, rural roads)
+	// - Google Geocoding is a paid fallback only for exactly that gap, never the default path, so
+	// a normal lookup that Nominatim already answers never costs anything
+	if ($lat === null) {
+		$g = shop_geocode_google($street, $zip, $city);
+		if ($g) { list($lat, $lng) = $g; }
+	}
 	fb_exec("REPLACE INTO ".fb_t('tp_shop_geocache')." (h, lat, lng, created_at) VALUES (?, ?, ?, NOW())", 'sdd', array($key, $lat, $lng));
 	return $lat !== null ? array($lat, $lng) : null;
+}
+
+function shop_geocode_google($street, $zip, $city) {
+	$key = shop_google_key();
+	if ($key === '') { return null; }
+	$addr = trim($street.', '.$zip.' '.$city, ' ,');
+	if ($addr === '') { return null; }
+	$url = 'https://maps.googleapis.com/maps/api/geocode/json?address='.rawurlencode($addr).'&region=de&key='.rawurlencode($key);
+	$ch = curl_init($url);
+	curl_setopt_array($ch, array(CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => false, CURLOPT_CONNECTTIMEOUT => 4, CURLOPT_TIMEOUT => 8));
+	$raw = curl_exec($ch);
+	if ((int)curl_getinfo($ch, CURLINFO_HTTP_CODE) !== 200) { return null; }
+	$j = json_decode((string)$raw, true);
+	if (!is_array($j) || !isset($j['status']) || $j['status'] !== 'OK' || empty($j['results'][0]['geometry']['location'])) { return null; }
+	$loc = $j['results'][0]['geometry']['location'];
+	return (isset($loc['lat'], $loc['lng'])) ? array((float)$loc['lat'], (float)$loc['lng']) : null;
+}
+
+// what3words: an escape hatch for locations with no real street address (a field, a park entrance,
+// an event site). Only reached from the guest UI after both Nominatim and Google fail to find a
+// typed address - never the default path. Cached the same way as a normal address, keyed by the
+// words string instead of street/zip/city.
+function shop_geocode_w3w($words) {
+	$apiKey = shop_w3w_key();
+	$words = trim((string)$words, "/ \t\n\r\0\x0B");
+	if ($words === '' || $apiKey === '') { return null; }
+	shop_ensure_schema();
+	$key = sha1('w3w:'.mb_strtolower($words));
+	$hit = fb_row("SELECT lat, lng, created_at FROM ".fb_t('tp_shop_geocache')." WHERE h = ?", 's', array($key));
+	if ($hit && ($hit['lat'] !== null || strtotime($hit['created_at']) > time() - 86400)) {
+		return $hit['lat'] !== null ? array((float)$hit['lat'], (float)$hit['lng']) : null;
+	}
+	$url = 'https://api.what3words.com/v3/convert-to-coordinates?words='.rawurlencode($words).'&key='.rawurlencode($apiKey);
+	$ch = curl_init($url);
+	curl_setopt_array($ch, array(CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => false, CURLOPT_CONNECTTIMEOUT => 4, CURLOPT_TIMEOUT => 8));
+	$raw = curl_exec($ch);
+	if ((int)curl_getinfo($ch, CURLINFO_HTTP_CODE) !== 200) { return null; } // a bad code or a service problem, neither cached
+	$j = json_decode((string)$raw, true);
+	$lat = (is_array($j) && !empty($j['coordinates']['lat'])) ? (float)$j['coordinates']['lat'] : null;
+	$lng = (is_array($j) && !empty($j['coordinates']['lng'])) ? (float)$j['coordinates']['lng'] : null;
+	fb_exec("REPLACE INTO ".fb_t('tp_shop_geocache')." (h, lat, lng, created_at) VALUES (?, ?, ?, NOW())", 'sdd', array($key, $lat, $lng));
+	return $lat !== null ? array($lat, $lng) : null;
+}
+
+// same idea as shop_w3w_test() below, for the Google key: resolves a known-good address and
+// surfaces Google's own status/error_message (Google Geocoding returns HTTP 200 even on failure,
+// the real result is the "status" field - REQUEST_DENIED, OVER_QUERY_LIMIT, etc.)
+function shop_google_test() {
+	$key = shop_google_key();
+	if ($key === '') { return array('ok' => false, 'error' => 'Kein Schlüssel hinterlegt.'); }
+	$url = 'https://maps.googleapis.com/maps/api/geocode/json?address='.rawurlencode('Hildesheim, Germany').'&key='.rawurlencode($key);
+	$ch = curl_init($url);
+	curl_setopt_array($ch, array(CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => false, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_TIMEOUT => 10));
+	$raw = curl_exec($ch);
+	$errno = curl_errno($ch); $err = $errno ? curl_error($ch) : null;
+	if ($errno) { return array('ok' => false, 'error' => 'Google nicht erreichbar ('.$err.').'); }
+	$j = json_decode((string)$raw, true);
+	if (is_array($j) && isset($j['status']) && $j['status'] === 'OK' && !empty($j['results'][0]['geometry']['location'])) {
+		return array('ok' => true, 'message' => 'Verbindung in Ordnung.');
+	}
+	$status = (is_array($j) && isset($j['status'])) ? $j['status'] : 'unbekannter Fehler';
+	$msg = (is_array($j) && !empty($j['error_message'])) ? $j['error_message'] : '';
+	return array('ok' => false, 'error' => 'Google meldet: '.$status.($msg !== '' ? ' ('.$msg.')' : '').'.');
+}
+
+// diagnostic for the backend "Verbindung prüfen" button: resolves a known-good address
+// (what3words' own documented example, ///filled.count.soap) and surfaces the API's own error
+// message - shop_geocode_w3w() itself only ever returns null on failure, which cannot distinguish
+// a bad/inactive key from a genuine what3words outage or a guest's typo
+function shop_w3w_test() {
+	$apiKey = shop_w3w_key();
+	if ($apiKey === '') { return array('ok' => false, 'error' => 'Kein Schlüssel hinterlegt.'); }
+	$url = 'https://api.what3words.com/v3/convert-to-coordinates?words=filled.count.soap&key='.rawurlencode($apiKey);
+	$ch = curl_init($url);
+	curl_setopt_array($ch, array(CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => false, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_TIMEOUT => 10));
+	$raw = curl_exec($ch);
+	$errno = curl_errno($ch); $err = $errno ? curl_error($ch) : null;
+	$http = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+	if ($errno) { return array('ok' => false, 'error' => 'what3words nicht erreichbar ('.$err.').'); }
+	$j = json_decode((string)$raw, true);
+	if ($http === 200 && is_array($j) && !empty($j['coordinates']['lat'])) { return array('ok' => true, 'message' => 'Verbindung in Ordnung.'); }
+	$msg = (is_array($j) && !empty($j['error']['message'])) ? $j['error']['message'] : ('HTTP '.$http);
+	return array('ok' => false, 'error' => 'what3words meldet: '.$msg);
 }
 
 function shop_point_in_polygon($lat, $lng, $poly) {
@@ -343,18 +434,37 @@ function shop_point_in_polygon($lat, $lng, $poly) {
 	return $in;
 }
 
-// the zone of an address: array(ok, zone (id, name, fee_cents, min_order_cents), lat, lng, error)
-function shop_find_zone($street, $zip, $city) {
-	if (trim($street) === '' || trim($zip) === '' || trim($city) === '') { return array('ok' => false, 'error' => 'Bitte Straße mit Hausnummer, PLZ und Ort angeben.'); }
-	$pos = shop_geocode($street, $zip, $city);
-	if (!$pos) { return array('ok' => false, 'error' => 'Wir konnten diese Adresse nicht finden. Bitte prüfe Straße, Hausnummer und PLZ, oder wähle Abholung.'); }
-	$best = null;
+// the zone a coordinate falls in, or null - shared by an address lookup and a what3words lookup
+function shop_zone_for_point($lat, $lng) {
 	foreach (fb_rows("SELECT id, name, polygon, fee_cents, min_order_cents FROM ".fb_t('tp_shop_zones')." WHERE active = 1 ORDER BY fee_cents, id") as $z) {
 		$poly = json_decode($z['polygon'], true);
-		if (is_array($poly) && shop_point_in_polygon($pos[0], $pos[1], $poly)) { $best = $z; break; }
+		if (is_array($poly) && shop_point_in_polygon($lat, $lng, $poly)) {
+			return array('id' => (int)$z['id'], 'name' => $z['name'], 'fee_cents' => (int)$z['fee_cents'], 'min_order_cents' => (int)$z['min_order_cents']);
+		}
 	}
-	if (!$best) { return array('ok' => false, 'error' => 'Diese Adresse liegt leider außerhalb unseres Liefergebiets. Du kannst gern bei uns abholen.', 'lat' => $pos[0], 'lng' => $pos[1]); }
-	return array('ok' => true, 'zone' => array('id' => (int)$best['id'], 'name' => $best['name'], 'fee_cents' => (int)$best['fee_cents'], 'min_order_cents' => (int)$best['min_order_cents']), 'lat' => $pos[0], 'lng' => $pos[1]);
+	return null;
+}
+
+// the zone of an address: array(ok, zone (id, name, fee_cents, min_order_cents), lat, lng, error, reason).
+// reason is 'not_found' (geocoding itself failed - the UI may then offer a what3words code instead) or
+// 'outside_zone' (a real, found address that is simply not served).
+function shop_find_zone($street, $zip, $city) {
+	if (trim($street) === '' || trim($zip) === '' || trim($city) === '') { return array('ok' => false, 'reason' => 'not_found', 'error' => 'Bitte Straße mit Hausnummer, PLZ und Ort angeben.'); }
+	$pos = shop_geocode($street, $zip, $city);
+	if (!$pos) { return array('ok' => false, 'reason' => 'not_found', 'error' => 'Wir konnten diese Adresse nicht finden. Bitte prüfe Straße, Hausnummer und PLZ, oder wähle Abholung.'); }
+	$zone = shop_zone_for_point($pos[0], $pos[1]);
+	if (!$zone) { return array('ok' => false, 'reason' => 'outside_zone', 'error' => 'Diese Adresse liegt leider außerhalb unseres Liefergebiets. Du kannst gern bei uns abholen.', 'lat' => $pos[0], 'lng' => $pos[1]); }
+	return array('ok' => true, 'zone' => $zone, 'lat' => $pos[0], 'lng' => $pos[1]);
+}
+
+// same contract as shop_find_zone(), but for a what3words code instead of street/zip/city
+function shop_find_zone_w3w($words) {
+	if (trim((string)$words, "/ \t\n\r\0\x0B") === '') { return array('ok' => false, 'reason' => 'not_found', 'error' => 'Bitte einen what3words-Code eingeben.'); }
+	$pos = shop_geocode_w3w($words);
+	if (!$pos) { return array('ok' => false, 'reason' => 'not_found', 'error' => 'Dieser what3words-Code konnte nicht gefunden werden. Bitte prüfe die Schreibweise.'); }
+	$zone = shop_zone_for_point($pos[0], $pos[1]);
+	if (!$zone) { return array('ok' => false, 'reason' => 'outside_zone', 'error' => 'Diese Adresse liegt leider außerhalb unseres Liefergebiets. Du kannst gern bei uns abholen.', 'lat' => $pos[0], 'lng' => $pos[1]); }
+	return array('ok' => true, 'zone' => $zone, 'lat' => $pos[0], 'lng' => $pos[1], 'words' => trim((string)$words, "/ \t\n\r\0\x0B"));
 }
 
 // ---- light menu for the list page: products per category with a flag for "has choices" and the lowest price
@@ -390,7 +500,8 @@ function shop_order_number() {
 function shop_phone_ok($p) { $d = preg_replace('/\D/', '', (string)$p); return preg_match('/^[+0-9 ()\/.\-]+$/', (string)$p) && strlen($d) >= 6 && strlen($d) <= 16; }
 
 /*
- * Check everything and store the order. $in: type, lines, name, phone, email, street, zip, city, address_note, when ('asap' or 'Y-m-d H:i'),
+ * Check everything and store the order. $in: type, lines, name, phone, email, street, zip, city (or words, a
+ * what3words code, instead of street/zip/city), address_note, when ('asap' or 'Y-m-d H:i'),
  * payment ('mollie' | 'cash' | 'card_door'), tip (cents), note, ip. Returns array(ok, error) or array(ok, order (row), items).
  * A guest who pays online gets status 'pending' until the payment arrived; the kitchen sees an order from 'new' on.
  */
@@ -417,12 +528,22 @@ function shop_create_order($in) {
 	$fee = 0; $zoneId = null; $lat = null; $lng = null; $street = $zip = $city = ''; $addrNote = '';
 	$min = ($type === 'delivery') ? shop_cents(shop_setting('min_order_delivery')) : shop_cents(shop_setting('min_order_pickup'));
 	if ($type === 'delivery') {
-		$street = mb_substr(trim((string)(isset($in['street']) ? $in['street'] : '')), 0, 160);
-		$zip = mb_substr(trim((string)(isset($in['zip']) ? $in['zip'] : '')), 0, 10);
-		$city = mb_substr(trim((string)(isset($in['city']) ? $in['city'] : '')), 0, 80);
 		$addrNote = mb_substr(trim((string)(isset($in['address_note']) ? $in['address_note'] : '')), 0, 200);
-		$z = shop_find_zone($street, $zip, $city);
-		if (!$z['ok']) { return array('ok' => false, 'error' => $z['error']); }
+		$words = mb_substr(trim((string)(isset($in['words']) ? $in['words'] : '')), 0, 40);
+		if ($words !== '') {
+			// no real street: store the what3words code where street/zip/city are normally shown
+			// (bon, driver view, admin lists already just print street/zip/city, unchanged here)
+			// and keep zone_for_point already found a driver-navigable lat/lng
+			$z = shop_find_zone_w3w($words);
+			if (!$z['ok']) { return array('ok' => false, 'error' => $z['error']); }
+			$street = 'what3words: '.$z['words']; $zip = ''; $city = '';
+		} else {
+			$street = mb_substr(trim((string)(isset($in['street']) ? $in['street'] : '')), 0, 160);
+			$zip = mb_substr(trim((string)(isset($in['zip']) ? $in['zip'] : '')), 0, 10);
+			$city = mb_substr(trim((string)(isset($in['city']) ? $in['city'] : '')), 0, 80);
+			$z = shop_find_zone($street, $zip, $city);
+			if (!$z['ok']) { return array('ok' => false, 'error' => $z['error']); }
+		}
 		$fee = $z['zone']['fee_cents']; $zoneId = $z['zone']['id']; $lat = $z['lat']; $lng = $z['lng'];
 		if ($z['zone']['min_order_cents'] > 0) { $min = $z['zone']['min_order_cents']; }
 	}
@@ -549,6 +670,33 @@ function shop_set_status($id, $status, $by = '', $etaMinutes = 0) {
 	$st = fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET $set WHERE id = ?", $types, $params);
 	if ($st) { shop_log($id, 'status', $status.($by !== '' ? ' ('.$by.')' : '')); shop_sms_status((int)$id, $status); if ($status === 'cancelled') { shop_coupon_release((int)$id); } }
 	return (bool)$st;
+}
+
+// ---- Google Geocoding + what3words keys for the delivery-zone check (shop_geocode_google(),
+// shop_geocode_w3w()). Stored encrypted the same way as the Mollie key (tp_shop_settings, backend
+// UI in Einstellungen > Lieferservice); config.general.php's googlemap_key/what3wordsApiKey still
+// work as a fallback for an operator who prefers editing the file directly.
+function shop_google_key() {
+	$blob = shop_setting('google_key');
+	$k = $blob ? sms_decrypt($blob) : null;
+	if ($k !== null && $k !== '') { return $k; }
+	global $settings;
+	return trim((string)(isset($settings['googlemap_key']) ? $settings['googlemap_key'] : ''));
+}
+function shop_google_key_info() {
+	$k = shop_google_key();
+	return array('set' => $k !== '', 'masked' => $k === '' ? '' : '••••'.substr($k, -4));
+}
+function shop_w3w_key() {
+	$blob = shop_setting('w3w_key');
+	$k = $blob ? sms_decrypt($blob) : null;
+	if ($k !== null && $k !== '') { return $k; }
+	global $settings;
+	return trim((string)(isset($settings['what3wordsApiKey']) ? $settings['what3wordsApiKey'] : ''));
+}
+function shop_w3w_key_info() {
+	$k = shop_w3w_key();
+	return array('set' => $k !== '', 'masked' => $k === '' ? '' : '••••'.substr($k, -4));
 }
 
 // ---- Mollie (online payment). The key is stored encrypted (tp_shop_settings.mollie_key), a test_ key works in test mode.

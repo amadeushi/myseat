@@ -10,6 +10,10 @@ $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 $o = shop_driver_order(isset($_GET['t']) ? (string)$_GET['t'] : '', isset($_GET['k']) ? (string)$_GET['k'] : '');
 $items = $o ? shop_order_items((int)$o['id']) : array();
 $addr = $o ? trim($o['street'].', '.$o['zip'].' '.$o['city']) : '';
+// a what3words-sourced order has no real street for Google Maps to search - it does have the
+// coordinate the code resolved to (shop_find_zone_w3w()), which is what the driver actually needs
+$isW3w = $o && strpos($o['street'], 'what3words: ') === 0;
+$routeDest = ($isW3w && $o['lat'] !== null && $o['lng'] !== null) ? $o['lat'].','.$o['lng'] : $addr;
 $pay = $o ? ($o['payment_method'] === 'mollie' || $o['payment_status'] === 'paid' ? 'Bezahlt, nichts zu kassieren' : (($o['payment_method'] === 'cash' ? 'BAR kassieren: ' : 'KARTE kassieren: ').shop_money($o['total_cents']))) : '';
 ?>
 <!DOCTYPE html>
@@ -36,7 +40,7 @@ $pay = $o ? ($o['payment_method'] === 'mollie' || $o['payment_status'] === 'paid
 		<h2>Adresse</h2>
 		<p class="dv-big"><?php echo shop_h($addr); ?></p>
 		<?php if ($o['address_note'] !== ''): ?><p class="cart-opts"><?php echo shop_h($o['address_note']); ?></p><?php endif; ?>
-		<p class="dv-links"><a class="cart-go dv-alt" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&amp;destination=<?php echo rawurlencode($addr); ?>">Route öffnen</a>
+		<p class="dv-links"><a class="cart-go dv-alt" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&amp;destination=<?php echo rawurlencode($routeDest); ?>">Route öffnen</a>
 			<a class="cart-go dv-alt" href="tel:<?php echo shop_h(preg_replace('/[^0-9+]/', '', $o['phone'])); ?>"><?php echo shop_h($o['customer_name']); ?> anrufen</a></p>
 	</div>
 

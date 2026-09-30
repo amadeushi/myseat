@@ -3,7 +3,7 @@
 (function () {
 	'use strict';
 	var KEY = 'amadeusCartV2', GUEST = 'amadeusGuestV1', TOKEN = document.body.dataset.token;
-	var S = { mode: 'delivery', cart: [], info: null, zone: null, zoneKey: '', slots: null, tipPct: 0, tipCustom: '', when: 'asap', pay: '', busy: false, coupon: null };
+	var S = { mode: 'delivery', cart: [], info: null, zone: null, zoneKey: '', zoneWords: '', w3wKey: '', slots: null, tipPct: 0, tipCustom: '', when: 'asap', pay: '', busy: false, coupon: null };
 	var form = document.getElementById('co-form');
 
 	function $(s, r) { return (r || document).querySelector(s); }
@@ -69,8 +69,10 @@
 		if (subtotal() < min()) { return 'Noch ' + fmt(min() - subtotal()) + ' bis zum Mindestbestellwert von ' + fmt(min()) + '.'; }
 		if (S.mode === 'delivery' && !S.zone) {
 			var street = form.elements.street.value.trim(), zip = form.elements.zip.value.trim(), city = form.elements.city.value.trim();
-			if (!street || !zip || !city) { return 'Bitte gib deine Lieferadresse an.'; }
-			if (S.zoneKey === street + '|' + zip + '|' + city) { return 'Wir liefern leider nicht zu dieser Adresse.'; }
+			var w3w = $('#co-w3w'), words = w3w ? w3w.value.trim() : '';
+			if (!street && !zip && !city && !words) { return 'Bitte gib deine Lieferadresse an.'; }
+			if (words && S.w3wKey === words) { return 'Wir liefern leider nicht zu dieser Adresse.'; }
+			if (street && zip && city && S.zoneKey === street + '|' + zip + '|' + city) { return 'Wir liefern leider nicht zu dieser Adresse.'; }
 			return 'Wir prüfen noch, ob wir zu deiner Adresse liefern.';
 		}
 		var dayEl = $('select[name=day]'), timeEl = $('select[name=time]');
@@ -91,7 +93,7 @@
 	// while ordering for delivery; the time step counts as done once "as soon as possible" or a slot is picked)
 	function checklist() {
 		var items = [];
-		if (S.mode === 'delivery') { items.push(!!(form.elements.street.value.trim() && form.elements.zip.value.trim() && form.elements.city.value.trim() && S.zone)); }
+		if (S.mode === 'delivery') { items.push(!!(S.zoneWords || (form.elements.street.value.trim() && form.elements.zip.value.trim() && form.elements.city.value.trim())) && !!S.zone); }
 		var dayEl = $('select[name=day]'), timeEl = $('select[name=time]');
 		items.push(S.when === 'asap' || !!(dayEl && timeEl && timeEl.value));
 		items.push(!!(form.elements.name.value.trim() && form.elements.phone.value.trim()));
@@ -118,21 +120,48 @@
 		$('#co-modehint').textContent = m === 'delivery' ? 'Wir liefern innerhalb unseres Liefergebiets. Die Liefergebühr hängt von deiner Adresse ab.' : 'Du holst dein Essen bei uns ab, bezahlen kannst du online oder vor Ort.';
 		loadSlots(); renderPay(); renderSummary();
 	}
+	// the what3words escape hatch only appears once a typed address is not found (not when it is
+	// simply outside the delivery area - a code will not help there either)
+	function setW3wVisible(show) {
+		var t = $('#co-w3w-toggle'), b = $('#co-w3w-box');
+		if (t) { t.hidden = !show; }
+		if (!show && b) { b.hidden = true; }
+	}
 	var zoneTimer;
 	function checkZone() {
 		clearTimeout(zoneTimer);
 		var street = form.elements.street.value.trim(), zip = form.elements.zip.value.trim(), city = form.elements.city.value.trim(), out = $('#co-zone');
 		var key = street + '|' + zip + '|' + city;
-		if (!street || !zip || !city) { S.zone = null; S.zoneKey = ''; out.textContent = ''; renderSummary(); return; }
+		// typing a real address again means leaving what3words mode, even if it had succeeded
+		S.zoneWords = ''; S.w3wKey = '';
+		if (!street || !zip || !city) { S.zone = null; S.zoneKey = ''; out.textContent = ''; setW3wVisible(false); renderSummary(); return; }
 		if (key === S.zoneKey) { return; }
 		out.className = 'co-zone'; out.textContent = 'Adresse wird geprüft ...';
 		zoneTimer = setTimeout(function () {
 			post('zone', { street: street, zip: zip, city: city }).then(function (r) {
 				S.zoneKey = key;
-				if (r.ok) { S.zone = r.zone; out.className = 'co-zone ok'; out.textContent = 'Wir liefern zu dir. Liefergebühr ' + fmt(r.zone.fee) + ', Mindestbestellwert ' + fmt(r.zone.min) + '.'; }
-				else { S.zone = null; out.className = 'co-zone bad'; out.textContent = r.error; }
+				if (r.ok) { S.zone = r.zone; out.className = 'co-zone ok'; out.textContent = 'Wir liefern zu dir. Liefergebühr ' + fmt(r.zone.fee) + ', Mindestbestellwert ' + fmt(r.zone.min) + '.'; setW3wVisible(false); }
+				else { S.zone = null; out.className = 'co-zone bad'; out.textContent = r.error; setW3wVisible(r.reason === 'not_found' && r.w3w_available); }
 				renderSummary();
 			}).catch(function () { out.className = 'co-zone bad'; out.textContent = 'Die Adresse konnte gerade nicht geprüft werden.'; });
+		}, 500);
+	}
+	// same idea as checkZone(), for a what3words code instead of street/zip/city
+	var w3wTimer;
+	function checkZoneW3W() {
+		clearTimeout(w3wTimer);
+		var w = $('#co-w3w'), out = $('#co-zone'); if (!w) { return; }
+		var words = w.value.trim();
+		if (!words) { S.zone = null; S.zoneWords = ''; S.w3wKey = ''; out.textContent = ''; renderSummary(); return; }
+		if (words === S.w3wKey) { return; }
+		out.className = 'co-zone'; out.textContent = 'Code wird geprüft ...';
+		w3wTimer = setTimeout(function () {
+			post('zone', { words: words }).then(function (r) {
+				S.w3wKey = words;
+				if (r.ok) { S.zone = r.zone; S.zoneWords = r.words || words; out.className = 'co-zone ok'; out.textContent = 'Wir liefern zu dir. Liefergebühr ' + fmt(r.zone.fee) + ', Mindestbestellwert ' + fmt(r.zone.min) + '.'; }
+				else { S.zone = null; S.zoneWords = ''; out.className = 'co-zone bad'; out.textContent = r.error; }
+				renderSummary();
+			}).catch(function () { out.className = 'co-zone bad'; out.textContent = 'Der Code konnte gerade nicht geprüft werden.'; });
 		}, 500);
 	}
 	function loadSlots() {
@@ -189,7 +218,9 @@
 	form.addEventListener('input', function (ev) {
 		if (/^(street|zip|city)$/.test(ev.target.name)) { checkZone(); }
 		if (/^(street|zip|city|name|phone)$/.test(ev.target.name)) { updateSubmit(); }
+		if (ev.target.id === 'co-w3w') { checkZoneW3W(); updateSubmit(); }
 	});
+	(function () { var t = $('#co-w3w-toggle'), b = $('#co-w3w-box'); if (t && b) { t.addEventListener('click', function () { b.hidden = false; $('#co-w3w').focus(); }); } })();
 	form.addEventListener('change', function (ev) {
 		var t = ev.target;
 		if (t.name === 'whenmode') { S.when = t.value === 'asap' ? 'asap' : 'slot'; S.whenTouched = true; updateSubmit(); }
@@ -226,7 +257,7 @@
 		S.busy = true; updateSubmit(); $('#co-submit').textContent = 'Einen Moment ...';
 		post('create', {
 			type: S.mode, when: when, payment: S.pay, tip: tipCents(), name: f.name.value, phone: f.phone.value, email: f.email.value, note: f.note.value,
-			street: f.street.value, zip: f.zip.value, city: f.city.value, address_note: f.address_note.value, website: f.website.value, coupon: S.coupon ? S.coupon.code : '',
+			street: f.street.value, zip: f.zip.value, city: f.city.value, words: S.zoneWords, address_note: f.address_note.value, website: f.website.value, coupon: S.coupon ? S.coupon.code : '',
 			lines: S.cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; })
 		}).then(function (r) {
 			if (!r.ok) { var msg = r.error || 'Das hat nicht geklappt.'; err.textContent = msg; S.busy = false; updateSubmit(); $('#co-why').textContent = msg; err.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); return; }

@@ -52,7 +52,22 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
-2026-09-30 == mySeat v4.6.0 == amadeushi - http://github.com/amadeushi/myseat
+2026-09-30 == mySeat v4.7.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: the delivery-zone address check (order/index.php quick check and order/checkout.php) now
+   falls back to Google Geocoding when OpenStreetMap/Nominatim cannot find an address - a paid
+   fallback only, never the default path, so a normal lookup Nominatim already answers costs
+   nothing.
+ * New: a what3words escape hatch for addresses with no real street (a field, an event site) -
+   appears only after both Nominatim and Google fail to find a typed address, lets the guest enter
+   a what3words code instead. The order stores the code plus the resolved coordinate; the driver's
+   dispatch link opens a route to the coordinate directly, since Google Maps cannot search a
+   what3words code as text.
+ * The Google and what3words API keys above are entered in the backend (Einstellungen >
+   Lieferservice), stored encrypted the same way as the Mollie key - config.general.php's
+   $settings['googlemap_key'] / $settings['what3wordsApiKey'] still work as a fallback for an
+   operator who prefers editing the file directly, but the backend value wins if both are set
+ * Shaped with /impeccable shape
 
  * New: a "Teilen" button on the guest page (api/cancel.php), shaped with /impeccable shape - a
    guest can forward a warm, cancel-link-free summary (date, time, table, menu/drinks links,

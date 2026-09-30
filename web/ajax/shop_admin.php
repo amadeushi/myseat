@@ -54,6 +54,34 @@ if ($op === 'save_mollie') {
 	sa_out(array('ok' => true, 'message' => 'Gespeichert.'));
 }
 if ($op === 'clear_mollie') { shop_setting_set('mollie_key', null); sa_out(array('ok' => true, 'message' => 'Der Mollie-Schlüssel wurde gelöscht.')); }
+
+if ($op === 'save_google_key') {
+	$key = isset($_POST['google_key']) ? trim((string)$_POST['google_key']) : '';
+	if ($key !== '') {
+		if (!preg_match('/^[A-Za-z0-9_-]{20,60}$/', $key)) { sa_out(array('ok' => false, 'error' => 'Der Schlüssel sieht nicht richtig aus.')); }
+		$enc = sms_encrypt($key);
+		if ($enc === null) { sa_out(array('ok' => false, 'error' => 'Der Schlüssel konnte nicht verschlüsselt werden.')); }
+		shop_setting_set('google_key', $enc);
+	}
+	sa_out(array('ok' => true, 'message' => 'Gespeichert.'));
+}
+if ($op === 'clear_google_key') { shop_setting_set('google_key', null); sa_out(array('ok' => true, 'message' => 'Der Google-Schlüssel wurde gelöscht.')); }
+if ($op === 'test_google_key') { sa_out(shop_google_test()); }
+
+if ($op === 'save_w3w_key') {
+	$key = isset($_POST['w3w_key']) ? trim((string)$_POST['w3w_key']) : '';
+	if ($key !== '') {
+		// what3words does not document a fixed key format (unlike Mollie's test_/live_ prefix) -
+		// only a sane length is checked here, the what3words API itself is the real validator
+		if (mb_strlen($key) < 8 || mb_strlen($key) > 100) { sa_out(array('ok' => false, 'error' => 'Der Schlüssel sieht nicht richtig aus.')); }
+		$enc = sms_encrypt($key);
+		if ($enc === null) { sa_out(array('ok' => false, 'error' => 'Der Schlüssel konnte nicht verschlüsselt werden.')); }
+		shop_setting_set('w3w_key', $enc);
+	}
+	sa_out(array('ok' => true, 'message' => 'Gespeichert.'));
+}
+if ($op === 'clear_w3w_key') { shop_setting_set('w3w_key', null); sa_out(array('ok' => true, 'message' => 'Der what3words-Schlüssel wurde gelöscht.')); }
+if ($op === 'test_w3w_key') { sa_out(shop_w3w_test()); }
 if ($op === 'test_mollie') {
 	$r = shop_mollie_test();
 	sa_out($r['ok'] ? array('ok' => true, 'message' => 'Verbindung in Ordnung. Aktive Zahlarten: '.($r['methods'] ? implode(', ', $r['methods']) : 'keine (im Mollie-Konto aktivieren)').'.') : array('ok' => false, 'error' => $r['error']));

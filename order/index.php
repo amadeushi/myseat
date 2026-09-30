@@ -50,6 +50,10 @@ $notice = (string)shop_setting('notice');
 						<label class="co-f"><span>PLZ</span><input type="text" id="sz-zip" inputmode="numeric" autocomplete="postal-code" maxlength="10"/></label>
 						<label class="co-f"><span>Ort</span><input type="text" id="sz-city" autocomplete="address-level2" maxlength="80" value="Hildesheim"/></label>
 					</div>
+					<button type="button" class="shop-zone-w3w-toggle" id="sz-w3w-toggle" hidden>Liegt es an keiner Straße? what3words-Code eingeben</button>
+					<div class="co-grid" id="sz-w3w-box" hidden>
+						<label class="co-f wide"><span>what3words-Code</span><input type="text" id="sz-w3w" maxlength="40" placeholder="///beispiel.wort.code"/></label>
+					</div>
 				</div>
 			</div>
 		</div>

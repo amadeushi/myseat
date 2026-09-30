@@ -53,6 +53,10 @@ $imprint = (!empty($settings['imprintUrl']) && preg_match('#^https?://#i', $sett
 					<label class="co-f wide"><span>Hinweis zur Adresse (optional)</span><input type="text" name="address_note" maxlength="200" placeholder="Etage, Klingel, Hinterhaus"/></label>
 				</div>
 				<p class="co-zone" id="co-zone" role="status" aria-live="polite"></p>
+				<button type="button" class="shop-zone-w3w-toggle" id="co-w3w-toggle" hidden>Liegt es an keiner Straße? what3words-Code eingeben</button>
+				<div class="co-grid" id="co-w3w-box" hidden>
+					<label class="co-f wide"><span>what3words-Code</span><input type="text" id="co-w3w" maxlength="40" placeholder="///beispiel.wort.code"/></label>
+				</div>
 			</fieldset>
 
 			<fieldset class="co-sec">

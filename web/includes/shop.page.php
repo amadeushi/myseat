@@ -13,6 +13,8 @@ $sh_days = array('Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So');
 $sh_by = array('delivery' => array(), 'pickup' => array());
 foreach ($sh_hours as $h) { $sh_by[$h['kind']][(int)$h['weekday']][] = substr($h['begins'], 0, 5).' bis '.substr($h['ends'], 0, 5); }
 $sh_mollie = shop_mollie_info();
+$sh_google = shop_google_key_info();
+$sh_w3w = shop_w3w_key_info();
 $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; };
 ?>
 <div class="sms-page shop-page" data-endpoint="ajax/shop_admin.php" data-token="<?php echo $sh_e($token); ?>">
@@ -91,6 +93,36 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 		</p>
 	</form>
 
+	<h4 class="sms-sub">Google Geocoding (Adress-Fallback)</h4>
+	<p class="offer-help">Wird nur benutzt, wenn OpenStreetMap eine eingegebene Lieferadresse nicht findet - kostenlose Adressen werden dadurch nie kostenpflichtig. Schlüssel im Google-Cloud-Konsole unter APIs &amp; Dienste, Anmeldedaten (Geocoding API aktivieren). Wird verschlüsselt gespeichert, nie wieder angezeigt, nur die letzten 4 Zeichen.</p>
+	<div class="sms-status">
+		<?php if ($sh_google['set']): ?><span class="offer-badge sms-badge-on">Schlüssel hinterlegt</span><span class="sms-keyinfo"><?php echo $sh_e($sh_google['masked']); ?></span>
+		<?php else: ?><span class="offer-badge">Kein Schlüssel hinterlegt</span><?php endif; ?>
+	</div>
+	<form class="sms-form" id="google-key-form" autocomplete="off">
+		<input type="password" name="google_key" autocomplete="new-password" spellcheck="false" placeholder="<?php echo $sh_google['set'] ? 'Neuen Schlüssel einfügen (optional)' : 'API-Schlüssel einfügen'; ?>"/>
+		<p class="offer-actions">
+			<button type="submit" class="button_dark">Speichern</button>
+			<?php if ($sh_google['set']): ?><button type="button" class="button_dark" id="google-key-test">Verbindung prüfen</button><button type="button" class="offer-delete" id="google-key-clear">Schlüssel löschen</button><?php endif; ?>
+			<span class="detail-status" id="google-key-msg" role="status" aria-live="polite"></span>
+		</p>
+	</form>
+
+	<h4 class="sms-sub">what3words (Adressen ohne Straße)</h4>
+	<p class="offer-help">Lässt Gäste ohne richtige Adresse (Feld, Veranstaltungsort) einen what3words-Code statt Straße/PLZ/Ort eingeben - erscheint nur, wenn eine eingegebene Adresse gar nicht gefunden wird. Schlüssel unter <a href="https://what3words.com/select-plan" target="_blank" rel="noopener">what3words.com/select-plan</a>. Wird verschlüsselt gespeichert, nie wieder angezeigt, nur die letzten 4 Zeichen.</p>
+	<div class="sms-status">
+		<?php if ($sh_w3w['set']): ?><span class="offer-badge sms-badge-on">Schlüssel hinterlegt</span><span class="sms-keyinfo"><?php echo $sh_e($sh_w3w['masked']); ?></span>
+		<?php else: ?><span class="offer-badge">Kein Schlüssel hinterlegt</span><?php endif; ?>
+	</div>
+	<form class="sms-form" id="w3w-key-form" autocomplete="off">
+		<input type="password" name="w3w_key" autocomplete="new-password" spellcheck="false" placeholder="<?php echo $sh_w3w['set'] ? 'Neuen Schlüssel einfügen (optional)' : 'API-Schlüssel einfügen'; ?>"/>
+		<p class="offer-actions">
+			<button type="submit" class="button_dark">Speichern</button>
+			<?php if ($sh_w3w['set']): ?><button type="button" class="button_dark" id="w3w-key-test">Verbindung prüfen</button><button type="button" class="offer-delete" id="w3w-key-clear">Schlüssel löschen</button><?php endif; ?>
+			<span class="detail-status" id="w3w-key-msg" role="status" aria-live="polite"></span>
+		</p>
+	</form>
+
 	<h4 class="sms-sub">Speisekarte</h4>
 	<p class="offer-help">Kategorien, Gerichte und Zubehörgruppen (Größen, Beilagen, Extras) pflegst du im Speisekarten-Editor.</p>
 	<p class="offer-actions"><a class="button_dark" href="main_page.php?p=10">Speisekarte bearbeiten</a></p>
@@ -164,5 +196,19 @@ window.addEventListener('load', function () {
 	if (mt) { mt.addEventListener('click', function () { say(mmsg, 'Einen Moment ...', false); post('test_mollie', {}, function (r) { say(mmsg, r.message, false); }, function (e) { say(mmsg, e, true); }); }); }
 	var mc = document.getElementById('mollie-clear');
 	if (mc) { mc.addEventListener('click', function () { if (mc.dataset.armed) { post('clear_mollie', {}, function () { location.reload(); }, function (e) { say(mmsg, e, true); }); } else { mc.dataset.armed = '1'; mc.textContent = 'Wirklich löschen?'; setTimeout(function () { mc.dataset.armed = ''; mc.textContent = 'Schlüssel löschen'; }, 4000); } }); }
+
+	// same save/clear pattern as Mollie above, for the two delivery-zone geocoding keys
+	function wireKeyForm(formId, msgId, clearId, saveOp, clearOp, field, clearLabel) {
+		var f = document.getElementById(formId), m = document.getElementById(msgId); if (!f) { return; }
+		f.addEventListener('submit', function (ev) { ev.preventDefault(); say(m, 'Einen Moment ...', false); post(saveOp, ((function () { var d = {}; d[field] = f.elements[field].value; return d; })()), function (r) { say(m, r.message, false); setTimeout(function () { location.reload(); }, 700); }, function (e) { say(m, e, true); }); });
+		var c = document.getElementById(clearId);
+		if (c) { c.addEventListener('click', function () { if (c.dataset.armed) { post(clearOp, {}, function () { location.reload(); }, function (e) { say(m, e, true); }); } else { c.dataset.armed = '1'; c.textContent = 'Wirklich löschen?'; setTimeout(function () { c.dataset.armed = ''; c.textContent = clearLabel; }, 4000); } }); }
+	}
+	wireKeyForm('google-key-form', 'google-key-msg', 'google-key-clear', 'save_google_key', 'clear_google_key', 'google_key', 'Schlüssel löschen');
+	wireKeyForm('w3w-key-form', 'w3w-key-msg', 'w3w-key-clear', 'save_w3w_key', 'clear_w3w_key', 'w3w_key', 'Schlüssel löschen');
+	var gt = document.getElementById('google-key-test'), gtmsg = document.getElementById('google-key-msg');
+	if (gt) { gt.addEventListener('click', function () { say(gtmsg, 'Einen Moment ...', false); post('test_google_key', {}, function (r) { say(gtmsg, r.message, false); }, function (e) { say(gtmsg, e, true); }); }); }
+	var wt = document.getElementById('w3w-key-test'), wtmsg = document.getElementById('w3w-key-msg');
+	if (wt) { wt.addEventListener('click', function () { say(wtmsg, 'Einen Moment ...', false); post('test_w3w_key', {}, function (r) { say(wtmsg, r.message, false); }, function (e) { say(wtmsg, e, true); }); }); }
 });
 </script>

@@ -61,12 +61,19 @@
 		if (backdrop) { backdrop.hidden = true; }
 		if (toggle) { toggle.setAttribute('aria-expanded', 'false'); }
 	}
+	// the what3words escape hatch only appears once a typed address is not found (not when it is
+	// simply outside the delivery area - a code will not help there either)
+	function setW3wVisible(show) {
+		var t = $('#sz-w3w-toggle'), b = $('#sz-w3w-box');
+		if (t) { t.hidden = !show; }
+		if (!show && b) { b.hidden = true; }
+	}
 	var zoneTimer, zoneKey = '';
 	function checkShopZone() {
 		clearTimeout(zoneTimer);
 		var s = $('#sz-street'), z = $('#sz-zip'), c = $('#sz-city'); if (!s || !z || !c) { return; }
 		var street = s.value.trim(), zip = z.value.trim(), city = c.value.trim(), key = street + '|' + zip + '|' + city;
-		if (!street || !zip || !city) { renderZoneResult('', ''); setDeliveryLocked(false); return; }
+		if (!street || !zip || !city) { renderZoneResult('', ''); setDeliveryLocked(false); setW3wVisible(false); return; }
 		if (key === zoneKey) { return; }
 		renderZoneResult('', 'Adresse wird geprüft ...');
 		zoneTimer = setTimeout(function () {
@@ -76,10 +83,29 @@
 					// the result shows next to the toggle regardless of the box's own open/closed state - the box
 					// itself is left open here on purpose (see initShopZone): closing it on every resolved check
 					// used to snap it shut mid-keystroke on mobile as soon as all three fields held some value
-					if (r.ok) { renderZoneResult('ok', '✓ Wir liefern zu dir'); setDeliveryLocked(false); }
-					else { renderZoneResult('', ''); setDeliveryLocked(true); toast(r.error); }
+					if (r.ok) { renderZoneResult('ok', '✓ Wir liefern zu dir'); setDeliveryLocked(false); setW3wVisible(false); }
+					else { renderZoneResult('', ''); setDeliveryLocked(true); toast(r.error); setW3wVisible(r.reason === 'not_found' && r.w3w_available); }
 					saveGuestAddress({ street: street, zip: zip, city: city });
 				}).catch(function () { renderZoneResult('bad', 'Adresse konnte nicht geprüft werden'); });
+		}, 500);
+	}
+	// same idea as checkShopZone(), for a what3words code instead of street/zip/city - purely
+	// informational here (this widget never places an order), checkout.js re-checks independently
+	var w3wTimer, w3wKey = '';
+	function checkShopZoneW3W() {
+		clearTimeout(w3wTimer);
+		var w = $('#sz-w3w'); if (!w) { return; }
+		var words = w.value.trim();
+		if (!words) { renderZoneResult('', ''); setDeliveryLocked(false); return; }
+		if (words === w3wKey) { return; }
+		renderZoneResult('', 'Code wird geprüft ...');
+		w3wTimer = setTimeout(function () {
+			fetch('api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ op: 'zone', token: TOKEN, words: words }) })
+				.then(function (r) { return r.json(); }).then(function (r) {
+					w3wKey = words;
+					if (r.ok) { renderZoneResult('ok', '✓ Wir liefern zu dir'); setDeliveryLocked(false); }
+					else { renderZoneResult('', ''); setDeliveryLocked(true); toast(r.error); }
+				}).catch(function () { renderZoneResult('bad', 'Code konnte nicht geprüft werden'); });
 		}, 500);
 	}
 	function initShopZone() {
@@ -90,7 +116,12 @@
 			if (backdrop) { backdrop.hidden = !open; }
 			if (open) { $('#sz-street').focus(); }
 		});
-		box.addEventListener('input', function (ev) { if (/^(sz-street|sz-zip|sz-city)$/.test(ev.target.id)) { checkShopZone(); } });
+		box.addEventListener('input', function (ev) {
+			if (/^(sz-street|sz-zip|sz-city)$/.test(ev.target.id)) { checkShopZone(); }
+			if (ev.target.id === 'sz-w3w') { checkShopZoneW3W(); }
+		});
+		var w3wToggle = $('#sz-w3w-toggle'), w3wBox = $('#sz-w3w-box');
+		if (w3wToggle && w3wBox) { w3wToggle.addEventListener('click', function () { w3wBox.hidden = false; $('#sz-w3w').focus(); }); }
 		document.addEventListener('click', function (ev) { if (!box.hidden && !zone.contains(ev.target)) { closeShopZone(); } });
 		document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && !box.hidden) { closeShopZone(); toggle.focus(); } });
 	}
