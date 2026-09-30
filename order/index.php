@@ -41,6 +41,17 @@ $notice = (string)shop_setting('notice');
 				<button type="button" class="mode-btn" data-mode="pickup" aria-pressed="false">Abholung</button>
 			</div>
 			<p class="shop-status" id="shop-status" role="status" aria-live="polite"></p>
+			<div class="shop-zone" id="shop-zone">
+				<button type="button" class="shop-zone-toggle" id="shop-zone-toggle" aria-expanded="false" aria-controls="shop-zone-box">Liefert ihr zu mir?</button>
+				<p class="shop-zone-result" id="shop-zone-result" role="status" aria-live="polite"></p>
+				<div class="shop-zone-box" id="shop-zone-box" hidden>
+					<div class="co-grid">
+						<label class="co-f wide"><span>Straße und Hausnummer</span><input type="text" id="sz-street" autocomplete="street-address" maxlength="120"/></label>
+						<label class="co-f"><span>PLZ</span><input type="text" id="sz-zip" inputmode="numeric" autocomplete="postal-code" maxlength="10"/></label>
+						<label class="co-f"><span>Ort</span><input type="text" id="sz-city" autocomplete="address-level2" maxlength="80" value="Hildesheim"/></label>
+					</div>
+				</div>
+			</div>
 		</div>
 	</header>
 	<?php if ($notice !== ''): ?><p class="shop-notice"><?php echo shop_h($notice); ?></p><?php endif; ?>

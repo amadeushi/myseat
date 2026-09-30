@@ -93,6 +93,11 @@ $title = count($reservations) > 1 ? 'Reservierungsschilder '.$reservations[0]['r
 		.table .blank { height: 15mm; border-bottom: .5mm dotted #000; margin: 2mm 6mm 0; }
 		.table .seq { margin-top: 1mm; padding-top: 1.6mm; border-top: .5mm solid #000; font-size: 10.5pt; font-weight: 700; letter-spacing: .1em; }
 		.foot { margin-top: 3mm; font-size: 8.5pt; font-weight: 600; }
+		/* a two-line guest name already adds a full extra line of height; trim other vertical spacing back by about the
+		   same amount (~6mm total) so the sign doesn't grow as tall and the paper length stays close to the one-line case */
+		.slip.two-line { padding-top: 2mm; padding-bottom: 5mm; }
+		.slip.two-line .time { margin: 1mm 0 0.5mm; }
+		.slip.two-line .foot { margin-top: 1.5mm; }
 		body.solo .slip { display: none; break-before: auto !important; page-break-before: auto !important; }
 		body.solo .slip.cur { display: block; }
 		@media screen { body { margin: 12px auto; } .slip { border: 1px dashed #999; margin-bottom: 12px; } }
@@ -116,7 +121,7 @@ $title = count($reservations) > 1 ? 'Reservierungsschilder '.$reservations[0]['r
 			<?php else: ?><div class="blank"></div><?php endif; ?>
 			<?php if ($n > 1): ?><div class="seq">Schild <?php echo $i + 1; ?> von <?php echo $n; ?></div><?php endif; ?>
 		</div>
-		<div class="foot">Wir freuen uns auf Sie</div>
+		<div class="foot">Wir freuen uns, dass Sie da sind</div>
 	</section>
 <?php endforeach; ?>
 <script>
@@ -127,6 +132,13 @@ $title = count($reservations) > 1 ? 'Reservierungsschilder '.$reservations[0]['r
 				var size = parseFloat(getComputedStyle(el).fontSize) * 0.75, min = 12;
 				while (size > min && el.scrollWidth > el.clientWidth + 1) { size -= 0.5; el.style.fontSize = size + 'pt'; }
 				if (el.scrollWidth > el.clientWidth + 1) { el.style.overflowWrap = 'anywhere'; }
+			});
+			// a two-line guest name already adds a full extra line of height: trim other vertical spacing back
+			// (see .slip.two-line in the stylesheet) so the sign doesn't grow as tall as name-height + full spacing
+			Array.prototype.forEach.call(document.querySelectorAll('.name'), function (el) {
+				var lineHeight = parseFloat(getComputedStyle(el).lineHeight) || parseFloat(getComputedStyle(el).fontSize) * 1.08;
+				var slip = el.closest('.slip');
+				if (slip) { slip.classList.toggle('two-line', el.clientHeight > lineHeight * 1.4); }
 			});
 		};
 		var go = function () { try { window.focus(); window.print(); } catch (e) {} };

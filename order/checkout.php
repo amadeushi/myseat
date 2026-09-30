@@ -87,7 +87,7 @@ $imprint = (!empty($settings['imprintUrl']) && preg_match('#^https?://#i', $sett
 					</div>
 					<div class="co-tip-custom" id="co-tip-custom" hidden>
 						<label for="co-tip-custom-in">Trinkgeld (frei wählbar)</label>
-						<div class="co-tip-custom-row"><input type="number" id="co-tip-custom-in" min="0" step="0.5" inputmode="decimal" placeholder="0,00"/><span>€</span></div>
+						<div class="co-tip-custom-row"><input type="text" id="co-tip-custom-in" inputmode="decimal" placeholder="0,00"/><span>€</span></div>
 					</div>
 				</div>
 			</fieldset>

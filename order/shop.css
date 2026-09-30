@@ -21,16 +21,31 @@
 
 /* top bar */
 .shop-top { position: sticky; top: 0; z-index: 30; background: rgba(12, 11, 10, 0.96); border-bottom: 1px solid var(--border-soft); backdrop-filter: blur(6px); }
-.shop-top-in { max-width: 1240px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; gap: 12px 24px; flex-wrap: wrap; }
+.shop-top-in { position: relative; max-width: 1240px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; gap: 12px 24px; flex-wrap: wrap; }
 .shop-logo { display: block; flex: none; }
 .shop-mode { display: flex; background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: 999px; padding: 3px; }
 .mode-btn { border: 0; background: transparent; color: var(--text-muted); font-size: 14px; font-weight: 600; min-height: 44px; padding: 0 20px; border-radius: 999px; transition: background 150ms ease, color 150ms ease; box-sizing: border-box; }
 .mode-btn[aria-pressed="true"] { background: var(--gold); color: #1a1408; }
+.mode-btn:disabled { color: rgba(168, 158, 140, 0.4); cursor: not-allowed; }
 .shop-status { font-size: 13px; color: var(--text-muted); margin-left: auto; display: flex; align-items: center; gap: 8px; }
 .shop-status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); flex: none; }
 .shop-status.is-open::before { background: var(--success); }
 .shop-status.is-closed::before { background: var(--danger); }
 .shop-notice { background: var(--surface-2); border-bottom: 1px solid var(--border-soft); color: var(--gold-strong); text-align: center; font-size: 14px; padding: 10px 16px; }
+
+/* quick delivery-zone check on the menu page, before the guest builds a cart (see checkout.php's own .co-zone for the
+   paired flow, re-checked there regardless). Collapsed into a small toggle by default; shop-zone-box is a floating
+   dropdown (like the datepicker/offer-dialog elsewhere in this app), not a row reflowing the header, and it closes
+   itself the moment a check resolves so it never lingers open. */
+.shop-zone { display: flex; align-items: center; gap: 10px; }
+.shop-zone-toggle { border: 0; background: transparent; padding: 0; min-height: 44px; color: var(--gold); font-size: 14px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+.shop-zone-toggle:hover { color: var(--gold-strong); }
+.shop-zone-result { font-size: 13px; color: var(--text-muted); }
+.shop-zone-result:empty { display: none; }
+.shop-zone-result.ok { color: var(--success); }
+.shop-zone-result.bad { color: var(--danger); }
+.shop-zone-box { position: absolute; top: 100%; right: 16px; margin-top: 8px; z-index: 40; width: 320px; max-width: calc(100vw - 32px); padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45); }
+.shop-zone-box .co-grid { margin: 0; }
 
 /* layout */
 .shop-layout { max-width: 1240px; margin: 0 auto; padding: 0 16px 120px; display: grid; grid-template-columns: 1fr; gap: 0 32px; }

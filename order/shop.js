@@ -31,7 +31,66 @@
 	function setMode(m) {
 		state.mode = m; save();
 		$$('.mode-btn').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.mode === m ? 'true' : 'false'); });
+		var zone = $('#shop-zone'); if (zone) { zone.hidden = m !== 'delivery'; }
 		renderStatus(); renderCart();
+	}
+
+	// ---- delivery-zone quick check on the menu page: same 'zone' endpoint checkout.php uses, so a guest can learn
+	// before building a cart whether delivery is possible, instead of finding out only at checkout
+	var GUEST = 'amadeusGuestV1';
+	function saveGuestAddress(a) {
+		try {
+			var d = JSON.parse(localStorage.getItem(GUEST) || '{}'); if (!d || typeof d !== 'object') { d = {}; }
+			d.street = a.street; d.zip = a.zip; d.city = a.city;
+			localStorage.setItem(GUEST, JSON.stringify(d));
+		} catch (e) {}
+	}
+	function setDeliveryLocked(locked) {
+		var btn = $('.mode-btn[data-mode="delivery"]');
+		if (btn) { btn.disabled = locked; btn.classList.toggle('is-locked', locked); }
+		if (locked && state.mode === 'delivery') { setMode('pickup'); }
+	}
+	function renderZoneResult(cls, text) {
+		var el = $('#shop-zone-result'); if (!el) { return; }
+		el.className = 'shop-zone-result' + (cls ? ' ' + cls : '');
+		el.textContent = text;
+	}
+	function closeShopZone() {
+		var box = $('#shop-zone-box'), toggle = $('#shop-zone-toggle');
+		if (box) { box.hidden = true; }
+		if (toggle) { toggle.setAttribute('aria-expanded', 'false'); }
+	}
+	var zoneTimer, zoneKey = '';
+	function checkShopZone() {
+		clearTimeout(zoneTimer);
+		var s = $('#sz-street'), z = $('#sz-zip'), c = $('#sz-city'); if (!s || !z || !c) { return; }
+		var street = s.value.trim(), zip = z.value.trim(), city = c.value.trim(), key = street + '|' + zip + '|' + city;
+		if (!street || !zip || !city) { renderZoneResult('', ''); setDeliveryLocked(false); return; }
+		if (key === zoneKey) { return; }
+		renderZoneResult('', 'Adresse wird geprüft ...');
+		zoneTimer = setTimeout(function () {
+			fetch('api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ op: 'zone', token: TOKEN, street: street, zip: zip, city: city }) })
+				.then(function (r) { return r.json(); }).then(function (r) {
+					zoneKey = key;
+					// the box closes itself the moment a result is known - only the short summary next to the
+					// toggle stays, so the header never keeps the open form sitting around after the guest is done
+					if (r.ok) { renderZoneResult('ok', '✓ Wir liefern zu dir'); setDeliveryLocked(false); }
+					else { renderZoneResult('', ''); setDeliveryLocked(true); toast(r.error); }
+					saveGuestAddress({ street: street, zip: zip, city: city });
+					closeShopZone();
+				}).catch(function () { renderZoneResult('bad', 'Adresse konnte nicht geprüft werden'); closeShopZone(); });
+		}, 500);
+	}
+	function initShopZone() {
+		var zone = $('#shop-zone'), toggle = $('#shop-zone-toggle'), box = $('#shop-zone-box'); if (!zone || !toggle || !box) { return; }
+		toggle.addEventListener('click', function () {
+			var open = box.hidden;
+			box.hidden = !open; toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+			if (open) { $('#sz-street').focus(); }
+		});
+		box.addEventListener('input', function (ev) { if (/^(sz-street|sz-zip|sz-city)$/.test(ev.target.id)) { checkShopZone(); } });
+		document.addEventListener('click', function (ev) { if (!box.hidden && !zone.contains(ev.target)) { closeShopZone(); } });
+		document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && !box.hidden) { closeShopZone(); toggle.focus(); } });
 	}
 
 	// ---- categories: highlight the one in view
@@ -407,6 +466,7 @@
 	setMode(state.mode);
 	watchCategories();
 	initSearch();
+	initShopZone();
 	loadState();
 	setInterval(loadState, 60000);
 	if (ACCEPT) { renderCart(); }

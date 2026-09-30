@@ -67,7 +67,16 @@
 		if (!S.cart.length) { return 'Dein Warenkorb ist leer.'; }
 		if (S.info && !S.info.accepting) { return 'Wir nehmen gerade keine Bestellungen an.'; }
 		if (subtotal() < min()) { return 'Noch ' + fmt(min() - subtotal()) + ' bis zum Mindestbestellwert von ' + fmt(min()) + '.'; }
-		if (S.mode === 'delivery' && !S.zone) { return form.elements.street.value.trim() ? 'Wir prüfen noch, ob wir zu deiner Adresse liefern.' : 'Bitte gib deine Lieferadresse an.'; }
+		if (S.mode === 'delivery' && !S.zone) {
+			var street = form.elements.street.value.trim(), zip = form.elements.zip.value.trim(), city = form.elements.city.value.trim();
+			if (!street || !zip || !city) { return 'Bitte gib deine Lieferadresse an.'; }
+			if (S.zoneKey === street + '|' + zip + '|' + city) { return 'Wir liefern leider nicht zu dieser Adresse.'; }
+			return 'Wir prüfen noch, ob wir zu deiner Adresse liefern.';
+		}
+		var dayEl = $('select[name=day]'), timeEl = $('select[name=time]');
+		if (S.when !== 'asap' && !(dayEl && timeEl && timeEl.value)) { return 'Bitte wähle eine Zeit.'; }
+		if (!form.elements.name.value.trim()) { return 'Bitte gib deinen Namen an.'; }
+		if (!form.elements.phone.value.trim()) { return 'Bitte gib deine Telefonnummer an.'; }
 		if (!S.pay) { return 'Bitte wähle eine Zahlungsart.'; }
 		return '';
 	}
@@ -141,6 +150,7 @@
 			if (!r.asap && !r.days.length) { h = '<p class="co-zone bad">Zurzeit kannst du leider nicht bestellen. Schau später wieder vorbei.</p>'; }
 			$('#co-when').innerHTML = h;
 			fillTimes();
+			updateSubmit();
 		});
 	}
 	function fillTimes() {
@@ -178,13 +188,13 @@
 	// ---- events
 	form.addEventListener('input', function (ev) {
 		if (/^(street|zip|city)$/.test(ev.target.name)) { checkZone(); }
-		if (/^(street|zip|city|name|phone)$/.test(ev.target.name)) { updateProgress(); }
+		if (/^(street|zip|city|name|phone)$/.test(ev.target.name)) { updateSubmit(); }
 	});
 	form.addEventListener('change', function (ev) {
 		var t = ev.target;
-		if (t.name === 'whenmode') { S.when = t.value === 'asap' ? 'asap' : 'slot'; S.whenTouched = true; updateProgress(); }
-		if (t.name === 'day') { fillTimes(); }
-		if (t.name === 'time') { updateProgress(); }
+		if (t.name === 'whenmode') { S.when = t.value === 'asap' ? 'asap' : 'slot'; S.whenTouched = true; updateSubmit(); }
+		if (t.name === 'day') { fillTimes(); updateSubmit(); }
+		if (t.name === 'time') { updateSubmit(); }
 		if (t.name === 'pay') { S.pay = t.value; updateSubmit(); }
 	});
 	document.addEventListener('click', function (ev) {
@@ -219,17 +229,18 @@
 			street: f.street.value, zip: f.zip.value, city: f.city.value, address_note: f.address_note.value, website: f.website.value, coupon: S.coupon ? S.coupon.code : '',
 			lines: S.cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; })
 		}).then(function (r) {
-			if (!r.ok) { err.textContent = r.error || 'Das hat nicht geklappt.'; S.busy = false; updateSubmit(); return; }
+			if (!r.ok) { var msg = r.error || 'Das hat nicht geklappt.'; err.textContent = msg; S.busy = false; updateSubmit(); $('#co-why').textContent = msg; err.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); return; }
 			try { var d = JSON.parse(localStorage.getItem(KEY) || '{}'); d.cart = []; localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) {}
 			location.href = r.redirect;
-		}).catch(function () { err.textContent = 'Das hat nicht geklappt. Bitte versuche es noch einmal.'; S.busy = false; updateSubmit(); });
+		}).catch(function () { var msg = 'Das hat nicht geklappt. Bitte versuche es noch einmal.'; err.textContent = msg; S.busy = false; updateSubmit(); $('#co-why').textContent = msg; err.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); });
 	});
 
 	load(); prefill();
 	if (!S.cart.length) { $('#co-empty').hidden = false; $$('.co-sec').forEach(function (s) { s.hidden = true; }); }
 	fetch('api.php?op=state', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) {
 		if (!r.ok || !r.accepting) { location.href = './'; return; }
-		S.info = r; setMode(S.mode); checkZone();
+		S.info = r;
+		if (S.cart.length) { setMode(S.mode); checkZone(); }
 	});
 	renderSummary();
 	try { var pc = new URLSearchParams(location.search).get('code'); if (pc && S.cart.length) { $('#co-coupon-in').value = pc; applyCoupon(pc, false); } } catch (e) {}

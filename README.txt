@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 4.4.2                         =-=
+=-= Version: 4.5.0                         =-=
 =-= Date:    30.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -51,6 +51,36 @@ tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-30 == mySeat v4.5.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: a "Liefert ihr zu mir?" quick delivery-zone check on the menu page (order/index.php),
+   shaped with /impeccable shape - a guest can check their address before building a cart
+   instead of finding out only at checkout that delivery isn't possible. Collapsed into a small
+   link by default; opens a floating dropdown (address fields), locks the delivery toggle and
+   switches to pickup if the address is rejected, and hands the checked address to checkout.php
+   through the same "remember my details" storage it already reads
+ * Guest-facing checkout page (order/checkout.php), following an /impeccable critique pass:
+ * Fix: the submit button could look fully ready while name, phone, or a selected time were
+   still missing - it now validates all three before enabling, matching the progress checklist
+   that already tracked them
+ * Fix: the custom tip amount field rejected the comma-decimal format its own placeholder asked
+   for ("0,00") - a German guest could not enter a custom tip at all
+ * Fix: a failed order submission's error message rendered ~600px away from the sticky submit
+   button, invisible to a guest who had scrolled down to tap it - it now also appears next to
+   the button and scrolls into view
+ * Fix: an empty cart still showed a fully interactive, fillable address form underneath the
+   "cart is empty" message, because the async server-state callback re-showed it regardless of
+   cart contents
+ * Fix: a rejected delivery address was told simultaneously "we don't deliver here" and "we're
+   still checking" - the second message now has its own case for an address already checked and
+   rejected
+ * Reservation table signs (web/reservation_bon.php): the footer text "Wir freuen uns auf Sie"
+   assumed the guest hadn't arrived yet, though the sign is printed and placed once they're
+   already seated - changed to "Wir freuen uns, dass Sie da sind"
+ * Fix: a two-line guest name on the table sign made the printed slip noticeably taller,
+   overlapping the next sign on the roll - vertical spacing now tightens automatically when the
+   name wraps to two lines, saving about 6mm of paper length in that case
 
 2026-09-30 == mySeat v4.4.2 == amadeushi - http://github.com/amadeushi/myseat
 
