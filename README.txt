@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 4.3.0                         =-=
+=-= Version: 4.3.1                         =-=
 =-= Date:    30.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -51,6 +51,20 @@ tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-30 == mySeat v4.3.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Backend dashboard, two follow-up fixes reported after v4.3.0/v4.2.0 shipped:
+ * Fix: the Woche/Monat/Statistik tab icons became invisible when a tab was active - .ui-ico sets
+   its own text-muted color instead of inheriting, which read as gold-on-gold on the active tab's
+   gold background
+ * Fix: the occupancy sparkline under "Statistik" was unreadably small (20px tall, 4px-wide bars,
+   an untouched leftover from the pre-redesign screen.css) - enlarged to 110px/10px bars on desktop
+   and 72px/6px on narrow screens, with horizontal scroll instead of page overflow for floors with
+   many time slots
+ * Fix: today's date in the Monat calendar had a near-white cell background - screen.css's more
+   specific "table .grey" selector (background-color: #F1F2F2) was overriding the themed ".grey"
+   rule regardless of load order; added a matching dark-themed "table .grey" rule
 
 2026-09-30 == mySeat v4.3.0 == amadeushi - http://github.com/amadeushi/myseat
 

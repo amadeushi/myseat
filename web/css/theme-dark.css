@@ -236,6 +236,13 @@ hr {
 	border-color: var(--gold);
 	color: var(--ink-strong);
 }
+/* .ui-ico sets its own color (var(--text-muted)) rather than inheriting - on the
+   gold active background that reads as gold-on-gold, so the icon disappears */
+.second_level_tab li.active a .ui-ico,
+.second_level_tab li a.active .ui-ico,
+.second_level_tab li a:active .ui-ico {
+	color: inherit;
+}
 .second_level_tab li.disabled a {
 	opacity: 0.45;
 }
@@ -333,6 +340,14 @@ thead.grey th,
 	border-color: var(--border-soft);
 	font-weight: 600;
 	letter-spacing: 0.02em;
+}
+/* screen.css's "table .grey" (element+class) outranks the plain ".grey" rule above
+   by specificity regardless of load order, and still carries its old light-theme
+   #F1F2F2 background - that's the near-white cell behind "today" in the month view */
+table .grey {
+	background: var(--surface-2);
+	color: var(--text-muted);
+	border-bottom-color: var(--border-soft);
 }
 table.global td,
 table.global th,
@@ -786,6 +801,38 @@ h3 { font-size: 22px; }
 .timeline .active, .sparkline .index .active {
 	opacity: 0.6;
 	color: var(--text) !important;
+}
+/* ---- occupancy sparkline size (dashboard "Statistik" tab) ---- */
+/* screen.css sizes this at 20px tall / 4px-wide bars - unreadably small; enlarged
+   here without touching the bottom-anchored bar mechanic (height set inline as a
+   % of .index by dash_sparkline.inc.php) or the color rules above. Wide floors
+   with many time slots can scroll horizontally instead of forcing the page to. */
+.sparkline {
+	height: 110px;
+	margin: 0 16px 10px 0;
+	max-width: 100%;
+	overflow-x: auto;
+	overflow-y: hidden;
+}
+.sparkline .index {
+	width: 10px;
+	margin-right: 3px;
+}
+.sparkline .index:last-child {
+	margin-right: 0;
+}
+.sparkline .index .count {
+	border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+@media (max-width: 820px) {
+	.sparkline {
+		height: 72px;
+		margin: 0 10px 10px 0;
+	}
+	.sparkline .index {
+		width: 6px;
+		margin-right: 2px;
+	}
 }
 
 /* ---- input add-ons, tab rail ---- */
