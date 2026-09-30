@@ -184,9 +184,10 @@ function bm_share_text($lang, $ctx) {
 		$l[] = $gi['parking_key'].': '.$gi['info'][$gi['parking_key']];
 		if ($gi['route_url'] !== '') { $l[] = $gi['route_l'].': '.$gi['route_url']; }
 		$l[] = '';
-		// an aside, not its own labelled section like Parken - it's addressed to whoever in the
-		// group might need it, not a claim that the recipient personally does
-		$l[] = 'PS, falls hilfreich: '.$gi['info'][$gi['accessibility_key']];
+		// names the topic (Barrierefreiheit) so "zwei Stufen" and "Rollstuhlrampe" are placeable,
+		// but keeps it an aside, not its own labelled section like Parken - addressed to whoever
+		// in the group might need it, not a claim that the recipient personally does
+		$l[] = 'PS zur Barrierefreiheit, falls hilfreich: '.$gi['info'][$gi['accessibility_key']];
 		$subject = 'Reservierung im '.$ctx['brand'];
 	} else {
 		$l[] = $ctx['host'] !== '' ? $ctx['host'].' has a table booked at '.$ctx['brand'].'!' : 'A table is booked at '.$ctx['brand'].'!';
@@ -201,7 +202,7 @@ function bm_share_text($lang, $ctx) {
 		$l[] = $gi['parking_key'].': '.$gi['info'][$gi['parking_key']];
 		if ($gi['route_url'] !== '') { $l[] = $gi['route_l'].': '.$gi['route_url']; }
 		$l[] = '';
-		$l[] = 'PS, in case it helps: '.$gi['info'][$gi['accessibility_key']];
+		$l[] = 'PS on accessibility, in case it helps: '.$gi['info'][$gi['accessibility_key']];
 		$subject = 'Reservation at '.$ctx['brand'];
 	}
 	return array('subject' => $subject, 'text' => implode("\n", $l));
