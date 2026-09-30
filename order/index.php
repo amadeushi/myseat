@@ -54,6 +54,7 @@ $notice = (string)shop_setting('notice');
 			</div>
 		</div>
 	</header>
+	<div class="shop-zone-backdrop" id="shop-zone-backdrop" hidden></div>
 	<?php if ($notice !== ''): ?><p class="shop-notice"><?php echo shop_h($notice); ?></p><?php endif; ?>
 	<?php if (!$shop_accepting): ?><p class="shop-notice">Wir nehmen gerade keine Bestellungen an. Du kannst dich schon in Ruhe umsehen.<?php echo $shop_staff ? ' (Vorschau für Mitarbeiter)' : ''; ?></p><?php endif; ?>
 

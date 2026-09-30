@@ -35,8 +35,11 @@
 
 /* quick delivery-zone check on the menu page, before the guest builds a cart (see checkout.php's own .co-zone for the
    paired flow, re-checked there regardless). Collapsed into a small toggle by default; shop-zone-box is a floating
-   dropdown (like the datepicker/offer-dialog elsewhere in this app), not a row reflowing the header, and it closes
-   itself the moment a check resolves so it never lingers open. */
+   dropdown (like the datepicker/offer-dialog elsewhere in this app), not a row reflowing the header. It stays open
+   while the guest is filling it in - only a tap outside, Escape, or the backdrop closes it - since auto-closing on
+   every resolved check used to snap it shut mid-keystroke on mobile the moment all three fields had some value.
+   shop-zone-backdrop dims the category nav/menu behind it (they sit right under the header on a phone, directly in
+   the dropdown's path) so the overlay reads as an intentional modal instead of a stray box covering navigation. */
 .shop-zone { display: flex; align-items: center; gap: 10px; }
 .shop-zone-toggle { border: 0; background: transparent; padding: 0; min-height: 44px; color: var(--gold); font-size: 14px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
 .shop-zone-toggle:hover { color: var(--gold-strong); }
@@ -46,6 +49,7 @@
 .shop-zone-result.bad { color: var(--danger); }
 .shop-zone-box { position: absolute; top: 100%; right: 16px; margin-top: 8px; z-index: 40; width: 320px; max-width: calc(100vw - 32px); padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45); }
 .shop-zone-box .co-grid { margin: 0; }
+.shop-zone-backdrop { position: fixed; inset: 0; z-index: 25; background: rgba(0, 0, 0, 0.5); }
 
 /* layout */
 .shop-layout { max-width: 1240px; margin: 0 auto; padding: 0 16px 120px; display: grid; grid-template-columns: 1fr; gap: 0 32px; }

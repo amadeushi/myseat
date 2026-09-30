@@ -56,8 +56,9 @@
 		el.textContent = text;
 	}
 	function closeShopZone() {
-		var box = $('#shop-zone-box'), toggle = $('#shop-zone-toggle');
+		var box = $('#shop-zone-box'), toggle = $('#shop-zone-toggle'), backdrop = $('#shop-zone-backdrop');
 		if (box) { box.hidden = true; }
+		if (backdrop) { backdrop.hidden = true; }
 		if (toggle) { toggle.setAttribute('aria-expanded', 'false'); }
 	}
 	var zoneTimer, zoneKey = '';
@@ -72,20 +73,21 @@
 			fetch('api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ op: 'zone', token: TOKEN, street: street, zip: zip, city: city }) })
 				.then(function (r) { return r.json(); }).then(function (r) {
 					zoneKey = key;
-					// the box closes itself the moment a result is known - only the short summary next to the
-					// toggle stays, so the header never keeps the open form sitting around after the guest is done
+					// the result shows next to the toggle regardless of the box's own open/closed state - the box
+					// itself is left open here on purpose (see initShopZone): closing it on every resolved check
+					// used to snap it shut mid-keystroke on mobile as soon as all three fields held some value
 					if (r.ok) { renderZoneResult('ok', '✓ Wir liefern zu dir'); setDeliveryLocked(false); }
 					else { renderZoneResult('', ''); setDeliveryLocked(true); toast(r.error); }
 					saveGuestAddress({ street: street, zip: zip, city: city });
-					closeShopZone();
-				}).catch(function () { renderZoneResult('bad', 'Adresse konnte nicht geprüft werden'); closeShopZone(); });
+				}).catch(function () { renderZoneResult('bad', 'Adresse konnte nicht geprüft werden'); });
 		}, 500);
 	}
 	function initShopZone() {
-		var zone = $('#shop-zone'), toggle = $('#shop-zone-toggle'), box = $('#shop-zone-box'); if (!zone || !toggle || !box) { return; }
+		var zone = $('#shop-zone'), toggle = $('#shop-zone-toggle'), box = $('#shop-zone-box'), backdrop = $('#shop-zone-backdrop'); if (!zone || !toggle || !box) { return; }
 		toggle.addEventListener('click', function () {
 			var open = box.hidden;
 			box.hidden = !open; toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+			if (backdrop) { backdrop.hidden = !open; }
 			if (open) { $('#sz-street').focus(); }
 		});
 		box.addEventListener('input', function (ev) { if (/^(sz-street|sz-zip|sz-city)$/.test(ev.target.id)) { checkShopZone(); } });

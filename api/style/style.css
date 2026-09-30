@@ -141,8 +141,10 @@ input[type="checkbox"] { margin:0px; vertical-align:-2px; width: 20px;}
 ::-moz-selection{ background: #FF5E99; color:#fff; text-shadow: none; }
 ::selection { background:#FF5E99; color:#fff; text-shadow: none; } 
 
-/*  j.mp/webkit-tap-highlight-color */
-a:link { -webkit-tap-highlight-color: #FF5E99; } 
+/*  j.mp/webkit-tap-highlight-color - #FF5E99 was this old boilerplate reset's own placeholder
+    hot pink (see the ::selection joke above), never themed for this app; neutralised here so a
+    themed one can replace it inside .booking-shell without a stray pink flash anywhere else */
+a:link { -webkit-tap-highlight-color: transparent; }
 
 
 /* make buttons play nice in IE:    
@@ -769,6 +771,7 @@ span.hide { display:none; }
 }
 .booking-shell a {
 	color: var(--gold);
+	-webkit-tap-highlight-color: rgba(201, 162, 89, 0.25);
 }
 .booking-shell a:hover {
 	color: var(--gold-strong);
