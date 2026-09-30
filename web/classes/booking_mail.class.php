@@ -121,27 +121,90 @@ function bm_ics_build($ctx) {
  */
 function bm_guest_info($lang, $phone_contact, $property) {
 	$de = ($lang === 'de');
+	// destination-only Google Maps search links (no coordinates/place-id guessed) for the three parking facilities
+	// named in the text below - so a guest can tap the name and navigate straight there
+	$park_link = function ($label, $query) {
+		return '<a href="https://www.google.com/maps/search/?api=1&query='.rawurlencode($query).'" target="_blank" rel="noopener">'.htmlspecialchars($label, ENT_QUOTES, 'UTF-8').'</a>';
+	};
+	$ratsbauhof = $park_link('Ratsbauhof', 'Saba Parkhaus Ratsbauhof Tiefgarage Hildesheim');
+	$marktplatz = $park_link('Marktplatz', 'Saba Parkhaus Marktgarage Hildesheim');
+	$toilet_query = 'Öffentliche Toilette Marktstraße 13 Hildesheim';
 	if ($de) {
-		$g = array('info_h' => 'So kommst du gut an', 'addr_l' => 'Adresse', 'route_l' => 'Route planen', 'bus_key' => 'Mit dem Bus', 'bus_l' => 'Fahrplanauskunft',
+		$arnekengalerie = $park_link('Parkhaus Arnekengalerie', 'Parkhaus Arneken Galerie Hildesheim');
+		$toilette = $park_link('öffentliche Toilette', $toilet_query);
+		$g = array('info_h' => 'So kommst du gut an', 'addr_l' => 'Adresse', 'route_l' => 'Route planen', 'bus_key' => 'Mit dem Bus', 'bus_l' => 'Fahrplanauskunft', 'parking_key' => 'Parken', 'accessibility_key' => 'Barrierefreiheit',
 			'menu_t' => 'Schau vorab, worauf du Lust hast:', 'menu_links' => array('Speisekarte' => 'https://amds.at/menu', 'Getränkekarte' => 'https://amds.at/drinks'),
 			'info' => array(
 				'Mit dem Bus' => 'Haltestellen Rathausstraße und Schuhstraße, fast alle Linien halten dort.',
 				'Parken' => 'Tiefgaragen am Ratsbauhof und unter dem Marktplatz (Zufahrt Jakobistraße), Parkhaus Arnekengalerie. Am Straßenrand (Rathaus- und Osterstraße) kostenlos werktags ab 19 Uhr, samstags ab 16 Uhr.',
 				'Barrierefreiheit' => 'Zwei Stufen am Eingang. Ruf vorab kurz an'.($phone_contact !== '' ? ' ('.$phone_contact.')' : '').', dann bauen wir eine Rollstuhlrampe auf und setzen dich ins Erdgeschoss. Barrierefreie öffentliche Toilette 10 Meter entfernt.',
 			));
+		$g['parking_html'] = 'Tiefgaragen am '.$ratsbauhof.' und unter dem '.$marktplatz.' (Zufahrt Jakobistraße), '.$arnekengalerie.'. Am Straßenrand (Rathaus- und Osterstraße) kostenlos werktags ab 19 Uhr, samstags ab 16 Uhr.';
+		$g['accessibility_html'] = 'Zwei Stufen am Eingang. Ruf vorab kurz an'.($phone_contact !== '' ? ' ('.$phone_contact.')' : '').', dann bauen wir eine Rollstuhlrampe auf und setzen dich ins Erdgeschoss. Barrierefreie '.$toilette.' 10 Meter entfernt.';
 	} else {
-		$g = array('info_h' => 'Getting here', 'addr_l' => 'Address', 'route_l' => 'Get directions', 'bus_key' => 'By bus', 'bus_l' => 'Timetable',
+		$arnekengalerie = $park_link('Arnekengalerie car park', 'Parkhaus Arneken Galerie Hildesheim');
+		$toilette = $park_link('public toilet', $toilet_query);
+		$g = array('info_h' => 'Getting here', 'addr_l' => 'Address', 'route_l' => 'Get directions', 'bus_key' => 'By bus', 'bus_l' => 'Timetable', 'parking_key' => 'Parking', 'accessibility_key' => 'Accessibility',
 			'menu_t' => 'Take a look at what you fancy:', 'menu_links' => array('Food menu' => 'https://amds.at/menu', 'Drinks menu' => 'https://amds.at/drinks'),
 			'info' => array(
 				'By bus' => 'Stops Rathausstraße and Schuhstraße, served by almost all lines.',
 				'Parking' => 'Underground car parks at Ratsbauhof and below the Marktplatz (entrance Jakobistraße), Arnekengalerie car park. Street parking (Rathaus- and Osterstraße) is free on weekdays from 7 pm and Saturdays from 4 pm.',
 				'Accessibility' => 'Two steps at the entrance. Please call ahead'.($phone_contact !== '' ? ' ('.$phone_contact.')' : '').' and we will set up a wheelchair ramp and seat you on the ground floor. Accessible public toilet 10 metres away.',
 			));
+		$g['accessibility_html'] = 'Two steps at the entrance. Please call ahead'.($phone_contact !== '' ? ' ('.$phone_contact.')' : '').' and we will set up a wheelchair ramp and seat you on the ground floor. Accessible '.$toilette.' 10 metres away.';
+		$g['parking_html'] = 'Underground car parks at '.$ratsbauhof.' and below the '.$marktplatz.' (entrance Jakobistraße), '.$arnekengalerie.'. Street parking (Rathaus- and Osterstraße) is free on weekdays from 7 pm and Saturdays from 4 pm.';
 	}
 	$g['addr_plain'] = trim(bm_clean(isset($property['street']) ? $property['street'] : '').', '.bm_clean(isset($property['zip']) ? $property['zip'] : '').' '.bm_clean(isset($property['city']) ? $property['city'] : ''), ' ,');
 	$g['bus_url'] = 'https://www.svhi-hildesheim.de/de/Fahrplan/Fahrplanauskunft/';
 	$g['route_url'] = $g['addr_plain'] !== '' ? 'https://www.google.com/maps/dir/?api=1&destination='.rawurlencode($g['addr_plain']) : '';
 	return $g;
+}
+
+/*
+ * The friendly plain-text summary a guest can forward to people joining them: date, time, table,
+ * menus, parking, accessibility - built from the same $gi as the confirmation mail and
+ * api/cancel.php. Never contains a cancel link or booking token, since it is meant for people who
+ * have no business cancelling someone else's reservation. $ctx keys: host (guest name who booked,
+ * may be ''), brand, date_text, time_text, table (may be ''), gi (bm_guest_info() result).
+ */
+function bm_share_text($lang, $ctx) {
+	$de = ($lang === 'de');
+	$gi = $ctx['gi'];
+	$l = array();
+	if ($de) {
+		$l[] = $ctx['host'] !== '' ? $ctx['host'].' hat für euch einen Tisch im '.$ctx['brand'].' reserviert!' : 'Ein Tisch im '.$ctx['brand'].' ist für euch reserviert!';
+		$l[] = '';
+		$l[] = 'Datum: '.$ctx['date_text'];
+		$l[] = 'Uhrzeit: '.$ctx['time_text'];
+		if ($ctx['table'] !== '') { $l[] = 'Tisch: '.$ctx['table'].' (kann sich bis dahin noch ändern)'; }
+		$l[] = '';
+		$l[] = rtrim($gi['menu_t'], ':').':';
+		foreach ($gi['menu_links'] as $k => $v) { $l[] = $k.': '.$v; }
+		$l[] = '';
+		$l[] = $gi['parking_key'].': '.$gi['info'][$gi['parking_key']];
+		if ($gi['route_url'] !== '') { $l[] = $gi['route_l'].': '.$gi['route_url']; }
+		$l[] = '';
+		// an aside, not its own labelled section like Parken - it's addressed to whoever in the
+		// group might need it, not a claim that the recipient personally does
+		$l[] = 'PS, falls hilfreich: '.$gi['info'][$gi['accessibility_key']];
+		$subject = 'Reservierung im '.$ctx['brand'];
+	} else {
+		$l[] = $ctx['host'] !== '' ? $ctx['host'].' has a table booked at '.$ctx['brand'].'!' : 'A table is booked at '.$ctx['brand'].'!';
+		$l[] = '';
+		$l[] = 'Date: '.$ctx['date_text'];
+		$l[] = 'Time: '.$ctx['time_text'];
+		if ($ctx['table'] !== '') { $l[] = 'Table: '.$ctx['table'].' (may still change before then)'; }
+		$l[] = '';
+		$l[] = rtrim($gi['menu_t'], ':').':';
+		foreach ($gi['menu_links'] as $k => $v) { $l[] = $k.': '.$v; }
+		$l[] = '';
+		$l[] = $gi['parking_key'].': '.$gi['info'][$gi['parking_key']];
+		if ($gi['route_url'] !== '') { $l[] = $gi['route_l'].': '.$gi['route_url']; }
+		$l[] = '';
+		$l[] = 'PS, in case it helps: '.$gi['info'][$gi['accessibility_key']];
+		$subject = 'Reservation at '.$ctx['brand'];
+	}
+	return array('subject' => $subject, 'text' => implode("\n", $l));
 }
 
 /*
@@ -288,8 +351,8 @@ function bm_build($d) {
 
 	// arrival, parking, accessibility, menus, address and route link: one source for the mail and the guest page (api/cancel.php)
 	$gi = bm_guest_info($lang, $phone_contact, $d['property']);
-	$info_h = $gi['info_h']; $info = $gi['info']; $addr_l = $gi['addr_l']; $route_l = $gi['route_l']; $bus_key = $gi['bus_key']; $bus_l = $gi['bus_l'];
-	$menu_t = $gi['menu_t']; $menu_links = $gi['menu_links']; $addr_plain = $gi['addr_plain']; $bus_url = $gi['bus_url']; $route_url = $gi['route_url'];
+	$info_h = $gi['info_h']; $info = $gi['info']; $addr_l = $gi['addr_l']; $route_l = $gi['route_l']; $bus_key = $gi['bus_key']; $bus_l = $gi['bus_l']; $park_key = $gi['parking_key']; $access_key = $gi['accessibility_key'];
+	$menu_t = $gi['menu_t']; $menu_links = $gi['menu_links']; $addr_plain = $gi['addr_plain']; $bus_url = $gi['bus_url']; $route_url = $gi['route_url']; $parking_html = $gi['parking_html']; $accessibility_html = $gi['accessibility_html'];
 
 	$legal = bm_legal_lines($d['property']);
 	$imprint_url = !empty($settings['imprintUrl']) ? $settings['imprintUrl'] : '';
@@ -330,6 +393,9 @@ function bm_build($d) {
 			return '<a href="'.$href.'" style="color:#8a6d3b;font-weight:bold;white-space:nowrap;">'.$m[0].'</a>';
 		}, $escaped);
 	};
+	// inline style for the parking links in $parking_html (built without one, so api/cancel.php's own stylesheet can
+	// color them instead) - email clients ignore stylesheets, so the mail needs the style attribute added here
+	$mail_links = function ($html) { return preg_replace('/<a /', '<a style="color:#8a6d3b;font-weight:bold;" ', $html); };
 	$font = "font-family:Arial,Helvetica,sans-serif;";
 	$row_html = '';
 	foreach ($rows as $k => $v) {
@@ -348,6 +414,7 @@ function bm_build($d) {
 	};
 	$menu_html = '';
 	$info_html = '';
+	$forward_html = '';
 	if ($with_info) {
 		// menus: two clear buttons side by side
 		$cells = array();
@@ -366,11 +433,21 @@ function bm_build($d) {
 		}
 		foreach ($info as $k => $v) {
 			$extra = ($k === $bus_key) ? '<br><a href="'.$h($bus_url).'" style="color:#6b5330;font-weight:bold;">'.$h($bus_l).'</a>' : '';
-			$rows_html .= $irow($k, $tel($h($v)).$extra);
+			$body = ($k === $park_key) ? $mail_links($parking_html) : (($k === $access_key) ? $mail_links($accessibility_html) : $tel($h($v)));
+			$rows_html .= $irow($k, $body.$extra);
 		}
 		$info_html = '<tr><td style="padding:16px 32px 8px;"><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-top:1px solid #e6e0d2;"><tr><td style="padding-top:16px;">'
 			.'<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:20px;color:#1c1a18;padding-bottom:4px;">'.$h($info_h).'</div>'
 			.'<table role="presentation" cellpadding="0" cellspacing="0" width="100%">'.$rows_html.'</table></td></tr></table></td></tr>';
+
+		// a plain-text summary (no cancel link, no token) the guest can forward to people
+		// joining them, since they don't see this mail - a mailto: link because Web Share isn't
+		// available inside an email; api/cancel.php offers the same text via a real share button
+		$fwd_label = $de ? 'Reservierung weiterleiten' : 'Forward reservation details';
+		$share = bm_share_text($lang, array('host' => $name, 'brand' => $brand, 'date_text' => $date_txt, 'time_text' => $time_txt, 'table' => '', 'gi' => $gi));
+		$fwd_url = 'mailto:?subject='.rawurlencode($share['subject']).'&body='.rawurlencode(str_replace("\n", "\r\n", $share['text']));
+		$forward_html = '<tr><td style="'.$font.'padding:4px 32px 4px;font-size:14px;line-height:1.6;">'
+			.'<a href="'.$h($fwd_url).'" style="color:#8a6d3b;font-weight:bold;">'.$h($fwd_label).'</a></td></tr>';
 	}
 	$html ='<!DOCTYPE html><html lang="'.$lang.'"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'.$h($subject).'</title></head>'
 		.'<body style="margin:0;padding:0;background-color:#f4f1ea;">'
@@ -383,6 +460,7 @@ function bm_build($d) {
 		.($cancel_t !== '' ? '<tr><td style="'.$font.'padding:8px 32px 4px;font-size:16px;line-height:1.6;color:#333333;">'.$h($cancel_t).'<br><a href="'.$h($cancel).'" style="color:#8a6d3b;font-weight:bold;">'.$h($cancel_l).'</a></td></tr>' : '')
 		.$menu_html
 		.$info_html
+		.$forward_html
 		.'<tr><td style="'.$font.'padding:12px 32px 4px;font-size:16px;line-height:1.6;color:#333333;">'.$tel($h($contact)).'</td></tr>'
 		.'<tr><td style="'.$font.'padding:16px 32px 28px;font-size:16px;line-height:1.6;color:#333333;">'.$h($closing).'<br>'.$h($sign).'</td></tr>'
 		.'<tr><td style="'.$font.'padding:16px 32px 24px;border-top:1px solid #e6e0d2;font-size:12px;line-height:1.6;color:#6e685c;"><strong>'.$h($legal_h).'</strong><br>'.$legal_html

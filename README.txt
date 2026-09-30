@@ -52,6 +52,18 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-09-30 == mySeat v4.6.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: a "Teilen" button on the guest page (api/cancel.php), shaped with /impeccable shape - a
+   guest can forward a warm, cancel-link-free summary (date, time, table, menu/drinks links,
+   parking, accessibility) to people joining them, who never see the confirmation mail. Uses the
+   Web Share API on mobile, falls back to copying the text to the clipboard on desktop. The
+   confirmation mail gets the same text behind a "An Mitgäste weiterleiten" mailto link, since a
+   mail can't run Web Share
+ * New: the parking facilities and the public toilet mentioned in the confirmation mail and
+   api/cancel.php now link to Google Maps by name (destination-only search links, no guessed
+   coordinates), so a guest can tap through and navigate there directly
+
 2026-09-30 == mySeat v4.5.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: a "Liefert ihr zu mir?" quick delivery-zone check on the menu page (order/index.php),

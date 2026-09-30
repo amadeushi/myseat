@@ -73,6 +73,9 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 			'title_past'   => 'Deine Reservierung',
 			'clock'        => ' Uhr',
 			'ics'          => 'Zum Kalender hinzufügen',
+			'share'        => 'Reservierung teilen',
+			'share_copied' => 'In die Zwischenablage kopiert',
+			'share_failed' => 'Kopieren nicht möglich, bitte manuell kopieren',
 		),
 		'en' => array(
 			'lookup_title' => 'Cancel reservation',
@@ -109,6 +112,9 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 			'title_past'   => 'Your reservation',
 			'clock'        => '',
 			'ics'          => 'Add to calendar',
+			'share'        => 'Share with your guests',
+			'share_copied' => 'Copied to clipboard',
+			'share_failed' => 'Could not copy, please copy manually',
 		),
 	);
 	$t = isset($tr[$lang]) ? $tr[$lang] : $tr['en'];
@@ -228,6 +234,13 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 			}
 		}
 		$page_title = $is_past ? $t['title_past'] : ($is_pending ? $t['title_pend'] : $t['title_ok']);
+		// forwardable summary for people joining the guest (no cancel link, no token) - same
+		// source as the mailto link in the confirmation mail, but with the table the reservation
+		// is currently assigned to, since that can change after the mail was sent
+		$share = (!$is_pending && !$is_past) ? bm_share_text($lang, array(
+			'host' => bm_clean($res['reservation_guest_name']), 'brand' => bm_clean($brand),
+			'date_text' => $when, 'time_text' => $at, 'table' => trim((string)$res['reservation_table']), 'gi' => $gi,
+		)) : null;
 	}
 ?>
 <!DOCTYPE html>
@@ -277,7 +290,15 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 		</dl>
 
 		<?php if (!$is_pending && !$is_past): ?>
-		<a class="guest-btn guest-ics" href="cancel.php?<?php echo $h($ics_query); ?>&amp;ics=1"><?php echo $h($t['ics']); ?></a>
+		<div class="guest-quick-actions">
+			<a class="guest-btn guest-ics" href="cancel.php?<?php echo $h($ics_query); ?>&amp;ics=1"><?php echo $h($t['ics']); ?></a>
+			<button type="button" class="guest-btn guest-share" id="guest-share-btn"
+				data-share-title="<?php echo $h($share['subject']); ?>" data-share-text="<?php echo $h($share['text']); ?>"
+				data-share-copied="<?php echo $h($t['share_copied']); ?>" data-share-failed="<?php echo $h($t['share_failed']); ?>">
+				<?php echo $h($t['share']); ?>
+			</button>
+		</div>
+		<p class="guest-toast" id="guest-toast" role="status" aria-live="polite" hidden></p>
 
 		<section class="guest-section" aria-labelledby="g-menu">
 			<h2 id="g-menu"><?php echo $h(rtrim($gi['menu_t'], ':')); ?></h2>
@@ -299,7 +320,7 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 			<?php foreach ($gi['info'] as $label => $text): if ($label !== $gi['bus_key']): ?>
 			<details class="guest-fold">
 				<summary><?php echo $h($label); ?></summary>
-				<p><?php echo $h($text); ?></p>
+				<p><?php echo $label === $gi['parking_key'] ? $gi['parking_html'] : ($label === $gi['accessibility_key'] ? $gi['accessibility_html'] : $h($text)); ?></p>
 			</details>
 			<?php endif; endforeach; ?>
 		</section>
@@ -375,5 +396,38 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 	</main>
 	<?php include __DIR__.'/legal_footer.php'; ?>
 </div>
+<?php if ($state === 'view'): ?>
+<script>
+(function () {
+	var btn = document.getElementById('guest-share-btn');
+	if (!btn) { return; }
+	var toast = document.getElementById('guest-toast');
+	var toastTimer;
+	var showToast = function (msg) {
+		if (!toast) { return; }
+		toast.textContent = msg;
+		toast.hidden = false;
+		requestAnimationFrame(function () { toast.classList.add('is-on'); });
+		clearTimeout(toastTimer);
+		toastTimer = setTimeout(function () { toast.classList.remove('is-on'); }, 2600);
+	};
+	btn.addEventListener('click', function () {
+		var title = btn.getAttribute('data-share-title');
+		var text = btn.getAttribute('data-share-text');
+		if (navigator.share) {
+			navigator.share({ title: title, text: text }).catch(function () {});
+			return;
+		}
+		if (navigator.clipboard && navigator.clipboard.writeText) {
+			navigator.clipboard.writeText(text)
+				.then(function () { showToast(btn.getAttribute('data-share-copied')); })
+				.catch(function () { showToast(btn.getAttribute('data-share-failed')); });
+		} else {
+			showToast(btn.getAttribute('data-share-failed'));
+		}
+	});
+})();
+</script>
+<?php endif; ?>
 </body>
 </html>
