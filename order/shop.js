@@ -200,9 +200,13 @@
 		box.innerHTML = h;
 	}
 	function cartOpen(on) { var c = $('#shop-cart'); if (c) { c.classList.toggle('is-open', on); document.documentElement.style.overflow = on ? 'hidden' : ''; } }
+	document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') { var c = $('#shop-cart'); if (c && c.classList.contains('is-open')) { cartOpen(false); } } });
 
 	var dlg = $('#product-dialog');
+	var dlgTrigger = null;
+	if (dlg) { dlg.addEventListener('close', function () { if (dlgTrigger && typeof dlgTrigger.focus === 'function') { dlgTrigger.focus(); } dlgTrigger = null; }); }
 	function openProduct(id, edit) {
+		dlgTrigger = document.activeElement;
 		fetch('api.php?op=product&id=' + encodeURIComponent(id), { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) {
 			if (!r.ok) { toast(r.error || 'Das hat nicht geklappt.'); return; }
 			buildDialog(r.product, edit);

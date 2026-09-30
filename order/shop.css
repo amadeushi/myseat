@@ -24,7 +24,7 @@
 .shop-top-in { max-width: 1240px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; gap: 12px 24px; flex-wrap: wrap; }
 .shop-logo { display: block; flex: none; }
 .shop-mode { display: flex; background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: 999px; padding: 3px; }
-.mode-btn { border: 0; background: transparent; color: var(--text-muted); font-size: 14px; font-weight: 600; min-height: 40px; padding: 0 20px; border-radius: 999px; transition: background 150ms ease, color 150ms ease; }
+.mode-btn { border: 0; background: transparent; color: var(--text-muted); font-size: 14px; font-weight: 600; min-height: 44px; padding: 0 20px; border-radius: 999px; transition: background 150ms ease, color 150ms ease; box-sizing: border-box; }
 .mode-btn[aria-pressed="true"] { background: var(--gold); color: #1a1408; }
 .shop-status { font-size: 13px; color: var(--text-muted); margin-left: auto; display: flex; align-items: center; gap: 8px; }
 .shop-status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); flex: none; }
@@ -36,7 +36,7 @@
 .shop-layout { max-width: 1240px; margin: 0 auto; padding: 0 16px 120px; display: grid; grid-template-columns: 1fr; gap: 0 32px; }
 .shop-cats { position: sticky; top: 121px; z-index: 20; display: flex; gap: 8px; overflow-x: auto; padding: 10px 16px; margin: 0 -16px; background: var(--bg); scrollbar-width: none; }
 .shop-cats::-webkit-scrollbar { display: none; }
-.shop-cats a { flex: none; min-height: 40px; display: inline-flex; align-items: center; padding: 0 16px; border: 1px solid var(--border-soft); border-radius: 999px; color: var(--text-muted); font-size: 14px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.shop-cats a { flex: none; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 16px; border: 1px solid var(--border-soft); border-radius: 999px; color: var(--text-muted); font-size: 14px; font-weight: 600; text-decoration: none; white-space: nowrap; }
 .shop-cats a.is-active { color: #1a1408; background: var(--gold); border-color: var(--gold); }
 .shop-menu { min-width: 0; }
 .shop-cat { padding-top: 28px; scroll-margin-top: 180px; }
@@ -69,10 +69,10 @@
 .cart-opts { grid-column: 1; color: var(--text-muted); font-size: 13px; line-height: 1.45; }
 .cart-lineprice { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
 .cart-qty { grid-column: 1 / -1; display: flex; align-items: center; gap: 4px; margin-top: 4px; }
-.qty-btn { width: 40px; height: 40px; border: 1px solid var(--border-soft); border-radius: 50%; background: var(--surface-2); color: var(--text); font-size: 20px; line-height: 1; }
+.qty-btn { width: 44px; height: 44px; box-sizing: border-box; border: 1px solid var(--border-soft); border-radius: 50%; background: var(--surface-2); color: var(--text); font-size: 20px; line-height: 1; }
 .qty-btn:hover { border-color: var(--border); }
 .qty-num { min-width: 32px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
-.cart-remove { margin-left: auto; border: 0; background: transparent; color: var(--text-muted); font-size: 13px; min-height: 40px; padding: 0 8px; text-decoration: underline; text-underline-offset: 3px; }
+.cart-remove { margin-left: auto; border: 0; background: transparent; color: var(--text-muted); font-size: 13px; min-height: 44px; box-sizing: border-box; padding: 0 8px; text-decoration: underline; text-underline-offset: 3px; }
 .cart-sum { border-top: 1px solid var(--border); padding-top: 14px; margin-top: 8px; display: grid; gap: 6px; }
 .cart-row { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; }
 .cart-row.muted { color: var(--text-muted); font-size: 14px; }
@@ -151,12 +151,13 @@
 .pd-ext .pd-chip { position: relative; flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; min-height: 52px; padding-right: 32px; }
 .pd-ext .pd-chip-name { flex: none; width: 100%; overflow-wrap: break-word; hyphens: auto; }
 .pd-ext .pd-chip .pd-check { position: absolute; top: 10px; right: 10px; }
-.pd-ext .pd-chip.has-step { flex-direction: row; align-items: center; padding-right: 6px; }
+.pd-ext .pd-chip.has-step { grid-column: 1 / -1; flex-direction: row; align-items: center; padding-right: 6px; }
+.pd-ext .pd-chip.has-step .pd-chip-name { width: auto; flex: 1 1 auto; min-width: 0; }
 
 .pd-note { margin-top: 20px; }
 .pd-note-toggle { border: 0; background: transparent; padding: 10px 0; min-height: 44px; color: var(--gold); font-size: 14px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 .pd-note-label { font-size: 14px; font-weight: 700; display: block; margin-bottom: 6px; }
-.pd-note textarea { width: 100%; min-height: 64px; border: 1px solid var(--border-soft); border-radius: 10px; background: var(--surface-2); color: var(--text); font: inherit; padding: 10px 12px; resize: vertical; }
+.pd-note textarea { width: 100%; min-height: 64px; border: 1px solid var(--border-soft); border-radius: 10px; background: var(--surface-2); color: var(--text); font: inherit; font-size: 16px; padding: 10px 12px; resize: vertical; }
 .pd-add { white-space: nowrap; gap: 8px; padding: 0 18px; }
 .pd-add.is-blocked { background: var(--surface-3); color: var(--gold-strong); box-shadow: inset 0 0 0 1px var(--border); }
 .pd-add.is-blocked:hover { background: var(--surface-3); }
@@ -180,7 +181,7 @@
 @media (min-width: 1024px) {
 	.shop-layout { grid-template-columns: 190px minmax(0, 1fr) 340px; padding-bottom: 60px; }
 	.shop-cats { position: sticky; top: 152px; align-self: start; flex-direction: column; overflow: visible; margin: 28px 0 0; padding: 0; background: transparent; gap: 2px; max-height: calc(100vh - 176px); overflow-y: auto; }
-	.shop-cats a { border: 0; border-radius: 10px; min-height: 40px; white-space: normal; }
+	.shop-cats a { border: 0; border-radius: 10px; min-height: 44px; white-space: normal; }
 	.shop-cats a.is-active { background: rgba(201, 162, 89, 0.16); color: var(--gold-strong); }
 	.shop-cat { scroll-margin-top: 156px; }
 	.shop-cart { position: sticky; top: 152px; align-self: start; inset: auto; z-index: 1; transform: none; visibility: visible; margin-top: 28px; padding: 0 20px 20px; max-height: calc(100vh - 176px); border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
@@ -311,7 +312,7 @@
 .st-again a { display: inline-flex; width: auto; padding: 0 28px; text-decoration: none; }
 @media (prefers-reduced-motion: reduce) { .cart-goal-bar span, .cart-up-item { transition: none; } }
 .shop-shell a.cart-go[aria-disabled="true"] { color: var(--text-muted); }
-.cart-edit { margin-left: auto; border: 0; background: transparent; color: var(--gold); font-size: 14px; font-weight: 600; min-height: 40px; padding: 0 6px; text-decoration: underline; text-underline-offset: 3px; }
+.cart-edit { margin-left: auto; border: 0; background: transparent; color: var(--gold); font-size: 14px; font-weight: 600; min-height: 44px; box-sizing: border-box; padding: 0 6px; text-decoration: underline; text-underline-offset: 3px; }
 .cart-edit:hover { color: var(--gold-strong); }
 
 /* order status: map */
@@ -365,7 +366,7 @@
 .shop-search-bar input::placeholder { color: var(--text-muted); }
 .shop-search-bar input:focus { border-color: var(--gold); outline: none; box-shadow: 0 0 0 2px rgba(201, 162, 89, 0.3); }
 .shop-search-bar input::-webkit-search-cancel-button { display: none; }
-.shop-search-clear { position: absolute; right: 6px; width: 34px; height: 34px; border: 0; border-radius: 50%; background: transparent; color: var(--text-muted); font-size: 20px; line-height: 1; }
+.shop-search-clear { position: absolute; right: 6px; width: 44px; height: 44px; box-sizing: border-box; border: 0; border-radius: 50%; background: transparent; color: var(--text-muted); font-size: 20px; line-height: 1; }
 .shop-search-clear:hover { color: var(--text); background: rgba(245, 240, 230, 0.08); }
 .shop-cats.is-filtered { opacity: 0.4; pointer-events: none; }
 .shop-item[hidden], .shop-cat[hidden] { display: none; }

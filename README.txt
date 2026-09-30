@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 4.4.1                         =-=
+=-= Version: 4.4.2                         =-=
 =-= Date:    30.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -51,6 +51,25 @@ tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-30 == mySeat v4.4.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Guest-facing food-ordering page (order/index.php), following an /impeccable critique pass:
+ * Fix: the delivery/pickup toggle, category nav links, quantity/edit/remove cart buttons, and
+   the search-clear button fell short of the 44x44px touch-target floor on the very first
+   controls a guest touches - enlarged all of them (including a mobile media-query override
+   that had undone the category-nav fix)
+ * Fix: an optional "Extras" chip with a quantity stepper (e.g. Ketchup, Mayonnaise) forced its
+   label to full width in a row that also needed the price and the stepper, causing one item's
+   name to render on top of the next chip's price/stepper under real menu data - the chip now
+   spans the full row instead of squeezing into one grid column
+ * Fix: the order-note textarea was 15px, one pixel under the design system's own "16px Form
+   Rule" - triggered iOS Safari's auto-zoom on focus in the flow's most-used free-text field
+ * Fix: closing the product-choice dialog dropped keyboard/screen-reader focus to <body> instead
+   of returning it to the button that opened it, forcing a full re-tab through the menu after
+   every product interaction
+ * Fix: the cart panel had no Escape-to-close, unlike the search input and the native product
+   dialog - it's now dismissible with the same key as every other overlay on the page
 
 2026-09-30 == mySeat v4.4.1 == amadeushi - http://github.com/amadeushi/myseat
 
