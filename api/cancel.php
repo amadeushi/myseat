@@ -244,7 +244,7 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 </head>
 <body>
 <div class="booking-shell <?php echo $state == 'view' ? 'guest-shell' : 'confirm-shell'; ?>">
-	<div class="<?php echo $state == 'view' ? 'guest-page' : 'confirm-card'; ?>">
+	<main class="<?php echo $state == 'view' ? 'guest-page' : 'confirm-card'; ?>">
 		<div class="brand-row"><?php echo brand_logo_html($prp_info['name']); ?><?php language_navigation($lang, false); ?></div>
 
 	<?php if ($state == 'done'): ?>
@@ -264,7 +264,6 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 		<header class="guest-head">
 			<h1 class="guest-title"><?php echo $h($page_title); ?></h1>
 			<p class="guest-lead"><?php echo $h($is_past ? $t['past'] : ($is_pending ? $t['lead_pend'] : $t['lead_ok'])); ?></p>
-			<?php if (!$is_past): ?><a class="guest-jump" href="#g-cancel"><?php echo $h($is_pending ? $t['cancel_open_p'] : $t['cancel_open']); ?></a><?php endif; ?>
 		</header>
 
 		<dl class="guest-facts">
@@ -327,7 +326,10 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 					<input type="hidden" name="nr" value="<?php echo $h($nr); ?>">
 					<input type="hidden" name="email" value="<?php echo $h($email); ?>">
 					<?php if ($token !== ''): ?><input type="hidden" name="t" value="<?php echo $h($token); ?>"><?php endif; ?>
-					<button type="submit" class="guest-danger"><?php echo $h($t['confirm_btn']); ?></button>
+					<div class="guest-cancel-actions">
+						<button type="submit" class="guest-danger"><?php echo $h($t['confirm_btn']); ?></button>
+						<button type="button" class="confirm-secondary guest-keep" onclick="this.closest('details').removeAttribute('open')"><?php echo $h($t['keep']); ?></button>
+					</div>
 				</form>
 			</details>
 		</section>
@@ -370,7 +372,7 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 		</form>
 
 	<?php endif; ?>
-	</div>
+	</main>
 	<?php include __DIR__.'/legal_footer.php'; ?>
 </div>
 </body>

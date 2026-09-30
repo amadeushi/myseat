@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 4.4.0                         =-=
+=-= Version: 4.4.1                         =-=
 =-= Date:    30.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -51,6 +51,24 @@ tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-30 == mySeat v4.4.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Guest-facing cancellation page (api/cancel.php), following an /impeccable critique pass:
+ * Fix: the "No, keep my reservation" button was fully translated in both languages but never
+   rendered - the only control inside the cancel confirmation was the destructive one; added a
+   secondary keep-it button next to it
+ * Fix: the language-switcher pills, the close (X) link, and the "Back to website" link fell
+   short of the 44x44px touch-target floor on a page opened almost exclusively from a phone -
+   enlarged all three
+ * Fix: the manual lookup form's booking-number/email fields were 15px, one pixel under the
+   design system's own "16px Form Rule" - triggered iOS Safari's auto-zoom on focus; bumped to
+   16px
+ * Removed a redundant "Cancel reservation" jump-link that sat directly under the welcome
+   message on every visit (not just cancellation visits) - it was meant as a shortcut to the
+   cancel button further down, but front-loaded the page's only non-gold accent color ahead of
+   the reassuring reservation details
+ * Wrapped the page content in a <main> landmark for keyboard/screen-reader navigation
 
 2026-09-30 == mySeat v4.4.0 == amadeushi - http://github.com/amadeushi/myseat
 

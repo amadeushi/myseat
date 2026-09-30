@@ -955,7 +955,12 @@ a.contact-item:hover svg {
 	padding: 2px;
 }
 .booking-shell .lang-picker a {
-	display: block;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	min-height: 44px;
+	min-width: 44px;
 	padding: 4px 10px;
 	border-radius: 999px;
 	font-size: 11px;
@@ -974,8 +979,9 @@ a.contact-item:hover svg {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 26px;
-	height: 26px;
+	box-sizing: border-box;
+	width: 44px;
+	height: 44px;
 	border-radius: 50%;
 	border: 1px solid var(--border-soft);
 	color: var(--text-muted);
@@ -1209,7 +1215,7 @@ a.contact-item:hover svg {
 	border-radius: 8px;
 	color: var(--text);
 	font-family: var(--font-body);
-	font-size: 15px;
+	font-size: 16px;
 	padding: 11px 14px;
 	margin: 0;
 	transition: border-color 150ms ease;
@@ -1642,7 +1648,11 @@ a.contact-item:hover svg {
 	margin: 28px 0 0;
 }
 .booking-shell .confirm-secondary {
-	display: block;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	min-height: 44px;
 	margin-top: 16px;
 	font-size: 13px;
 	color: var(--text-muted);
@@ -2032,7 +2042,7 @@ button.offer-chip:focus-visible { outline: 2px solid var(--gold); outline-offset
 	color: var(--text);
 	max-width: 58ch;
 }
-.guest-info a, .guest-contact a, .guest-jump {
+.guest-info a, .guest-contact a {
 	text-underline-offset: 3px;
 }
 .guest-info dd a {
@@ -2040,18 +2050,6 @@ button.offer-chip:focus-visible { outline: 2px solid var(--gold); outline-offset
 	align-items: center;
 	min-height: 44px;
 	font-weight: 600;
-}
-.booking-shell .guest-jump {
-	display: inline-flex;
-	align-items: center;
-	min-height: 44px;
-	margin-top: 4px;
-	font-size: 14px;
-	font-weight: 600;
-	color: var(--danger);
-}
-.booking-shell .guest-jump:hover {
-	color: #efa199;
 }
 .guest-fold {
 	border-top: 1px solid var(--border-soft);
@@ -2162,6 +2160,22 @@ button.offer-chip:focus-visible { outline: 2px solid var(--gold); outline-offset
 }
 .guest-danger:hover {
 	background: #efa199;
+}
+.guest-cancel-actions {
+	display: flex;
+	align-items: center;
+	gap: 18px;
+	flex-wrap: wrap;
+}
+.guest-keep {
+	background: none;
+	border: 0;
+	margin: 0;
+	padding: 0 4px;
+	min-height: 44px;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
 }
 @media (max-width: 380px) {
 	.guest-buttons {
