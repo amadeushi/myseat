@@ -3,7 +3,7 @@
 (function () {
 	'use strict';
 	var body = document.body, ACCEPT = body.dataset.accepting === '1', KEY = 'amadeusCartV2', TOKEN = body.dataset.token;
-	var state = { mode: 'delivery', cart: [], info: null };
+	var state = { mode: 'delivery', cart: [], info: null, zone: null };
 
 	function $(s, r) { return (r || document).querySelector(s); }
 	function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
@@ -61,6 +61,30 @@
 		if (backdrop) { backdrop.hidden = true; }
 		if (toggle) { toggle.setAttribute('aria-expanded', 'false'); }
 	}
+	// two or more real, deliverable streets matched the same typed text - the guest picks instead of the
+	// app silently guessing between them (see shop_find_zone()'s 'ambiguous' reason)
+	function renderCandidates(list) {
+		var box = $('#sz-candidates'); if (!box) { return; }
+		if (!list || !list.length) { box.hidden = true; box.innerHTML = ''; return; }
+		box.innerHTML = list.map(function (c, i) {
+			return '<button type="button" class="co-candidate" data-i="' + i + '"><strong>' + esc(c.road) + '</strong><small>' + esc(c.postcode) + ' ' + esc(c.city) + '</small></button>';
+		}).join('');
+		box.hidden = false;
+		$$('.co-candidate', box).forEach(function (btn, i) {
+			btn.addEventListener('click', function () {
+				var c = list[i], s = $('#sz-street'), z = $('#sz-zip'), cty = $('#sz-city');
+				if (!s || !z) { return; }
+				z.value = c.postcode;
+				zoneKey = s.value.trim() + '|' + z.value.trim() + '|' + cty.value.trim();
+				state.zone = c.zone;
+				renderZoneResult('ok', '✓ Wir liefern zu dir · ' + fmt(c.zone.fee) + ' Liefergebühr, ab ' + fmt(c.zone.min));
+				setDeliveryLocked(false); setW3wVisible(false);
+				box.hidden = true; box.innerHTML = '';
+				saveGuestAddress({ street: s.value.trim(), zip: z.value.trim(), city: cty.value.trim() });
+				renderCart();
+			});
+		});
+	}
 	// the what3words escape hatch only appears once a typed address is not found (not when it is
 	// simply outside the delivery area - a code will not help there either)
 	function setW3wVisible(show) {
@@ -73,9 +97,12 @@
 		clearTimeout(zoneTimer);
 		var s = $('#sz-street'), z = $('#sz-zip'), c = $('#sz-city'); if (!s || !z || !c) { return; }
 		var street = s.value.trim(), zip = z.value.trim(), city = c.value.trim(), key = street + '|' + zip + '|' + city;
-		if (!street || !zip || !city) { renderZoneResult('', ''); setDeliveryLocked(false); setW3wVisible(false); return; }
+		// a house number is required before asking at all - a street name alone ("Goschentor") is too vague a
+		// query and Nominatim/Google may fuzzy-match it to a different, wrong real street while still typing
+		if (!street || !city || !/\d/.test(street)) { renderZoneResult('', ''); setDeliveryLocked(false); setW3wVisible(false); renderCandidates(null); state.zone = null; renderCart(); return; }
 		if (key === zoneKey) { return; }
 		renderZoneResult('', 'Adresse wird geprüft ...');
+		renderCandidates(null);
 		zoneTimer = setTimeout(function () {
 			fetch('api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ op: 'zone', token: TOKEN, street: street, zip: zip, city: city }) })
 				.then(function (r) { return r.json(); }).then(function (r) {
@@ -83,9 +110,20 @@
 					// the result shows next to the toggle regardless of the box's own open/closed state - the box
 					// itself is left open here on purpose (see initShopZone): closing it on every resolved check
 					// used to snap it shut mid-keystroke on mobile as soon as all three fields held some value
-					if (r.ok) { renderZoneResult('ok', '✓ Wir liefern zu dir'); setDeliveryLocked(false); setW3wVisible(false); }
-					else { renderZoneResult('', ''); setDeliveryLocked(true); toast(r.error); setW3wVisible(r.reason === 'not_found' && r.w3w_available); }
-					saveGuestAddress({ street: street, zip: zip, city: city });
+					if (r.ok) {
+						// the PLZ comes straight from the same lookup that just confirmed the address - it always
+						// takes over here (even a wrong one already in the field, e.g. from browser autofill),
+						// since a confirmed match knows better. The street itself is never rewritten: a guest
+						// should never see their own typed text silently replaced by something else
+						if (r.postcode) { z.value = r.postcode; }
+						state.zone = r.zone; renderZoneResult('ok', '✓ Wir liefern zu dir · ' + fmt(r.zone.fee) + ' Liefergebühr, ab ' + fmt(r.zone.min)); setDeliveryLocked(false); setW3wVisible(false);
+					} else if (r.reason === 'ambiguous') {
+						state.zone = null; renderZoneResult('', 'Mehrere passende Adressen - bitte auswählen:'); setDeliveryLocked(true); setW3wVisible(false); renderCandidates(r.candidates);
+					} else {
+						state.zone = null; renderZoneResult('', ''); setDeliveryLocked(true); toast(r.error); setW3wVisible(r.reason === 'not_found' && r.w3w_available);
+					}
+					saveGuestAddress({ street: street, zip: z.value.trim(), city: city });
+					renderCart();
 				}).catch(function () { renderZoneResult('bad', 'Adresse konnte nicht geprüft werden'); });
 		}, 500);
 	}
@@ -96,15 +134,16 @@
 		clearTimeout(w3wTimer);
 		var w = $('#sz-w3w'); if (!w) { return; }
 		var words = w.value.trim();
-		if (!words) { renderZoneResult('', ''); setDeliveryLocked(false); return; }
+		if (!words) { renderZoneResult('', ''); setDeliveryLocked(false); state.zone = null; renderCart(); return; }
 		if (words === w3wKey) { return; }
 		renderZoneResult('', 'Code wird geprüft ...');
 		w3wTimer = setTimeout(function () {
 			fetch('api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ op: 'zone', token: TOKEN, words: words }) })
 				.then(function (r) { return r.json(); }).then(function (r) {
 					w3wKey = words;
-					if (r.ok) { renderZoneResult('ok', '✓ Wir liefern zu dir'); setDeliveryLocked(false); }
-					else { renderZoneResult('', ''); setDeliveryLocked(true); toast(r.error); }
+					if (r.ok) { state.zone = r.zone; renderZoneResult('ok', '✓ Wir liefern zu dir · ' + fmt(r.zone.fee) + ' Liefergebühr, ab ' + fmt(r.zone.min)); setDeliveryLocked(false); }
+					else { state.zone = null; renderZoneResult('', ''); setDeliveryLocked(true); toast(r.error); }
+					renderCart();
 				}).catch(function () { renderZoneResult('bad', 'Code konnte nicht geprüft werden'); });
 		}, 500);
 	}
@@ -228,7 +267,7 @@
 	}
 	function subtotal() { return state.cart.reduce(function (s, l) { return s + l.unit * l.qty; }, 0); }
 	function count() { return state.cart.reduce(function (s, l) { return s + l.qty; }, 0); }
-	function minOrder() { if (!state.info) { return 0; } return state.mode === 'delivery' ? state.info.min_delivery : state.info.min_pickup; }
+	function minOrder() { if (!state.info) { return 0; } return state.mode === 'delivery' ? (state.zone ? state.zone.min : state.info.min_delivery) : state.info.min_pickup; }
 
 	var ICON_TRASH = '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M4 6h12M8 6V4h4v2M6 6l.7 10h6.6L14 6M8.5 9v4.5M11.5 9v4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 	// "Noch etwas dazu?": learned from past orders (what is bought together with what is already in the cart), falling
@@ -285,7 +324,7 @@
 			}).join('') + '</div></div>';
 		}
 		h += '<div class="cart-sum"><div class="cart-row"><span>Zwischensumme</span><span>' + fmt(sub) + '</span></div>' +
-			(state.mode === 'delivery' ? '<div class="cart-row muted"><span>Liefergebühr</span><span>nach Adresse</span></div>' : '') + '</div>';
+			(state.mode === 'delivery' ? '<div class="cart-row muted"><span>Liefergebühr</span><span>' + (state.zone ? fmt(state.zone.fee) : 'nach Adresse') + '</span></div>' : '') + '</div>';
 		h += '<a class="cart-go" href="checkout.php"' + (below ? ' aria-disabled="true" tabindex="-1"' : '') + '>' + (below ? 'Noch ' + fmt(min - sub) + ' bis zur Kasse' : 'Zur Kasse · ' + fmt(sub)) + '</a>' +
 			'<p class="cart-trust">Frisch für dich zubereitet. Bezahlen kannst du online, bar oder mit Karte.</p>' +
 			'<button type="button" class="cart-clear" data-clear>Warenkorb leeren</button>';

@@ -1922,3 +1922,33 @@ button.orders-kitchen:disabled { opacity: .5; cursor: wait; }
 .me-form a { color: var(--gold-strong); }
 @media (max-width: 940px) { .me-cols { grid-template-columns: 1fr; } .me-list, .me-edit { max-height: none; position: static; } }
 .menu-page [hidden] { display: none !important; }
+
+/* Liefergebiete (p=11, web/content/shop_zones.page.php): map + list side by side, one card per zone */
+.zo-overlaps { margin-bottom: 14px; padding: 10px 14px; background: rgba(226, 134, 124, 0.1); border: 1px solid var(--danger); border-radius: var(--radius-md); }
+.zo-overlaps[hidden] { display: none; }
+.zo-overlaps p { margin: 4px 0; font-size: 13px; color: var(--text); }
+.zo-layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 18px; align-items: start; }
+.zo-map { height: 620px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-2); }
+.zo-side { display: grid; gap: 12px; align-content: start; }
+.zo-new { width: 100%; }
+.zo-list { display: grid; gap: 12px; max-height: 620px; overflow-y: auto; }
+.zo-card { display: grid; gap: 10px; padding: 14px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); }
+.zo-card.is-active { border-color: var(--gold); }
+.zo-card.is-new { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+.zo-card-head { display: flex; align-items: center; gap: 10px; }
+.zo-card-head input[name=name] { flex: 1; min-width: 0; font-weight: 700; }
+.zo-swatch { flex: 0 0 auto; width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--border-soft); }
+.zo-card-fields { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; font-size: 13px; color: var(--text-muted); }
+.zo-card-fields input[type=text] { width: 84px; margin-left: 6px; }
+.zo-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.zo-card-actions .detail-status { margin-left: auto; }
+.zo-card-actions .detail-status.is-ok { color: var(--success); }
+.zo-edit-shape { border: 1px solid var(--border); background: transparent; color: var(--text); border-radius: var(--radius-sm); padding: 8px 14px; min-height: 44px; }
+.zo-edit-shape:hover { border-color: var(--gold); color: var(--gold); }
+.zo-delete, .zo-cancel-new { border: 0; background: transparent; color: var(--text-muted); text-decoration: underline; text-underline-offset: 3px; min-height: 44px; padding: 0 4px; }
+.zo-delete:hover, .zo-cancel-new:hover { color: var(--danger); }
+/* Leaflet.draw's default toolbar control is never added to the map (every draw/edit action is one of the
+   buttons above instead) - only its vertex handles need restyling to match the dark theme, the default is
+   a plain white square meant for a light basemap UI */
+.leaflet-editing-icon { background: var(--gold); border: 2px solid var(--surface); border-radius: 50%; }
+@media (max-width: 940px) { .zo-layout { grid-template-columns: 1fr; } .zo-map { height: 380px; } .zo-list { max-height: none; } }

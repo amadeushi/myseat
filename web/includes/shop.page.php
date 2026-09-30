@@ -129,7 +129,7 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 
 	<h4 class="sms-sub">Liefergebiete</h4>
 	<?php if (!$sh_zones): ?>
-		<p class="offer-help">Noch keine Liefergebiete. Sie kommen mit der Übernahme aus Resmio.</p>
+		<p class="offer-help">Noch keine Liefergebiete. Zeichne sie im Liefergebiete-Editor auf der Karte.</p>
 	<?php else: ?>
 	<div class="shop-zones">
 		<?php foreach ($sh_zones as $z): ?>
@@ -145,6 +145,7 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 	</div>
 	<p class="offer-help">Die Gebiete sind als Flächen auf der Karte hinterlegt. Ob eine Adresse liegt, prüft die Bestellseite über die Koordinaten der Adresse.</p>
 	<?php endif; ?>
+	<p class="offer-actions"><a class="button_dark" href="main_page.php?p=11">Liefergebiete-Editor öffnen (Formen zeichnen, anlegen, löschen)</a></p>
 
 	<h4 class="sms-sub">Bestellzeiten</h4>
 	<?php if (!$sh_hours): ?>

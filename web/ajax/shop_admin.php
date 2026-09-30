@@ -89,11 +89,9 @@ if ($op === 'test_mollie') {
 
 if ($op === 'zone') {
 	$id = (int)(isset($_POST['id']) ? $_POST['id'] : 0);
-	$name = mb_substr(trim((string)(isset($_POST['name']) ? $_POST['name'] : '')), 0, 80);
-	if ($id <= 0 || $name === '') { sa_out(array('ok' => false, 'error' => 'Name fehlt.')); }
-	fb_exec("UPDATE ".fb_t('tp_shop_zones')." SET name = ?, fee_cents = ?, min_order_cents = ?, active = ? WHERE id = ?",
-		'siiii', array($name, shop_cents(isset($_POST['fee']) ? $_POST['fee'] : 0), shop_cents(isset($_POST['min']) ? $_POST['min'] : 0), !empty($_POST['active']) ? 1 : 0, $id));
-	sa_out(array('ok' => true, 'message' => 'Liefergebiet gespeichert.'));
+	$r = shop_zone_save_info($id, isset($_POST['name']) ? $_POST['name'] : '', shop_cents(isset($_POST['fee']) ? $_POST['fee'] : 0),
+		shop_cents(isset($_POST['min']) ? $_POST['min'] : 0), !empty($_POST['active']));
+	sa_out($r['ok'] ? array('ok' => true, 'message' => 'Liefergebiet gespeichert.') : $r);
 }
 
 sa_out(array('ok' => false, 'error' => 'Unbekannte Aktion.'));

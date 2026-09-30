@@ -3,7 +3,7 @@
 (function () {
 	'use strict';
 	var KEY = 'amadeusCartV2', GUEST = 'amadeusGuestV1', TOKEN = document.body.dataset.token;
-	var S = { mode: 'delivery', cart: [], info: null, zone: null, zoneKey: '', zoneWords: '', w3wKey: '', slots: null, tipPct: 0, tipCustom: '', when: 'asap', pay: '', busy: false, coupon: null };
+	var S = { mode: 'delivery', cart: [], info: null, zone: null, zoneKey: '', zoneAmbiguous: false, zoneWords: '', w3wKey: '', slots: null, tipPct: 0, tipCustom: '', when: 'asap', pay: '', busy: false, coupon: null };
 	var form = document.getElementById('co-form');
 
 	function $(s, r) { return (r || document).querySelector(s); }
@@ -71,8 +71,9 @@
 			var street = form.elements.street.value.trim(), zip = form.elements.zip.value.trim(), city = form.elements.city.value.trim();
 			var w3w = $('#co-w3w'), words = w3w ? w3w.value.trim() : '';
 			if (!street && !zip && !city && !words) { return 'Bitte gib deine Lieferadresse an.'; }
+			if (S.zoneAmbiguous) { return 'Bitte wähle deine Adresse aus der Liste aus.'; }
 			if (words && S.w3wKey === words) { return 'Wir liefern leider nicht zu dieser Adresse.'; }
-			if (street && zip && city && S.zoneKey === street + '|' + zip + '|' + city) { return 'Wir liefern leider nicht zu dieser Adresse.'; }
+			if (street && city && S.zoneKey === street + '|' + zip + '|' + city) { return 'Wir liefern leider nicht zu dieser Adresse.'; }
 			return 'Wir prüfen noch, ob wir zu deiner Adresse liefern.';
 		}
 		var dayEl = $('select[name=day]'), timeEl = $('select[name=time]');
@@ -127,6 +128,27 @@
 		if (t) { t.hidden = !show; }
 		if (!show && b) { b.hidden = true; }
 	}
+	// two or more real, deliverable streets matched the same typed text - the guest picks instead of the
+	// app silently guessing between them (see shop_find_zone()'s 'ambiguous' reason)
+	function renderCandidates(list) {
+		var box = $('#co-candidates'); if (!box) { return; }
+		if (!list || !list.length) { box.hidden = true; box.innerHTML = ''; return; }
+		box.innerHTML = list.map(function (c, i) {
+			return '<button type="button" class="co-candidate" data-i="' + i + '"><strong>' + esc(c.road) + '</strong><small>' + esc(c.postcode) + ' ' + esc(c.city) + '</small></button>';
+		}).join('');
+		box.hidden = false;
+		$$('.co-candidate', box).forEach(function (btn, i) {
+			btn.addEventListener('click', function () {
+				var c = list[i], out = $('#co-zone');
+				form.elements.zip.value = c.postcode;
+				S.zoneKey = form.elements.street.value.trim() + '|' + form.elements.zip.value.trim() + '|' + form.elements.city.value.trim();
+				S.zone = c.zone; S.zoneAmbiguous = false;
+				out.className = 'co-zone ok'; out.textContent = 'Wir liefern zu dir. Liefergebühr ' + fmt(c.zone.fee) + ', Mindestbestellwert ' + fmt(c.zone.min) + '.';
+				setW3wVisible(false); box.hidden = true; box.innerHTML = '';
+				renderSummary();
+			});
+		});
+	}
 	var zoneTimer;
 	function checkZone() {
 		clearTimeout(zoneTimer);
@@ -134,14 +156,27 @@
 		var key = street + '|' + zip + '|' + city;
 		// typing a real address again means leaving what3words mode, even if it had succeeded
 		S.zoneWords = ''; S.w3wKey = '';
-		if (!street || !zip || !city) { S.zone = null; S.zoneKey = ''; out.textContent = ''; setW3wVisible(false); renderSummary(); return; }
+		// a house number is required before asking at all - a street name alone ("Goschentor") is too vague a
+		// query and Nominatim/Google may fuzzy-match it to a different, wrong real street while still typing
+		if (!street || !city || !/\d/.test(street)) { S.zone = null; S.zoneKey = ''; S.zoneAmbiguous = false; out.textContent = ''; setW3wVisible(false); renderCandidates(null); renderSummary(); return; }
 		if (key === S.zoneKey) { return; }
 		out.className = 'co-zone'; out.textContent = 'Adresse wird geprüft ...';
+		renderCandidates(null);
 		zoneTimer = setTimeout(function () {
 			post('zone', { street: street, zip: zip, city: city }).then(function (r) {
 				S.zoneKey = key;
-				if (r.ok) { S.zone = r.zone; out.className = 'co-zone ok'; out.textContent = 'Wir liefern zu dir. Liefergebühr ' + fmt(r.zone.fee) + ', Mindestbestellwert ' + fmt(r.zone.min) + '.'; setW3wVisible(false); }
-				else { S.zone = null; out.className = 'co-zone bad'; out.textContent = r.error; setW3wVisible(r.reason === 'not_found' && r.w3w_available); }
+				if (r.ok) {
+					// the PLZ comes straight from the same lookup that just confirmed the address - it always
+					// takes over here (even a wrong one already in the field, e.g. from browser autofill),
+					// since a confirmed match knows better. The street itself is never rewritten: a guest
+					// should never see their own typed text silently replaced by something else
+					if (r.postcode) { form.elements.zip.value = r.postcode; }
+					S.zone = r.zone; S.zoneAmbiguous = false; out.className = 'co-zone ok'; out.textContent = 'Wir liefern zu dir. Liefergebühr ' + fmt(r.zone.fee) + ', Mindestbestellwert ' + fmt(r.zone.min) + '.'; setW3wVisible(false);
+				} else if (r.reason === 'ambiguous') {
+					S.zone = null; S.zoneAmbiguous = true; out.className = 'co-zone'; out.textContent = 'Mehrere passende Adressen - bitte auswählen:'; setW3wVisible(false); renderCandidates(r.candidates);
+				} else {
+					S.zone = null; S.zoneAmbiguous = false; out.className = 'co-zone bad'; out.textContent = r.error; setW3wVisible(r.reason === 'not_found' && r.w3w_available);
+				}
 				renderSummary();
 			}).catch(function () { out.className = 'co-zone bad'; out.textContent = 'Die Adresse konnte gerade nicht geprüft werden.'; });
 		}, 500);

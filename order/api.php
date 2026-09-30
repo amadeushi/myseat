@@ -61,10 +61,12 @@ if ($op === 'zone') {
 		? shop_find_zone_w3w($words)
 		: shop_find_zone(mb_substr((string)(isset($body['street']) ? $body['street'] : ''), 0, 120), mb_substr((string)(isset($body['zip']) ? $body['zip'] : ''), 0, 10), mb_substr((string)(isset($body['city']) ? $body['city'] : ''), 0, 80));
 	if (!$r['ok']) {
-		api_out(array('ok' => false, 'error' => $r['error'], 'reason' => isset($r['reason']) ? $r['reason'] : '', 'w3w_available' => shop_w3w_key() !== ''));
+		api_out(array('ok' => false, 'error' => $r['error'], 'reason' => isset($r['reason']) ? $r['reason'] : '', 'w3w_available' => shop_w3w_key() !== '',
+			'candidates' => isset($r['candidates']) ? $r['candidates'] : array()));
 	}
 	$min = $r['zone']['min_order_cents'] > 0 ? $r['zone']['min_order_cents'] : shop_cents(shop_setting('min_order_delivery'));
-	api_out(array('ok' => true, 'zone' => array('id' => $r['zone']['id'], 'name' => $r['zone']['name'], 'fee' => $r['zone']['fee_cents'], 'min' => $min), 'lat' => $r['lat'], 'lng' => $r['lng'], 'words' => isset($r['words']) ? $r['words'] : ''));
+	api_out(array('ok' => true, 'zone' => array('id' => $r['zone']['id'], 'name' => $r['zone']['name'], 'fee' => $r['zone']['fee_cents'], 'min' => $min), 'lat' => $r['lat'], 'lng' => $r['lng'],
+		'words' => isset($r['words']) ? $r['words'] : '', 'postcode' => isset($r['postcode']) ? $r['postcode'] : '', 'road' => isset($r['road']) ? $r['road'] : ''));
 }
 
 if ($op === 'upsell') {

@@ -47,7 +47,8 @@ function shop_ensure_schema() {
 		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `kind` VARCHAR(10) NOT NULL, `weekday` TINYINT NOT NULL, `begins` TIME NOT NULL, `ends` TIME NOT NULL,
 		KEY `kind` (`kind`, `weekday`)) $opts");
 	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_geocache')." (
-		`h` CHAR(40) NOT NULL PRIMARY KEY, `lat` DOUBLE NULL, `lng` DOUBLE NULL, `created_at` DATETIME NOT NULL) $opts");
+		`h` CHAR(40) NOT NULL PRIMARY KEY, `lat` DOUBLE NULL, `lng` DOUBLE NULL, `postcode` VARCHAR(10) NULL, `road` VARCHAR(160) NULL,
+		`created_at` DATETIME NOT NULL) $opts");
 	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_orders')." (
 		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `token` CHAR(32) NOT NULL, `number` VARCHAR(12) NOT NULL, `day_no` INT NOT NULL DEFAULT 0,
 		`order_date` DATE NOT NULL, `type` VARCHAR(10) NOT NULL, `status` VARCHAR(12) NOT NULL DEFAULT 'new', `scheduled_at` DATETIME NULL, `eta_at` DATETIME NULL,
@@ -94,6 +95,24 @@ function shop_ensure_schema() {
 	$scol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'source'");
 	if (!$scol) {
 		mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `source` VARCHAR(12) NOT NULL DEFAULT 'shop', ADD `external_ref` VARCHAR(20) NULL, ADD UNIQUE KEY `ext_ref` (`external_ref`)");
+	}
+	// the postcode/road Nominatim or Google matched, so a confirmed address can hand its normalized
+	// form back to the guest (auto-fill the PLZ, correct the street spelling) - see shop_geocode()
+	$gcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_geocache')." LIKE 'postcode'");
+	if (!$gcol) {
+		mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_geocache')." ADD `postcode` VARCHAR(10) NULL, ADD `road` VARCHAR(160) NULL");
+		// every row cached before these columns existed has postcode/road left NULL forever - a cache hit
+		// never re-asks the provider, so that address would silently never auto-fill. Clearing the cache
+		// once here is cheap and self-healing: the next lookup for it just asks Nominatim/Google again,
+		// this time keeping the postcode and road too
+		mysqli_query($db, "TRUNCATE TABLE ".fb_t('tp_shop_geocache'));
+	}
+	// every distinct street/PLZ Nominatim offered for a query (JSON), so shop_find_zone() can tell two
+	// real, differently-named streets apart instead of silently guessing between them - see shop_geocode()
+	$ccol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_geocache')." LIKE 'candidates'");
+	if (!$ccol) {
+		mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_geocache')." ADD `candidates` TEXT NULL");
+		mysqli_query($db, "TRUNCATE TABLE ".fb_t('tp_shop_geocache'));
 	}
 	$done = true;
 	shop_migrate_groups();
@@ -314,14 +333,22 @@ function shop_slots($kind, $date) {
 
 // ---- delivery zones: address -> coordinates (OpenStreetMap Nominatim, cached, Google as a paid fallback for
 // addresses Nominatim's data misses) -> zone (point in polygon)
+// returns array(lat, lng, postcode, road, candidates) or null - postcode/road are the provider's own
+// normalized values (may be null even on a hit, e.g. a cache row from before those columns existed),
+// used to hand a confirmed address back to the guest (auto-fill an empty or wrong PLZ; the street
+// itself is never rewritten). candidates is every distinct match (lat, lng, postcode, road) Nominatim
+// offered for this query, including the primary one - shop_find_zone() uses it to tell a guest apart
+// two real, differently-named streets instead of silently guessing between them.
 function shop_geocode($street, $zip, $city) {
 	shop_ensure_schema();
 	$key = sha1(mb_strtolower(trim($street).'|'.trim($zip).'|'.trim($city)));
-	$hit = fb_row("SELECT lat, lng, created_at FROM ".fb_t('tp_shop_geocache')." WHERE h = ?", 's', array($key));
+	$hit = fb_row("SELECT lat, lng, postcode, road, candidates, created_at FROM ".fb_t('tp_shop_geocache')." WHERE h = ?", 's', array($key));
 	if ($hit && ($hit['lat'] !== null || strtotime($hit['created_at']) > time() - 86400)) {
-		return $hit['lat'] !== null ? array((float)$hit['lat'], (float)$hit['lng']) : null;
+		if ($hit['lat'] === null) { return null; }
+		$cands = $hit['candidates'] ? json_decode($hit['candidates'], true) : array(array('lat' => (float)$hit['lat'], 'lng' => (float)$hit['lng'], 'postcode' => $hit['postcode'], 'road' => $hit['road']));
+		return array((float)$hit['lat'], (float)$hit['lng'], $hit['postcode'], $hit['road'], $cands);
 	}
-	$url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=de&street='.rawurlencode(trim($street)).'&postalcode='.rawurlencode(trim($zip)).'&city='.rawurlencode(trim($city));
+	$url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&addressdetails=1&countrycodes=de&street='.rawurlencode(trim($street)).'&postalcode='.rawurlencode(trim($zip)).'&city='.rawurlencode(trim($city));
 	$ch = curl_init($url);
 	curl_setopt_array($ch, array(CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => false, CURLOPT_CONNECTTIMEOUT => 4, CURLOPT_TIMEOUT => 8,
 		CURLOPT_USERAGENT => 'mySeat-Lieferservice/1.0 (Amadeus Hildesheim; hamun@amds.at)'));
@@ -329,19 +356,39 @@ function shop_geocode($street, $zip, $city) {
 	$http = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
 	if ($http !== 200) { return null; } // a problem of the service is not cached
 	$j = json_decode((string)$raw, true);
-	$lat = (is_array($j) && !empty($j[0]['lat'])) ? (float)$j[0]['lat'] : null;
-	$lng = (is_array($j) && !empty($j[0]['lon'])) ? (float)$j[0]['lon'] : null;
+	$cands = array();
+	if (is_array($j)) {
+		foreach ($j as $row) {
+			if (empty($row['lat']) || empty($row['lon'])) { continue; }
+			$addr = isset($row['address']) ? $row['address'] : array();
+			if (empty($addr['road'])) { continue; } // not a street-level match (a district, a postcode area, ...)
+			$road = trim($addr['road'].' '.(isset($addr['house_number']) ? $addr['house_number'] : shop_street_number($street)));
+			$postcode = !empty($addr['postcode']) ? (string)$addr['postcode'] : null;
+			$k = mb_strtolower($road.'|'.$postcode);
+			if (isset($cands[$k])) { continue; } // Nominatim can list the same street/PLZ combo more than once
+			$cands[$k] = array('lat' => (float)$row['lat'], 'lng' => (float)$row['lon'], 'postcode' => $postcode, 'road' => $road);
+		}
+	}
+	$cands = array_values($cands);
+	$lat = $lng = $postcode = $road = null;
+	if ($cands) { $lat = $cands[0]['lat']; $lng = $cands[0]['lng']; $postcode = $cands[0]['postcode']; $road = $cands[0]['road']; }
 	// Nominatim's German address data occasionally misses real addresses (new builds, rural roads)
 	// - Google Geocoding is a paid fallback only for exactly that gap, never the default path, so
 	// a normal lookup that Nominatim already answers never costs anything
 	if ($lat === null) {
 		$g = shop_geocode_google($street, $zip, $city);
-		if ($g) { list($lat, $lng) = $g; }
+		if ($g) { list($lat, $lng, $postcode, $road) = $g; $cands = array(array('lat' => $lat, 'lng' => $lng, 'postcode' => $postcode, 'road' => $road)); }
 	}
-	fb_exec("REPLACE INTO ".fb_t('tp_shop_geocache')." (h, lat, lng, created_at) VALUES (?, ?, ?, NOW())", 'sdd', array($key, $lat, $lng));
-	return $lat !== null ? array($lat, $lng) : null;
+	fb_exec("REPLACE INTO ".fb_t('tp_shop_geocache')." (h, lat, lng, postcode, road, candidates, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())",
+		'sddsss', array($key, $lat, $lng, $postcode, $road, count($cands) > 1 ? json_encode($cands) : null));
+	return $lat !== null ? array($lat, $lng, $postcode, $road, $cands) : null;
+}
+// the house number the guest typed, when a provider's own match does not carry one separately
+function shop_street_number($street) {
+	return preg_match('/(\d[\d\s\/a-zA-Z-]*)$/u', trim((string)$street), $m) ? trim($m[1]) : '';
 }
 
+// returns array(lat, lng, postcode, road) or null, same contract as shop_geocode()
 function shop_geocode_google($street, $zip, $city) {
 	$key = shop_google_key();
 	if ($key === '') { return null; }
@@ -355,7 +402,15 @@ function shop_geocode_google($street, $zip, $city) {
 	$j = json_decode((string)$raw, true);
 	if (!is_array($j) || !isset($j['status']) || $j['status'] !== 'OK' || empty($j['results'][0]['geometry']['location'])) { return null; }
 	$loc = $j['results'][0]['geometry']['location'];
-	return (isset($loc['lat'], $loc['lng'])) ? array((float)$loc['lat'], (float)$loc['lng']) : null;
+	if (!isset($loc['lat'], $loc['lng'])) { return null; }
+	$postcode = null; $route = null; $number = null;
+	foreach ((isset($j['results'][0]['address_components']) ? $j['results'][0]['address_components'] : array()) as $c) {
+		if (!empty($c['types']) && in_array('postal_code', $c['types'], true)) { $postcode = $c['long_name']; }
+		if (!empty($c['types']) && in_array('route', $c['types'], true)) { $route = $c['long_name']; }
+		if (!empty($c['types']) && in_array('street_number', $c['types'], true)) { $number = $c['long_name']; }
+	}
+	$road = $route !== null ? trim($route.' '.($number !== null ? $number : shop_street_number($street))) : null;
+	return array((float)$loc['lat'], (float)$loc['lng'], $postcode, $road);
 }
 
 // what3words: an escape hatch for locations with no real street address (a field, a park entrance,
@@ -445,16 +500,107 @@ function shop_zone_for_point($lat, $lng) {
 	return null;
 }
 
+// ---- delivery zone editor (backend page p=11, web/content/shop_zones.page.php): draw, edit and delete
+// the polygons themselves. shop_admin.php's 'zone' op still covers name/fee/min/active for the settings
+// page; these are the shape-aware operations only that page needs.
+function shop_zones_list() {
+	shop_ensure_schema();
+	$out = array();
+	foreach (fb_rows("SELECT id, name, polygon, fee_cents, min_order_cents, active FROM ".fb_t('tp_shop_zones')." ORDER BY fee_cents, id") as $z) {
+		$poly = json_decode($z['polygon'], true);
+		$out[] = array('id' => (int)$z['id'], 'name' => $z['name'], 'polygon' => is_array($poly) ? $poly : array(),
+			'fee_cents' => (int)$z['fee_cents'], 'min_order_cents' => (int)$z['min_order_cents'], 'active' => (int)$z['active']);
+	}
+	return $out;
+}
+// a usable polygon: at least 3 points, each a [lat, lng] pair of real numbers
+function shop_zone_polygon_ok($poly) {
+	if (!is_array($poly) || count($poly) < 3) { return false; }
+	foreach ($poly as $p) { if (!is_array($p) || count($p) < 2 || !is_numeric($p[0]) || !is_numeric($p[1])) { return false; } }
+	return true;
+}
+function shop_zone_create($name, $feeCents, $minCents, $active, $poly) {
+	if (!shop_zone_polygon_ok($poly)) { return array('ok' => false, 'error' => 'Das Gebiet braucht mindestens 3 Eckpunkte.'); }
+	$name = mb_substr(trim((string)$name), 0, 80);
+	if ($name === '') { return array('ok' => false, 'error' => 'Bitte gib dem Gebiet einen Namen.'); }
+	$clean = array_map(function ($p) { return array((float)$p[0], (float)$p[1]); }, $poly);
+	fb_exec("INSERT INTO ".fb_t('tp_shop_zones')." (name, polygon, fee_cents, min_order_cents, active) VALUES (?, ?, ?, ?, ?)",
+		'ssiii', array($name, json_encode($clean), max(0, (int)$feeCents), max(0, (int)$minCents), $active ? 1 : 0));
+	return array('ok' => true, 'id' => (int)mysqli_insert_id(fb_db()));
+}
+function shop_zone_save_shape($id, $poly) {
+	if (!shop_zone_polygon_ok($poly)) { return array('ok' => false, 'error' => 'Das Gebiet braucht mindestens 3 Eckpunkte.'); }
+	$clean = array_map(function ($p) { return array((float)$p[0], (float)$p[1]); }, $poly);
+	fb_exec("UPDATE ".fb_t('tp_shop_zones')." SET polygon = ? WHERE id = ?", 'si', array(json_encode($clean), (int)$id));
+	return array('ok' => true);
+}
+// name/fee/min/active only - shared by the settings page (web/ajax/shop_admin.php's 'zone' op) and this
+// editor's own 'save_info' op, which use two different admin tokens and so can't call one another directly
+function shop_zone_save_info($id, $name, $feeCents, $minCents, $active) {
+	$name = mb_substr(trim((string)$name), 0, 80);
+	if ($id <= 0 || $name === '') { return array('ok' => false, 'error' => 'Name fehlt.'); }
+	fb_exec("UPDATE ".fb_t('tp_shop_zones')." SET name = ?, fee_cents = ?, min_order_cents = ?, active = ? WHERE id = ?",
+		'siiii', array($name, max(0, (int)$feeCents), max(0, (int)$minCents), $active ? 1 : 0, (int)$id));
+	return array('ok' => true);
+}
+function shop_zone_delete($id) {
+	fb_exec("DELETE FROM ".fb_t('tp_shop_zones')." WHERE id = ?", 'i', array((int)$id));
+	return array('ok' => true);
+}
+// advisory only: two active zones whose areas overlap, so an operator sees it and knows which one
+// shop_zone_for_point() would actually pick there (ORDER BY fee_cents, id - the cheaper zone wins,
+// with no separate priority setting). A vertex of one zone found inside the other is good enough
+// evidence of an overlap for this purpose; it will not catch two polygons crossing without either
+// one containing a vertex of the other, which is a rare shape for a real delivery-area map
+function shop_zones_overlaps($zones) {
+	$active = array_values(array_filter($zones, function ($z) { return $z['active'] && shop_zone_polygon_ok($z['polygon']); }));
+	$out = array();
+	for ($i = 0; $i < count($active); $i++) {
+		for ($j = $i + 1; $j < count($active); $j++) {
+			$a = $active[$i]; $b = $active[$j]; $hit = false;
+			foreach ($a['polygon'] as $p) { if (shop_point_in_polygon($p[0], $p[1], $b['polygon'])) { $hit = true; break; } }
+			if (!$hit) { foreach ($b['polygon'] as $p) { if (shop_point_in_polygon($p[0], $p[1], $a['polygon'])) { $hit = true; break; } } }
+			if ($hit) {
+				// same ordering shop_zone_for_point() itself uses
+				$winner = ($a['fee_cents'] !== $b['fee_cents']) ? ($a['fee_cents'] < $b['fee_cents'] ? $a['id'] : $b['id']) : min($a['id'], $b['id']);
+				$out[] = array('a' => $a['id'], 'b' => $b['id'], 'winner' => $winner);
+			}
+		}
+	}
+	return $out;
+}
+
 // the zone of an address: array(ok, zone (id, name, fee_cents, min_order_cents), lat, lng, error, reason).
 // reason is 'not_found' (geocoding itself failed - the UI may then offer a what3words code instead) or
 // 'outside_zone' (a real, found address that is simply not served).
 function shop_find_zone($street, $zip, $city) {
-	if (trim($street) === '' || trim($zip) === '' || trim($city) === '') { return array('ok' => false, 'reason' => 'not_found', 'error' => 'Bitte Straße mit Hausnummer, PLZ und Ort angeben.'); }
+	// PLZ is not required here: Nominatim/Google can often resolve street + Ort alone, and a
+	// successful match hands its own postcode back (see 'postcode' below) rather than asking the
+	// guest to type it first - the PLZ is still required to actually place the order (shop_create_order)
+	if (trim($street) === '' || trim($city) === '') { return array('ok' => false, 'reason' => 'not_found', 'error' => 'Bitte Straße mit Hausnummer und Ort angeben.'); }
 	$pos = shop_geocode($street, $zip, $city);
 	if (!$pos) { return array('ok' => false, 'reason' => 'not_found', 'error' => 'Wir konnten diese Adresse nicht finden. Bitte prüfe Straße, Hausnummer und PLZ, oder wähle Abholung.'); }
-	$zone = shop_zone_for_point($pos[0], $pos[1]);
-	if (!$zone) { return array('ok' => false, 'reason' => 'outside_zone', 'error' => 'Diese Adresse liegt leider außerhalb unseres Liefergebiets. Du kannst gern bei uns abholen.', 'lat' => $pos[0], 'lng' => $pos[1]); }
-	return array('ok' => true, 'zone' => $zone, 'lat' => $pos[0], 'lng' => $pos[1]);
+	list($lat, $lng, $postcode, $road, $cands) = $pos;
+	// several real, differently-named streets can match the same typed text ("Goschentor" is also the
+	// start of "Goschenstraße") - only the ones actually in a delivery zone matter, and only among
+	// those does an actual choice exist; a single deliverable match is accepted exactly as before
+	$deliverable = array();
+	foreach ($cands as $c) {
+		$z = shop_zone_for_point($c['lat'], $c['lng']);
+		if ($z) { $c['zone'] = $z; $deliverable[] = $c; }
+	}
+	if (!$deliverable) { return array('ok' => false, 'reason' => 'outside_zone', 'error' => 'Diese Adresse liegt leider außerhalb unseres Liefergebiets. Du kannst gern bei uns abholen.', 'lat' => $lat, 'lng' => $lng); }
+	if (count($deliverable) === 1) {
+		$c = $deliverable[0];
+		return array('ok' => true, 'zone' => $c['zone'], 'lat' => $c['lat'], 'lng' => $c['lng'], 'postcode' => $c['postcode'], 'road' => $c['road']);
+	}
+	$out = array();
+	foreach ($deliverable as $c) {
+		$min = $c['zone']['min_order_cents'] > 0 ? $c['zone']['min_order_cents'] : shop_cents(shop_setting('min_order_delivery'));
+		$out[] = array('road' => $c['road'], 'postcode' => $c['postcode'], 'city' => trim($city), 'lat' => $c['lat'], 'lng' => $c['lng'],
+			'zone' => array('id' => $c['zone']['id'], 'name' => $c['zone']['name'], 'fee' => $c['zone']['fee_cents'], 'min' => $min));
+	}
+	return array('ok' => false, 'reason' => 'ambiguous', 'error' => 'Mehrere passende Adressen gefunden. Bitte wähle die richtige aus.', 'candidates' => $out);
 }
 
 // same contract as shop_find_zone(), but for a what3words code instead of street/zip/city
@@ -543,6 +689,11 @@ function shop_create_order($in) {
 			$city = mb_substr(trim((string)(isset($in['city']) ? $in['city'] : '')), 0, 80);
 			$z = shop_find_zone($street, $zip, $city);
 			if (!$z['ok']) { return array('ok' => false, 'error' => $z['error']); }
+			// the browser already auto-fills the PLZ from the same lookup once an address is found
+			// (see order/shop.js, checkout.js) - this only catches a guest who reached the endpoint
+			// without that step, by falling back to what the geocoder itself matched
+			if ($zip === '') { $zip = !empty($z['postcode']) ? $z['postcode'] : ''; }
+			if ($zip === '') { return array('ok' => false, 'error' => 'Bitte gib deine Postleitzahl an.'); }
 		}
 		$fee = $z['zone']['fee_cents']; $zoneId = $z['zone']['id']; $lat = $z['lat']; $lng = $z['lng'];
 		if ($z['zone']['min_order_cents'] > 0) { $min = $z['zone']['min_order_cents']; }

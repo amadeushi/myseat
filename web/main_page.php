@@ -23,7 +23,7 @@ This file is part of mySeat.
 /** Login **/
 // ** set configuration
 	//Software version - http://github.com/apmuthu/myseat
-	$sw_version = 'v4.7.0';
+	$sw_version = 'v4.10.0';
 	
 	include('../config/config.general.php');
 	
@@ -174,6 +174,14 @@ echo "<body>";
 			// menu editor of the delivery service (categories, dishes, option groups)
 			if ( current_user_can( 'Settings-General' ) ){
 				include('content/menu.page.php');
+			}else{
+				redeclare_access();
+			}
+		break;
+		case '11':
+			// delivery zone editor of the delivery service (draw/edit polygons on a map)
+			if ( current_user_can( 'Settings-General' ) ){
+				include('content/shop_zones.page.php');
 			}else{
 				redeclare_access();
 			}

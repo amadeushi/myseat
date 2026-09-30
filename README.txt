@@ -52,6 +52,55 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-01 == mySeat v4.10.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Liefergebiete-Editor im Backend (Einstellungen > Lieferservice > "Liefergebiete-Editor öffnen",
+   web/main_page.php?p=11) - Liefergebiete können jetzt direkt als Polygon auf einer Karte gezeichnet,
+   in ihrer Form bearbeitet und gelöscht werden, statt nur einmalig aus Resmio übernommen zu werden.
+   Alle aktiven Gebiete sind gleichzeitig sichtbar (je eigene Farbe), überschneiden sich zwei Gebiete,
+   zeigt ein Hinweis, welches davon laut bestehender Regel (günstigere Liefergebühr gewinnt) tatsächlich
+   greift - die Zuordnungsregel selbst bleibt unverändert. Name/Liefergebühr/Mindestbestellwert/aktiv
+   bleiben wie bisher direkt bearbeitbar. Umgesetzt mit /impeccable shape.
+ * Leaflet.draw (vendoriert in web/js/leaflet/, wie das schon vorhandene Leaflet selbst) treibt das
+   Zeichnen/Editieren der Eckpunkte an; die neuen shop_zone_create()/shop_zone_save_shape()/
+   shop_zone_delete()/shop_zones_overlaps() in web/classes/shop.class.php und der neue Endpunkt
+   web/ajax/shop_zones_admin.php gehören dazu
+
+2026-10-01 == mySeat v4.9.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: wenn die Adressprüfung (Menü-Schnellcheck und Kasse) mehr als eine echte, lieferbare Straße zu
+   der eingegebenen Adresse findet (z.B. "Goschentor" trifft auch auf "Goschenstraße" zu), erscheint
+   jetzt eine kurze Auswahlliste statt automatisch zu raten - ein Klick übernimmt PLZ und Liefergebiet
+   des gewählten Treffers, die eingegebene Straße bleibt dabei unverändert. Ein einzelner Treffer wird
+   weiterhin automatisch übernommen, kein zusätzlicher Klick im Regelfall. Umgesetzt mit /impeccable
+   shape.
+ * shop_geocode() fragt Nominatim jetzt mit mehreren Treffern ab (vorher nur der einzelne "beste");
+   neue Spalte candidates auf tp_shop_geocache, angelegt automatisch wie die anderen Tabellen der App
+
+2026-10-01 == mySeat v4.8.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: the delivery-zone address check (order/index.php quick check and order/checkout.php) now
+   auto-fills the PLZ and corrects the street's spelling as soon as an address resolves - Nominatim/
+   Google's own postcode and normalized road name come back with a successful zone check, so a guest
+   only has to type Straße + Ort (PLZ is filled in for them, or can still be typed for a more precise
+   match on an ambiguous street name). shop_find_zone() no longer requires a PLZ to attempt a lookup;
+   placing an order still needs one, filled in either by the guest, by this auto-fill, or as a last
+   resort from what the geocoder itself matched
+ * New columns on tp_shop_geocache (postcode, road), created automatically like the app's other
+   tables - nothing to do on the server
+
+2026-09-30 == mySeat v4.7.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: the "Liefert ihr zu mir?" quick check on the menu page (order/index.php) now shows the
+   delivery fee and minimum order of the resolved zone right away, instead of only a generic "Wir
+   liefern zu dir" - the cart's Mindestbestellwert bar, the checkout-button hint and the delivery-fee
+   line all switch to the zone's real numbers as soon as an address is checked, so a guest is not
+   surprised by a different amount at checkout
+ * The what3words and Google key cards in Einstellungen > Lieferservice each got a "Verbindung
+   prüfen" button (v4.7.0, undocumented until now) that tests the stored key against the real API
+   and shows its own error message (e.g. what3words' plan/quota errors, Google's REQUEST_DENIED /
+   OVER_QUERY_LIMIT), instead of only surfacing a problem once a guest hits it live
+
 2026-09-30 == mySeat v4.7.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: the delivery-zone address check (order/index.php quick check and order/checkout.php) now

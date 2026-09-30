@@ -56,6 +56,17 @@
    and would otherwise win by source order, showing them even while hidden is set */
 .shop-zone-w3w-toggle[hidden], #sz-w3w-box[hidden], #co-w3w-box[hidden] { display: none; }
 #sz-w3w-box, #co-w3w-box { margin-top: 10px; }
+/* two or more real, deliverable streets matched the same typed text (e.g. "Goschentor" is also the start of
+   "Goschenstraße") - the guest picks instead of the app silently guessing. Flat at rest (not a floating
+   overlay): inside #sz-candidates it already sits in the already-floating .shop-zone-box, inside #co-candidates
+   it displaces the checkout page's own flow, so neither needs its own shadow */
+.co-candidates { margin-top: 10px; background: var(--border-soft); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.co-candidates[hidden] { display: none; }
+.co-candidate { display: flex; flex-direction: column; gap: 2px; width: 100%; min-height: 44px; padding: 10px 14px; background: var(--surface-2); border: 0; border-bottom: 1px solid var(--border-soft); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.co-candidate:last-child { border-bottom: 0; }
+.co-candidate:hover, .co-candidate:focus-visible { background: var(--surface-3); outline: none; }
+.co-candidate strong { font-weight: 700; }
+.co-candidate small { color: var(--text-muted); font-size: 13px; }
 .shop-zone-box { position: absolute; top: 100%; right: 16px; margin-top: 8px; z-index: 40; width: 320px; max-width: calc(100vw - 32px); padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45); }
 .shop-zone-box .co-grid { margin: 0; }
 .shop-zone-backdrop { position: fixed; inset: 0; z-index: 25; background: rgba(0, 0, 0, 0.5); }
