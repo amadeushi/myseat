@@ -170,7 +170,18 @@ function bm_build($d) {
 	$email    = bm_clean(isset($form['reservation_guest_email']) ? $form['reservation_guest_email'] : '');
 	$number   = $d['booking_number'];
 	$weekday  = bm_weekday($d['date'], $lang);
-	$date_txt = ($d['date_text'] !== '' && strpos($d['date_text'], ' - ') !== false) ? $d['date_text'] : $weekday.', '.$d['date_text'];
+	// callers always format date_text with the system's (day.month.year) date setting,
+	// regardless of the guest's language - for English guests that numeric format is
+	// ambiguous (05.10.2026 reads as May 10th under US conventions), so rebuild it from the
+	// raw date. A date range (recurring booking, "date_text" contains ' - ') has no single
+	// raw date to rebuild from and is left as given.
+	if ($d['date_text'] !== '' && strpos($d['date_text'], ' - ') !== false) {
+		$date_txt = $d['date_text'];
+	} elseif (!$de && ($ts = strtotime($d['date'])) !== false) {
+		$date_txt = date('l, F j, Y', $ts);
+	} else {
+		$date_txt = $weekday.', '.$d['date_text'];
+	}
 	$time_txt = $de ? $d['time_text'].' Uhr' : $d['time_text'];
 	$brand    = $outlet !== '' ? $outlet : bm_clean($d['property']['name']);
 	$phone_contact = !empty($settings['mailPhone']) ? $settings['mailPhone'] : (!empty($d['property']['phone']) ? bm_clean($d['property']['phone']) : '');
@@ -179,7 +190,11 @@ function bm_build($d) {
 
 	if ($de) {
 		$greeting = 'Hallo '.$name.',';
-		$rows     = array('Datum' => $date_txt, 'Uhrzeit' => $time_txt, 'Personen' => (string)$pax, 'Buchungsnummer' => $number);
+		// a declined request never got a booking number - showing one would read as a
+		// confirmed reference for a table that doesn't exist
+		$rows     = ($mode === 'declined')
+			? array('Datum' => $date_txt, 'Uhrzeit' => $time_txt, 'Personen' => (string)$pax)
+			: array('Datum' => $date_txt, 'Uhrzeit' => $time_txt, 'Personen' => (string)$pax, 'Buchungsnummer' => $number);
 		if ($notes !== '') { $rows['Deine Anmerkung'] = $notes; }
 		$contact  = 'Für Fragen oder Änderungswünsche erreichst du uns'.($phone_contact !== '' ? ' telefonisch unter '.$phone_contact : '').($phone_contact !== '' && $mail_contact !== '' ? ' oder' : '').($mail_contact !== '' ? ' per E-Mail an '.$mail_contact : '').'.';
 		$closing  = 'Bis bald!';
@@ -196,7 +211,7 @@ function bm_build($d) {
 		} elseif ($mode === 'declined') {
 			$subject  = 'Zu deiner Anfrage für den '.$date_txt;
 			$intro    = 'danke für deine Anfrage. Für diesen Abend können wir eure Gruppe leider nicht unterbringen, das tut uns wirklich leid. Wir helfen gern weiter: Wenn du magst, suchen wir gemeinsam nach einem Ausweichtermin. Melde dich einfach bei uns.';
-			$head     = 'Deine Anfrage';
+			$head     = 'Leider keine Zusage möglich';
 			$cancel_t = ''; $cancel_l = '';
 			$auto     = 'Diese E-Mail wurde automatisch nach der Bearbeitung deiner Online-Anfrage versendet.';
 		} elseif ($mode === 'reminder') {
@@ -223,7 +238,11 @@ function bm_build($d) {
 		}
 	} else {
 		$greeting = 'Hello '.$name.',';
-		$rows     = array('Date' => $date_txt, 'Time' => $time_txt, 'Guests' => (string)$pax, 'Booking number' => $number);
+		// a declined request never got a booking number - showing one would read as a
+		// confirmed reference for a table that doesn't exist
+		$rows     = ($mode === 'declined')
+			? array('Date' => $date_txt, 'Time' => $time_txt, 'Guests' => (string)$pax)
+			: array('Date' => $date_txt, 'Time' => $time_txt, 'Guests' => (string)$pax, 'Booking number' => $number);
 		if ($notes !== '') { $rows['Your note'] = $notes; }
 		$contact  = 'If you have any questions or want to change something, reach us'.($phone_contact !== '' ? ' by phone at '.$phone_contact : '').($phone_contact !== '' && $mail_contact !== '' ? ' or' : '').($mail_contact !== '' ? ' by email at '.$mail_contact : '').'.';
 		$closing  = 'See you soon!';
@@ -240,7 +259,7 @@ function bm_build($d) {
 		} elseif ($mode === 'declined') {
 			$subject  = 'About your request for '.$date_txt;
 			$intro    = 'thank you for your request. Unfortunately we cannot fit your group in that evening, and we are truly sorry. We are happy to help: if you like, we can look for another date together. Just get in touch.';
-			$head     = 'Your request';
+			$head     = 'No table available this time';
 			$cancel_t = ''; $cancel_l = '';
 			$auto     = 'This email was sent automatically after your online request was reviewed.';
 		} elseif ($mode === 'reminder') {
@@ -314,7 +333,7 @@ function bm_build($d) {
 	$font = "font-family:Arial,Helvetica,sans-serif;";
 	$row_html = '';
 	foreach ($rows as $k => $v) {
-		$row_html .= '<tr><td style="'.$font.'font-size:14px;color:#777777;padding:6px 16px 6px 0;vertical-align:top;white-space:nowrap;">'.$h($k).'</td>'
+		$row_html .= '<tr><td style="'.$font.'font-size:14px;color:#6e6e6e;padding:6px 16px 6px 0;vertical-align:top;white-space:nowrap;">'.$h($k).'</td>'
 			.'<td style="'.$font.'font-size:16px;color:#1c1a18;padding:6px 0;vertical-align:top;'.($k === 'Buchungsnummer' || $k === 'Booking number' ? 'font-weight:bold;letter-spacing:.04em;' : '').'">'.nl2br($h($v)).'</td></tr>';
 	}
 	$legal_html = $tel(implode('<br>', array_map($h, $legal)));
@@ -360,13 +379,13 @@ function bm_build($d) {
 		.'<tr><td style="'.$font.'padding:28px 32px 4px;font-size:12px;font-weight:bold;letter-spacing:.16em;text-transform:uppercase;color:#8a6d3b;">'.$h($brand).'</td></tr>'
 		.'<tr><td style="font-family:Georgia,\'Times New Roman\',serif;padding:0 32px 8px;font-size:26px;line-height:1.25;color:#1c1a18;">'.$h($head).'</td></tr>'
 		.'<tr><td style="'.$font.'padding:12px 32px 4px;font-size:16px;line-height:1.6;color:#333333;">'.$h($greeting).'<br><br>'.$h($intro).'</td></tr>'
-		.'<tr><td style="padding:12px 32px;"><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#faf8f3;border:1px solid #e6e0d2;border-radius:6px;"><tr><td style="padding:12px 18px;"><table role="presentation" cellpadding="0" cellspacing="0">'.$row_html.'</table></td></tr></table></td></tr>'
+		.'<tr><td style="padding:12px 32px;"><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="'.($mode === 'declined' ? 'border-top:1px solid #e6e0d2;border-bottom:1px solid #e6e0d2;' : 'background-color:#faf8f3;border:1px solid #e6e0d2;border-radius:6px;').'"><tr><td style="padding:12px 18px;"><table role="presentation" cellpadding="0" cellspacing="0">'.$row_html.'</table></td></tr></table></td></tr>'
 		.($cancel_t !== '' ? '<tr><td style="'.$font.'padding:8px 32px 4px;font-size:16px;line-height:1.6;color:#333333;">'.$h($cancel_t).'<br><a href="'.$h($cancel).'" style="color:#8a6d3b;font-weight:bold;">'.$h($cancel_l).'</a></td></tr>' : '')
 		.$menu_html
 		.$info_html
 		.'<tr><td style="'.$font.'padding:12px 32px 4px;font-size:16px;line-height:1.6;color:#333333;">'.$tel($h($contact)).'</td></tr>'
 		.'<tr><td style="'.$font.'padding:16px 32px 28px;font-size:16px;line-height:1.6;color:#333333;">'.$h($closing).'<br>'.$h($sign).'</td></tr>'
-		.'<tr><td style="'.$font.'padding:16px 32px 24px;border-top:1px solid #e6e0d2;font-size:12px;line-height:1.6;color:#8a8577;"><strong>'.$h($legal_h).'</strong><br>'.$legal_html
+		.'<tr><td style="'.$font.'padding:16px 32px 24px;border-top:1px solid #e6e0d2;font-size:12px;line-height:1.6;color:#6e685c;"><strong>'.$h($legal_h).'</strong><br>'.$legal_html
 		.($links ? '<br>'.implode(' &middot; ', $links) : '').'<br><br>'.$h($auto).'</td></tr>'
 		.'</table></td></tr></table></body></html>';
 
@@ -439,11 +458,11 @@ function bm_build($d) {
 			.'<a href="'.$h($url).'" style="'.$font.'display:inline-block;padding:14px 26px;font-size:16px;font-weight:bold;line-height:1.2;color:'.($primary ? '#ffffff' : '#6b5330').';text-decoration:none;border-radius:6px;">'.$h($label).'</a></td></tr></table>';
 	};
 	$fact = function ($label, $value) use ($h, $font) {
-		return '<td valign="top" style="padding:0 20px 0 0;"><div style="'.$font.'font-size:11px;font-weight:bold;letter-spacing:.1em;text-transform:uppercase;color:#8a8577;">'.$h($label).'</div>'
+		return '<td valign="top" style="padding:0 20px 0 0;"><div style="'.$font.'font-size:11px;font-weight:bold;letter-spacing:.1em;text-transform:uppercase;color:#6e685c;">'.$h($label).'</div>'
 			.'<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:22px;line-height:1.3;color:#1c1a18;padding-top:2px;white-space:nowrap;">'.$h($value).'</div></td>';
 	};
 	$detail = function ($label, $value_html) use ($h, $font) {
-		return '<tr><td style="'.$font.'font-size:14px;color:#777777;padding:7px 16px 7px 0;vertical-align:top;white-space:nowrap;">'.$h($label).'</td>'
+		return '<tr><td style="'.$font.'font-size:14px;color:#6e6e6e;padding:7px 16px 7px 0;vertical-align:top;white-space:nowrap;">'.$h($label).'</td>'
 			.'<td style="'.$font.'font-size:16px;line-height:1.45;color:#1c1a18;padding:7px 0;vertical-align:top;">'.$value_html.'</td></tr>';
 	};
 	$tel_href = preg_replace('/[^\d+]/', '', $phone);
@@ -472,7 +491,7 @@ function bm_build($d) {
 		.'<tr><td style="'.$font.'padding:8px 32px 16px;font-size:15px;line-height:1.6;color:#333333;">'.$h($pending ? $L['req_text'] : $L['new_text']).'</td></tr>'
 		.($primary_url !== '' ? '<tr><td style="padding:0 32px 8px;">'.$btn($primary_url, $pending ? $L['cta_req'] : $L['cta_new'], $pending).'</td></tr>' : '')
 		.($pending && $backend_url !== '' ? '<tr><td style="'.$font.'padding:8px 32px 0;font-size:14px;line-height:1.6;color:#555555;"><a href="'.$h($backend_url).'" style="color:#6b5330;text-decoration:underline;">'.$h($L['open_backend']).'</a></td></tr>' : '')
-		.'<tr><td style="'.$font.'padding:22px 32px 24px;font-size:12px;line-height:1.6;color:#8a8577;">'.$h($L['foot']).'</td></tr>'
+		.'<tr><td style="'.$font.'padding:22px 32px 24px;font-size:12px;line-height:1.6;color:#6e685c;">'.$h($L['foot']).'</td></tr>'
 		.'</table></td></tr></table></body></html>';
 
 	return array('lang' => $lang, 'subject' => $subject, 'plain' => $p, 'html' => $html, 'admin_subject' => $a_subject, 'admin_text' => $a, 'admin_html' => $a_html, 'reply_to' => $email, 'ics' => $ics, 'ics_filename' => $ics_filename);

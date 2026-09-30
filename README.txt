@@ -3,7 +3,7 @@
 =-=           mySeat README               =-=
 =-=                                       =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-=-= Version: 4.3.1                         =-=
+=-= Version: 4.4.0                         =-=
 =-= Date:    30.09.2026                   =-=
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -51,6 +51,29 @@ tp_* tables on first use). Optional new settings for
 config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
+
+2026-09-30 == mySeat v4.4.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Guest-facing email templates (reservation, feedback, delivery order), following an
+   /impeccable critique pass:
+ * Fix: the feedback-request mail showed 5 pre-filled gold stars before the guest had rated
+   anything, anchoring toward a positive answer despite the mail's own "honest feedback, good
+   or bad" framing - removed
+ * Fix: the declined-request mail shared its heading with the pending mail and still showed a
+   bold "Buchungsnummer" for a table that was never booked, reading like a confirmed receipt -
+   now has its own heading and a de-emphasized, booking-number-free fact box
+ * Fix: an English-speaking guest saw dates in the system's day.month.year format (e.g.
+   "05.10.2026", ambiguous as May 10th under US conventions) regardless of their chosen
+   language - now rebuilt as "Monday, October 5, 2026" for English mails
+ * Fix: four text colors (#777777, #8a8577 and the delivery mail's #888/#777) fell short of
+   WCAG AA contrast on white - darkened to pass
+ * Fix: the delivery/pickup order confirmation (web/classes/shop_mail.class.php) was a third,
+   uncoordinated visual system - different page background, card radius and font-stack
+   quoting than the reservation/feedback mails, no legal footer, and the restaurant
+   notification wasn't a complete HTML document at all - brought in line with the other
+   templates. Full bilingual support was not added: the delivery order flow itself
+   (order/index.php, checkout.php) hardcodes German with no language switch, so a translated
+   receipt would need that fixed first
 
 2026-09-30 == mySeat v4.3.1 == amadeushi - http://github.com/amadeushi/myseat
 
