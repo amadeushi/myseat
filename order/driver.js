@@ -27,9 +27,10 @@
 		}).join('') + '</div>';
 		$$('[data-claim]', root).forEach(function (btn) {
 			btn.addEventListener('click', function () {
+				if (!btn.dataset.armed) { btn.dataset.armed = '1'; btn.textContent = 'Wirklich annehmen?'; setTimeout(function () { btn.dataset.armed = ''; btn.textContent = 'Annehmen'; }, 4000); return; }
 				btn.disabled = true; btn.textContent = 'Nimmt an …';
 				post('driver_claim', { order_id: +btn.dataset.claim }).then(function (r) {
-					if (!r.ok) { state(r.error); btn.disabled = false; btn.textContent = 'Annehmen'; refresh(); return; }
+					if (!r.ok) { state(r.error); btn.disabled = false; btn.dataset.armed = ''; btn.textContent = 'Annehmen'; refresh(); return; }
 					render(r);
 				});
 			});

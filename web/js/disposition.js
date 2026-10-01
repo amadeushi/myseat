@@ -23,6 +23,9 @@
 		if (o.pay === 'mollie') { return '<span class="k-badge paid">online bezahlt</span>'; }
 		return '<span class="k-badge cash">' + (o.pay === 'cash' ? 'bar kassieren' : 'Karte kassieren') + ' ' + money(o.total) + '</span>';
 	}
+	// the guest's own live-tracking link (order/status.php) - sent automatically by SMS once set up, but
+	// not every guest has SMS enabled or a mobile number, so dispatch can still hand it over by hand
+	function guestUrl(o) { return new URL('../order/status.php?t=' + encodeURIComponent(o.token), location.href).href; }
 	// a driver claims his own delivery from his own queue (order/driver.php) now - nothing to send him
 	// here, just show who has it once someone did, and whether his phone is currently reporting in
 	function driverBadge(o) {
@@ -41,7 +44,9 @@
 			'<ul class="k-items">' + o.items.map(function (it) {
 				return '<li class="k-item"><span class="k-qty">' + it.qty + '×</span>' + esc(it.title) + (it.variation ? ' <span class="k-var">' + esc(it.variation) + '</span>' : '') +
 					(it.options.length ? '<div class="k-opts">+ ' + it.options.map(esc).join(', ') + '</div>' : '') + (it.note ? '<span class="k-inote">' + esc(it.note) + '</span>' : '') + '</li>';
-			}).join('') + '</ul>' + (o.note ? '<p class="k-onote">' + esc(o.note) + '</p>' : '') + '<div class="k-pay">' + payText(o) + '<button type="button" class="k-go secondary k-bonbtn" data-bon="' + o.id + '">Lieferschein drucken</button></div><div class="k-actions">';
+			}).join('') + '</ul>' + (o.note ? '<p class="k-onote">' + esc(o.note) + '</p>' : '') + '<div class="k-pay">' + payText(o) +
+			'<button type="button" class="k-go secondary k-bonbtn" data-bon="' + o.id + '">Lieferschein drucken</button>' +
+			'<button type="button" class="k-go secondary" data-guestlink="' + esc(guestUrl(o)) + '">Gast-Link kopieren</button></div><div class="k-actions">';
 		if (o.status === 'new') {
 			h += '<span class="k-eta-l">Annehmen, fertig in:</span>' + [20, 30, 45, 60].map(function (m) { return '<button type="button" class="k-go eta" data-act="accept" data-eta="' + m + '">' + m + ' Min</button>'; }).join('') + '<button type="button" class="k-go secondary" data-act="cancelled">Ablehnen</button>';
 		} else if (o.status === 'accepted') { h += '<button type="button" class="k-go" data-act="preparing">Wird gekocht</button>'; }
@@ -84,6 +89,12 @@
 		var cardEl = ev.target.closest('.k-card');
 		if (cardEl && !acked[cardEl.dataset.id]) { acked[cardEl.dataset.id] = true; cardEl.classList.remove('is-new'); sound.ack(); }
 		var bonBtn = ev.target.closest('[data-bon]'); if (bonBtn) { MonitorPrint.slip(bonBtn.dataset.bon, true); return; }
+		var gl = ev.target.closest('[data-guestlink]');
+		if (gl) {
+			var url = gl.dataset.guestlink, done = function () { gl.textContent = 'Link kopiert'; setTimeout(function () { gl.textContent = 'Gast-Link kopieren'; }, 2500); };
+			if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(url).then(done, function () { notify(url); }); } else { notify(url); }
+			return;
+		}
 		var rel = ev.target.closest('[data-release]');
 		if (rel) {
 			if (!rel.dataset.armed) { rel.dataset.armed = '1'; rel.textContent = 'Wirklich zurückgeben?'; setTimeout(function () { rel.dataset.armed = ''; rel.textContent = 'Zurück in den Pool'; }, 4000); return; }

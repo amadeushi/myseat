@@ -45,7 +45,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['token']) || empty($_
 	so_out(array('ok' => false, 'error' => 'Die Sitzung ist abgelaufen. Bitte lade die Seite neu.'));
 }
 if ($op === 'demo') {
-	$new = shop_create_demo_order(isset($_POST['type']) ? (string)$_POST['type'] : 'delivery');
+	$new = shop_create_demo_order(isset($_POST['type']) ? (string)$_POST['type'] : 'delivery',
+		isset($_POST['street']) ? (string)$_POST['street'] : '', isset($_POST['zip']) ? (string)$_POST['zip'] : '', isset($_POST['city']) ? (string)$_POST['city'] : '');
 	so_out($new ? array('ok' => true, 'id' => $new) : array('ok' => false, 'error' => 'Die Testbestellung konnte nicht angelegt werden.'));
 }
 $id = (int)(isset($_POST['id']) ? $_POST['id'] : 0);

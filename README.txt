@@ -52,6 +52,37 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-01 == mySeat v5.1.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: der Fahrer-App-Annahme-Bug vom letzten Release ist behoben - shop_driver_claim_order() prüfte
+   bisher nicht, ob das anschließende Setzen auf "unterwegs" wirklich geklappt hat. Schlug das fehl,
+   blieb die Lieferung dem Fahrer zugewiesen, aber für Pool und Fahrer-App gleichzeitig unsichtbar.
+   Jetzt wird der Status neu geprüft und ein klarer Fehler statt eines falschen Erfolgs gemeldet.
+ * New: Disposition kann eine unterwegs befindliche Lieferung jetzt per Klick zurück in den offenen
+   Pool legen, unabhängig vom zugewiesenen Fahrer - für den Fall, dass ein Fahrer nicht ausliefern kann.
+ * New: Fahrer-Verwaltung (Einstellungen > Lieferservice) zeigt jetzt "zuletzt gesehen" je Fahrer an,
+   um eine falsch eingetragene Traccar-Geräte-ID von einer Funkstille unterscheiden zu können.
+ * New: "Annehmen" in der Fahrer-App verlangt jetzt eine doppelte Bestätigung (Verklicken passiert
+   leicht); die Disposition hat einen "Gast-Link kopieren"-Button direkt an jeder Bestellung.
+ * Fix: Testbestellungen (Bestellungen > "Test: Lieferung") bekamen bisher die Koordinate 0/0, wodurch
+   die Gast-Statusseite nie eine Karte zeigen und die Bestellung nie eine Lieferzone auflösen konnte.
+ * New: "Test: Lieferung" fragt jetzt optional nach einer echten Adresse (Straße, PLZ, Ort), die wie
+   im echten Checkout geocodiert wird - leer lassen übernimmt wie bisher die Restaurant-Adresse.
+ * Fix: shop_origin() gab seit der Mehrfachkandidaten-Umstellung (v4.9.0) versehentlich das volle
+   5er-Array von shop_geocode() zurück statt nur [lat, lng]. order/track.js reichte das direkt als
+   Leaflet-Koordinate durch, was beim ersten Kartenpin einen Fehler warf und die gesamte Karte auf
+   der Gast-Statusseite leer ließ (weder Pins noch Kacheln) - betraf jede Lieferung mit konfigurierter
+   Restaurant-Adresse.
+ * Fix: die Kartenkacheln blieben in Firefox komplett weiß - ein CSS-filter (Dark-Mode-Invertierung)
+   auf einem Container mit transform-animierten Kindern (Leaflets Kacheln) wird dort nicht sauber
+   kompositiert. order/shop.css promotet den Kachel-Layer jetzt auf eine eigene Compositing-Ebene.
+ * New: order/tile_proxy.php lädt und cached OpenStreetMap-Kacheln jetzt serverseitig, statt dass
+   jeder Gast-Browser sie direkt von tile.openstreetmap.org holt - OSM sieht dadurch nicht mehr die
+   IP-Adresse jedes Gasts, nur noch die des eigenen Servers. Schreibt atomar (Temp-Datei + rename),
+   damit ein paralleler Request nie eine halb geschriebene Kachel zu sehen bekommt (das verursachte
+   anfangs vereinzelt ebenfalls weiße Kacheln). Der dadurch überholte IP-Hinweistext auf der
+   Gast-Statusseite ist entfernt.
+
 2026-10-01 == mySeat v5.0.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Fahrer-App ohne eigenen Traccar-Server - order/driver_gps.php spricht das OsmAnd-Protokoll

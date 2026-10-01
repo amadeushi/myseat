@@ -118,7 +118,6 @@ $delivery = $order && $order['type'] === 'delivery';
 			<div id="st-map" class="st-map" data-cfg="<?php echo shop_h(json_encode($cfg)); ?>" role="img" aria-label="Karte"></div>
 			<p class="st-mapnote" id="st-mapnote" role="status" aria-live="polite"></p>
 			<?php if (!$delivery && $origin): ?><p class="st-mapnote"><a href="https://www.openstreetmap.org/?mlat=<?php echo $origin[0]; ?>&amp;mlon=<?php echo $origin[1]; ?>#map=17/<?php echo $origin[0]; ?>/<?php echo $origin[1]; ?>" target="_blank" rel="noopener">In der Karten-App öffnen</a></p><?php endif; ?>
-			<p class="st-mapnote st-mapcredit">Kartendaten von OpenStreetMap. Beim Laden der Karte sieht der Kartendienst deine IP-Adresse.</p>
 		</div>
 		<link rel="stylesheet" href="vendor/leaflet/leaflet.css"/>
 		<script src="vendor/leaflet/leaflet.js"></script>

@@ -52,7 +52,21 @@
 	}
 	page.addEventListener('click', function (ev) {
 		var dm = ev.target.closest('[data-demo]');
-		if (dm) { dm.disabled = true; post('demo', { type: dm.dataset.demo }).then(function (r) { dm.disabled = false; if (!r.ok) { alert(r.error || 'Das hat nicht geklappt.'); } load(); }); return; }
+		if (dm) {
+			var data = { type: dm.dataset.demo };
+			if (dm.dataset.demo === 'delivery') {
+				var street = prompt('Straße und Hausnummer für die Testlieferung (leer lassen für die Restaurant-Adresse):', '');
+				if (street === null) { return; }
+				street = street.trim();
+				if (street !== '') {
+					var zip = prompt('PLZ:', '') || '', city = prompt('Ort:', 'Hildesheim') || '';
+					data.street = street; data.zip = zip.trim(); data.city = city.trim();
+				}
+			}
+			dm.disabled = true;
+			post('demo', data).then(function (r) { dm.disabled = false; if (!r.ok) { alert(r.error || 'Das hat nicht geklappt.'); } load(); });
+			return;
+		}
 		var f = ev.target.closest('.orders-filter button');
 		if (f) { filter = f.dataset.filter; Array.prototype.forEach.call(document.querySelectorAll('.orders-filter button'), function (b) { b.setAttribute('aria-pressed', b === f ? 'true' : 'false'); }); load(); return; }
 		var rowEl = ev.target.closest('.orders-row'); if (!rowEl) { return; }

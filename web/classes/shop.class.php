@@ -781,7 +781,7 @@ function shop_create_order($in) {
 
 // a test order for trying the monitors and the printing (needs neither the shop to be open nor a payment): marked as test,
 // fake guest, a few dishes with options and notes, status "new" so it shows up for the dispatch first
-function shop_create_demo_order($type) {
+function shop_create_demo_order($type, $street = '', $zip = '', $city = '') {
 	shop_ensure_schema();
 	$type = ($type === 'pickup') ? 'pickup' : 'delivery';
 	$today = date('Y-m-d'); $now = date('Y-m-d H:i:s');
@@ -791,15 +791,35 @@ function shop_create_demo_order($type) {
 		array('Cola 0,33 l', '', array(), 2, 350, ''),
 	);
 	$sub = 0; foreach ($lines as $l) { $sub += $l[3] * $l[4]; }
-	$fee = ($type === 'delivery') ? 250 : 0; $total = $sub + $fee;
+	// a real coordinate (given address, or the restaurant's own as a fallback - it usually falls inside its
+	// own delivery zone) rather than 0/0 - without one, the guest's status page has nothing to put on the
+	// map at all, and the order never resolves a zone either, so it couldn't be tried from the driver app's
+	// open-delivery list
+	$lat = 0; $lng = 0; $zoneId = 0; $fee = ($type === 'delivery') ? 250 : 0;
+	$dStreet = 'Teststraße 1'; $dZip = '31134'; $dCity = 'Hildesheim';
+	if ($type === 'delivery') {
+		$street = trim((string)$street); $zip = trim((string)$zip); $city = trim((string)$city);
+		$point = null;
+		if ($street !== '') {
+			$g = shop_geocode($street, $zip, $city !== '' ? $city : 'Hildesheim');
+			if ($g) { $point = array($g[0], $g[1]); $dStreet = $street; $dZip = $g[2] ? $g[2] : $zip; $dCity = $city !== '' ? $city : 'Hildesheim'; }
+		}
+		if (!$point) { $point = shop_origin(); }
+		if ($point) {
+			$lat = $point[0]; $lng = $point[1];
+			$zone = shop_zone_for_point($lat, $lng);
+			if ($zone) { $zoneId = $zone['id']; $fee = $zone['fee_cents']; }
+		}
+	}
+	$total = $sub + $fee;
 	$dayNo = (int)(fb_row("SELECT COALESCE(MAX(day_no), 0) + 1 AS n FROM ".fb_t('tp_shop_orders')." WHERE order_date = ?", 's', array($today))['n']);
 	$ok = fb_exec("INSERT INTO ".fb_t('tp_shop_orders')."
 		(token, number, day_no, order_date, type, status, scheduled_at, eta_at, customer_name, phone, email, street, zip, city, address_note, lat, lng, zone_id,
 		 ip_hash, subtotal_cents, fee_cents, tip_cents, total_cents, payment_method, payment_status, note, lang, is_test, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, 'new', NULL, ?, 'Test Kunde', '05121 000000', '', ?, ?, ?, ?, 0, 0, 0, '', ?, ?, 0, ?, 'cash', 'open', ?, 'de', 1, ?, ?)",
-		'ssisss'.'ssss'.'iii'.'sss', array(bin2hex(random_bytes(16)), shop_order_number(), $dayNo, $today, $type, date('Y-m-d H:i:s', time() + 30 * 60),
-			$type === 'delivery' ? 'Teststraße 1' : '', $type === 'delivery' ? '31134' : '', $type === 'delivery' ? 'Hildesheim' : '', $type === 'delivery' ? '2. Stock links' : '',
-			$sub, $fee, $total, 'Testbestellung zum Ausprobieren des Drucks', $now, $now));
+		VALUES (?, ?, ?, ?, ?, 'new', NULL, ?, 'Test Kunde', '05121 000000', '', ?, ?, ?, ?, ?, ?, ?, '', ?, ?, 0, ?, 'cash', 'open', ?, 'de', 1, ?, ?)",
+		'ssisss'.'ssss'.'ddi'.'iii'.'sss', array(bin2hex(random_bytes(16)), shop_order_number(), $dayNo, $today, $type, date('Y-m-d H:i:s', time() + 30 * 60),
+			$type === 'delivery' ? $dStreet : '', $type === 'delivery' ? $dZip : '', $type === 'delivery' ? $dCity : '', $type === 'delivery' ? '2. Stock links' : '',
+			$lat, $lng, $zoneId, $sub, $fee, $total, 'Testbestellung zum Ausprobieren des Drucks', $now, $now));
 	if (!$ok) { return 0; }
 	$id = (int)mysqli_insert_id(fb_db());
 	foreach ($lines as $l) {
@@ -1223,7 +1243,10 @@ function shop_me_delete_group($id) {
 function shop_origin() {
 	$st = trim((string)shop_setting('origin_street')); $zip = trim((string)shop_setting('origin_zip')); $city = trim((string)shop_setting('origin_city'));
 	if ($st === '' || $city === '') { return null; }
-	return shop_geocode($st, $zip, $city);
+	// every caller (incl. order/track.js, which treats this directly as a Leaflet [lat,lng] coordinate) wants
+	// just the restaurant's own point - not shop_geocode()'s full postcode/road/candidates tuple
+	$g = shop_geocode($st, $zip, $city);
+	return $g ? array($g[0], $g[1]) : null;
 }
 function shop_driver_position($o) {
 	if ($o['driver_at'] === null || $o['driver_lat'] === null || !in_array($o['status'], array('ready', 'delivering'), true)) { return null; }

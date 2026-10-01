@@ -356,7 +356,7 @@
 
 /* order status: map */
 .st-map { height: 280px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-soft); background: var(--bg); }
-.st-map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9) saturate(0.55); }
+.st-map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9) saturate(0.55); transform: translateZ(0); will-change: filter; }
 .st-map .leaflet-control-attribution { background: rgba(12, 11, 10, 0.75); color: var(--text-muted); font-size: 10px; }
 .st-map .leaflet-control-attribution a { color: var(--gold); }
 .st-map .leaflet-bar a { background: var(--surface-2); color: var(--text); border-color: var(--border-soft); }
@@ -368,7 +368,6 @@
 .st-tip.leaflet-tooltip-top::before { border-top-color: var(--border); }
 .shop-shell .st-mapnote { margin-top: 10px; color: var(--text-muted); font-size: 14px; }
 .shop-shell .st-mapnote:empty { display: none; }
-.shop-shell .st-mapcredit { font-size: 11px; }
 @media (prefers-reduced-motion: reduce) { .st-pin-driver span { animation: none; } }
 
 /* driver page */

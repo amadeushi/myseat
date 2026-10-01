@@ -8,7 +8,7 @@
 	try { cfg = JSON.parse(el.dataset.cfg || '{}'); } catch (e) { return; }
 	var note = document.getElementById('st-mapnote');
 	var map = L.map(el, { zoomControl: true, scrollWheelZoom: false, attributionControl: true, worldCopyJump: false });
-	L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
+	L.tileLayer('tile_proxy.php?z={z}&x={x}&y={y}', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
 	function pin(kind, ll, label) {
 		var m = L.marker(ll, { icon: L.divIcon({ className: 'st-pin st-pin-' + kind, html: '<span></span>', iconSize: [30, 30], iconAnchor: [15, 15] }), keyboard: false, interactive: false });
 		if (label) { m.bindTooltip(label, { permanent: true, direction: 'top', offset: [0, -14], className: 'st-tip' }); }
