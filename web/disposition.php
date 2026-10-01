@@ -48,9 +48,9 @@ $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 		<p class="k-drivers-note" id="k-drivers-note"></p>
 	</div>
 	<main class="k-board">
-		<section class="k-col" data-col="new" aria-labelledby="kc-new"><h2 id="kc-new">Neu <span class="k-n" id="n-new">0</span></h2><div class="k-list" id="col-new"></div></section>
-		<section class="k-col" data-col="work" aria-labelledby="kc-work"><h2 id="kc-work">In der Küche <span class="k-n" id="n-work">0</span></h2><div class="k-list" id="col-work"></div></section>
-		<section class="k-col" data-col="ready" aria-labelledby="kc-ready"><h2 id="kc-ready">Fertig <span class="k-n" id="n-ready">0</span></h2><div class="k-list" id="col-ready"></div></section>
+		<section class="k-col" data-col="new" aria-labelledby="kc-new"><h2 id="kc-new">Neu <span class="k-n" id="n-new">0</span></h2><div class="k-list" id="col-new"></div><p class="k-overflow" id="of-new" role="status" hidden></p></section>
+		<section class="k-col" data-col="work" aria-labelledby="kc-work"><h2 id="kc-work">In der Küche <span class="k-n" id="n-work">0</span></h2><div class="k-list" id="col-work"></div><p class="k-overflow" id="of-work" role="status" hidden></p></section>
+		<section class="k-col" data-col="ready" aria-labelledby="kc-ready"><h2 id="kc-ready">Fertig <span class="k-n" id="n-ready">0</span></h2><div class="k-list" id="col-ready"></div><p class="k-overflow" id="of-ready" role="status" hidden></p></section>
 	</main>
 	<script src="js/leaflet/leaflet.js"></script>
 	<script src="js/monitor_sound.js?v=<?php echo @filemtime(__DIR__.'/js/monitor_sound.js'); ?>"></script>

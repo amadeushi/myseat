@@ -33,7 +33,7 @@ if ($op === 'kitchen') {
 }
 if ($op === 'day') {
 	$date = (isset($_REQUEST['date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_REQUEST['date'])) ? $_REQUEST['date'] : date('Y-m-d');
-	$filter = (isset($_REQUEST['filter']) && $_REQUEST['filter'] === 'open') ? 'open' : 'all';
+	$filter = (isset($_REQUEST['filter']) && in_array($_REQUEST['filter'], array('open', 'closed'), true)) ? $_REQUEST['filter'] : 'all';
 	so_out(array('ok' => true, 'date' => $date, 'orders' => shop_day_orders($date, $filter), 'stats' => shop_day_stats($date)));
 }
 if ($op === 'drivers_live') {

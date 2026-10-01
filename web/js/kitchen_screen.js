@@ -4,7 +4,14 @@
 	'use strict';
 	var TOKEN = document.body.dataset.token, board = document.getElementById('ks-board'), lastOk = Date.now(), orders = [], acked = {}, seen = null, printed = {};
 	var cols = 5, autoPrint = false;
-	try { cols = parseInt(localStorage.getItem('ksCols'), 10) === 4 ? 4 : 5; autoPrint = localStorage.getItem('ksAutoPrint') === '1'; printed = JSON.parse(sessionStorage.getItem('ksPrinted') || '{}') || {}; } catch (e) {}
+	// acked used to live only in memory: any reload (crash, nightly restart) wiped it, so every still-active
+	// order would pulse as "fresh" again even though none of them were new - persisted the same way `printed` is
+	try {
+		cols = parseInt(localStorage.getItem('ksCols'), 10) === 4 ? 4 : 5; autoPrint = localStorage.getItem('ksAutoPrint') === '1';
+		printed = JSON.parse(sessionStorage.getItem('ksPrinted') || '{}') || {};
+		acked = JSON.parse(sessionStorage.getItem('ksAcked') || '{}') || {};
+	} catch (e) {}
+	function saveAcked() { try { sessionStorage.setItem('ksAcked', JSON.stringify(acked)); } catch (e) {} }
 
 	function $(s) { return document.querySelector(s); }
 	function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -26,25 +33,59 @@
 
 	// ---- columns
 	function since(ts) { var m = Math.max(0, Math.round((Date.now() / 1000 - ts) / 60)); return m < 1 ? 'gerade' : 'seit ' + m + ' Min'; }
+	var LATE_AFTER_MIN = 20;
 	function card(o) {
 		var due = o.scheduled ? 'geplant ' + o.scheduled : o.due;
-		return '<article class="ks-card' + (acked[o.id] ? '' : ' is-fresh') + '" data-id="' + o.id + '"><header class="ks-head"><span class="ks-no">#' + o.day_no + '</span><span class="k-type ' + o.type + '">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + '</span>' +
-			(o.test ? '<span class="k-badge">Test</span>' : '') + '</header><div class="ks-due"><b>' + esc(due) + '</b><small>' + since(o.accepted_ts) + '</small></div>' +
+		var ageMin = Math.max(0, Math.round((Date.now() / 1000 - o.accepted_ts) / 60)), late = ageMin >= LATE_AFTER_MIN;
+		// "angenommen" vs. "wird gekocht" used to be invisible here - a cook couldn't tell whether dispatch had
+		// already started an order without opening disposition.php; lateness escalates through amber + text,
+		// never through the failure color alone, matching the fix already made on the dispatch board
+		return '<article class="ks-card' + (acked[o.id] ? '' : ' is-fresh') + (late ? ' is-late' : '') + '" data-id="' + o.id + '"><header class="ks-head"><span class="ks-no">#' + o.day_no + '</span><span class="k-type ' + esc(o.type) + '">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + '</span>' +
+			'<span class="k-badge">' + (o.status === 'preparing' ? 'Wird gekocht' : 'Angenommen') + '</span>' +
+			(o.test ? '<span class="k-badge">Test</span>' : '') + '</header><div class="ks-due' + (late ? ' k-late' : '') + '"><b>' + esc(due) + '</b><small>' + since(o.accepted_ts) + (late ? ' · VERSPÄTET' : '') + '</small></div>' +
 			'<ul class="ks-items">' + o.items.map(function (it) {
 				return '<li class="ks-item"><span class="ks-qty">' + it.qty + '×</span><span class="ks-title">' + esc(it.title) + '</span>' + (it.variation ? '<span class="ks-var">' + esc(it.variation) + '</span>' : '') +
 					it.options.map(function (op) { return '<span class="ks-opt">+ ' + esc(op) + '</span>'; }).join('') + (it.note ? '<span class="ks-note">' + esc(it.note) + '</span>' : '') + '</li>';
 			}).join('') + '</ul>' + (o.note ? '<p class="ks-onote">' + esc(o.note) + '</p>' : '') +
 			'<footer class="ks-foot"><button type="button" class="k-btn ks-bon" data-bon="' + o.id + '">Bon drucken</button><button type="button" class="k-go ks-done" data-done="' + o.id + '">Fertig, ausgegeben</button></footer></article>';
 	}
-	var lastSig = '';
+	// diff-rendered by order id instead of a wholesale innerHTML replace on every change: a full rebuild used to
+	// wipe out an in-progress "wirklich ausgegeben?" confirm (its armed state lives on the button's own DOM
+	// node) and reset the scroll position inside any card's item list, the instant ANY other order changed -
+	// including the frequent, routine case of simply acking one card. Same fix as disposition.js this session.
+	var cardNodes = {}, cardSig = {};
 	function render() {
-		var shown = orders.slice(0, cols), more = orders.length - shown.length;
-		// same orders as before: only refresh the "since" texts, so a button waiting for its second tap keeps its state
-		var sig = JSON.stringify([cols, orders.map(function (o) { return [o.id, o.status, o.items, o.note]; }), Object.keys(acked)]);
-		if (sig === lastSig && shown.length) { orders.forEach(function (o) { var el = board.querySelector('.ks-card[data-id="' + o.id + '"] .ks-due small'); if (el) { el.textContent = since(o.accepted_ts); } }); return; }
-		lastSig = sig;
-		board.innerHTML = shown.length ? shown.map(card).join('') : '<p class="ks-empty">Keine offenen Bestellungen.<br><span>Alles ausgegeben.</span></p>';
-		$('#k-counts').innerHTML = '<span class="k-count">Offen <b>' + orders.length + '</b></span>' + (more > 0 ? '<span class="k-count k-warn">Wartet noch <b>' + more + '</b></span>' : '');
+		var shown = orders.slice(0, cols), more = orders.slice(cols);
+		var liveIds = {};
+		if (!shown.length) {
+			board.innerHTML = '<p class="ks-empty">Keine offenen Bestellungen.<br><span>Alles ausgegeben.</span></p>';
+		} else {
+			if (board.firstElementChild && board.firstElementChild.classList.contains('ks-empty')) { board.innerHTML = ''; }
+			shown.forEach(function (o) {
+				liveIds[o.id] = true;
+				var sig = JSON.stringify(o) + '|' + (acked[o.id] ? 1 : 0);
+				if (!cardNodes[o.id] || cardSig[o.id] !== sig) {
+					var tmp = document.createElement('div'); tmp.innerHTML = card(o);
+					var fresh = tmp.firstElementChild;
+					if (cardNodes[o.id] && cardNodes[o.id].parentNode) { cardNodes[o.id].replaceWith(fresh); }
+					cardNodes[o.id] = fresh; cardSig[o.id] = sig;
+				} else {
+					var small = cardNodes[o.id].querySelector('.ks-due small'); if (small) { small.textContent = since(o.accepted_ts) + (cardNodes[o.id].classList.contains('is-late') ? ' · VERSPÄTET' : ''); }
+				}
+				if (cardNodes[o.id].parentNode !== board) { board.appendChild(cardNodes[o.id]); }
+			});
+		}
+		Object.keys(cardNodes).forEach(function (id) {
+			if (!liveIds[id]) { if (cardNodes[id].parentNode) { cardNodes[id].remove(); } delete cardNodes[id]; delete cardSig[id]; }
+		});
+		// a column silently dropping orders past the visible count used to give zero signal - a compact
+		// "als Nächstes" strip (number + due time only, no full ticket) now surfaces what's still waiting
+		var of = $('#ks-overflow');
+		if (of) {
+			of.hidden = !more.length;
+			if (more.length) { of.textContent = 'Als Nächstes: ' + more.slice(0, 6).map(function (o) { return '#' + o.day_no; }).join(', ') + (more.length > 6 ? ' …' : ''); }
+		}
+		$('#k-counts').innerHTML = '<span class="k-count">Offen <b>' + orders.length + '</b></span>' + (more.length ? '<span class="k-count k-warn">Wartet noch <b>' + more.length + '</b></span>' : '');
 		document.title = (orders.length ? '(' + orders.length + ') ' : '') + 'Küchenbildschirm';
 	}
 
@@ -59,7 +100,7 @@
 			var ids = r.orders.map(function (o) { return o.id; });
 			var fresh = seen === null ? [] : r.orders.filter(function (o) { return seen.indexOf(o.id) < 0; });
 			orders = r.orders; seen = ids;
-			Object.keys(acked).forEach(function (k) { if (ids.indexOf(+k) < 0) { delete acked[k]; } });
+			Object.keys(acked).forEach(function (k) { if (ids.indexOf(+k) < 0) { delete acked[k]; } }); saveAcked();
 			if (fresh.length) {
 				sound.notify();
 				if (autoPrint) { fresh.forEach(function (o, i) { if (!printed[o.id]) { printed[o.id] = 1; try { sessionStorage.setItem('ksPrinted', JSON.stringify(printed)); } catch (e) {} setTimeout(function () { MonitorPrint.slip(o.id, false); }, i * 1500); } }); }
@@ -72,7 +113,7 @@
 	board.addEventListener('click', function (ev) {
 		var c = ev.target.closest('.ks-card'); if (!c) { return; }
 		var id = +c.dataset.id;
-		if (!acked[id]) { acked[id] = true; c.classList.remove('is-fresh'); sound.ack(); }
+		if (!acked[id]) { acked[id] = true; saveAcked(); c.classList.remove('is-fresh'); sound.ack(); }
 		var bon = ev.target.closest('[data-bon]'); if (bon) { MonitorPrint.slip(id, false); return; }
 		var done = ev.target.closest('[data-done]');
 		if (done) {

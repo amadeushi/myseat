@@ -1779,6 +1779,7 @@ select.status_dbox:not([multiple]) option::checkmark { display: inline-block; or
 .offer-cancel, .offer-delete { background: none; border: 0; padding: 10px 12px; font: inherit; color: var(--text-muted); cursor: pointer; }
 .offer-delete { margin-left: auto; color: var(--danger, #e2867c); }
 .offer-cancel:hover, .offer-cancel:focus-visible { color: var(--gold-strong); }
+.offer-delete:hover, .offer-delete:focus-visible { background: none; color: var(--danger, #e2867c); text-decoration: underline; }
 
 /* ---- Settings > SMS-Versand ---- */
 .sms-page { max-width: 760px; }
@@ -1809,12 +1810,23 @@ select.status_dbox:not([multiple]) option::checkmark { display: inline-block; or
 /* ---- Bestellungen (dashboard) ---- */
 .orders-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 16px; }
 .orders-bar h3 { margin: 0; font-size: 18px; }
+.orders-bar .date-nav { float: none; }
 .orders-spacer { flex: 1; }
-.orders-nav, .orders-kitchen { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; min-width: 38px; padding: 0 12px; border: 1px solid var(--border-soft, rgba(245,240,230,.1)); border-radius: var(--radius-md); color: var(--text); text-decoration: none; }
-.orders-kitchen { color: var(--gold-strong, #e2c07f); border-color: var(--border, rgba(201,164,89,.3)); }
+.orders-kitchen { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; min-width: 38px; padding: 0 12px; border: 1px solid var(--border, rgba(201,164,89,.3)); border-radius: var(--radius-md); color: var(--gold-strong, #e2c07f); text-decoration: none; white-space: nowrap; }
 .orders-filter { display: inline-flex; border: 1px solid var(--border-soft, rgba(245,240,230,.1)); border-radius: var(--radius-md); overflow: hidden; }
-.orders-filter button { min-height: 38px; padding: 0 16px; border: 0; background: transparent; color: var(--text-muted); cursor: pointer; font: inherit; }
+.orders-filter button { padding: 10px 16px; border: 0; background: transparent; color: var(--text-muted); cursor: pointer; font: inherit; }
 .orders-filter button[aria-pressed="true"] { background: var(--gold, #c9a259); color: var(--ink-strong); }
+/* "Werkzeuge": the rarely-used-per-shift links (test orders, Speisekarte, Disposition, Küchenbildschirm)
+   collapsed behind one disclosure instead of sitting at the same visual weight as the filter tabs */
+.orders-tools { position: relative; }
+.orders-tools > summary { list-style: none; display: inline-flex; align-items: center; justify-content: center; min-height: 38px; padding: 0 16px; border: 1px solid var(--border, rgba(201,164,89,.3)); border-radius: var(--radius-md); color: var(--gold-strong, #e2c07f); cursor: pointer; }
+.orders-tools > summary::-webkit-details-marker { display: none; }
+.orders-tools > summary:hover { background: rgba(201,164,89,.12); }
+.orders-tools > summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.orders-tools[open] > summary { background: var(--gold); color: var(--ink-strong); border-color: var(--gold); }
+.orders-tools-panel { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; display: flex; flex-direction: column; gap: 4px; padding: 10px; min-width: 220px; background: var(--surface-2, #1c1a18); border: 1px solid var(--border, rgba(201,164,89,.3)); border-radius: var(--radius-md); box-shadow: 0 16px 40px rgba(0,0,0,.5); }
+.orders-tools-panel .orders-kitchen { justify-content: flex-start; border-color: transparent; }
+.orders-tools-panel .orders-kitchen:hover:not(:disabled) { border-color: var(--border, rgba(201,164,89,.3)); }
 .orders-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 18px; }
 .orders-stat { padding: 10px 14px; border: 1px solid var(--border-soft, rgba(245,240,230,.08)); border-radius: var(--radius-md); background: var(--surface-2, #1c1a18); }
 .orders-stat span { display: block; font-size: 12px; color: var(--text-muted); }
@@ -1822,24 +1834,50 @@ select.status_dbox:not([multiple]) option::checkmark { display: inline-block; or
 .orders-row { border-top: 1px solid var(--border-soft, rgba(245,240,230,.08)); }
 .orders-main { display: grid; grid-template-columns: 34px 52px 110px 90px minmax(120px, 1fr) 80px 130px 110px 130px; gap: 8px; align-items: center; padding: 10px 0; }
 .orders-toggle { width: 30px; height: 30px; border: 1px solid var(--border-soft, rgba(245,240,230,.1)); border-radius: var(--radius-md); background: transparent; color: var(--text); cursor: pointer; }
+.orders-toggle:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .orders-no { font-weight: 700; }
-.orders-type { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--gold-strong, #e2c07f); }
-.orders-type.pickup { color: var(--success, #8fbf7a); }
+/* delivery vs. pickup is told apart by icon, not by a second accent color - color stays reserved for the
+   status meanings documented in DESIGN.md (gold accent, danger/success as the bounded status exception) */
+.orders-type { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--gold-strong, #e2c07f); }
+.orders-type-icon { width: 14px; height: 14px; flex: none; }
 .orders-sum { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
 .orders-pay, .orders-status { font-size: 13px; color: var(--text-muted); }
 .orders-row.st-new .orders-status { color: var(--gold-strong); font-weight: 700; }
 .orders-row.st-cancelled { opacity: .55; }
+.orders-row.st-failed .orders-status { color: var(--danger); font-weight: 700; }
+.orders-fail { color: var(--danger); }
+.orders-fail-chip { display: inline-block; margin: 0 0 12px; padding: 6px 14px; border-radius: var(--radius-pill); background: rgba(226,134,124,.16); color: var(--danger); font-weight: 700; font-size: 13px; }
 .orders-test { font-size: 12px; padding: 1px 6px; border-radius: var(--radius-sm); background: rgba(201,162,89,.18); font-style: normal; }
 .orders-detail { padding: 4px 0 14px 42px; color: var(--text-muted); font-size: 14px; line-height: 1.6; }
 .orders-detail ul { margin: 6px 0; padding-left: 18px; }
 .orders-detail li span { float: right; font-variant-numeric: tabular-nums; }
 .orders-detail em { color: var(--gold-strong); }
 .orders-empty, .orders-note { color: var(--text-muted); padding: 18px 0; }
+.orders-note.is-error { color: var(--danger); }
 @media (max-width: 900px) {
-	.orders-main { grid-template-columns: 34px 46px 1fr 90px; }
-	.orders-time, .orders-pay, .orders-type { display: none; }
-	.orders-status, .orders-act { grid-column: 3 / -1; }
+	/* every visible child gets an explicit column/row instead of relying on source-order auto-placement,
+	   which previously overlapped .orders-status/.orders-act once .orders-time/.orders-pay were hidden */
+	.orders-main { grid-template-columns: 30px auto 1fr auto; grid-template-rows: auto auto; row-gap: 4px; padding: 10px 0; }
+	.orders-time, .orders-pay { display: none; }
+	.orders-toggle { grid-column: 1; grid-row: 1; }
+	.orders-no { grid-column: 2; grid-row: 1; }
+	.orders-type { grid-column: 3; grid-row: 1; justify-self: start; }
+	.orders-sum { grid-column: 4; grid-row: 1; }
+	.orders-who { grid-column: 1 / -1; grid-row: 2; padding-left: 40px; }
+	.orders-status { grid-column: 1 / 3; grid-row: 3; padding-left: 40px; }
+	.orders-act { grid-column: 3 / -1; grid-row: 3; text-align: right; }
 }
+
+/* the ETA/confirm/test-delivery dialog, replacing native confirm()/alert()/prompt() */
+.orders-dialog { width: min(440px, calc(100% - 32px)); margin: auto; padding: 22px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); color: var(--text); box-shadow: 0 16px 40px rgba(0,0,0,.5); }
+.orders-dialog::backdrop { background: rgba(0,0,0,.7); }
+.orders-dialog #od-title { margin: 0 0 14px; font-size: 18px; }
+.orders-dialog form { display: grid; gap: 14px; }
+.orders-dialog label { display: grid; gap: 4px; font-size: 13px; color: var(--text-muted); }
+.orders-dialog .od-row { display: flex; align-items: center; gap: 8px; }
+.orders-dialog .od-row input { width: 80px; }
+.orders-dialog p { margin: 0; color: var(--text); line-height: 1.5; }
+.orders-dlg-actions { display: flex; justify-content: flex-end; gap: 10px; }
 
 .shop-page .offer-check { display: flex; margin: 6px 0; }
 
@@ -1947,6 +1985,66 @@ button.orders-kitchen:disabled { opacity: .5; cursor: wait; }
 .zo-edit-shape:hover { border-color: var(--gold); color: var(--gold); }
 .zo-delete, .zo-cancel-new { border: 0; background: transparent; color: var(--text-muted); text-decoration: underline; text-underline-offset: 3px; min-height: 44px; padding: 0 4px; }
 .zo-delete:hover, .zo-cancel-new:hover { color: var(--danger); }
+
+/* POS (p=12): type in a phone/portal order on the guest shop's own menu, for till staff */
+/* sticky + opaque + a high z-index: this used to scroll away exactly while staff browsed the product grid, the
+   moment a second incoming call is most likely to go unnoticed (see also #pd-call, the copy shown inside the
+   open product dialog - a native <dialog> makes everything else inert, so the page-level banner alone goes
+   silent while a product is being picked) */
+.pos-call { position: sticky; top: 0; z-index: 15; display: flex; align-items: center; gap: 12px; padding: 12px 16px; margin-bottom: 16px; background: var(--surface-2); border-radius: var(--radius-md); box-shadow: 0 8px 28px rgba(0,0,0,.5); }
+.pos-call[hidden] { display: none; }
+.pd-call { margin: 0; padding: 10px 16px; display: flex; align-items: center; gap: 12px; background: var(--surface-2); border-bottom: 1px solid var(--gold); font-size: 14px; }
+.pd-call[hidden] { display: none; }
+.pos-layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 18px; align-items: start; }
+.pos-cats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.pos-cat { padding: 8px 16px; min-height: 40px; border: 1px solid var(--border-soft); border-radius: var(--radius-pill); background: var(--surface); color: var(--text-muted); }
+.pos-cat.is-active { background: var(--gold); border-color: var(--gold); color: var(--ink-strong, #1a1408); font-weight: 700; }
+.pos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.pos-item { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; padding: 12px 14px; min-height: 64px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); text-align: left; color: var(--text); }
+.pos-item[hidden] { display: none; }
+.pos-item:hover { border-color: var(--gold); }
+.pos-item-title { font-weight: 600; }
+.pos-item-price { color: var(--gold-strong); font-size: 13px; }
+.pos-side { display: grid; gap: 14px; align-content: start; position: sticky; top: 16px; }
+.pos-cart { display: grid; gap: 10px; padding: 14px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); max-height: 320px; overflow-y: auto; }
+.pos-line { padding-bottom: 8px; border-bottom: 1px solid var(--border-soft); }
+.pos-line:last-child { border-bottom: 0; padding-bottom: 0; }
+.pos-line.is-editable { cursor: pointer; border-radius: var(--radius-sm); }
+.pos-line.is-editable:hover { background: var(--surface-2); }
+.pos-line.is-editable:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.pos-cart-warn { margin: 0; font-size: 12px; color: var(--gold-strong); }
+.pos-line-var, .pos-line-opts { font-size: 12px; color: var(--text-muted); margin: 2px 0; }
+.pos-line-note { width: 100%; box-sizing: border-box; margin: 4px 0; padding: 6px 10px; font-size: 13px; min-height: 32px; }
+.pos-line-sum { display: flex; align-items: center; justify-content: space-between; font-weight: 600; }
+.pos-line-del { border: 0; background: transparent; color: var(--text-muted); font-size: 18px; line-height: 1; padding: 0 4px; }
+.pos-line-del:hover { color: var(--danger); }
+.pos-cart-total { display: flex; justify-content: space-between; padding-top: 8px; border-top: 1px solid var(--border); font-size: 16px; }
+.pos-form { display: grid; gap: 12px; padding: 14px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); }
+.pos-form label { display: grid; gap: 4px; font-size: 13px; color: var(--text-muted); }
+.pos-form .detail-status.is-ok { color: var(--success); }
+.pos-form .detail-status.is-warn { color: var(--gold-strong); }
+.pos-type { display: flex; gap: 16px; align-items: center; color: var(--text); font-size: 14px; }
+.pos-type label { display: flex; flex-direction: row; gap: 6px; align-items: center; }
+.pos-no-phone { display: flex; flex-direction: row; gap: 8px; align-items: center; color: var(--text); font-size: 13px; }
+.pos-no-phone[hidden] { display: none; }
+.pos-zone { font-size: 13px; color: var(--text-muted); min-height: 18px; }
+.pos-zone-pick { border: 1px solid var(--border); background: transparent; color: var(--gold-strong); border-radius: var(--radius-sm); padding: 4px 10px; margin: 2px; }
+.pos-history { display: grid; gap: 6px; }
+.pos-history-head { font-size: 12px; color: var(--text-muted); margin: 0; }
+.pos-history-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; background: var(--surface-2); border-radius: var(--radius-sm); font-size: 13px; }
+.pos-submit { width: 100%; }
+/* order/shop.css's search bar is tuned to sit sticky under the guest page's own header (top: 61px) - inside the
+   admin POS layout it is just a normal block above the product grid */
+.pos-main .shop-search-bar { position: static; padding: 0 0 14px; background: transparent; }
+.pos-main .shop-search-in { max-width: none; margin: 0; }
+@media (max-width: 900px) {
+	/* the whole .pos-side (cart + full order form) used to go static below this width, losing the glanceable
+	   running total exactly on counter-tablet widths - display:contents flattens .pos-side so .pos-cart can be
+	   sticky and visually reordered on its own, independent of the longer form, which still scrolls normally */
+	.pos-layout { grid-template-columns: 1fr; }
+	.pos-side { display: contents; }
+	.pos-cart { position: sticky; top: 0; z-index: 10; order: -1; max-height: 38vh; box-shadow: 0 8px 28px rgba(0,0,0,.5); }
+}
 /* Leaflet.draw's default toolbar control is never added to the map (every draw/edit action is one of the
    buttons above instead) - only its vertex handles need restyling to match the dark theme, the default is
    a plain white square meant for a light basemap UI */

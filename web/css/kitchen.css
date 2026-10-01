@@ -1,7 +1,7 @@
 /* Kitchen monitor: read from a distance, big type, three columns, colour only where it means something */
 .kitchen {
 	--bg: #0c0b0a; --surface: #161412; --surface-2: #1f1c19; --border: rgba(245, 240, 230, 0.12);
-	--gold: #c9a259; --gold-strong: #e2c07f; --text: #f6f1e6; --muted: #b3a998; --danger: #ef8a7f; --success: #97c982; --amber: #e8b04a;
+	--gold: #c9a259; --gold-strong: #e2c07f; --text: #f6f1e6; --muted: #b3a998; --danger: #e2867c; --success: #8fbf7a; --amber: #e8b04a;
 	margin: 0; background: var(--bg); color: var(--text); font-family: 'Raleway', -apple-system, 'Segoe UI', sans-serif; font-size: 18px; line-height: 1.35;
 	height: 100vh; display: flex; flex-direction: column; overflow: hidden;
 }
@@ -29,18 +29,26 @@
 .k-col[data-col="work"] h2 { color: var(--gold-strong); }
 .k-col[data-col="ready"] h2 { color: var(--success); }
 .k-list { flex: 1; min-height: 0; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
-.k-empty { color: var(--muted); text-align: center; padding: 28px 8px; font-size: 16px; }
+.k-empty { color: var(--success); text-align: center; padding: 28px 8px; font-size: 22px; font-weight: 700; }
+/* pinned below the scrollable .k-list, outside it - a silently overflowing column (a busy Friday queuing
+   orders below the fold) used to give zero signal on a board nobody is expected to scroll */
+.k-overflow { flex: none; text-align: center; padding: 8px; font-size: 15px; font-weight: 700; color: var(--amber); background: var(--surface); border-top: 1px solid var(--border); }
+.k-overflow[hidden] { display: none; }
 
 .k-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
-.k-card.is-late { border-color: var(--danger); }
+/* "late" (still waiting) and "failed" (actually broken) used to share the same --danger ring, making two very
+   different situations look identical at a glance - danger now stays reserved for real failures; a late order
+   escalates through amber plus the "VERSPÄTET" text label added in disposition.js, not color alone */
+.k-card.is-late { border-color: var(--amber); box-shadow: 0 0 0 2px rgba(232, 176, 74, 0.3); }
 .k-card.is-new { border-color: var(--amber); box-shadow: 0 0 0 2px rgba(232, 176, 74, 0.25); }
+.k-card.is-failed { border-color: var(--danger); box-shadow: 0 0 0 2px rgba(226, 134, 124, 0.25); }
 .k-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .k-no { font-size: 36px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
 .k-type { font-size: 15px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; padding: 3px 10px; border-radius: 8px; background: rgba(201, 162, 89, 0.18); color: var(--gold-strong); }
 .k-type.pickup { background: rgba(151, 201, 130, 0.16); color: var(--success); }
 .k-due { margin-left: auto; font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .k-due small { font-size: 14px; font-weight: 600; color: var(--muted); display: block; text-align: right; }
-.k-late { color: var(--danger); }
+.k-late { color: var(--amber); }
 .k-who { color: var(--muted); font-size: 16px; margin-top: 6px; }
 .k-items { margin-top: 10px; border-top: 1px solid var(--border); }
 .k-item { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 22px; font-weight: 700; }
@@ -50,6 +58,7 @@
 .k-item .k-opts { font-size: 18px; font-weight: 500; color: var(--text); margin-left: 40px; line-height: 1.4; }
 .k-item .k-inote { display: block; margin: 4px 0 0 40px; padding: 4px 10px; border-radius: 8px; background: rgba(232, 176, 74, 0.16); color: var(--amber); font-size: 18px; font-weight: 700; }
 .k-onote { margin-top: 8px; padding: 8px 12px; border-radius: 10px; background: rgba(232, 176, 74, 0.16); color: var(--amber); font-size: 18px; font-weight: 700; }
+.k-onote.k-fail-reason { background: rgba(226, 134, 124, 0.16); color: var(--danger); }
 .k-pay { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 16px; }
 .k-badge { padding: 3px 10px; border-radius: 8px; font-weight: 800; font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase; background: var(--surface); color: var(--muted); border: 1px solid var(--border); }
 .k-badge.paid { color: var(--success); border-color: rgba(151, 201, 130, 0.5); }
@@ -89,6 +98,10 @@
 .ks-empty span { font-size: 28px; font-weight: 500; }
 .ks-card { min-height: 0; display: flex; flex-direction: column; background: var(--surface); border: 2px solid var(--border); border-radius: 14px; padding: 14px 16px 12px; }
 .ks-card.is-fresh { border-color: var(--amber); animation: ks-pulse 1.4s ease-in-out infinite; }
+/* an order sitting in the kitchen too long used to look identical to one accepted seconds ago - escalates
+   through amber plus the "VERSPÄTET" text in kitchen_screen.js, same non-color-only pattern as disposition.php */
+.ks-card.is-late { border-color: var(--amber); box-shadow: 0 0 0 2px rgba(232, 176, 74, 0.3); }
+.ks-due.k-late b, .ks-due.k-late small { color: var(--amber); }
 @keyframes ks-pulse { 50% { box-shadow: 0 0 0 6px rgba(232, 176, 74, 0.28); } }
 @media (prefers-reduced-motion: reduce) { .ks-card.is-fresh { animation: none; box-shadow: 0 0 0 4px rgba(232, 176, 74, 0.28); } }
 .ks-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }

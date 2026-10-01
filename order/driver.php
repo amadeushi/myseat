@@ -2,9 +2,11 @@
 /*
  * The driver's own page (order/driver.php?device=<traccar device id>), bookmarked once on his phone - no login,
  * the device id is the credential (mapped to his name in Einstellungen > Lieferservice). Shows the open delivery
- * queue to accept from, then the detail of whichever one he has (address, phone, what to collect, "Zugestellt",
- * "Zurück in den Pool"). GPS itself comes from the Traccar app running in the background (order/driver_gps.php)
- * and keeps reporting even while this page is closed - this page only ever reads/claims orders.
+ * pool to accept from, his own queue of accepted-but-not-yet-started deliveries, and the detail of whichever one
+ * he has started ("Zugestellt", "Pausieren", "Zurück in den Pool", "Fehlgeschlagen"). Only one delivery can ever
+ * be started at a time, so at most one guest watches his live position. GPS itself comes from the Traccar app
+ * running in the background (order/driver_gps.php) and keeps reporting even while this page is closed - this
+ * page only ever reads/claims/starts orders.
  */
 require __DIR__.'/bootstrap.inc.php';
 header('Cache-Control: no-store');

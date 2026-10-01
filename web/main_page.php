@@ -23,7 +23,7 @@ This file is part of mySeat.
 /** Login **/
 // ** set configuration
 	//Software version - http://github.com/apmuthu/myseat
-	$sw_version = 'v5.1.0';
+	$sw_version = 'v6.0.0';
 	
 	include('../config/config.general.php');
 	
@@ -182,6 +182,14 @@ echo "<body>";
 			// delivery zone editor of the delivery service (draw/edit polygons on a map)
 			if ( current_user_can( 'Settings-General' ) ){
 				include('content/shop_zones.page.php');
+			}else{
+				redeclare_access();
+			}
+		break;
+		case '12':
+			// POS: type in an order that did not come through the own shop (phone call, unconnected portal)
+			if ( current_user_can( 'Reservation-Edit' ) ){
+				include('content/orders_pos.page.php');
 			}else{
 				redeclare_access();
 			}

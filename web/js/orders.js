@@ -3,12 +3,64 @@
 	'use strict';
 	var page = document.getElementById('orders-page'); if (!page) { return; }
 	var TOKEN = page.dataset.token, DATE = page.dataset.date, filter = 'all', open = {};
-	var LABEL = { 'new': 'neu', accepted: 'angenommen', preparing: 'in Zubereitung', ready: 'fertig', delivering: 'unterwegs', done: 'erledigt', cancelled: 'storniert' };
+	var LABEL = { 'new': 'neu', accepted: 'angenommen', preparing: 'in Zubereitung', ready: 'fertig', delivering: 'unterwegs', done: 'erledigt', cancelled: 'storniert', failed: 'fehlgeschlagen' };
+	var ICON_BOX = '<svg class="orders-type-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7l9-4 9 4v10l-9 4-9-4V7zm9-4v18M3 7l9 4 9-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+	var ICON_BAG = '<svg class="orders-type-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12l-1.2 12.5a1 1 0 0 1-1 .9H8.2a1 1 0 0 1-1-.9L6 8zm3 0V6a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+	function $(s, r) { return (r || document).querySelector(s); }
 	function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 	function money(c) { return (c / 100).toFixed(2).replace('.', ',') + ' €'; }
 	function post(op, data) {
 		var fd = new FormData(); fd.append('op', op); fd.append('token', TOKEN); for (var k in data) { fd.append(k, data[k]); }
 		return fetch('ajax/shop_orders.php', { method: 'POST', body: fd, credentials: 'same-origin' }).then(function (r) { return r.json(); });
+	}
+
+	// ---- inline status note, replaces alert() - themed, auto-clearing, same .is-error pattern used elsewhere
+	var noteTimer = null;
+	function note(msg, isError) {
+		var el = $('#orders-note');
+		el.textContent = msg; el.classList.toggle('is-error', !!isError);
+		clearTimeout(noteTimer);
+		if (msg) { noteTimer = setTimeout(function () { el.textContent = ''; }, 5000); }
+	}
+
+	// ---- themed dialog, replaces confirm()/prompt(): one <dialog> in the page, filled per call, resolved by
+	// the form's submit (OK) or the explicit cancel button. method="dialog" sets dlg.returnValue to the
+	// submitter's value, so "confirm" vs anything else tells the two paths apart.
+	var dlg = $('#orders-dlg');
+	function openDialog(title, bodyHtml, confirmLabel) {
+		return new Promise(function (resolve) {
+			$('#od-title').textContent = title;
+			$('#od-body').innerHTML = bodyHtml;
+			$('#od-confirm').textContent = confirmLabel || 'OK';
+			function onClose() {
+				dlg.removeEventListener('close', onClose);
+				resolve(dlg.returnValue === 'confirm' ? $('#od-form') : null);
+			}
+			dlg.addEventListener('close', onClose);
+			if (typeof dlg.showModal === 'function') { dlg.showModal(); } else { dlg.setAttribute('open', ''); }
+			var first = $('#od-body input, #od-body textarea'); (first || $('#od-confirm')).focus();
+		});
+	}
+	$('#od-cancel').addEventListener('click', function () { dlg.close('cancel'); });
+	function confirmDialog(title, message, confirmLabel) {
+		return openDialog(title, '<p>' + esc(message) + '</p>', confirmLabel).then(function (f) { return !!f; });
+	}
+	// the ETA staff commits to when accepting a new order - shown and editable instead of silently sent
+	function askEta() {
+		return openDialog('Bestellung annehmen', '<label>Zusage an den Gast<span class="od-row"><input type="number" id="od-eta" value="30" min="5" max="180" step="5" required/> Minuten</span></label>', 'Annehmen').then(function (f) {
+			return f ? Math.max(5, parseInt(f.querySelector('#od-eta').value, 10) || 30) : null;
+		});
+	}
+	// the address for a test delivery (replaces three chained prompt() calls) - leave the street empty to use
+	// the restaurant's own configured address, same behaviour the old prompt() flow had
+	function askDemoAddress() {
+		return openDialog('Testbestellung: Lieferung',
+			'<label>Straße + Hausnummer<br/><input type="text" id="od-street" placeholder="leer lassen für Restaurant-Adresse"/></label>' +
+			'<label>PLZ<br/><input type="text" id="od-zip"/></label>' +
+			'<label>Ort<br/><input type="text" id="od-city" value="Hildesheim"/></label>', 'Anlegen').then(function (f) {
+			if (!f) { return null; }
+			return { street: f.querySelector('#od-street').value.trim(), zip: f.querySelector('#od-zip').value.trim(), city: f.querySelector('#od-city').value.trim() };
+		});
 	}
 	function next(o) {
 		if (o.status === 'new') { return ['accepted', 'Annehmen']; }
@@ -24,17 +76,18 @@
 	}
 	function row(o) {
 		var n = next(o), pay = o.pay === 'mollie' ? (o.pay_status === 'paid' ? 'online bezahlt' : 'online offen') : (o.pay === 'cash' ? 'bar' : 'Karte') + (o.pay_status === 'paid' ? ', kassiert' : ', offen');
-		var h = '<div class="orders-row st-' + o.status + '" data-id="' + o.id + '"><div class="orders-main">' +
-			'<button type="button" class="orders-toggle" aria-expanded="' + (open[o.id] ? 'true' : 'false') + '" aria-label="Details">' + (open[o.id] ? '−' : '+') + '</button>' +
+		var h = '<div class="orders-row st-' + esc(o.status) + '" data-id="' + o.id + '"><div class="orders-main">' +
+			'<button type="button" class="orders-toggle" aria-expanded="' + (open[o.id] ? 'true' : 'false') + '" aria-label="' + (open[o.id] ? 'Details ausblenden' : 'Details anzeigen') + '">' + (open[o.id] ? '−' : '+') + '</button>' +
 			'<span class="orders-no">#' + o.day_no + '</span><span class="orders-time">' + esc(o.scheduled ? o.scheduled + ' geplant' : o.created) + '</span>' +
-			'<span class="orders-type ' + o.type + '">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + '</span>' +
-			'<span class="orders-who">' + esc(o.name) + (o.test ? ' <em class="orders-test">Test</em>' : '') + '</span>' +
+			'<span class="orders-type ' + esc(o.type) + '">' + (o.type === 'delivery' ? ICON_BOX : ICON_BAG) + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + '</span>' +
+			'<span class="orders-who">' + esc(o.name) + (o.source === 'phone' ? ' <em class="orders-test">Telefon</em>' : '') + (o.test ? ' <em class="orders-test">Test</em>' : '') + '</span>' +
 			'<span class="orders-sum">' + money(o.total) + '</span><span class="orders-pay">' + pay + '</span>' +
 			'<span class="orders-status">' + LABEL[o.status] + '</span><span class="orders-act">' +
 			(n ? '<button type="button" class="button_dark" data-status="' + n[0] + '">' + n[1] + '</button>' : '') + '</span></div>';
 		if (open[o.id]) {
-			h += '<div class="orders-detail"><p><strong>' + esc(o.name) + '</strong> · <a href="tel:' + esc(o.phone.replace(/\s+/g, '')) + '">' + esc(o.phone) + '</a>' + (o.email ? ' · ' + esc(o.email) : '') + ' · Nr. ' + esc(o.number) + '</p>' +
+			h += '<div class="orders-detail"><p><strong>' + esc(o.name) + '</strong>' + (o.phone ? ' · <a href="tel:' + esc(o.phone.replace(/\s+/g, '')) + '">' + esc(o.phone) + '</a>' : '') + (o.email ? ' · ' + esc(o.email) : '') + ' · Nr. ' + esc(o.number) + '</p>' +
 				(o.address ? '<p>' + esc(o.address) + (o.address_note ? ' (' + esc(o.address_note) + ')' : '') + '</p>' : '') +
+				(o.status === 'failed' && o.fail_reason ? '<p class="orders-fail">Fehlgeschlagen: ' + esc(o.fail_reason) + '</p>' : '') +
 				'<ul>' + o.items.map(function (it) { return '<li>' + it.qty + '× ' + esc(it.title) + (it.variation ? ' (' + esc(it.variation) + ')' : '') + (it.options.length ? ' – ' + esc(it.options.join(', ')) : '') + (it.note ? ' <em>„' + esc(it.note) + '“</em>' : '') + ' <span>' + money(it.line) + '</span></li>'; }).join('') + '</ul>' +
 				(o.note ? '<p><em>Anmerkung: ' + esc(o.note) + '</em></p>' : '') +
 				'<p class="orders-totals">Zwischensumme ' + money(o.subtotal) + (o.discount ? ' · Gutschein ' + esc(o.coupon) + ' −' + money(o.discount) : '') + (o.fee ? ' · Liefergebühr ' + money(o.fee) : '') + (o.tip ? ' · Trinkgeld ' + money(o.tip) : '') + ' · <strong>Gesamt ' + money(o.total) + '</strong></p>' +
@@ -44,27 +97,29 @@
 	}
 	function load() {
 		fetch('ajax/shop_orders.php?op=day&date=' + DATE + '&filter=' + filter, { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (r) {
-			if (!r.ok) { document.getElementById('orders-note').textContent = r.error || 'Das hat nicht geklappt.'; return; }
+			if (!r.ok) { note(r.error || 'Das hat nicht geklappt.', true); return; }
 			stats(r.stats);
-			document.getElementById('orders-list').innerHTML = r.orders.length ? r.orders.map(row).join('') : '<p class="orders-empty">Keine Bestellungen an diesem Tag.</p>';
-			document.getElementById('orders-note').textContent = '';
-		}).catch(function () { document.getElementById('orders-note').textContent = 'Keine Verbindung.'; });
+			var failedNote = '';
+			if (filter === 'closed') { var nFailed = r.orders.filter(function (o) { return o.status === 'failed'; }).length; if (nFailed) { failedNote = '<p class="orders-fail-chip">Fehlgeschlagen: ' + nFailed + '</p>'; } }
+			document.getElementById('orders-list').innerHTML = failedNote + (r.orders.length ? r.orders.map(row).join('') : '<p class="orders-empty">Keine Bestellungen an diesem Tag.</p>');
+			note('');
+		}).catch(function () { note('Keine Verbindung.', true); });
 	}
 	page.addEventListener('click', function (ev) {
 		var dm = ev.target.closest('[data-demo]');
 		if (dm) {
-			var data = { type: dm.dataset.demo };
 			if (dm.dataset.demo === 'delivery') {
-				var street = prompt('Straße und Hausnummer für die Testlieferung (leer lassen für die Restaurant-Adresse):', '');
-				if (street === null) { return; }
-				street = street.trim();
-				if (street !== '') {
-					var zip = prompt('PLZ:', '') || '', city = prompt('Ort:', 'Hildesheim') || '';
-					data.street = street; data.zip = zip.trim(); data.city = city.trim();
-				}
+				askDemoAddress().then(function (addr) {
+					if (!addr) { return; }
+					var data = { type: 'delivery' };
+					if (addr.street !== '') { data.street = addr.street; data.zip = addr.zip; data.city = addr.city; }
+					dm.disabled = true;
+					post('demo', data).then(function (r) { dm.disabled = false; if (!r.ok) { note(r.error || 'Das hat nicht geklappt.', true); } load(); });
+				});
+				return;
 			}
 			dm.disabled = true;
-			post('demo', data).then(function (r) { dm.disabled = false; if (!r.ok) { alert(r.error || 'Das hat nicht geklappt.'); } load(); });
+			post('demo', { type: 'pickup' }).then(function (r) { dm.disabled = false; if (!r.ok) { note(r.error || 'Das hat nicht geklappt.', true); } load(); });
 			return;
 		}
 		var f = ev.target.closest('.orders-filter button');
@@ -74,11 +129,29 @@
 		if (ev.target.closest('.orders-toggle')) { open[id] = !open[id]; load(); return; }
 		var st = ev.target.closest('[data-status]');
 		if (st) {
-			if (st.dataset.status === 'cancelled' && !confirm('Diese Bestellung wirklich stornieren?')) { return; }
-			var d = { id: id, status: st.dataset.status }; if (st.dataset.status === 'accepted') { d.eta = 30; }
-			st.disabled = true; post('status', d).then(function (r) { if (!r.ok) { alert(r.error || 'Das hat nicht geklappt.'); } load(); }); return;
+			if (st.dataset.status === 'cancelled') {
+				confirmDialog('Bestellung stornieren', 'Diese Bestellung wirklich stornieren? Das kann nicht rückgängig gemacht werden.', 'Stornieren').then(function (ok) {
+					if (!ok) { return; }
+					post('status', { id: id, status: 'cancelled' }).then(function (r) { if (!r.ok) { note(r.error || 'Das hat nicht geklappt.', true); } load(); });
+				});
+				return;
+			}
+			if (st.dataset.status === 'accepted') {
+				askEta().then(function (eta) {
+					if (eta === null) { return; }
+					st.disabled = true;
+					post('status', { id: id, status: 'accepted', eta: eta }).then(function (r) { st.disabled = false; if (!r.ok) { note(r.error || 'Das hat nicht geklappt.', true); } load(); });
+				});
+				return;
+			}
+			st.disabled = true; post('status', { id: id, status: st.dataset.status }).then(function (r) { if (!r.ok) { note(r.error || 'Das hat nicht geklappt.', true); } load(); }); return;
 		}
-		if (ev.target.closest('[data-delete]')) { if (confirm('Diese Testbestellung endgültig löschen?')) { post('delete_test', { id: id }).then(function (r) { if (!r.ok) { alert(r.error); } load(); }); } }
+		if (ev.target.closest('[data-delete]')) {
+			confirmDialog('Testbestellung löschen', 'Diese Testbestellung endgültig löschen? Das kann nicht rückgängig gemacht werden.', 'Löschen').then(function (ok) {
+				if (!ok) { return; }
+				post('delete_test', { id: id }).then(function (r) { if (!r.ok) { note(r.error, true); } load(); });
+			});
+		}
 	});
 	load(); setInterval(load, 20000);
 })();

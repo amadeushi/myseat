@@ -112,24 +112,23 @@ if ($op === 'repay') {
 
 // the driver's own page (order/driver.php?device=<traccar device id>, no login - the device id itself is
 // the credential, mapped to a name in Einstellungen > Lieferservice). GPS itself arrives separately and
-// continuously at order/driver_gps.php from the Traccar app in the background; these ops are only the
-// open-order list, claiming one, giving it back, and marking it delivered.
-if (in_array($op, array('driver_list', 'driver_claim', 'driver_release', 'driver_complete'), true)) {
+// continuously at order/driver_gps.php from the Traccar app in the background; these ops are the open
+// pool, his own queue (claimed, not yet started), claiming/starting/pausing/releasing/failing/completing one.
+if (in_array($op, array('driver_list', 'driver_claim', 'driver_start', 'driver_pause', 'driver_fail', 'driver_release', 'driver_complete'), true)) {
 	$driver = shop_driver_by_device(isset($body['device']) ? $body['device'] : '');
 	if (!$driver) { api_out(array('ok' => false, 'error' => 'Dieses Gerät ist keinem Fahrer zugeordnet.'), 403); }
 	$driverId = (int)$driver['id'];
-	if ($op === 'driver_list') {
-		$current = shop_driver_current_order($driverId);
-		api_out(array('ok' => true, 'current' => $current ? shop_driver_order_view($current) : null, 'open' => $current ? array() : shop_driver_open_orders()));
-	}
+	if ($op === 'driver_list') { api_out(array_merge(array('ok' => true), shop_driver_state($driverId))); }
 	$orderId = (int)(isset($body['order_id']) ? $body['order_id'] : 0);
 	if ($orderId <= 0) { api_out(array('ok' => false, 'error' => 'Unbekannte Lieferung.')); }
 	if ($op === 'driver_claim') { $r = shop_driver_claim_order($driverId, $orderId); }
+	if ($op === 'driver_start') { $r = shop_driver_start_order($driverId, $orderId); }
+	if ($op === 'driver_pause') { $r = shop_driver_pause_order($driverId, $orderId); }
+	if ($op === 'driver_fail') { $r = shop_driver_fail_order($driverId, $orderId, isset($body['reason']) ? (string)$body['reason'] : ''); }
 	if ($op === 'driver_release') { $r = shop_driver_release_order($driverId, $orderId); }
 	if ($op === 'driver_complete') { $r = shop_driver_complete_order($driverId, $orderId); }
 	if (!$r['ok']) { api_out($r); }
-	$current = shop_driver_current_order($driverId);
-	api_out(array('ok' => true, 'current' => $current ? shop_driver_order_view($current) : null, 'open' => $current ? array() : shop_driver_open_orders()));
+	api_out(array_merge(array('ok' => true), shop_driver_state($driverId)));
 }
 
 if ($op === 'create') {

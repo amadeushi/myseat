@@ -20,7 +20,8 @@ if (isset($_GET['json'])) {
 	exit;
 }
 $phone = !empty($settings['mailPhone']) ? $settings['mailPhone'] : '';
-$tel = $phone !== '' ? '<a href="tel:'.shop_h(preg_replace('/\s+/', '', $phone)).'">'.shop_h($phone).'</a>' : '';
+$telHref = $phone !== '' ? 'tel:'.shop_h(preg_replace('/\s+/', '', $phone)) : '';
+$tel = $phone !== '' ? '<a href="'.$telHref.'">'.shop_h($phone).'</a>' : '';
 $delivery = $order && $order['type'] === 'delivery';
 ?>
 <!DOCTYPE html>
@@ -46,25 +47,30 @@ $delivery = $order && $order['type'] === 'delivery';
 	<?php if (!$order): ?>
 		<h1 class="st-title">Bestellung nicht gefunden</h1>
 		<p class="st-lead">Dieser Link gehört zu keiner Bestellung. Bitte prüfe ihn oder ruf uns an<?php echo $tel !== '' ? ': '.$tel : ''; ?>.</p>
+		<?php if ($telHref !== ''): ?><p class="st-again"><a class="cart-go" href="<?php echo $telHref; ?>">Anrufen: <?php echo shop_h($phone); ?></a></p><?php endif; ?>
 	<?php else:
 		$st = $order['status'];
 		$paidOnline = ($order['payment_method'] === 'mollie');
 		$titles = array(
 			'pending' => 'Fast geschafft: bitte bezahlen', 'new' => 'Danke, deine Bestellung ist eingegangen', 'accepted' => 'Wir kümmern uns um deine Bestellung',
 			'preparing' => 'Deine Bestellung wird zubereitet', 'ready' => $delivery ? 'Deine Bestellung ist fertig und wird gleich abgeholt' : 'Deine Bestellung ist abholbereit',
-			'delivering' => 'Deine Bestellung ist unterwegs zu dir', 'done' => 'Guten Appetit!', 'cancelled' => 'Diese Bestellung wurde storniert');
-		$steps = $delivery ? array('new' => 'Bestellung eingegangen', 'preparing' => 'Wird zubereitet', 'ready' => 'Fertig', 'delivering' => 'Unterwegs', 'done' => 'Geliefert')
-			: array('new' => 'Bestellung eingegangen', 'preparing' => 'Wird zubereitet', 'ready' => 'Abholbereit', 'done' => 'Abgeholt');
-		$rank = array('pending' => 0, 'new' => 1, 'accepted' => 1, 'preparing' => 2, 'ready' => 3, 'delivering' => 4, 'done' => 5);
-		$stepRank = $delivery ? array('new' => 1, 'preparing' => 2, 'ready' => 3, 'delivering' => 4, 'done' => 5) : array('new' => 1, 'preparing' => 2, 'ready' => 3, 'done' => 5);
+			'delivering' => 'Deine Bestellung ist unterwegs zu dir', 'done' => 'Guten Appetit!', 'cancelled' => 'Diese Bestellung wurde storniert',
+			'failed' => 'Bei deiner Lieferung gab es ein Problem');
+		// "accepted" used to share its rank with "new", so the restaurant actively confirming an order produced
+		// no visible step movement at all - it now gets its own step and rank, same as every other transition
+		$steps = $delivery ? array('new' => 'Bestellung eingegangen', 'accepted' => 'Bestätigt', 'preparing' => 'Wird zubereitet', 'ready' => 'Fertig', 'delivering' => 'Unterwegs', 'done' => 'Geliefert')
+			: array('new' => 'Bestellung eingegangen', 'accepted' => 'Bestätigt', 'preparing' => 'Wird zubereitet', 'ready' => 'Abholbereit', 'done' => 'Abgeholt');
+		$rank = array('pending' => 0, 'new' => 1, 'accepted' => 2, 'preparing' => 3, 'ready' => 4, 'delivering' => 5, 'done' => 6);
+		$stepRank = $delivery ? array('new' => 1, 'accepted' => 2, 'preparing' => 3, 'ready' => 4, 'delivering' => 5, 'done' => 6) : array('new' => 1, 'accepted' => 2, 'preparing' => 3, 'ready' => 4, 'done' => 5);
 		$cur = isset($rank[$st]) ? $rank[$st] : 0;
 		$items = shop_order_items((int)$order['id']);
 		$eta = $order['eta_at'] ? strtotime($order['eta_at']) : 0;
 	?>
-		<h1 class="st-title"><?php echo shop_h($titles[$st]); ?></h1>
+		<h1 class="st-title<?php echo in_array($st, array('failed', 'cancelled'), true) ? ' is-danger' : ($st === 'done' ? ' is-success' : ''); ?>"><?php echo shop_h($titles[$st]); ?></h1>
 		<p class="st-lead">
 			<?php if ($st === 'pending'): ?>Deine Bestellung geht erst an die Küche, wenn die Zahlung angekommen ist.
 			<?php elseif ($st === 'cancelled'): ?>Wenn du damit nicht gerechnet hast, ruf uns bitte an<?php echo $tel !== '' ? ': '.$tel : ''; ?>.
+			<?php elseif ($st === 'failed'): ?>Dein Fahrer konnte die Lieferung leider nicht abschließen. Bitte ruf uns an<?php echo $tel !== '' ? ': '.$tel : ''; ?>.
 			<?php elseif ($st === 'done'): ?>Vielen Dank für deine Bestellung.
 			<?php endif; ?>
 		</p>
@@ -76,10 +82,10 @@ $delivery = $order && $order['type'] === 'delivery';
 				'ready' => $delivery ? 'Alles ist verpackt, der Fahrer holt es gleich ab.' : 'Alles ist frisch und warm für dich bereit.',
 				'delivering' => 'Gleich klingelt es bei dir.',
 			);
-			$late = ($eta && time() > $eta + 300 && !in_array($st, array('pending', 'done', 'cancelled', 'ready'), true));
+			$late = ($eta && time() > $eta + 300 && !in_array($st, array('pending', 'done', 'cancelled', 'failed', 'ready'), true));
 		?>
 		<?php if (isset($sub[$st])): ?><p class="st-sub"><?php echo shop_h($sub[$st]); ?></p><?php endif; ?>
-		<?php if ($eta && !in_array($st, array('pending', 'done', 'cancelled'), true)): ?>
+		<?php if ($eta && !in_array($st, array('pending', 'done', 'cancelled', 'failed'), true)): ?>
 		<div class="st-eta" aria-label="Voraussichtliche Zeit">
 			<span><?php echo $delivery ? ($order['scheduled_at'] ? 'Lieferung um' : 'Voraussichtlich bei dir um') : ($order['scheduled_at'] ? 'Abholung um' : 'Abholbereit gegen'); ?></span>
 			<strong><?php echo shop_h(date('H:i', $eta)); ?></strong><span>Uhr</span>
@@ -92,16 +98,16 @@ $delivery = $order && $order['type'] === 'delivery';
 			<div class="st-pay">Die Zahlung ist noch offen. <a href="#" id="st-repay">Jetzt online bezahlen</a><span id="st-repay-msg" class="st-warn" role="alert"></span></div>
 		<?php endif; ?>
 
-		<?php if ($st !== 'cancelled' && $st !== 'pending'): ?>
+		<?php if ($st !== 'cancelled' && $st !== 'failed' && $st !== 'pending'): ?>
 		<ol class="st-steps" aria-label="Stand deiner Bestellung">
 			<?php foreach ($steps as $key => $label):
-				$r = $stepRank[$key]; $cls = ($cur > $r || $st === 'done') ? 'is-done' : (($cur === $r || ($key === 'new' && $cur === 1)) ? 'is-now' : ''); ?>
+				$r = $stepRank[$key]; $cls = ($cur > $r || $st === 'done') ? 'is-done' : ($cur === $r ? 'is-now' : ''); ?>
 			<li class="st-step <?php echo $cls; ?>"><span><?php echo shop_h($label); ?></span></li>
 			<?php endforeach; ?>
 		</ol>
 		<?php endif; ?>
 
-		<?php if ($st !== 'cancelled' && $st !== 'done'): ?><p class="st-hint">Diese Seite aktualisiert sich von selbst. Du kannst sie offen lassen oder den Link speichern.</p><?php endif; ?>
+		<?php if ($st !== 'cancelled' && $st !== 'failed' && $st !== 'done'): ?><p class="st-hint">Diese Seite aktualisiert sich von selbst. Du kannst sie offen lassen oder den Link speichern.</p><?php endif; ?>
 		<?php if ($st === 'done'): ?><p class="st-again"><a class="cart-go" href="./">Noch einmal bestellen</a></p><?php endif; ?>
 
 		<?php
@@ -158,7 +164,7 @@ $delivery = $order && $order['type'] === 'delivery';
 		<script>
 		(function () {
 			var t = <?php echo json_encode($token); ?>, status = <?php echo json_encode($st.'|'.$order['payment_status']); ?>, TOKEN = document.body.dataset.token;
-			var done = <?php echo json_encode(in_array($st, array('done', 'cancelled'), true)); ?>;
+			var done = <?php echo json_encode(in_array($st, array('done', 'cancelled', 'failed'), true)); ?>;
 			var lateIn = <?php echo json_encode($eta ? max(0, $eta + 301 - time()) : 0); ?>;
 			if (!done && lateIn > 0 && lateIn < 10800) { setTimeout(function () { location.reload(); }, lateIn * 1000); }
 			if (!done) { setInterval(function () { fetch('status.php?t=' + t + '&json=1', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) { if (r.ok && (r.status + '|' + r.payment) !== status) { location.reload(); return; } if (r.ok && window.StatusMap) { window.StatusMap.update(r.driver); } }).catch(function () {}); }, <?php echo $st === 'delivering' ? 6000 : 12000; ?>); }

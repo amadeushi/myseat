@@ -52,6 +52,43 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-01 == mySeat v6.0.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Fahrer-App erlaubt jetzt Mehrfach-Annahme aus dem Pool - ein Fahrer übernimmt mehrere Lieferungen
+   in seine eigene Warteschlange und startet jede einzeln (shop_driver_start_order()), damit immer nur
+   ein Gast gleichzeitig die Route live mitverfolgen kann. Neu: "Pausieren" legt eine gestartete Lieferung
+   zurück in die eigene Warteschlange (shop_driver_pause_order()), ein "Fehlgeschlagen"-Button mit
+   Freitext-Grund für Lieferungen, die nicht abgeschlossen werden können (neuer Status 'failed', eigene
+   Spalte/Farbe in Disposition und Bestellungen-Liste, fail_reason-Spalte).
+ * New: "Bestellungen" hat jetzt einen dritten Filter "Abgeschlossen" (erledigt/storniert/fehlgeschlagen
+   getrennt ausgewiesen) und einen "Bestellung erfassen"-Link zur neuen POS-Oberfläche.
+ * New: POS-Oberfläche (Bestellungen > "Bestellung erfassen") zum Eintippen telefonischer oder nicht
+   technisch angebundener Bestellungen - nutzt dieselbe Speisekarte, Preislogik und Liefergebiets-Prüfung
+   wie der Gast-Shop (shop_create_manual_order()), inklusive Produktdialog mit Pflicht-/Zusatzoptionen,
+   Suche, Warenkorb mit editierbaren Notizen und Zeilen-Korrektur per Antippen. Bestellungen aus dieser
+   Oberfläche laufen mit source='phone' normal in Disposition/Küchenmonitor ein.
+ * New: Gäste-Bestellhistorie nach Telefonnummer (shop_guest_history()) mit "Diese Bestellung übernehmen"
+   in der POS-Oberfläche - ordnet wiederkehrende Gäste anhand ihrer letzten Bestellungen automatisch zu,
+   ohne eigene Gästedatenbank.
+ * New: Sipgate-Anrufintegration (Einstellungen > Lieferservice) zeigt eingehende Anrufe als Banner in
+   der POS-Oberfläche, inklusive Rufnummer zum direkten Übernehmen ins Telefonfeld.
+ * Fix: Statusmeldungen (Bestellungen, POS, Disposition, Küchenbildschirm) unterscheiden jetzt sichtbar
+   zwischen Fehler/Erfolg/Zwischenstatus statt immer gleich grau anzuzeigen; native confirm()/alert()/
+   prompt()-Dialoge sind durch themenkonforme Dialoge ersetzt (unsichtbar im Vollbildbetrieb).
+ * Fix: Disposition und Küchenbildschirm zeigen jetzt einen Hinweis, wenn eine Spalte über den sichtbaren
+   Bereich hinaus Bestellungen enthält, statt sie lautlos verschwinden zu lassen; "verspätet" ist jetzt
+   farblich und als Text von "fehlgeschlagen" unterschieden statt denselben roten Rahmen zu teilen.
+   Beide Monitore rendern Karten jetzt per Diff statt bei jeder Aktualisierung alles neu aufzubauen,
+   damit eine laufende Bestätigung oder die Scroll-Position nicht alle paar Sekunden zurückgesetzt wird.
+ * Fix: die Gäste-Statusseite (order/status.php) zeigt "fehlgeschlagen"/"storniert" jetzt farblich abgesetzt
+   statt in derselben Gestaltung wie jede andere Statusmeldung; "angenommen" hat jetzt einen eigenen
+   Fortschrittsschritt (vorher keine sichtbare Bewegung gegenüber "neu"); ein ungültiger/abgelaufener Link
+   zeigt jetzt einen deutlichen Anruf-Button statt nur eines unauffälligen Links.
+ * Fix: alter Bootstrap-Fokus-Schimmer (blaues Leuchten auf Eingabefeldern) entfernt, betraf Installer,
+   Bestellbestätigung und das Gäste-Reservierungswidget.
+ * Fix: Radius-, Farb- und Schriftgrößen-Werte in order/shop.css auf die dokumentierten Design-Tokens
+   konsolidiert (siehe DESIGN.md), analog zur bereits bestehenden Konsolidierung von theme-dark.css.
+
 2026-10-01 == mySeat v5.1.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix: der Fahrer-App-Annahme-Bug vom letzten Release ist behoben - shop_driver_claim_order() prüfte

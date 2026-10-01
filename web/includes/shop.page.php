@@ -16,6 +16,8 @@ foreach ($sh_hours as $h) { $sh_by[$h['kind']][(int)$h['weekday']][] = substr($h
 $sh_mollie = shop_mollie_info();
 $sh_google = shop_google_key_info();
 $sh_w3w = shop_w3w_key_info();
+$sh_sipgate = shop_sipgate_secret_info();
+$sh_webhook_url = shop_site_url().'/order/sipgate_webhook.php';
 $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; };
 ?>
 <div class="sms-page shop-page" data-endpoint="ajax/shop_admin.php" data-token="<?php echo $sh_e($token); ?>">
@@ -121,6 +123,22 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 			<button type="submit" class="button_dark">Speichern</button>
 			<?php if ($sh_w3w['set']): ?><button type="button" class="button_dark" id="w3w-key-test">Verbindung prüfen</button><button type="button" class="offer-delete" id="w3w-key-clear">Schlüssel löschen</button><?php endif; ?>
 			<span class="detail-status" id="w3w-key-msg" role="status" aria-live="polite"></span>
+		</p>
+	</form>
+
+	<h4 class="sms-sub">Sipgate-Anrufererkennung</h4>
+	<p class="offer-help">Zeigt bei "Bestellung erfassen" automatisch die Nummer eines eingehenden Anrufs an. Trage die Webhook-URL unten in deinem Sipgate-Konto unter sipgate.io als Push-URL ein (beliebiger Benutzername, als Passwort das hier gesetzte). Wird verschlüsselt gespeichert, nie wieder angezeigt, nur die letzten 4 Zeichen.</p>
+	<p class="offer-help">Webhook-URL: <code><?php echo $sh_e($sh_webhook_url); ?></code></p>
+	<div class="sms-status">
+		<?php if ($sh_sipgate['set']): ?><span class="offer-badge sms-badge-on">Passwort hinterlegt</span><span class="sms-keyinfo"><?php echo $sh_e($sh_sipgate['masked']); ?></span>
+		<?php else: ?><span class="offer-badge">Kein Passwort hinterlegt</span><?php endif; ?>
+	</div>
+	<form class="sms-form" id="sipgate-key-form" autocomplete="off">
+		<input type="password" name="sipgate_secret" autocomplete="new-password" spellcheck="false" placeholder="<?php echo $sh_sipgate['set'] ? 'Neues Passwort einfügen (optional)' : 'Passwort festlegen'; ?>"/>
+		<p class="offer-actions">
+			<button type="submit" class="button_dark">Speichern</button>
+			<?php if ($sh_sipgate['set']): ?><button type="button" class="offer-delete" id="sipgate-key-clear">Passwort löschen</button><?php endif; ?>
+			<span class="detail-status" id="sipgate-key-msg" role="status" aria-live="polite"></span>
 		</p>
 	</form>
 
@@ -252,6 +270,7 @@ window.addEventListener('load', function () {
 	}
 	wireKeyForm('google-key-form', 'google-key-msg', 'google-key-clear', 'save_google_key', 'clear_google_key', 'google_key', 'Schlüssel löschen');
 	wireKeyForm('w3w-key-form', 'w3w-key-msg', 'w3w-key-clear', 'save_w3w_key', 'clear_w3w_key', 'w3w_key', 'Schlüssel löschen');
+	wireKeyForm('sipgate-key-form', 'sipgate-key-msg', 'sipgate-key-clear', 'save_sipgate_secret', 'clear_sipgate_secret', 'sipgate_secret', 'Passwort löschen');
 	var gt = document.getElementById('google-key-test'), gtmsg = document.getElementById('google-key-msg');
 	if (gt) { gt.addEventListener('click', function () { say(gtmsg, 'Einen Moment ...', false); post('test_google_key', {}, function (r) { say(gtmsg, r.message, false); }, function (e) { say(gtmsg, e, true); }); }); }
 	var wt = document.getElementById('w3w-key-test'), wtmsg = document.getElementById('w3w-key-msg');

@@ -97,6 +97,41 @@
         "rule": "design-system-color",
         "value": "#e0685f",
         "createdAt": "2026-09-29T14:21:01.154Z"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "rgba(0,0,0,.7)",
+        "createdAt": "2026-10-01T19:28:32.171Z"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "28px",
+        "createdAt": "2026-10-01T20:02:53.057Z"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "32px",
+        "createdAt": "2026-10-01T20:02:53.086Z"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "40px",
+        "createdAt": "2026-10-01T20:02:53.113Z"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "52px",
+        "createdAt": "2026-10-01T20:02:53.139Z"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "10px",
+        "createdAt": "2026-10-01T20:02:53.169Z"
+      },
+      {
+        "rule": "design-system-radius",
+        "value": "8px",
+        "createdAt": "2026-10-01T20:02:53.197Z"
       }
     ]
   }

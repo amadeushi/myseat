@@ -90,6 +90,10 @@ function shop_ensure_schema() {
 	if (!$dcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `driver_lat` DOUBLE NULL, ADD `driver_lng` DOUBLE NULL, ADD `driver_at` DATETIME NULL"); }
 	$col = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'ip_hash'");
 	if (!$col) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `ip_hash` CHAR(16) NOT NULL DEFAULT ''"); }
+	$frcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'fail_reason'");
+	if (!$frcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `fail_reason` VARCHAR(255) NOT NULL DEFAULT ''"); }
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_calls')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `phone` VARCHAR(40) NOT NULL, `received_at` DATETIME NOT NULL, KEY `at` (`received_at`)) $opts");
 	// orders imported from a Lieferando receipt PDF (see shop_lieferando.class.php): source tells the kitchen monitor
 	// apart from own-shop orders, external_ref is the Lieferando order code and keeps a re-import from creating it twice
 	$scol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'source'");
@@ -641,9 +645,26 @@ function shop_menu() {
 	return $out;
 }
 
+// the full menu with every product's variations/modifier groups embedded (web/content/orders_pos.page.php
+// needs the whole picker up front, not a round trip per tapped product like the guest page does)
+function shop_pos_catalog() {
+	$menu = shop_menu();
+	foreach ($menu as &$cat) {
+		foreach ($cat['products'] as &$p) {
+			$full = shop_catalog_product((int)$p['id']);
+			$p['variations'] = $full ? $full['variations'] : array();
+			$p['groups'] = $full ? $full['groups'] : array();
+			$p['price'] = $full ? $full['price'] : (int)$p['price_cents'];
+		}
+		unset($p);
+	}
+	unset($cat);
+	return $menu;
+}
+
 // ---- orders
 const SHOP_STATUS_LABEL = array('pending' => 'wartet auf Zahlung', 'new' => 'neu', 'accepted' => 'angenommen', 'preparing' => 'in Zubereitung', 'ready' => 'fertig',
-	'delivering' => 'unterwegs', 'done' => 'erledigt', 'cancelled' => 'storniert');
+	'delivering' => 'unterwegs', 'done' => 'erledigt', 'cancelled' => 'storniert', 'failed' => 'fehlgeschlagen');
 
 function shop_order_number() {
 	$alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -779,6 +800,98 @@ function shop_create_order($in) {
 	return array('ok' => true, 'order' => shop_order($id), 'items' => shop_order_items($id));
 }
 
+/*
+ * A real order the staff types in on the guest's behalf (phone call, or an order from a delivery portal that
+ * isn't technically connected) - web/content/orders_pos.page.php. Reuses the same pricing (shop_price_line())
+ * and zone lookup (shop_find_zone()) as the guest checkout, but skips every guest-only guard: the shop may be
+ * "closed" for self-service and this can still be typed in, there is no minimum order value, no time-slot
+ * picking (always "as soon as possible"), no coupon, no tip, no online payment, and no per-IP rate limit (there
+ * is no guest IP - it's the till). $in: type, lines, name, phone, email, street, zip, city, address_note,
+ * payment ('cash'|'card_door'), note. Always status 'new', source 'phone', is_test 0.
+ */
+function shop_create_manual_order($in) {
+	shop_ensure_schema();
+	$type = (isset($in['type']) && $in['type'] === 'pickup') ? 'pickup' : 'delivery';
+	$lines = (isset($in['lines']) && is_array($in['lines'])) ? $in['lines'] : array();
+	if (!$lines) { return array('ok' => false, 'error' => 'Der Warenkorb ist leer.'); }
+	// a silent array_slice() here used to drop item 61+ while still returning "angelegt" - staff must split the
+	// order instead of unknowingly serving an order the guest thinks is complete
+	if (count($lines) > 60) { return array('ok' => false, 'error' => 'Zu viele Positionen in einer Bestellung (maximal 60). Bitte in zwei Bestellungen aufteilen.'); }
+	$items = array(); $sub = 0;
+	foreach ($lines as $l) {
+		$r = shop_price_line(is_array($l) ? $l : array());
+		if (!$r['ok']) { return array('ok' => false, 'error' => $r['error']); }
+		$items[] = $r['line']; $sub += $r['line']['line_cents'];
+	}
+	$name = mb_substr(trim((string)(isset($in['name']) ? $in['name'] : '')), 0, 120);
+	$phone = mb_substr(trim((string)(isset($in['phone']) ? $in['phone'] : '')), 0, 40);
+	$email = trim((string)(isset($in['email']) ? $in['email'] : ''));
+	if (mb_strlen($name) < 2) { return array('ok' => false, 'error' => 'Bitte einen Namen angeben.'); }
+	// a delivery always needs a number (the driver may have to call); a guest picking the order up in person
+	// right now can skip it if the till says so
+	$noPhone = ($type === 'pickup' && !empty($in['no_phone']));
+	if (!$noPhone && !shop_phone_ok($phone)) { return array('ok' => false, 'error' => 'Bitte eine Telefonnummer angeben.'); }
+	if ($noPhone) { $phone = ''; }
+	if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) { return array('ok' => false, 'error' => 'Die E-Mail-Adresse sieht nicht richtig aus.'); }
+	$fee = 0; $zoneId = null; $lat = null; $lng = null; $street = $zip = $city = ''; $addrNote = '';
+	if ($type === 'delivery') {
+		$addrNote = mb_substr(trim((string)(isset($in['address_note']) ? $in['address_note'] : '')), 0, 200);
+		$street = mb_substr(trim((string)(isset($in['street']) ? $in['street'] : '')), 0, 160);
+		$zip = mb_substr(trim((string)(isset($in['zip']) ? $in['zip'] : '')), 0, 10);
+		$city = mb_substr(trim((string)(isset($in['city']) ? $in['city'] : '')), 0, 80);
+		$z = shop_find_zone($street, $zip, $city);
+		if (!$z['ok']) { return $z; } // 'ambiguous' comes with candidates - the POS shows the same pick list as checkout.js
+		if ($zip === '') { $zip = !empty($z['postcode']) ? $z['postcode'] : ''; }
+		$fee = $z['zone']['fee_cents']; $zoneId = $z['zone']['id']; $lat = $z['lat']; $lng = $z['lng'];
+	}
+	$pay = isset($in['payment']) ? (string)$in['payment'] : '';
+	if (!in_array($pay, array('cash', 'card_door'), true)) { return array('ok' => false, 'error' => 'Bitte eine Zahlart wählen.'); }
+	$total = $sub + $fee;
+	$lead = ($type === 'delivery') ? (int)shop_setting('eta_delivery_min') : (int)shop_setting('lead_pickup_min');
+	$eta = date('Y-m-d H:i:s', time() + max(1, $lead) * 60);
+	$token = bin2hex(random_bytes(16));
+	$number = shop_order_number();
+	$today = date('Y-m-d');
+	$dayNo = (int)(fb_row("SELECT COALESCE(MAX(day_no), 0) + 1 AS n FROM ".fb_t('tp_shop_orders')." WHERE order_date = ?", 's', array($today))['n']);
+	$now = date('Y-m-d H:i:s');
+	$ok = fb_exec("INSERT INTO ".fb_t('tp_shop_orders')."
+		(token, number, day_no, order_date, type, status, scheduled_at, eta_at, customer_name, phone, email, street, zip, city, address_note, lat, lng, zone_id,
+		 ip_hash, subtotal_cents, fee_cents, tip_cents, total_cents, payment_method, payment_status, note, lang, source, is_test, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, 'new', NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?, 0, ?, ?, 'open', ?, 'de', 'phone', 0, ?, ?)",
+		'ssisss'.'sssssss'.'ddi'.'iii'.'ssss', array($token, $number, $dayNo, $today, $type, $eta, $name, $phone, $email, $street, $zip, $city, $addrNote,
+			$lat === null ? 0 : $lat, $lng === null ? 0 : $lng, $zoneId === null ? 0 : $zoneId, $sub, $fee, $total, $pay,
+			mb_substr(trim((string)(isset($in['note']) ? $in['note'] : '')), 0, 500), $now, $now));
+	if (!$ok) { return array('ok' => false, 'error' => 'Die Bestellung konnte nicht gespeichert werden. Bitte versuche es noch einmal.'); }
+	$id = (int)mysqli_insert_id(fb_db());
+	foreach ($items as $it) {
+		fb_exec("INSERT INTO ".fb_t('tp_shop_order_items')." (order_id, product_id, title, variation, options, qty, unit_cents, line_cents, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+			'iisssiiis', array($id, $it['product_id'], $it['title'], $it['variation'], json_encode($it['options'], JSON_UNESCAPED_UNICODE), $it['qty'], $it['unit_cents'], $it['line_cents'], $it['note']));
+	}
+	shop_log($id, 'created', 'phone: '.$pay);
+	return array('ok' => true, 'order' => shop_order($id));
+}
+
+// the guest's last few orders at this phone number, each with its items - lets the POS offer "diese Bestellung
+// übernehmen" for a returning caller without a separate guest table (the order history already has everything)
+function shop_guest_history($phone, $limit = 5) {
+	$phone = trim((string)$phone);
+	if ($phone === '' || !shop_phone_ok($phone)) { return array(); }
+	$rows = fb_rows("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE phone = ? AND is_test = 0 ORDER BY created_at DESC LIMIT ?", 'si', array($phone, (int)$limit));
+	$out = array();
+	foreach ($rows as $r) {
+		$out[] = array(
+			'id' => (int)$r['id'], 'created' => substr($r['created_at'], 0, 16), 'type' => $r['type'],
+			'name' => $r['customer_name'], 'street' => $r['street'], 'zip' => $r['zip'], 'city' => $r['city'], 'address_note' => $r['address_note'],
+			'total' => (int)$r['total_cents'],
+			'items' => array_map(function ($it) {
+				return array('product_id' => $it['product_id'] !== null ? (int)$it['product_id'] : null, 'title' => $it['title'], 'variation' => $it['variation'],
+					'options' => json_decode((string)$it['options'], true) ?: array(), 'qty' => (int)$it['qty'], 'note' => $it['note']);
+			}, shop_order_items((int)$r['id'])),
+		);
+	}
+	return $out;
+}
+
 // a test order for trying the monitors and the printing (needs neither the shop to be open nor a payment): marked as test,
 // fake guest, a few dishes with options and notes, status "new" so it shows up for the dispatch first
 function shop_create_demo_order($type, $street = '', $zip = '', $city = '') {
@@ -848,10 +961,10 @@ function shop_set_status($id, $status, $by = '', $etaMinutes = 0) {
 	$set = "status = ?, updated_at = ?"; $types = 'ss'; $params = array($status, $now);
 	if ($status === 'accepted') { $set .= ", accepted_at = ?"; $types .= 's'; $params[] = $now; if ($etaMinutes > 0) { $set .= ", eta_at = ?"; $types .= 's'; $params[] = date('Y-m-d H:i:s', time() + $etaMinutes * 60); } }
 	if ($status === 'ready') { $set .= ", ready_at = ?"; $types .= 's'; $params[] = $now; }
-	if ($status === 'done' || $status === 'cancelled') { $set .= ", done_at = ?"; $types .= 's'; $params[] = $now; }
+	if ($status === 'done' || $status === 'cancelled' || $status === 'failed') { $set .= ", done_at = ?"; $types .= 's'; $params[] = $now; }
 	$types .= 'i'; $params[] = (int)$id;
 	$st = fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET $set WHERE id = ?", $types, $params);
-	if ($st) { shop_log($id, 'status', $status.($by !== '' ? ' ('.$by.')' : '')); shop_sms_status((int)$id, $status); if ($status === 'cancelled') { shop_coupon_release((int)$id); } }
+	if ($st) { shop_log($id, 'status', $status.($by !== '' ? ' ('.$by.')' : '')); shop_sms_status((int)$id, $status); if ($status === 'cancelled' || $status === 'failed') { shop_coupon_release((int)$id); } }
 	return (bool)$st;
 }
 
@@ -880,6 +993,34 @@ function shop_w3w_key() {
 function shop_w3w_key_info() {
 	$k = shop_w3w_key();
 	return array('set' => $k !== '', 'masked' => $k === '' ? '' : '••••'.substr($k, -4));
+}
+
+// ---- sipgate caller-id: a webhook (order/sipgate_webhook.php, no login - sipgate.io authenticates itself with
+// this shared secret over HTTP Basic Auth, set once in sipgate's own portal) records the number of every
+// incoming call; the POS page (web/content/orders_pos.page.php) polls shop_last_call() to show a banner for a
+// call still fresh enough to matter. No missed-call tracking, no history - this is a short-lived screen-pop, not a log.
+function shop_sipgate_secret() {
+	$blob = shop_setting('sipgate_secret');
+	$k = $blob ? sms_decrypt($blob) : null;
+	if ($k !== null && $k !== '') { return $k; }
+	global $settings;
+	return trim((string)(isset($settings['sipgateWebhookSecret']) ? $settings['sipgateWebhookSecret'] : ''));
+}
+function shop_sipgate_secret_info() {
+	$k = shop_sipgate_secret();
+	return array('set' => $k !== '', 'masked' => $k === '' ? '' : '••••'.substr($k, -4));
+}
+function shop_record_incoming_call($phone) {
+	shop_ensure_schema();
+	$phone = mb_substr(trim((string)$phone), 0, 40);
+	if ($phone === '') { return; }
+	fb_exec("INSERT INTO ".fb_t('tp_shop_calls')." (phone, received_at) VALUES (?, NOW())", 's', array($phone));
+	fb_exec("DELETE FROM ".fb_t('tp_shop_calls')." WHERE received_at < ?", 's', array(date('Y-m-d H:i:s', time() - 3600)));
+}
+function shop_last_call($maxAgeSeconds = 60) {
+	$r = fb_row("SELECT id, phone, received_at FROM ".fb_t('tp_shop_calls')." ORDER BY id DESC LIMIT 1");
+	if (!$r || (time() - strtotime($r['received_at'])) > $maxAgeSeconds) { return null; }
+	return array('id' => (int)$r['id'], 'phone' => $r['phone']);
 }
 
 // ---- Mollie (online payment). The key is stored encrypted (tp_shop_settings.mollie_key), a test_ key works in test mode.
@@ -995,6 +1136,7 @@ function shop_orders_with_items($rows) {
 			'token' => $r['token'],
 			'driver_name' => $r['driver_id'] && isset($driverNames[(int)$r['driver_id']]) ? $driverNames[(int)$r['driver_id']] : '',
 			'driver_age' => ($dp = shop_driver_position($r)) ? $dp['age'] : null,
+			'fail_reason' => (string)$r['fail_reason'],
 		);
 	}
 	return $out;
@@ -1004,7 +1146,7 @@ function shop_orders_with_items($rows) {
 function shop_board() {
 	shop_ensure_schema();
 	shop_expire_pending();
-	$rows = fb_rows("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE status IN ('new', 'accepted', 'preparing', 'ready', 'delivering') ORDER BY COALESCE(scheduled_at, created_at), id");
+	$rows = fb_rows("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE status IN ('new', 'accepted', 'preparing', 'ready', 'delivering', 'failed') ORDER BY COALESCE(scheduled_at, created_at), id");
 	return shop_orders_with_items($rows);
 }
 
@@ -1012,7 +1154,8 @@ function shop_board() {
 function shop_day_orders($date, $filter = 'all') {
 	shop_ensure_schema();
 	shop_expire_pending();
-	$rows = fb_rows("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE (order_date = ? OR DATE(scheduled_at) = ?) AND status <> 'pending' ".($filter === 'open' ? "AND status IN ('new', 'accepted', 'preparing', 'ready', 'delivering')" : '')." ORDER BY id DESC LIMIT 300", 'ss', array($date, $date));
+	$cond = $filter === 'open' ? "AND status IN ('new', 'accepted', 'preparing', 'ready', 'delivering')" : ($filter === 'closed' ? "AND status IN ('done', 'cancelled', 'failed')" : '');
+	$rows = fb_rows("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE (order_date = ? OR DATE(scheduled_at) = ?) AND status <> 'pending' $cond ORDER BY id DESC LIMIT 300", 'ss', array($date, $date));
 	return shop_orders_with_items($rows);
 }
 
@@ -1020,7 +1163,7 @@ function shop_day_stats($date) {
 	$r = fb_row("SELECT COUNT(*) AS n, COALESCE(SUM(total_cents), 0) AS sum, COALESCE(SUM(type = 'delivery'), 0) AS deliveries, COALESCE(SUM(type = 'pickup'), 0) AS pickups,
 			COALESCE(SUM(status IN ('new', 'accepted', 'preparing', 'ready', 'delivering')), 0) AS open_n,
 			COALESCE(SUM(payment_method = 'mollie' AND payment_status = 'paid'), 0) AS paid_online
-		FROM ".fb_t('tp_shop_orders')." WHERE order_date = ? AND status NOT IN ('pending', 'cancelled') AND is_test = 0", 's', array($date));
+		FROM ".fb_t('tp_shop_orders')." WHERE order_date = ? AND status NOT IN ('pending', 'cancelled', 'failed') AND is_test = 0", 's', array($date));
 	$prep = fb_row("SELECT AVG(TIMESTAMPDIFF(MINUTE, created_at, ready_at)) AS m FROM ".fb_t('tp_shop_orders')." WHERE order_date = ? AND ready_at IS NOT NULL AND is_test = 0", 's', array($date));
 	return array('orders' => (int)$r['n'], 'revenue' => (int)$r['sum'], 'deliveries' => (int)$r['deliveries'], 'pickups' => (int)$r['pickups'], 'open' => (int)$r['open_n'], 'paid_online' => (int)$r['paid_online'],
 		'avg_ready_min' => ($prep && $prep['m'] !== null) ? (int)round($prep['m']) : null);
@@ -1304,37 +1447,77 @@ function shop_driver_update_position($driverId, $lat, $lng) {
 	fb_exec("REPLACE INTO ".fb_t('tp_shop_driver_positions')." (driver_id, lat, lng, updated_at) VALUES (?, ?, ?, NOW())", 'idd', array((int)$driverId, (float)$lat, (float)$lng));
 	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET driver_lat = ?, driver_lng = ?, driver_at = NOW() WHERE driver_id = ? AND status = 'delivering'", 'ddi', array((float)$lat, (float)$lng, (int)$driverId));
 }
-// open deliveries any driver may still accept: ready, delivery type, nobody has it yet
-function shop_driver_open_orders() {
+// deliveries ready to go, either the open pool (driverId null, nobody has it yet) or one driver's own
+// accepted-but-not-yet-started queue (driverId given) - same card shape either way
+function shop_driver_pool_orders($driverId = null) {
 	shop_ensure_schema();
+	$cond = $driverId === null ? 'o.driver_id IS NULL' : 'o.driver_id = ?';
 	$rows = fb_rows("SELECT o.id, o.day_no, o.zip, o.customer_name, o.subtotal_cents, o.fee_cents, o.total_cents, o.scheduled_at, o.created_at, z.name AS zone_name,
 			(SELECT COALESCE(SUM(qty), 0) FROM ".fb_t('tp_shop_order_items')." WHERE order_id = o.id) AS n_items
 		FROM ".fb_t('tp_shop_orders')." o LEFT JOIN ".fb_t('tp_shop_zones')." z ON z.id = o.zone_id
-		WHERE o.type = 'delivery' AND o.status = 'ready' AND o.driver_id IS NULL ORDER BY COALESCE(o.scheduled_at, o.created_at)");
+		WHERE o.type = 'delivery' AND o.status = 'ready' AND $cond ORDER BY COALESCE(o.scheduled_at, o.created_at)",
+		$driverId === null ? '' : 'i', $driverId === null ? array() : array((int)$driverId));
 	return array_map(function ($r) {
 		return array('id' => (int)$r['id'], 'day_no' => (int)$r['day_no'], 'zip' => $r['zip'], 'zone' => $r['zone_name'], 'customer_name' => $r['customer_name'],
 			'items' => (int)$r['n_items'], 'total' => (int)$r['total_cents'],
 			'when' => $r['scheduled_at'] ? date('H:i', strtotime($r['scheduled_at'])) : 'so schnell wie möglich');
 	}, $rows);
 }
+function shop_driver_open_orders() { return shop_driver_pool_orders(null); }
+function shop_driver_queued_orders($driverId) { return shop_driver_pool_orders((int)$driverId); }
 // claims an open delivery for a driver, atomically - the WHERE guards against two drivers tapping
-// "Annehmen" on the same order at the same moment; only the one whose UPDATE actually matched a row wins
+// "Annehmen" on the same order at the same moment; only the one whose UPDATE actually matched a row wins.
+// Claiming only reserves it into the driver's own queue (still 'ready') - it does not go live/trackable
+// for the guest until he explicitly starts it (shop_driver_start_order()), so he can bundle several
+// deliveries before setting off, while never having more than one guest watching him at once.
 function shop_driver_claim_order($driverId, $orderId) {
 	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET driver_id = ? WHERE id = ? AND driver_id IS NULL AND status = 'ready' AND type = 'delivery'",
 		'ii', array((int)$driverId, (int)$orderId));
 	// re-read rather than trust mysqli_affected_rows() here: it is the one check that must never say "ok"
-	// while quietly leaving status at 'ready' - that was exactly the bug where a claimed delivery vanished
-	// from the open pool (driver_id set) but never reached the driver's own current-order view (status
-	// still 'ready'), only fixed once dispatch forced status to 'delivering' by hand
-	$check = fb_row("SELECT driver_id, status FROM ".fb_t('tp_shop_orders')." WHERE id = ?", 'i', array((int)$orderId));
+	// while the UPDATE quietly matched nothing - that was exactly the bug where a claimed delivery vanished
+	// from the open pool but never reached the driver's own queue
+	$check = fb_row("SELECT driver_id FROM ".fb_t('tp_shop_orders')." WHERE id = ?", 'i', array((int)$orderId));
 	if (!$check || (int)$check['driver_id'] !== (int)$driverId) {
 		return array('ok' => false, 'error' => 'Diese Lieferung wurde gerade von einem anderen Fahrer angenommen.');
 	}
+	return array('ok' => true);
+}
+// makes one of the driver's own queued (claimed, not yet started) deliveries the active one - only
+// allowed while he has no other delivery already underway, so exactly one guest can ever watch him live
+function shop_driver_start_order($driverId, $orderId) {
+	$o = fb_row("SELECT id, status FROM ".fb_t('tp_shop_orders')." WHERE id = ? AND driver_id = ?", 'ii', array((int)$orderId, (int)$driverId));
+	if (!$o || $o['status'] !== 'ready') { return array('ok' => false, 'error' => 'Diese Lieferung gehört nicht zu deiner Warteliste.'); }
+	if (shop_driver_current_order($driverId)) { return array('ok' => false, 'error' => 'Du hast schon eine aktive Lieferung - erst die abschließen, pausieren oder zurückgeben.'); }
 	$names = shop_drivers_name_map();
 	if (!shop_set_status((int)$orderId, 'delivering', 'Fahrer: '.(isset($names[(int)$driverId]) ? $names[(int)$driverId] : ''))) {
-		return array('ok' => false, 'error' => 'Die Lieferung wurde dir zugewiesen, konnte aber nicht auf "unterwegs" gesetzt werden. Bitte bei der Disposition melden.');
+		return array('ok' => false, 'error' => 'Die Lieferung konnte nicht auf "unterwegs" gesetzt werden. Bitte bei der Disposition melden.');
 	}
 	return array('ok' => true);
+}
+// takes the active delivery off "live" and back into the driver's own queue, without releasing it to
+// other drivers - for switching to a different one of his own without losing this one
+function shop_driver_pause_order($driverId, $orderId) {
+	$o = fb_row("SELECT id, status FROM ".fb_t('tp_shop_orders')." WHERE id = ? AND driver_id = ?", 'ii', array((int)$orderId, (int)$driverId));
+	if (!$o || $o['status'] !== 'delivering') { return array('ok' => false, 'error' => 'Diese Lieferung ist nicht unterwegs.'); }
+	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET driver_lat = NULL, driver_lng = NULL, driver_at = NULL WHERE id = ?", 'i', array((int)$orderId));
+	if (!shop_set_status((int)$orderId, 'ready', 'Fahrer: pausiert')) { return array('ok' => false, 'error' => 'Die Lieferung konnte nicht pausiert werden.'); }
+	return array('ok' => true);
+}
+// the driver could not deliver (wrong address, guest unreachable, ...): terminal, frees him up for the
+// next one. Kept apart from 'cancelled' so dispatch can tell "we called it off" from "it failed on the road"
+function shop_driver_fail_order($driverId, $orderId, $reason) {
+	$o = fb_row("SELECT id, status FROM ".fb_t('tp_shop_orders')." WHERE id = ? AND driver_id = ?", 'ii', array((int)$orderId, (int)$driverId));
+	if (!$o || $o['status'] !== 'delivering') { return array('ok' => false, 'error' => 'Diese Lieferung ist nicht unterwegs.'); }
+	$reason = trim(mb_substr((string)$reason, 0, 255));
+	if ($reason === '') { return array('ok' => false, 'error' => 'Bitte kurz beschreiben, was das Problem war.'); }
+	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET driver_lat = NULL, driver_lng = NULL, driver_at = NULL, fail_reason = ? WHERE id = ?", 'si', array($reason, (int)$orderId));
+	if (!shop_set_status((int)$orderId, 'failed', 'Fahrer: '.$reason)) { return array('ok' => false, 'error' => 'Die Meldung konnte nicht gespeichert werden.'); }
+	return array('ok' => true);
+}
+// the combined view the driver app polls: his active delivery (if any), his own queue, and the open pool
+function shop_driver_state($driverId) {
+	$current = shop_driver_current_order($driverId);
+	return array('current' => $current ? shop_driver_order_view($current) : null, 'queued' => shop_driver_queued_orders($driverId), 'open' => shop_driver_open_orders());
 }
 // hands a delivery the driver can no longer make back into the open pool for everyone else
 // shared by the driver's own "Zurück in den Pool" and the dispatch override below - puts a claimed
@@ -1352,8 +1535,10 @@ function shop_driver_release_order($driverId, $orderId) {
 // dispatch's own override: puts a delivery back into the open pool regardless of which driver has it
 // (or even if none does and it was just set "unterwegs" by hand) - for when a driver can't be reached
 function shop_dispatch_release_order($orderId, $by) {
-	$o = fb_row("SELECT id, type, status FROM ".fb_t('tp_shop_orders')." WHERE id = ?", 'i', array((int)$orderId));
-	if (!$o || $o['type'] !== 'delivery' || $o['status'] !== 'delivering') { return array('ok' => false, 'error' => 'Diese Lieferung ist nicht unterwegs.'); }
+	$o = fb_row("SELECT id, type, status, driver_id FROM ".fb_t('tp_shop_orders')." WHERE id = ?", 'i', array((int)$orderId));
+	if (!$o || $o['type'] !== 'delivery' || $o['driver_id'] === null || !in_array($o['status'], array('ready', 'delivering'), true)) {
+		return array('ok' => false, 'error' => 'Diese Lieferung ist keinem Fahrer zugeteilt.');
+	}
 	return shop_order_release_to_pool($orderId, $by.': zurück in den Pool');
 }
 function shop_driver_complete_order($driverId, $orderId) {

@@ -18,6 +18,7 @@
 
 	// ---- cards
 	function column(o) { return o.status === 'new' ? 'new' : (o.status === 'accepted' || o.status === 'preparing' ? 'work' : 'ready'); }
+	function failReasonText(o) { return '<p class="k-onote k-fail-reason">Fehlgeschlagen: ' + esc(o.fail_reason || 'kein Grund angegeben') + '</p>'; }
 	function payText(o) {
 		if (o.pay === 'lieferando') { return '<span class="k-badge paid">bei Lieferando bezahlt</span>'; }
 		if (o.pay === 'mollie') { return '<span class="k-badge paid">online bezahlt</span>'; }
@@ -37,10 +38,14 @@
 		var late = false, dueTxt = o.scheduled ? o.scheduled : o.due, sub = o.scheduled ? 'geplant' : (o.status === 'new' ? 'sofort' : 'bis');
 		var ageMin = Math.max(0, Math.round((Date.now() / 1000 - o.created_ts) / 60));
 		if (o.status === 'new' && ageMin >= 8) { late = true; }
-		var h = '<article class="k-card' + (o.status === 'new' ? ' is-new' : '') + (late ? ' is-late' : '') + '" data-id="' + o.id + '"><div class="k-head"><span class="k-no">#' + o.day_no + '</span><span class="k-type ' + o.type + '">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + '</span>' +
+		// "late" (still just waiting) and "failed" (actually broken) used to share the same danger-red ring -
+		// late now escalates through amber plus this text label, never through the failure color alone
+		var h = '<article class="k-card' + (o.status === 'new' ? ' is-new' : '') + (late ? ' is-late' : '') + (o.status === 'failed' ? ' is-failed' : '') + '" data-id="' + o.id + '"><div class="k-head"><span class="k-no">#' + o.day_no + '</span><span class="k-type ' + o.type + '">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + '</span>' +
 			(o.source === 'lieferando' ? '<span class="k-badge lief">Lieferando</span>' : '') +
-			(o.test ? '<span class="k-badge">Test</span>' : '') + '<span class="k-due' + (late ? ' k-late' : '') + '">' + esc(dueTxt) + '<small>' + sub + (o.status === 'new' ? ' · vor ' + ageMin + ' Min' : '') + '</small></span></div>' +
-			'<p class="k-who">' + esc(o.name) + ' · ' + esc(o.phone) + '</p>' + (o.address ? '<p class="k-addr">' + esc(o.address) + (o.address_note ? ' (' + esc(o.address_note) + ')' : '') + '</p>' : '') +
+			(o.source === 'phone' ? '<span class="k-badge">Telefon</span>' : '') +
+			(o.test ? '<span class="k-badge">Test</span>' : '') + '<span class="k-due' + (late ? ' k-late' : '') + '">' + esc(dueTxt) + '<small>' + sub + (o.status === 'new' ? ' · vor ' + ageMin + ' Min' : '') + (late ? ' · VERSPÄTET' : '') + '</small></span></div>' +
+			'<p class="k-who">' + esc(o.name) + (o.phone ? ' · ' + esc(o.phone) : '') + '</p>' + (o.address ? '<p class="k-addr">' + esc(o.address) + (o.address_note ? ' (' + esc(o.address_note) + ')' : '') + '</p>' : '') +
+			(o.status === 'failed' ? failReasonText(o) : '') +
 			'<ul class="k-items">' + o.items.map(function (it) {
 				return '<li class="k-item"><span class="k-qty">' + it.qty + '×</span>' + esc(it.title) + (it.variation ? ' <span class="k-var">' + esc(it.variation) + '</span>' : '') +
 					(it.options.length ? '<div class="k-opts">+ ' + it.options.map(esc).join(', ') + '</div>' : '') + (it.note ? '<span class="k-inote">' + esc(it.note) + '</span>' : '') + '</li>';
@@ -51,16 +56,51 @@
 			h += '<span class="k-eta-l">Annehmen, fertig in:</span>' + [20, 30, 45, 60].map(function (m) { return '<button type="button" class="k-go eta" data-act="accept" data-eta="' + m + '">' + m + ' Min</button>'; }).join('') + '<button type="button" class="k-go secondary" data-act="cancelled">Ablehnen</button>';
 		} else if (o.status === 'accepted') { h += '<button type="button" class="k-go" data-act="preparing">Wird gekocht</button>'; }
 		else if (o.status === 'preparing') { h += '<button type="button" class="k-go" data-act="ready">Fertig</button>'; }
-		else if (o.status === 'ready') { h += o.type === 'delivery' ? '<button type="button" class="k-go" data-act="delivering">Unterwegs (ohne Fahrer-App)</button>' : '<button type="button" class="k-go" data-act="done">Abgeholt</button>'; }
+		else if (o.status === 'ready') {
+			// a driver may already have this one in his own, not-yet-started queue (order/driver.php) -
+			// dispatch sees who, and can still force it along or pull it back regardless
+			h += (o.driver_name ? driverBadge(o) + '<button type="button" class="k-go secondary" data-release="' + o.id + '">Zurück in den Pool</button>' : '') +
+				(o.type === 'delivery' ? '<button type="button" class="k-go" data-act="delivering">Unterwegs (ohne Fahrer-App)</button>' : '<button type="button" class="k-go" data-act="done">Abgeholt</button>');
+		}
 		else if (o.status === 'delivering') { h += driverBadge(o) + '<button type="button" class="k-go secondary" data-release="' + o.id + '">Zurück in den Pool</button><button type="button" class="k-go" data-act="done">Geliefert</button>'; }
+		else if (o.status === 'failed') { h += driverBadge(o) + '<button type="button" class="k-go secondary" data-release="' + o.id + '">Zurück in den Pool</button><button type="button" class="k-go secondary" data-act="cancelled">Stornieren</button>'; }
 		return h + '</div></article>';
 	}
+	// diff-rendered by order id instead of a wholesale innerHTML replace every poll: a full rebuild used to wipe
+	// out an in-progress "wirklich ablehnen?" confirm (its armed state lives on the button's own DOM node) and
+	// reset every column's scroll position, both every 6 seconds even when nothing about that order changed
+	var cardNodes = {}, cardSig = {};
 	function render(orders) {
 		var cols = { 'new': [], work: [], ready: [] };
 		orders.forEach(function (o) { cols[column(o)].push(o); });
+		var liveIds = {};
 		Object.keys(cols).forEach(function (k) {
-			$('#col-' + k).innerHTML = cols[k].length ? cols[k].map(card).join('') : '<p class="k-empty">' + (k === 'new' ? 'Keine neuen Bestellungen' : 'Nichts hier') + '</p>';
+			var root = $('#col-' + k), scrollTop = root.scrollTop;
+			if (!cols[k].length) {
+				root.innerHTML = '<p class="k-empty">' + (k === 'new' ? 'Alles erledigt' : 'Nichts hier') + '</p>';
+			} else {
+				if (root.firstElementChild && root.firstElementChild.classList.contains('k-empty')) { root.innerHTML = ''; }
+				cols[k].forEach(function (o) {
+					liveIds[o.id] = true;
+					var sig = JSON.stringify(o);
+					if (!cardNodes[o.id] || cardSig[o.id] !== sig) {
+						var tmp = document.createElement('div'); tmp.innerHTML = card(o);
+						var fresh = tmp.firstElementChild;
+						if (cardNodes[o.id] && cardNodes[o.id].parentNode) { cardNodes[o.id].replaceWith(fresh); }
+						cardNodes[o.id] = fresh; cardSig[o.id] = sig;
+					}
+					if (cardNodes[o.id].parentNode !== root) { root.appendChild(cardNodes[o.id]); }
+				});
+			}
+			root.scrollTop = scrollTop;
 			$('#n-' + k).textContent = cols[k].length;
+			// a column silently overflowing below the fold (a busy night queuing orders nobody is expected to
+			// scroll for) used to give zero signal - a persistent hint below the list fixes that
+			var of = $('#of-' + k);
+			if (of) { of.hidden = root.scrollHeight <= root.clientHeight + 1; of.textContent = 'Weitere Bestellungen unten'; }
+		});
+		Object.keys(cardNodes).forEach(function (id) {
+			if (!liveIds[id]) { if (cardNodes[id].parentNode) { cardNodes[id].remove(); } delete cardNodes[id]; delete cardSig[id]; }
 		});
 		$('#k-counts').innerHTML = '<span class="k-count">Neu <b>' + cols['new'].length + '</b></span><span class="k-count">In der Küche <b>' + cols.work.length + '</b></span><span class="k-count">Fertig <b>' + cols.ready.length + '</b></span>';
 		document.title = (cols['new'].length ? '(' + cols['new'].length + ') ' : '') + 'Disposition';
