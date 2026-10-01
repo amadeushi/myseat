@@ -114,6 +114,18 @@ function shop_ensure_schema() {
 		mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_geocache')." ADD `candidates` TEXT NULL");
 		mysqli_query($db, "TRUNCATE TABLE ".fb_t('tp_shop_geocache'));
 	}
+	// drivers (order/driver.php, the self-service delivery queue): identified by their phone's Traccar
+	// device id, no login - the operator maps device id to a name once (Einstellungen > Lieferservice).
+	// tp_shop_driver_positions holds one row per driver, the latest ping from order/driver_gps.php
+	// (OsmAnd protocol), independent of whether that driver currently has an order - a driver's phone
+	// keeps reporting in the background even before accepting a delivery
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_drivers')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `device_id` VARCHAR(64) NOT NULL, `name` VARCHAR(80) NOT NULL,
+		`active` TINYINT NOT NULL DEFAULT 1, `created_at` DATETIME NOT NULL, UNIQUE KEY `device` (`device_id`)) $opts");
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_driver_positions')." (
+		`driver_id` INT UNSIGNED NOT NULL PRIMARY KEY, `lat` DOUBLE NOT NULL, `lng` DOUBLE NOT NULL, `updated_at` DATETIME NOT NULL) $opts");
+	$ocol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'driver_id'");
+	if (!$ocol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `driver_id` INT UNSIGNED NULL, ADD KEY `driver` (`driver_id`)"); }
 	$done = true;
 	shop_migrate_groups();
 }
@@ -942,6 +954,7 @@ function shop_expire_pending() {
 function shop_orders_with_items($rows) {
 	if (!$rows) { return array(); }
 	$ids = array_map(function ($r) { return (int)$r['id']; }, $rows);
+	$driverNames = shop_drivers_name_map();
 	$items = array();
 	foreach (fb_rows("SELECT * FROM ".fb_t('tp_shop_order_items')." WHERE order_id IN (".implode(',', $ids).") ORDER BY id") as $it) {
 		$opts = array();
@@ -959,7 +972,8 @@ function shop_orders_with_items($rows) {
 			'address' => $r['type'] === 'delivery' ? trim($r['street'].', '.$r['zip'].' '.$r['city']) : '', 'address_note' => $r['address_note'], 'note' => $r['note'],
 			'pay' => $r['payment_method'], 'pay_status' => $r['payment_status'], 'total' => (int)$r['total_cents'], 'fee' => (int)$r['fee_cents'], 'tip' => (int)$r['tip_cents'], 'subtotal' => (int)$r['subtotal_cents'],
 			'items' => isset($items[(int)$r['id']]) ? $items[(int)$r['id']] : array(), 'coupon' => (string)$r['coupon_code'], 'discount' => (int)$r['discount_cents'],
-			'token' => $r['token'], 'dkey' => ($r['type'] === 'delivery' && $r['source'] !== 'lieferando') ? shop_driver_key($r) : '',
+			'token' => $r['token'],
+			'driver_name' => $r['driver_id'] && isset($driverNames[(int)$r['driver_id']]) ? $driverNames[(int)$r['driver_id']] : '',
 			'driver_age' => ($dp = shop_driver_position($r)) ? $dp['age'] : null,
 		);
 	}
@@ -1211,19 +1225,157 @@ function shop_origin() {
 	if ($st === '' || $city === '') { return null; }
 	return shop_geocode($st, $zip, $city);
 }
-// key in the link that is given to the driver (opens the driver page of exactly this order)
-function shop_driver_key($o) {
-	require_once __DIR__.'/cancel_link.class.php';
-	return substr(hash_hmac('sha256', 'driver|'.$o['token'].'|'.(int)$o['id'], cl_secret()), 0, 20);
-}
-function shop_driver_order($token, $key) {
-	$o = shop_order_by_token((string)$token);
-	return ($o && $o['type'] === 'delivery' && is_string($key) && hash_equals(shop_driver_key($o), $key)) ? $o : null;
-}
 function shop_driver_position($o) {
 	if ($o['driver_at'] === null || $o['driver_lat'] === null || !in_array($o['status'], array('ready', 'delivering'), true)) { return null; }
 	$age = time() - strtotime($o['driver_at']);
 	return ($age < 600) ? array('lat' => (float)$o['driver_lat'], 'lng' => (float)$o['driver_lng'], 'age' => max(0, $age)) : null;
+}
+
+// ---- drivers (order/driver.php, order/driver_gps.php): a driver has no login, his phone's Traccar
+// device id is the only credential. The operator maps device id -> name once (Einstellungen >
+// Lieferservice); see shop_ensure_schema() for tp_shop_drivers / tp_shop_driver_positions.
+// last_seen_min tells the operator apart "this device id has never sent a single ping" (null) from "it
+// pinged 40 minutes ago and then stopped" (a number) - the GPS endpoint always answers 200 OK even for
+// an unrecognized or deactivated device id (so the Traccar app itself never shows an error), so this is
+// the only place a mismatched device id becomes visible at all
+function shop_drivers_list() {
+	shop_ensure_schema();
+	$rows = fb_rows("SELECT d.id, d.device_id, d.name, d.active, p.updated_at FROM ".fb_t('tp_shop_drivers')." d
+		LEFT JOIN ".fb_t('tp_shop_driver_positions')." p ON p.driver_id = d.id ORDER BY d.name");
+	foreach ($rows as &$r) { $r['last_seen_min'] = $r['updated_at'] ? max(0, (int)round((time() - strtotime($r['updated_at'])) / 60)) : null; } unset($r);
+	return $rows;
+}
+function shop_driver_by_device($deviceId) {
+	$deviceId = trim((string)$deviceId);
+	if ($deviceId === '') { return null; }
+	return fb_row("SELECT * FROM ".fb_t('tp_shop_drivers')." WHERE device_id = ? AND active = 1", 's', array($deviceId));
+}
+function shop_driver_save($id, $name, $deviceId, $active) {
+	$name = mb_substr(trim((string)$name), 0, 80); $deviceId = mb_substr(trim((string)$deviceId), 0, 64);
+	if ($name === '' || $deviceId === '') { return array('ok' => false, 'error' => 'Bitte Name und Geräte-ID angeben.'); }
+	$dupe = fb_row("SELECT id FROM ".fb_t('tp_shop_drivers')." WHERE device_id = ? AND id <> ?", 'si', array($deviceId, (int)$id));
+	if ($dupe) { return array('ok' => false, 'error' => 'Diese Geräte-ID ist schon einem anderen Fahrer zugeordnet.'); }
+	if ($id > 0) {
+		fb_exec("UPDATE ".fb_t('tp_shop_drivers')." SET name = ?, device_id = ?, active = ? WHERE id = ?", 'ssii', array($name, $deviceId, $active ? 1 : 0, (int)$id));
+		return array('ok' => true, 'id' => (int)$id);
+	}
+	fb_exec("INSERT INTO ".fb_t('tp_shop_drivers')." (device_id, name, active, created_at) VALUES (?, ?, ?, NOW())", 'ssi', array($deviceId, $name, $active ? 1 : 0));
+	return array('ok' => true, 'id' => (int)mysqli_insert_id(fb_db()));
+}
+function shop_driver_delete($id) {
+	fb_exec("DELETE FROM ".fb_t('tp_shop_drivers')." WHERE id = ?", 'i', array((int)$id));
+	fb_exec("DELETE FROM ".fb_t('tp_shop_driver_positions')." WHERE driver_id = ?", 'i', array((int)$id));
+	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET driver_id = NULL WHERE driver_id = ?", 'i', array((int)$id));
+	return array('ok' => true);
+}
+// one row per driver, however old - the caller decides what counts as "live" (see shop_drivers_live())
+function shop_drivers_name_map() {
+	$out = array();
+	foreach (fb_rows("SELECT id, name FROM ".fb_t('tp_shop_drivers')) as $d) { $out[(int)$d['id']] = $d['name']; }
+	return $out;
+}
+// a ping from order/driver_gps.php: the driver's own current position always updates, and - only while
+// he actually has a delivery running - the same ping mirrors into that order's driver_lat/lng/at, which
+// is the column the guest's own live map (order/status.php) already reads, unchanged
+function shop_driver_update_position($driverId, $lat, $lng) {
+	fb_exec("REPLACE INTO ".fb_t('tp_shop_driver_positions')." (driver_id, lat, lng, updated_at) VALUES (?, ?, ?, NOW())", 'idd', array((int)$driverId, (float)$lat, (float)$lng));
+	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET driver_lat = ?, driver_lng = ?, driver_at = NOW() WHERE driver_id = ? AND status = 'delivering'", 'ddi', array((float)$lat, (float)$lng, (int)$driverId));
+}
+// open deliveries any driver may still accept: ready, delivery type, nobody has it yet
+function shop_driver_open_orders() {
+	shop_ensure_schema();
+	$rows = fb_rows("SELECT o.id, o.day_no, o.zip, o.customer_name, o.subtotal_cents, o.fee_cents, o.total_cents, o.scheduled_at, o.created_at, z.name AS zone_name,
+			(SELECT COALESCE(SUM(qty), 0) FROM ".fb_t('tp_shop_order_items')." WHERE order_id = o.id) AS n_items
+		FROM ".fb_t('tp_shop_orders')." o LEFT JOIN ".fb_t('tp_shop_zones')." z ON z.id = o.zone_id
+		WHERE o.type = 'delivery' AND o.status = 'ready' AND o.driver_id IS NULL ORDER BY COALESCE(o.scheduled_at, o.created_at)");
+	return array_map(function ($r) {
+		return array('id' => (int)$r['id'], 'day_no' => (int)$r['day_no'], 'zip' => $r['zip'], 'zone' => $r['zone_name'], 'customer_name' => $r['customer_name'],
+			'items' => (int)$r['n_items'], 'total' => (int)$r['total_cents'],
+			'when' => $r['scheduled_at'] ? date('H:i', strtotime($r['scheduled_at'])) : 'so schnell wie möglich');
+	}, $rows);
+}
+// claims an open delivery for a driver, atomically - the WHERE guards against two drivers tapping
+// "Annehmen" on the same order at the same moment; only the one whose UPDATE actually matched a row wins
+function shop_driver_claim_order($driverId, $orderId) {
+	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET driver_id = ? WHERE id = ? AND driver_id IS NULL AND status = 'ready' AND type = 'delivery'",
+		'ii', array((int)$driverId, (int)$orderId));
+	// re-read rather than trust mysqli_affected_rows() here: it is the one check that must never say "ok"
+	// while quietly leaving status at 'ready' - that was exactly the bug where a claimed delivery vanished
+	// from the open pool (driver_id set) but never reached the driver's own current-order view (status
+	// still 'ready'), only fixed once dispatch forced status to 'delivering' by hand
+	$check = fb_row("SELECT driver_id, status FROM ".fb_t('tp_shop_orders')." WHERE id = ?", 'i', array((int)$orderId));
+	if (!$check || (int)$check['driver_id'] !== (int)$driverId) {
+		return array('ok' => false, 'error' => 'Diese Lieferung wurde gerade von einem anderen Fahrer angenommen.');
+	}
+	$names = shop_drivers_name_map();
+	if (!shop_set_status((int)$orderId, 'delivering', 'Fahrer: '.(isset($names[(int)$driverId]) ? $names[(int)$driverId] : ''))) {
+		return array('ok' => false, 'error' => 'Die Lieferung wurde dir zugewiesen, konnte aber nicht auf "unterwegs" gesetzt werden. Bitte bei der Disposition melden.');
+	}
+	return array('ok' => true);
+}
+// hands a delivery the driver can no longer make back into the open pool for everyone else
+// shared by the driver's own "Zurück in den Pool" and the dispatch override below - puts a claimed
+// delivery back to unassigned/ready so any driver (the same one or another) can take it again
+function shop_order_release_to_pool($orderId, $by) {
+	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET driver_id = NULL, driver_lat = NULL, driver_lng = NULL, driver_at = NULL WHERE id = ?", 'i', array((int)$orderId));
+	if (!shop_set_status((int)$orderId, 'ready', $by)) { return array('ok' => false, 'error' => 'Die Lieferung konnte nicht zurückgegeben werden.'); }
+	return array('ok' => true);
+}
+function shop_driver_release_order($driverId, $orderId) {
+	$o = fb_row("SELECT id FROM ".fb_t('tp_shop_orders')." WHERE id = ? AND driver_id = ?", 'ii', array((int)$orderId, (int)$driverId));
+	if (!$o) { return array('ok' => false, 'error' => 'Diese Lieferung gehört nicht zu dir.'); }
+	return shop_order_release_to_pool($orderId, 'Fahrer: zurückgegeben');
+}
+// dispatch's own override: puts a delivery back into the open pool regardless of which driver has it
+// (or even if none does and it was just set "unterwegs" by hand) - for when a driver can't be reached
+function shop_dispatch_release_order($orderId, $by) {
+	$o = fb_row("SELECT id, type, status FROM ".fb_t('tp_shop_orders')." WHERE id = ?", 'i', array((int)$orderId));
+	if (!$o || $o['type'] !== 'delivery' || $o['status'] !== 'delivering') { return array('ok' => false, 'error' => 'Diese Lieferung ist nicht unterwegs.'); }
+	return shop_order_release_to_pool($orderId, $by.': zurück in den Pool');
+}
+function shop_driver_complete_order($driverId, $orderId) {
+	$o = fb_row("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE id = ? AND driver_id = ?", 'ii', array((int)$orderId, (int)$driverId));
+	if (!$o || $o['status'] !== 'delivering') { return array('ok' => false, 'error' => 'Diese Lieferung ist nicht unterwegs.'); }
+	if ($o['payment_method'] !== 'mollie' && $o['payment_status'] !== 'paid') { fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET payment_status = 'paid' WHERE id = ?", 'i', array((int)$orderId)); }
+	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET driver_lat = NULL, driver_lng = NULL, driver_at = NULL WHERE id = ?", 'i', array((int)$orderId));
+	if (!shop_set_status((int)$orderId, 'done', 'Fahrer')) { return array('ok' => false, 'error' => 'Die Lieferung konnte nicht abgeschlossen werden.'); }
+	return array('ok' => true);
+}
+// the one delivery (if any) this driver currently has - the detail view shown instead of the open list
+function shop_driver_current_order($driverId) {
+	return fb_row("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE driver_id = ? AND status = 'delivering' LIMIT 1", 'i', array((int)$driverId));
+}
+// the full-order JSON order/driver.php shows once a driver has a delivery: address, what to collect,
+// what to hand over - same facts the old token-link page showed, just reached a different way
+function shop_driver_order_view($o) {
+	$items = shop_order_items((int)$o['id']);
+	$addr = trim($o['street'].', '.$o['zip'].' '.$o['city']);
+	// a what3words-sourced order has no real street for Google Maps to search - it does have the
+	// coordinate the code resolved to (shop_find_zone_w3w()), which is what the driver actually needs
+	$isW3w = strpos($o['street'], 'what3words: ') === 0;
+	$routeDest = ($isW3w && $o['lat'] !== null && $o['lng'] !== null) ? $o['lat'].','.$o['lng'] : $addr;
+	$pay = ($o['payment_method'] === 'mollie' || $o['payment_status'] === 'paid') ? 'Bezahlt, nichts zu kassieren' :
+		(($o['payment_method'] === 'cash' ? 'BAR kassieren: ' : 'KARTE kassieren: ').shop_money((int)$o['total_cents']));
+	return array('id' => (int)$o['id'], 'day_no' => (int)$o['day_no'], 'address' => $addr, 'address_note' => $o['address_note'], 'route_dest' => $routeDest,
+		'customer_name' => $o['customer_name'], 'phone' => $o['phone'], 'pay' => $pay, 'note' => $o['note'],
+		'items' => array_map(function ($it) { return array('qty' => (int)$it['qty'], 'title' => $it['title']); }, $items));
+}
+// for the dispatch live map: every driver whose own position ping is recent, with the delivery (if any) he currently has
+function shop_drivers_live($maxAgeSeconds = 600) {
+	$rows = fb_rows("SELECT d.id, d.name, p.lat, p.lng, p.updated_at,
+			o.id AS order_id, o.day_no, o.street, o.zip, o.city
+		FROM ".fb_t('tp_shop_drivers')." d
+		JOIN ".fb_t('tp_shop_driver_positions')." p ON p.driver_id = d.id
+		LEFT JOIN ".fb_t('tp_shop_orders')." o ON o.driver_id = d.id AND o.status = 'delivering'
+		WHERE d.active = 1");
+	$out = array();
+	foreach ($rows as $r) {
+		$age = time() - strtotime($r['updated_at']);
+		if ($age > $maxAgeSeconds) { continue; }
+		$out[] = array('id' => (int)$r['id'], 'name' => $r['name'], 'lat' => (float)$r['lat'], 'lng' => (float)$r['lng'], 'age' => $age,
+			'order' => $r['order_id'] ? array('id' => (int)$r['order_id'], 'day_no' => (int)$r['day_no'], 'address' => trim($r['street'].', '.$r['zip'].' '.$r['city'])) : null);
+	}
+	return $out;
 }
 
 // ---- SMS to the guest at the two moments that matter: the delivery is on its way (with the link to follow it), the pickup is ready.

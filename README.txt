@@ -52,6 +52,25 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-01 == mySeat v5.0.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Fahrer-App ohne eigenen Traccar-Server - order/driver_gps.php spricht das OsmAnd-Protokoll
+   direkt, die Traccar-App auf dem Fahrer-Handy zeigt einfach auf diese URL. Kein Login: die in der
+   App frei wählbare Geräte-ID identifiziert den Fahrer, einmalig in Einstellungen > Lieferservice
+   einem Namen zugeordnet (neue Tabellen tp_shop_drivers, tp_shop_driver_positions).
+ * ACHTUNG, ERSETZT das bisherige Modell: order/driver.php verschickte bisher einen Token-Link an
+   EINEN Fahrer für EINE Bestellung (Disposition > "Fahrer-Link kopieren"/WhatsApp) - das entfällt.
+   Jeder Fahrer bekommt stattdessen einmalig einen festen Link (order/driver.php?device=<Geräte-ID>)
+   zum Speichern auf dem Homescreen; dort sieht er eine offene Auftragsliste (Gebiet/PLZ, Positionen,
+   Betrag, Wunschzeit) und nimmt sich selbst eine Lieferung (atomar, kein Doppel-Annehmen möglich).
+   Nach der Annahme wie bisher Adresse/Telefon/Bestellung/Kassieren/"Route öffnen", dazu "Zugestellt"
+   und neu "Zurück in den Pool", falls er doch nicht ausliefern kann.
+ * Die Disposition (disposition.php) hat jetzt eine Fahrer-Karte (Button oben rechts): alle aktiven
+   Fahrerpositionen gleichzeitig, mit der Lieferung, die sie gerade haben. Setup erfordert, dass
+   mindestens ein Fahrer mit Geräte-ID angelegt und die Traccar-App entsprechend konfiguriert ist -
+   bis dahin bleibt die Liste leer, nichts bricht.
+ * Umgesetzt mit /impeccable shape.
+
 2026-10-01 == mySeat v4.10.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Liefergebiete-Editor im Backend (Einstellungen > Lieferservice > "Liefergebiete-Editor öffnen",

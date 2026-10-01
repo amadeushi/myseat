@@ -36,6 +36,9 @@ if ($op === 'day') {
 	$filter = (isset($_REQUEST['filter']) && $_REQUEST['filter'] === 'open') ? 'open' : 'all';
 	so_out(array('ok' => true, 'date' => $date, 'orders' => shop_day_orders($date, $filter), 'stats' => shop_day_stats($date)));
 }
+if ($op === 'drivers_live') {
+	so_out(array('ok' => true, 'origin' => shop_origin(), 'drivers' => shop_drivers_live()));
+}
 
 // everything below changes something: POST with the token
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['token']) || empty($_SESSION['shop_admin_token']) || !hash_equals($_SESSION['shop_admin_token'], (string)$_POST['token'])) {
@@ -61,6 +64,9 @@ if ($op === 'status') {
 	}
 	shop_set_status($id, $to, $who, (int)(isset($_POST['eta']) ? $_POST['eta'] : 0));
 	so_out(array('ok' => true));
+}
+if ($op === 'release_to_pool') {
+	so_out(shop_dispatch_release_order($id, $who));
 }
 if ($op === 'delete_test') {
 	so_out(shop_delete_test_order($id) ? array('ok' => true) : array('ok' => false, 'error' => 'Nur Testbestellungen können gelöscht werden.'));

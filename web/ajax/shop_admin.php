@@ -94,4 +94,15 @@ if ($op === 'zone') {
 	sa_out($r['ok'] ? array('ok' => true, 'message' => 'Liefergebiet gespeichert.') : $r);
 }
 
+if ($op === 'save_driver') {
+	$id = (int)(isset($_POST['id']) ? $_POST['id'] : 0);
+	$r = shop_driver_save($id, isset($_POST['name']) ? $_POST['name'] : '', isset($_POST['device_id']) ? $_POST['device_id'] : '', !empty($_POST['active']));
+	sa_out($r['ok'] ? array('ok' => true, 'message' => 'Fahrer gespeichert.') : $r);
+}
+if ($op === 'delete_driver') {
+	$id = (int)(isset($_POST['id']) ? $_POST['id'] : 0);
+	if ($id <= 0) { sa_out(array('ok' => false, 'error' => 'Unbekannter Fahrer.')); }
+	sa_out(shop_driver_delete($id));
+}
+
 sa_out(array('ok' => false, 'error' => 'Unbekannte Aktion.'));

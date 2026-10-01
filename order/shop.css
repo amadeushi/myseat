@@ -379,6 +379,12 @@
 .dv-actions .cart-go[hidden] { display: none; }
 .dv-actions .cart-go { margin-top: 10px; min-height: 60px; font-size: 18px; }
 .dv-done { background: var(--success); }
+/* the open-delivery queue a driver picks from (order/driver.php, no delivery accepted yet) */
+.dv-list { display: grid; gap: 14px; margin-top: 20px; }
+.dv-card .dv-big { font-size: 18px; }
+.dv-card .st-lead { margin: 4px 0 14px; max-width: none; }
+.dv-card .cart-go { min-height: 52px; }
+.dv-card .cart-go:disabled { opacity: 0.6; }
 
 /* coupon */
 .co-coupon { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-soft); }

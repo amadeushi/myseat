@@ -110,27 +110,26 @@ if ($op === 'repay') {
 	api_out($p['ok'] ? array('ok' => true, 'redirect' => $p['url']) : array('ok' => false, 'error' => $p['error']));
 }
 
-// the driver's phone (link with the key of the order): start the trip, send the position, hand over
-if (in_array($op, array('driver_go', 'driver_pos', 'driver_done'), true)) {
-	$o = shop_driver_order(isset($body['order']) ? (string)$body['order'] : '', isset($body['key']) ? (string)$body['key'] : '');
-	if (!$o) { api_out(array('ok' => false, 'error' => 'Dieser Link gilt nicht.'), 403); }
-	$id = (int)$o['id'];
-	if ($op === 'driver_pos') {
-		$lat = isset($body['lat']) ? (float)$body['lat'] : 999; $lng = isset($body['lng']) ? (float)$body['lng'] : 999;
-		if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180 || !in_array($o['status'], array('ready', 'delivering'), true)) { api_out(array('ok' => false, 'error' => 'Keine gültige Position.')); }
-		fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET driver_lat = ?, driver_lng = ?, driver_at = NOW() WHERE id = ?", 'ddi', array($lat, $lng, $id));
-		api_out(array('ok' => true, 'status' => $o['status']));
+// the driver's own page (order/driver.php?device=<traccar device id>, no login - the device id itself is
+// the credential, mapped to a name in Einstellungen > Lieferservice). GPS itself arrives separately and
+// continuously at order/driver_gps.php from the Traccar app in the background; these ops are only the
+// open-order list, claiming one, giving it back, and marking it delivered.
+if (in_array($op, array('driver_list', 'driver_claim', 'driver_release', 'driver_complete'), true)) {
+	$driver = shop_driver_by_device(isset($body['device']) ? $body['device'] : '');
+	if (!$driver) { api_out(array('ok' => false, 'error' => 'Dieses Gerät ist keinem Fahrer zugeordnet.'), 403); }
+	$driverId = (int)$driver['id'];
+	if ($op === 'driver_list') {
+		$current = shop_driver_current_order($driverId);
+		api_out(array('ok' => true, 'current' => $current ? shop_driver_order_view($current) : null, 'open' => $current ? array() : shop_driver_open_orders()));
 	}
-	if ($op === 'driver_go') {
-		if (!in_array($o['status'], array('ready', 'delivering'), true)) { api_out(array('ok' => false, 'error' => 'Die Bestellung ist noch nicht fertig.')); }
-		if ($o['status'] === 'ready') { shop_set_status($id, 'delivering', 'Fahrer'); }
-		api_out(array('ok' => true));
-	}
-	if ($o['status'] !== 'delivering') { api_out(array('ok' => false, 'error' => 'Die Bestellung ist nicht unterwegs.')); }
-	if ($o['payment_method'] !== 'mollie' && $o['payment_status'] !== 'paid') { fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET payment_status = 'paid' WHERE id = ?", 'i', array($id)); }
-	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET driver_lat = NULL, driver_lng = NULL, driver_at = NULL WHERE id = ?", 'i', array($id));
-	shop_set_status($id, 'done', 'Fahrer');
-	api_out(array('ok' => true));
+	$orderId = (int)(isset($body['order_id']) ? $body['order_id'] : 0);
+	if ($orderId <= 0) { api_out(array('ok' => false, 'error' => 'Unbekannte Lieferung.')); }
+	if ($op === 'driver_claim') { $r = shop_driver_claim_order($driverId, $orderId); }
+	if ($op === 'driver_release') { $r = shop_driver_release_order($driverId, $orderId); }
+	if ($op === 'driver_complete') { $r = shop_driver_complete_order($driverId, $orderId); }
+	if (!$r['ok']) { api_out($r); }
+	$current = shop_driver_current_order($driverId);
+	api_out(array('ok' => true, 'current' => $current ? shop_driver_order_view($current) : null, 'open' => $current ? array() : shop_driver_open_orders()));
 }
 
 if ($op === 'create') {

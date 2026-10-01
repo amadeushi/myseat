@@ -28,6 +28,7 @@ $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 	<title>Disposition &ndash; <?php echo htmlspecialchars($brand); ?></title>
 	<link rel="stylesheet" href="fonts/fonts.css"/>
 	<link rel="stylesheet" href="css/kitchen.css?v=<?php echo @filemtime(__DIR__.'/css/kitchen.css'); ?>"/>
+	<link rel="stylesheet" href="js/leaflet/leaflet.css"/>
 </head>
 <body class="kitchen" data-token="<?php echo htmlspecialchars($_SESSION['shop_admin_token']); ?>">
 	<header class="k-top">
@@ -35,16 +36,23 @@ $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 		<div class="k-counts" id="k-counts" aria-live="polite"></div>
 		<span class="k-clock" id="k-clock"></span>
 		<div id="k-tools" class="k-tools"></div>
+		<button type="button" class="k-btn" id="k-drivers-toggle" aria-pressed="false">Fahrer-Karte</button>
 		<button type="button" class="k-btn" id="k-full">Vollbild</button>
 		<a class="k-btn" href="kitchen_screen.php">Küchenbildschirm</a>
 		<a class="k-btn" href="main_page.php?p=9">Bestellungen</a>
 	</header>
 	<p class="k-offline" id="k-offline" role="alert" hidden>Keine Verbindung. Ich versuche es weiter ...</p>
+	<div class="k-drivers" id="k-drivers" hidden>
+		<div class="k-drivers-head"><h2>Fahrer</h2><button type="button" class="k-btn" id="k-drivers-close">Schließen</button></div>
+		<div class="k-drivers-map" id="k-drivers-map"></div>
+		<p class="k-drivers-note" id="k-drivers-note"></p>
+	</div>
 	<main class="k-board">
 		<section class="k-col" data-col="new" aria-labelledby="kc-new"><h2 id="kc-new">Neu <span class="k-n" id="n-new">0</span></h2><div class="k-list" id="col-new"></div></section>
 		<section class="k-col" data-col="work" aria-labelledby="kc-work"><h2 id="kc-work">In der Küche <span class="k-n" id="n-work">0</span></h2><div class="k-list" id="col-work"></div></section>
 		<section class="k-col" data-col="ready" aria-labelledby="kc-ready"><h2 id="kc-ready">Fertig <span class="k-n" id="n-ready">0</span></h2><div class="k-list" id="col-ready"></div></section>
 	</main>
+	<script src="js/leaflet/leaflet.js"></script>
 	<script src="js/monitor_sound.js?v=<?php echo @filemtime(__DIR__.'/js/monitor_sound.js'); ?>"></script>
 	<script src="js/monitor_print.js?v=<?php echo @filemtime(__DIR__.'/js/monitor_print.js'); ?>"></script>
 	<script src="js/disposition.js?v=<?php echo @filemtime(__DIR__.'/js/disposition.js'); ?>"></script>

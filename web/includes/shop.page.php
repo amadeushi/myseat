@@ -8,6 +8,7 @@ foreach (array_keys(shop_defaults()) as $k) { $sh[$k] = shop_setting($k); }
 $sh_count = function ($t) { $r = fb_row("SELECT COUNT(*) AS n FROM ".fb_t($t)); return $r ? (int)$r['n'] : 0; };
 $sh_cats = $sh_count('tp_shop_categories'); $sh_prods = $sh_count('tp_shop_products');
 $sh_zones = fb_rows("SELECT id, name, fee_cents, min_order_cents, active FROM ".fb_t('tp_shop_zones')." ORDER BY id");
+$sh_drivers = shop_drivers_list();
 $sh_hours = fb_rows("SELECT kind, weekday, begins, ends FROM ".fb_t('tp_shop_hours')." ORDER BY kind, weekday, begins");
 $sh_days = array('Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So');
 $sh_by = array('delivery' => array(), 'pickup' => array());
@@ -131,7 +132,7 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 	<?php if (!$sh_zones): ?>
 		<p class="offer-help">Noch keine Liefergebiete. Zeichne sie im Liefergebiete-Editor auf der Karte.</p>
 	<?php else: ?>
-	<div class="shop-zones">
+	<div class="shop-zones" id="shop-zones-list">
 		<?php foreach ($sh_zones as $z): ?>
 		<form class="shop-zone" data-id="<?php echo (int)$z['id']; ?>">
 			<input type="text" name="name" value="<?php echo $sh_e($z['name']); ?>" maxlength="80" aria-label="Name"/>
@@ -146,6 +147,34 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 	<p class="offer-help">Die Gebiete sind als Flächen auf der Karte hinterlegt. Ob eine Adresse liegt, prüft die Bestellseite über die Koordinaten der Adresse.</p>
 	<?php endif; ?>
 	<p class="offer-actions"><a class="button_dark" href="main_page.php?p=11">Liefergebiete-Editor öffnen (Formen zeichnen, anlegen, löschen)</a></p>
+
+	<h4 class="sms-sub">Fahrer</h4>
+	<p class="offer-help">Jeder Fahrer trägt in seiner Traccar-App eine selbst gewählte Geräte-ID ein (Server-URL: diese Domain + <code>/order/driver_gps.php</code>, Protokoll: OsmAnd). Hier wird die Geräte-ID einmalig einem Namen zugeordnet; sein eigener Link lautet dann <code>/order/driver.php?device=&lt;Geräte-ID&gt;</code>, zum Speichern auf dem Homescreen.</p>
+	<div class="shop-zones" id="shop-drivers">
+		<?php foreach ($sh_drivers as $d): ?>
+		<form class="shop-zone" data-id="<?php echo (int)$d['id']; ?>">
+			<input type="text" name="name" value="<?php echo $sh_e($d['name']); ?>" maxlength="80" placeholder="Name" aria-label="Name"/>
+			<input type="text" name="device_id" value="<?php echo $sh_e($d['device_id']); ?>" maxlength="64" placeholder="Geräte-ID" aria-label="Geräte-ID"/>
+			<label class="offer-check"><input type="checkbox" name="active" value="1"<?php echo $d['active'] ? ' checked' : ''; ?>/> aktiv</label>
+			<span class="offer-badge<?php echo ($d['last_seen_min'] !== null && $d['last_seen_min'] <= 10) ? ' sms-badge-on' : ''; ?>">
+				<?php if ($d['last_seen_min'] === null): ?>Noch nie gesehen - Geräte-ID in der Traccar-App prüfen
+				<?php elseif ($d['last_seen_min'] <= 10): ?>Live (zuletzt vor <?php echo (int)$d['last_seen_min']; ?> Min)
+				<?php else: ?>Zuletzt vor <?php echo (int)$d['last_seen_min']; ?> Min - App prüft nicht mehr?
+				<?php endif; ?>
+			</span>
+			<button type="submit" class="button_dark">Speichern</button>
+			<button type="button" class="offer-delete" data-driver-delete="<?php echo (int)$d['id']; ?>">Löschen</button>
+			<span class="detail-status" role="status" aria-live="polite"></span>
+		</form>
+		<?php endforeach; ?>
+		<form class="shop-zone" data-id="0">
+			<input type="text" name="name" value="" maxlength="80" placeholder="Name" aria-label="Name"/>
+			<input type="text" name="device_id" value="" maxlength="64" placeholder="Geräte-ID" aria-label="Geräte-ID"/>
+			<label class="offer-check"><input type="checkbox" name="active" value="1" checked/> aktiv</label>
+			<button type="submit" class="button_dark">Fahrer anlegen</button>
+			<span class="detail-status" role="status" aria-live="polite"></span>
+		</form>
+	</div>
 
 	<h4 class="sms-sub">Bestellzeiten</h4>
 	<?php if (!$sh_hours): ?>
@@ -183,13 +212,29 @@ window.addEventListener('load', function () {
 		say(msg, 'Einen Moment ...', false);
 		post('save', d, function (r) { say(msg, r.message, false); setTimeout(function () { location.reload(); }, 600); }, function (e) { say(msg, e, true); });
 	});
-	Array.prototype.forEach.call(document.querySelectorAll('.shop-zone'), function (f) {
+	Array.prototype.forEach.call(document.querySelectorAll('#shop-zones-list .shop-zone'), function (f) {
 		var out = f.querySelector('.detail-status');
 		f.addEventListener('submit', function (ev) {
 			ev.preventDefault();
 			post('zone', { id: f.dataset.id, name: f.elements.name.value, fee: f.elements.fee.value, min: f.elements.min.value, active: f.elements.active.checked ? '1' : '' },
 				function (r) { say(out, r.message, false); }, function (e) { say(out, e, true); });
 		});
+	});
+	// Fahrer: Name/Geräte-ID/aktiv speichert mit id=0 einen neuen Fahrer an, sonst aktualisiert es den bestehenden
+	Array.prototype.forEach.call(document.querySelectorAll('#shop-drivers .shop-zone'), function (f) {
+		var out = f.querySelector('.detail-status');
+		f.addEventListener('submit', function (ev) {
+			ev.preventDefault();
+			post('save_driver', { id: f.dataset.id, name: f.elements.name.value, device_id: f.elements.device_id.value, active: f.elements.active.checked ? '1' : '' },
+				function (r) { say(out, r.message, false); setTimeout(function () { location.reload(); }, 600); }, function (e) { say(out, e, true); });
+		});
+		var del = f.querySelector('[data-driver-delete]');
+		if (del) {
+			del.addEventListener('click', function () {
+				if (del.dataset.armed) { post('delete_driver', { id: del.dataset.driverDelete }, function () { location.reload(); }, function (e) { say(out, e, true); }); }
+				else { del.dataset.armed = '1'; del.textContent = 'Wirklich löschen?'; setTimeout(function () { del.dataset.armed = ''; del.textContent = 'Löschen'; }, 4000); }
+			});
+		}
 	});
 	var mform = document.getElementById('mollie-form'), mmsg = document.getElementById('mollie-msg');
 	mform.addEventListener('submit', function (ev) { ev.preventDefault(); say(mmsg, 'Einen Moment ...', false); post('save_mollie', { mollie_key: mform.elements.mollie_key.value }, function (r) { say(mmsg, r.message, false); setTimeout(function () { location.reload(); }, 700); }, function (e) { say(mmsg, e, true); }); });

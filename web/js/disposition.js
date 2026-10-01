@@ -23,13 +23,12 @@
 		if (o.pay === 'mollie') { return '<span class="k-badge paid">online bezahlt</span>'; }
 		return '<span class="k-badge cash">' + (o.pay === 'cash' ? 'bar kassieren' : 'Karte kassieren') + ' ' + money(o.total) + '</span>';
 	}
-	// the driver gets a link to his own page for this order (start trip, share position, handed over); the guest sees him on the map
-	function driverUrl(o) { return new URL('../order/driver.php?t=' + encodeURIComponent(o.token) + '&k=' + encodeURIComponent(o.dkey), location.href).href; }
-	function driverBtns(o) {
-		if (!o.dkey) { return ''; }
-		var live = o.driver_age !== null && o.driver_age !== undefined ? '<span class="k-badge paid">Fahrer teilt Standort</span>' : '';
-		return live + '<button type="button" class="k-go secondary" data-driver="' + o.id + '" data-url="' + esc(driverUrl(o)) + '">Fahrer-Link kopieren</button>' +
-			'<a class="k-go secondary" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent('Lieferung #' + o.day_no + ' ' + o.address + ': ' + driverUrl(o)) + '">per WhatsApp</a>';
+	// a driver claims his own delivery from his own queue (order/driver.php) now - nothing to send him
+	// here, just show who has it once someone did, and whether his phone is currently reporting in
+	function driverBadge(o) {
+		if (!o.driver_name) { return ''; }
+		var live = o.driver_age !== null && o.driver_age !== undefined ? ' · teilt Standort' : '';
+		return '<span class="k-badge paid">Fahrer: ' + esc(o.driver_name) + live + '</span>';
 	}
 	function card(o) {
 		var late = false, dueTxt = o.scheduled ? o.scheduled : o.due, sub = o.scheduled ? 'geplant' : (o.status === 'new' ? 'sofort' : 'bis');
@@ -47,8 +46,8 @@
 			h += '<span class="k-eta-l">Annehmen, fertig in:</span>' + [20, 30, 45, 60].map(function (m) { return '<button type="button" class="k-go eta" data-act="accept" data-eta="' + m + '">' + m + ' Min</button>'; }).join('') + '<button type="button" class="k-go secondary" data-act="cancelled">Ablehnen</button>';
 		} else if (o.status === 'accepted') { h += '<button type="button" class="k-go" data-act="preparing">Wird gekocht</button>'; }
 		else if (o.status === 'preparing') { h += '<button type="button" class="k-go" data-act="ready">Fertig</button>'; }
-		else if (o.status === 'ready') { h += o.type === 'delivery' ? driverBtns(o) + '<button type="button" class="k-go" data-act="delivering">Unterwegs</button>' : '<button type="button" class="k-go" data-act="done">Abgeholt</button>'; }
-		else if (o.status === 'delivering') { h += driverBtns(o) + '<button type="button" class="k-go" data-act="done">Geliefert</button>'; }
+		else if (o.status === 'ready') { h += o.type === 'delivery' ? '<button type="button" class="k-go" data-act="delivering">Unterwegs (ohne Fahrer-App)</button>' : '<button type="button" class="k-go" data-act="done">Abgeholt</button>'; }
+		else if (o.status === 'delivering') { h += driverBadge(o) + '<button type="button" class="k-go secondary" data-release="' + o.id + '">Zurück in den Pool</button><button type="button" class="k-go" data-act="done">Geliefert</button>'; }
 		return h + '</div></article>';
 	}
 	function render(orders) {
@@ -84,13 +83,18 @@
 	document.addEventListener('click', function (ev) {
 		var cardEl = ev.target.closest('.k-card');
 		if (cardEl && !acked[cardEl.dataset.id]) { acked[cardEl.dataset.id] = true; cardEl.classList.remove('is-new'); sound.ack(); }
-		var drv = ev.target.closest('[data-driver]');
-		if (drv) {
-			var url = drv.dataset.url, done = function () { drv.textContent = 'Link kopiert'; setTimeout(function () { drv.textContent = 'Fahrer-Link kopieren'; }, 2500); };
-			if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(url).then(done, function () { notify(url); }); } else { notify(url); }
+		var bonBtn = ev.target.closest('[data-bon]'); if (bonBtn) { MonitorPrint.slip(bonBtn.dataset.bon, true); return; }
+		var rel = ev.target.closest('[data-release]');
+		if (rel) {
+			if (!rel.dataset.armed) { rel.dataset.armed = '1'; rel.textContent = 'Wirklich zurückgeben?'; setTimeout(function () { rel.dataset.armed = ''; rel.textContent = 'Zurück in den Pool'; }, 4000); return; }
+			rel.disabled = true;
+			var fd2 = new FormData(); fd2.append('op', 'release_to_pool'); fd2.append('token', TOKEN); fd2.append('id', rel.dataset.release);
+			fetch('ajax/shop_orders.php', { method: 'POST', body: fd2, credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) {
+				if (!r.ok) { notify(r.error || 'Das hat nicht geklappt.'); }
+				load();
+			}).catch(function () { notify('Das hat nicht geklappt. Bitte versuche es noch einmal.'); rel.disabled = false; });
 			return;
 		}
-		var bonBtn = ev.target.closest('[data-bon]'); if (bonBtn) { MonitorPrint.slip(bonBtn.dataset.bon, true); return; }
 		var b = ev.target.closest('.k-go[data-act]'); if (!b) { return; }
 		var card = b.closest('.k-card'), act = b.dataset.act, status = act === 'accept' ? 'accepted' : act;
 		// no browser dialogs here: in full screen they stay invisible. Rejecting needs a second tap on the same button.
@@ -107,4 +111,42 @@
 		}).catch(function () { notify('Das hat nicht geklappt. Bitte versuche es noch einmal.'); b.disabled = false; });
 	});
 	load(); setInterval(load, 6000);
+
+	// ---- Fahrer-Karte: every active driver's current position, plus the delivery (if any) he has.
+	// Only built and polled while the panel is actually open, to not waste a Leaflet map on a monitor
+	// where nobody ever looks at it.
+	(function () {
+		var toggle = $('#k-drivers-toggle'), panel = $('#k-drivers'), closeBtn = $('#k-drivers-close'); if (!toggle || !panel) { return; }
+		var map = null, markers = {}, poll = null;
+		function colorFor(id) { return ['#c9a259', '#62b6cb', '#8fbf7a', '#a99be8', '#e2b56b', '#c65a4f'][id % 6]; }
+		function ensureMap(origin) {
+			if (map) { return; }
+			map = L.map('k-drivers-map').setView(origin ? [origin[0], origin[1]] : [52.1508, 9.9511], 13);
+			L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 }).addTo(map);
+		}
+		function refresh() {
+			fetch('ajax/shop_orders.php?op=drivers_live', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (r) {
+				if (!r.ok) { return; }
+				ensureMap(r.origin);
+				var seenIds = {};
+				r.drivers.forEach(function (d) {
+					seenIds[d.id] = true;
+					var label = esc(d.name) + (d.order ? ' · Lieferung #' + d.order.day_no : ' · ohne Lieferung');
+					if (markers[d.id]) { markers[d.id].setLatLng([d.lat, d.lng]).setTooltipContent(label); }
+					else {
+						markers[d.id] = L.circleMarker([d.lat, d.lng], { radius: 9, color: colorFor(d.id), weight: 2, fillOpacity: 0.85 }).addTo(map).bindTooltip(label, { permanent: true, direction: 'top', className: 'k-drivers-tip' });
+					}
+				});
+				Object.keys(markers).forEach(function (id) { if (!seenIds[id]) { map.removeLayer(markers[id]); delete markers[id]; } });
+				$('#k-drivers-note').textContent = r.drivers.length ? '' : 'Gerade kein Fahrer mit aktuellem Standort.';
+			}).catch(function () {});
+		}
+		toggle.addEventListener('click', function () {
+			var open = panel.hidden;
+			panel.hidden = !open; toggle.setAttribute('aria-pressed', open ? 'true' : 'false');
+			if (open) { refresh(); if (map) { setTimeout(function () { map.invalidateSize(); }, 50); } poll = setInterval(refresh, 10000); }
+			else if (poll) { clearInterval(poll); poll = null; }
+		});
+		if (closeBtn) { closeBtn.addEventListener('click', function () { toggle.click(); }); }
+	})();
 })();
