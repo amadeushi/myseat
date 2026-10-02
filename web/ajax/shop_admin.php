@@ -83,17 +83,6 @@ if ($op === 'save_w3w_key') {
 if ($op === 'clear_w3w_key') { shop_setting_set('w3w_key', null); sa_out(array('ok' => true, 'message' => 'Der what3words-Schlüssel wurde gelöscht.')); }
 if ($op === 'test_w3w_key') { sa_out(shop_w3w_test()); }
 
-if ($op === 'save_sipgate_secret') {
-	$key = isset($_POST['sipgate_secret']) ? trim((string)$_POST['sipgate_secret']) : '';
-	if ($key !== '') {
-		if (mb_strlen($key) < 8 || mb_strlen($key) > 100) { sa_out(array('ok' => false, 'error' => 'Bitte ein Passwort mit mindestens 8 Zeichen wählen.')); }
-		$enc = sms_encrypt($key);
-		if ($enc === null) { sa_out(array('ok' => false, 'error' => 'Das Passwort konnte nicht verschlüsselt werden.')); }
-		shop_setting_set('sipgate_secret', $enc);
-	}
-	sa_out(array('ok' => true, 'message' => 'Gespeichert.'));
-}
-if ($op === 'clear_sipgate_secret') { shop_setting_set('sipgate_secret', null); sa_out(array('ok' => true, 'message' => 'Das Sipgate-Passwort wurde gelöscht.')); }
 if ($op === 'test_mollie') {
 	$r = shop_mollie_test();
 	sa_out($r['ok'] ? array('ok' => true, 'message' => 'Verbindung in Ordnung. Aktive Zahlarten: '.($r['methods'] ? implode(', ', $r['methods']) : 'keine (im Mollie-Konto aktivieren)').'.') : array('ok' => false, 'error' => $r['error']));

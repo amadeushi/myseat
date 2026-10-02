@@ -996,20 +996,9 @@ function shop_w3w_key_info() {
 }
 
 // ---- sipgate caller-id: a webhook (order/sipgate_webhook.php, no login - sipgate.io authenticates itself with
-// this shared secret over HTTP Basic Auth, set once in sipgate's own portal) records the number of every
+// a shared secret in the webhook URL, see config/sipgate_webhook_key.php) records the number of every
 // incoming call; the POS page (web/content/orders_pos.page.php) polls shop_last_call() to show a banner for a
 // call still fresh enough to matter. No missed-call tracking, no history - this is a short-lived screen-pop, not a log.
-function shop_sipgate_secret() {
-	$blob = shop_setting('sipgate_secret');
-	$k = $blob ? sms_decrypt($blob) : null;
-	if ($k !== null && $k !== '') { return $k; }
-	global $settings;
-	return trim((string)(isset($settings['sipgateWebhookSecret']) ? $settings['sipgateWebhookSecret'] : ''));
-}
-function shop_sipgate_secret_info() {
-	$k = shop_sipgate_secret();
-	return array('set' => $k !== '', 'masked' => $k === '' ? '' : '••••'.substr($k, -4));
-}
 function shop_record_incoming_call($phone) {
 	shop_ensure_schema();
 	$phone = mb_substr(trim((string)$phone), 0, 40);

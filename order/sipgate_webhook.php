@@ -1,34 +1,51 @@
 <?php
 /*
- * Sipgate.io Push API webhook: sipgate calls this URL for every call event on a configured phone number, with
- * HTTP Basic Auth (username/password chosen freely when the push URL is set up in the sipgate web portal - only
- * the password is checked here, against the one secret saved in Einstellungen > Lieferservice). No session: a
- * machine client sends no cookies. Reacts only to an incoming call starting ("newCall", direction "in") and
- * records the caller's number for web/content/orders_pos.page.php to show as a short-lived screen-pop - no
- * missed-call tracking, no call log, just "who is calling right now".
+ * sipgate.io Push API: verify a shared URL key
+ * before loading the database. No Basic Auth or session cookies are required.
+ * Only incoming newCall events update the short-lived caller display.
  */
-include(__DIR__.'/../config/config.general.php');
-include(__DIR__.'/../web/classes/mysql_compat.php');
-include(__DIR__.'/../web/classes/connect.db.php');
-require_once(__DIR__.'/../web/classes/shop.class.php');
-
-header('Content-Type: text/plain; charset=utf-8');
 header('Cache-Control: no-store');
-shop_ensure_schema();
+header('Content-Type: text/plain; charset=utf-8');
 
-$secret = shop_sipgate_secret();
-$given = isset($_SERVER['PHP_AUTH_PW']) ? (string)$_SERVER['PHP_AUTH_PW'] : '';
-if ($secret === '' || $given === '' || !hash_equals($secret, $given)) {
-	header('WWW-Authenticate: Basic realm="mySeat"');
-	http_response_code(401);
+if (!isset($_SERVER['REQUEST_METHOD']) || $_SERVER['REQUEST_METHOD'] !== 'POST') {
+	header('Allow: POST');
+	http_response_code(405);
+	echo 'Nur POST erlaubt';
+	exit;
+}
+require_once(__DIR__.'/sipgate_diagnostics.php');
+sipgate_diagnostic_write('request_received');
+$expectedKey = require(__DIR__.'/../config/sipgate_webhook_key.php');
+$givenKey = isset($_GET['key']) && is_string($_GET['key']) ? $_GET['key'] : '';
+if (!is_string($expectedKey) || $expectedKey === '' || $givenKey === '' || !hash_equals($expectedKey, $givenKey)) {
+	sipgate_diagnostic_write('url_key_invalid');
+	http_response_code(403);
 	echo 'Nicht autorisiert';
 	exit;
 }
+sipgate_diagnostic_write('url_key_valid');
+$body = file_get_contents('php://input');
+if ($body === false) {
+	sipgate_diagnostic_write('request_body_unreadable');
+	http_response_code(400);
+	echo 'Anfrageinhalt nicht lesbar';
+	exit;
+}
 
-$event = isset($_REQUEST['event']) ? (string)$_REQUEST['event'] : '';
-$direction = isset($_REQUEST['direction']) ? (string)$_REQUEST['direction'] : '';
-$from = isset($_REQUEST['from']) ? (string)$_REQUEST['from'] : '';
+// Parse only the authenticated POST body; query parameters and cookies must not override it.
+$data = array();
+parse_str($body, $data);
+$event = isset($data['event']) && is_string($data['event']) ? $data['event'] : '';
+$direction = isset($data['direction']) && is_string($data['direction']) ? $data['direction'] : '';
+$from = isset($data['from']) && is_string($data['from']) ? $data['from'] : '';
 if ($event === 'newCall' && $direction === 'in' && $from !== '') {
+	include(__DIR__.'/../config/config.general.php');
+	include(__DIR__.'/../web/classes/mysql_compat.php');
+	include(__DIR__.'/../web/classes/connect.db.php');
+	require_once(__DIR__.'/../web/classes/shop.class.php');
 	shop_record_incoming_call($from);
 }
-echo 'OK';
+
+sipgate_diagnostic_write('processed');
+header('Content-Type: application/xml; charset=utf-8');
+echo '<?xml version="1.0" encoding="UTF-8"?><Response />';
