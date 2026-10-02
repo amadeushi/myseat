@@ -29,7 +29,28 @@
 		if (g.min > 0) { return g.min === g.max ? 'Pflicht: genau ' + g.min : 'Pflicht: mindestens ' + g.min + (g.max > 0 ? ', höchstens ' + g.max : ''); }
 		return g.max > 0 ? 'optional, bis zu ' + g.max : 'optional';
 	}
-	function askDiscard() { return !dirty || confirm('Ungespeicherte Änderungen verwerfen?'); }
+	// themed <dialog> instead of native confirm()/prompt() - same fix already made in orders.js this project,
+	// for the same reason: a native dialog is invisible/jarring in a full-screen kiosk/tablet backoffice context
+	var dlg = $('#me-dlg');
+	function openDialog(title, bodyHtml, confirmLabel) {
+		return new Promise(function (resolve) {
+			$('#me-od-title').textContent = title;
+			$('#me-od-body').innerHTML = bodyHtml;
+			$('#me-od-confirm').textContent = confirmLabel || 'OK';
+			function onClose() {
+				dlg.removeEventListener('close', onClose);
+				resolve(dlg.returnValue === 'confirm' ? $('#me-od-form') : null);
+			}
+			dlg.addEventListener('close', onClose);
+			if (typeof dlg.showModal === 'function') { dlg.showModal(); } else { dlg.setAttribute('open', ''); }
+			$('#me-od-confirm').focus();
+		});
+	}
+	if (dlg) { $('#me-od-cancel').addEventListener('click', function () { dlg.close('cancel'); }); }
+	function confirmDialog(title, message, confirmLabel) {
+		return openDialog(title, '<p>' + esc(message) + '</p>', confirmLabel).then(function (f) { return !!f; });
+	}
+	function discardOk() { return !dirty ? Promise.resolve(true) : confirmDialog('Ungespeicherte Änderungen', 'Ungespeicherte Änderungen verwerfen?', 'Verwerfen'); }
 
 	// ---- loading
 	function apply(r) { ['categories', 'products', 'groups', 'coupons'].forEach(function (k) { if (r[k]) { D[k] = r[k]; } }); }
@@ -103,6 +124,7 @@
 			'<label class="me-l" for="me-img">Bild (Adresse, https://...)</label><input id="me-img" maxlength="300" value="' + esc(d.image_url) + '"/>' +
 			'<label class="offer-check"><input type="checkbox" id="me-active"' + (d.active ? ' checked' : '') + '/> Im Shop sichtbar</label>' +
 			'<h5 class="me-sub">Varianten <small>Größen oder Sorten mit eigenem Preis</small></h5>' +
+			(d.variations.length ? '<p class="me-help">"Zubehör ×" ist ein Faktor für die Preise der Zubehörgruppen bei dieser Variante - bei 1,3 kostet ein Extra-Belag 30&nbsp;% mehr als am Grundpreis.</p>' : '') +
 			'<div class="me-rows" id="me-vars">' + (d.variations.length ? varHead() : '') + d.variations.map(varRow).join('') + '</div>' +
 			'<button type="button" class="me-mini me-add" data-addvar>+ Variante</button>' +
 			'<h5 class="me-sub">Zubehörgruppen <small>Auswahl, die der Gast bei diesem Gericht bekommt</small></h5><div id="me-dgroups">' + dishGroupsHtml(d) + '</div>' +
@@ -173,13 +195,16 @@
 		return '<form class="me-form" id="me-form" autocomplete="off"><h4>' + (isNew ? 'Neuer Gutschein' : 'Gutschein bearbeiten') + '</h4>' +
 			'<label class="me-l" for="mc-code">Code (den der Gast eingibt)</label><div class="me-addgroup"><input id="mc-code" maxlength="40" value="' + esc(c.code) + '" required placeholder="z. B. WILLKOMMEN10" style="text-transform:uppercase"/><button type="button" class="me-mini" data-gen>Erzeugen</button></div>' +
 			'<label class="me-l" for="mc-note">Notiz (nur für euch)</label><input id="mc-note" maxlength="160" value="' + esc(c.note) + '" placeholder="z. B. Flyer Innenstadt, Oktober"/>' +
+			'<h5 class="me-sub">Rabatt</h5>' +
 			'<div class="me-two"><div><label class="me-l" for="mc-kind">Art des Rabatts</label><select id="mc-kind">' + opt('percent', 'Prozent vom Warenwert', c.kind) + opt('fixed', 'Betrag in Euro', c.kind) + '</select></div>' +
 			'<div><label class="me-l" for="mc-value" id="mc-value-l">' + (c.kind === 'percent' ? 'Rabatt in %' : 'Rabatt in €') + '</label><input id="mc-value" inputmode="decimal" value="' + (c.kind === 'percent' ? c.value : eur(c.value)) + '"/></div></div>' +
 			'<div class="me-two" id="mc-maxrow"' + (c.kind === 'percent' ? '' : ' hidden') + '><div><label class="me-l" for="mc-max">Höchstrabatt in € (leer = ohne)</label><input id="mc-max" inputmode="decimal" value="' + (c.max_discount ? eur(c.max_discount) : '') + '"/></div><div></div></div>' +
-			'<div class="me-two"><div><label class="me-l" for="mc-min">Mindestwarenwert in € (leer = keiner)</label><input id="mc-min" inputmode="decimal" value="' + (c.min_order ? eur(c.min_order) : '') + '"/></div>' +
-			'<div><label class="me-l" for="mc-applies">Gilt für</label><select id="mc-applies">' + opt('all', 'Lieferung und Abholung', c.applies) + opt('delivery', 'nur Lieferung', c.applies) + opt('pickup', 'nur Abholung', c.applies) + '</select></div></div>' +
+			'<div class="me-two"><div><label class="me-l" for="mc-min">Mindestwarenwert in € (leer = keiner)</label><input id="mc-min" inputmode="decimal" value="' + (c.min_order ? eur(c.min_order) : '') + '"/></div><div></div></div>' +
+			'<h5 class="me-sub">Gültigkeit</h5>' +
+			'<div class="me-two"><div><label class="me-l" for="mc-applies">Gilt für</label><select id="mc-applies">' + opt('all', 'Lieferung und Abholung', c.applies) + opt('delivery', 'nur Lieferung', c.applies) + opt('pickup', 'nur Abholung', c.applies) + '</select></div><div></div></div>' +
 			'<div class="me-two"><div><label class="me-l" for="mc-from">Gültig ab (leer = sofort)</label><input id="mc-from" type="datetime-local" value="' + esc(c.valid_from) + '"/></div>' +
 			'<div><label class="me-l" for="mc-until">Gültig bis (leer = unbegrenzt)</label><input id="mc-until" type="datetime-local" value="' + esc(c.valid_until) + '"/></div></div>' +
+			'<h5 class="me-sub">Limits</h5>' +
 			'<div class="me-two"><div><label class="me-l" for="mc-usage">Einlösungen</label><select id="mc-usage">' + opt('once', 'Einmalig (insgesamt nur eine Einlösung)', usage) + opt('n', 'Mehrmalig, höchstens ...', usage) + opt('unl', 'Mehrmalig, unbegrenzt', usage) + '</select></div>' +
 			'<div id="mc-nrow"' + (usage === 'n' ? '' : ' hidden') + '><label class="me-l" for="mc-n">Höchstens so oft</label><input id="mc-n" type="number" min="2" max="1000000" value="' + (c.max_uses > 1 ? c.max_uses : 50) + '"/></div></div>' +
 			'<label class="offer-check"><input type="checkbox" id="mc-guest"' + (c.per_guest ? ' checked' : '') + '/> Pro Gast nur einmal (erkannt an Telefonnummer oder E-Mail)</label>' +
@@ -217,9 +242,11 @@
 		$$('#me-list .me-cat').forEach(function (s) { var any = $$('li[data-t]', s).some(function (li) { return !li.hidden; }); s.hidden = q !== '' && !any; });
 	}
 	function select(t, id, draft) {
-		if (!askDiscard()) { return; }
-		sel = { t: t, id: id, draft: draft }; render();
-		var e = $('#me-edit'); if (e) { e.scrollIntoView({ block: 'nearest' }); var f = $('input,textarea', e); if (f && !id) { f.focus(); } }
+		discardOk().then(function (ok) {
+			if (!ok) { return; }
+			sel = { t: t, id: id, draft: draft }; render();
+			var e = $('#me-edit'); if (e) { e.scrollIntoView({ block: 'nearest' }); var f = $('input,textarea', e); if (f && !id) { f.focus(); } }
+		});
 	}
 	function afterSave(t, id, msg) {
 		sel = { t: t, id: id, draft: copy(t === 'p' ? byId(D.products, id) : t === 'c' ? byId(D.categories, id) : t === 'k' ? byId(D.coupons, id) : byId(D.groups, id)) };
@@ -240,7 +267,10 @@
 	// ---- events
 	page.addEventListener('click', function (ev) {
 		var t = ev.target, el;
-		if ((el = t.closest('[data-view]'))) { if (view !== el.dataset.view) { if (!askDiscard()) { return; } view = el.dataset.view; sel = null; query = ''; render(); } return; }
+		if ((el = t.closest('[data-view]'))) {
+			if (view !== el.dataset.view) { var nextView = el.dataset.view; discardOk().then(function (ok) { if (!ok) { return; } view = nextView; sel = null; query = ''; render(); }); }
+			return;
+		}
 		if ((el = t.closest('[data-prod]'))) { var p = byId(D.products, +el.dataset.prod); select('p', p.id, copy(p)); return; }
 		if ((el = t.closest('[data-cat]'))) { var c = byId(D.categories, +el.dataset.cat); select('c', c.id, copy(c)); return; }
 		if ((el = t.closest('[data-group]'))) { var g = byId(D.groups, +el.dataset.group); select('g', g.id, copy(g)); return; }
@@ -250,12 +280,25 @@
 		if ((el = t.closest('[data-delcoupon]'))) {
 			armed(el, 'Wirklich löschen?', function () { api('coupon_delete', { id: sel.id }).then(function () { var gone = sel.id; D.coupons = D.coupons.filter(function (c) { return c.id !== gone; }); sel = null; render(); say('Gutschein gelöscht.', false); }).catch(function () { el.disabled = false; }); }); return;
 		}
-		if ((el = t.closest('[data-goprod]'))) { ev.preventDefault(); if (!askDiscard()) { return; } view = 'dishes'; var gp = byId(D.products, +el.dataset.goprod); sel = { t: 'p', id: gp.id, draft: copy(gp) }; render(); return; }
+		if ((el = t.closest('[data-goprod]'))) {
+			ev.preventDefault();
+			var goId = +el.dataset.goprod;
+			discardOk().then(function (ok) { if (!ok) { return; } view = 'dishes'; var gp = byId(D.products, goId); sel = { t: 'p', id: gp.id, draft: copy(gp) }; render(); });
+			return;
+		}
 		if (t.closest('[data-newcat]')) { select('c', 0, { id: 0, name: '', description: '', active: 1 }); return; }
 		if ((el = t.closest('[data-newdish]'))) { select('p', 0, newDraftDish(+el.dataset.newdish)); return; }
 		if (t.closest('[data-newgroup]')) { select('g', 0, { id: 0, title: '', min: 0, max: 0, items: [{ id: 0, title: '', price: 0, max: 1 }] }); return; }
-		if ((el = t.closest('[data-catmove]'))) { if (!askDiscard()) { return; } api('category_move', { id: el.dataset.id, dir: el.dataset.catmove }).then(function (r) { apply(r); render(); }).catch(function () {}); return; }
-		if ((el = t.closest('[data-prodmove]'))) { if (!askDiscard()) { return; } api('product_move', { id: sel.id, dir: el.dataset.prodmove }).then(function (r) { apply(r); var keep = sel; render(); sel = keep; say('Verschoben.', false); }).catch(function () {}); return; }
+		if ((el = t.closest('[data-catmove]'))) {
+			var catMoveId = el.dataset.id, catMoveDir = el.dataset.catmove;
+			discardOk().then(function (ok) { if (!ok) { return; } api('category_move', { id: catMoveId, dir: catMoveDir }).then(function (r) { apply(r); render(); }).catch(function () {}); });
+			return;
+		}
+		if ((el = t.closest('[data-prodmove]'))) {
+			var prodMoveDir = el.dataset.prodmove;
+			discardOk().then(function (ok) { if (!ok) { return; } api('product_move', { id: sel.id, dir: prodMoveDir }).then(function (r) { apply(r); var keep = sel; render(); sel = keep; say('Verschoben.', false); }).catch(function () {}); });
+			return;
+		}
 		if (t.closest('[data-addvar]')) {
 			var box = $('#me-vars'); if (!$('.me-head', box)) { box.insertAdjacentHTML('afterbegin', varHead()); }
 			box.insertAdjacentHTML('beforeend', varRow({ id: 0, title: '', price: 0, mult: 1 })); $('.me-var:last-child .v-t', box).focus(); dirty = true; return;
@@ -288,8 +331,12 @@
 			}); return;
 		}
 		if ((el = t.closest('[data-delcat]'))) {
-			armed(el, 'Wirklich löschen?', function () {
-				api('category_delete', { id: sel.id }).then(function () { var gone = sel.id; D.categories = D.categories.filter(function (c) { return c.id !== gone; }); sel = null; render(); say('Kategorie gelöscht.', false); }).catch(function () { el.disabled = false; });
+			var catDishCount = D.products.filter(function (p) { return p.category_id === sel.id; }).length;
+			armed(el, catDishCount ? 'Löschen? ' + catDishCount + ' Gericht' + (catDishCount === 1 ? '' : 'e') + ' werden mitgelöscht' : 'Wirklich löschen?', function () {
+				api('category_delete', { id: sel.id }).then(function () {
+					var gone = sel.id; D.categories = D.categories.filter(function (c) { return c.id !== gone; }); D.products = D.products.filter(function (p) { return p.category_id !== gone; });
+					sel = null; render(); say('Kategorie gelöscht.', false);
+				}).catch(function () { el.disabled = false; });
 			}); return;
 		}
 		if ((el = t.closest('[data-delgroup]'))) {
@@ -298,9 +345,12 @@
 				api('group_delete', { id: sel.id }).then(function (r) { apply(r); sel = null; render(); say('Gruppe gelöscht.', false); }).catch(function () { el.disabled = false; });
 			}); return;
 		}
-		if (t.closest('[data-copygroup]')) { if (!askDiscard()) { return; } api('group_copy', { id: sel.id }).then(function (r) { apply(r); afterSave('g', r.group.id, 'Kopie angelegt. Gib ihr einen eigenen Namen.'); }).catch(function () {}); }
+		if (t.closest('[data-copygroup]')) {
+			discardOk().then(function (ok) { if (!ok) { return; } api('group_copy', { id: sel.id }).then(function (r) { apply(r); afterSave('g', r.group.id, 'Kopie angelegt. Gib ihr einen eigenen Namen.'); }).catch(function () {}); });
+		}
 	});
 	page.addEventListener('submit', function (ev) {
+		if (ev.target.id === 'me-od-form') { return; } // let the <dialog method="dialog"> close itself natively
 		ev.preventDefault();
 		var btn = $('button[type=submit]', ev.target); btn.disabled = true;
 		var done = function () { btn.disabled = false; };

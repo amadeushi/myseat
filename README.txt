@@ -52,6 +52,41 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-02 == mySeat v6.1.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Sipgate-Webhook (order/sipgate_webhook.php) authentifiziert jetzt per geteiltem Schlüssel in der
+   Webhook-URL statt per HTTP Basic Auth, die Sipgate offenbar nicht zuverlässig sendet - verlangt POST und
+   liest event/direction/from nur noch aus dem authentifizierten Request-Body. Neue Diagnoseseite
+   (order/sipgate_diagnose.php, hinter Login) zeigt den Status der letzten Anfrage.
+ * New: Rufnummernübernahme (bisher nur in der Kasse) gibt es jetzt auch beim Anlegen einer neuen
+   Reservierung (Einstellungen > neue Reservierung) - derselbe eingehende-Anruf-Banner mit
+   "Übernehmen"-Button trägt die Nummer ins Telefonfeld ein, da ein und dieselbe Telefonleitung sowohl
+   Bestellungen als auch Reservierungen entgegennimmt.
+ * Fix: eingehende Anrufer-Rufnummern von Sipgate kamen teils ohne führendes "+" an (z. B. "4915123456789"),
+   wodurch weder der Kassen-Abgleich "Zuletzt bestellt" noch die neue Übernahme bei Reservierungen die
+   Nummer wiedererkannten. shop_record_incoming_call() rekonstruiert das "+" jetzt für deutsche/
+   österreichische Nummern (Mobil und Festnetz gleichermaßen), inklusive der "00"-Präfix- und der
+   doppelten-Vorwahl-Null-Falle.
+ * Fix: Fahrer-App (order/driver.php) - ein Download-Rebuild bei jedem 20-Sekunden-Abruf konnte eine
+   angefangene "Fehlgeschlagen"-Begründung oder einen scharfgestellten Bestätigen-Button lautlos verwerfen;
+   rendert jetzt per Diff wie die übrigen Monitore. "Link ungültig" zeigt jetzt einen Anrufen-Button statt
+   in eine Sackgasse zu führen. "Fehlgeschlagen" ist nicht mehr so prominent wie "Zugestellt", eine
+   gesperrte "Starten"-Kachel ist jetzt klar als gesperrt erkennbar statt nur leicht abgedunkelt, und zwei
+   Textgrößen wurden auf die dokumentierte Skala gebracht.
+ * Fix: Speisekarten-Editor (Einstellungen > Speisekarte) - natives Browser-confirm()/beforeunload beim
+   Verwerfen ungespeicherter Änderungen ist durch einen themenkonformen Dialog ersetzt; eine Kategorie zu
+   löschen warnt jetzt mit der Anzahl betroffener Gerichte statt pauschal zu fragen. Das
+   Gutschein-Formular ist in Abschnitte (Rabatt/Gültigkeit/Limits) gegliedert statt 14 Felder ohne
+   Gliederung zu zeigen; der Zubehör-Preisfaktor bei Varianten hat jetzt eine sichtbare Erklärung statt nur
+   eine Hover-Tooltipp. Eingabefelder sind jetzt 16px groß (vorher löste das Fokussieren auf iOS einen
+   Zoom aus) und die kleinen Werkzeug-Buttons haben jetzt 44px Touch-Fläche statt 32px.
+ * Fix: Sicherheitslücke in zwei Autovervollständigungs-Endpunkten (web/ajax/autocomplete.php,
+   web/ajax/autocomplete_res.php) behoben - der Suchbegriff landete ungeprüft in der SQL-Abfrage.
+ * Fix: an mehreren Stellen (Speisekarte, Kasse, Zonen-Editor, Gruppenbestellung) verschwand die Beschriftung
+   eines Buttons beim Hovern, weil eine allgemeine Hover-Regel nur Hintergrund oder nur Textfarbe setzte und
+   die jeweils andere Eigenschaft von einer globalen Button-Hover-Regel mit einer dazu passenden Farbe
+   überschrieben wurde (z. B. goldener Text auf goldenem Hintergrund). Alle gefundenen Stellen korrigiert.
+
 2026-10-01 == mySeat v6.0.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Fahrer-App erlaubt jetzt Mehrfach-Annahme aus dem Pool - ein Fahrer übernimmt mehrere Lieferungen

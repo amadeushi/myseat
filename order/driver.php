@@ -13,6 +13,8 @@ header('Cache-Control: no-store');
 $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 $device = isset($_GET['device']) ? (string)$_GET['device'] : '';
 $driver = shop_driver_by_device($device);
+$phone = !empty($settings['mailPhone']) ? $settings['mailPhone'] : '';
+$telHref = $phone !== '' ? 'tel:'.shop_h(preg_replace('/\s+/', '', $phone)) : '';
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -29,7 +31,8 @@ $driver = shop_driver_by_device($device);
 <main class="st-wrap">
 <?php if (!$driver): ?>
 	<h1 class="st-title">Link ungültig</h1>
-	<p class="st-lead">Dieses Gerät ist keinem Fahrer zugeordnet. Bitte vom Betreiber in Einstellungen &gt; Lieferservice eintragen lassen.</p>
+	<p class="st-lead">Dieses Gerät ist keinem Fahrer zugeordnet. Bitte vom Betreiber in Einstellungen &gt; Lieferservice eintragen lassen<?php echo $telHref !== '' ? ' oder uns kurz anrufen' : ''; ?>.</p>
+	<?php if ($telHref !== ''): ?><p class="st-again"><a class="cart-go" href="<?php echo $telHref; ?>">Anrufen: <?php echo shop_h($phone); ?></a></p><?php endif; ?>
 <?php else: ?>
 	<h1 class="st-title">Hallo <?php echo shop_h($driver['name']); ?></h1>
 	<p class="st-lead" id="dv-state">Lädt …</p>

@@ -14,6 +14,7 @@ $rsv_selected = array();
 <form method="post" action="ajax/process_reservation.php" id="new_reservation_form" class="rsv-form" novalidate="novalidate">
 
 	<div class="rsv-card">
+		<p class="rsv-call" id="rsv-call" role="status" aria-live="assertive" hidden></p>
 		<div class="rsv-grid rsv-grid-top">
 			<div class="rsv-field">
 				<label><?php echo rt('date'); ?></label>

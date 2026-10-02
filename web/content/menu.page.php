@@ -19,5 +19,15 @@ if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = bin2
 	</div>
 	<p class="me-note" id="me-note" role="status" aria-live="polite"></p>
 	<div id="me-root" class="me-root"><p class="orders-empty">Die Speisekarte wird geladen ...</p></div>
+	<dialog class="orders-dialog" id="me-dlg" aria-labelledby="me-od-title">
+		<form method="dialog" id="me-od-form">
+			<h3 id="me-od-title"></h3>
+			<div id="me-od-body"></div>
+			<div class="orders-dlg-actions">
+				<button type="button" class="offer-delete" id="me-od-cancel">Abbrechen</button>
+				<button type="submit" class="button_dark" id="me-od-confirm" value="confirm">OK</button>
+			</div>
+		</form>
+	</dialog>
 </div>
 <script src="js/menu_editor.js?v=<?php echo @filemtime(__DIR__.'/../js/menu_editor.js'); ?>"></script>

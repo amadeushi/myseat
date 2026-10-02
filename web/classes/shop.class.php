@@ -999,10 +999,31 @@ function shop_w3w_key_info() {
 // a shared secret in the webhook URL, see config/sipgate_webhook_key.php) records the number of every
 // incoming call; the POS page (web/content/orders_pos.page.php) polls shop_last_call() to show a banner for a
 // call still fresh enough to matter. No missed-call tracking, no history - this is a short-lived screen-pop, not a log.
+// Best-effort "+" reconstruction for a caller-id string, scoped to the same DE/AT range sms_normalize_phone()
+// supports - but unlike that function, this never rejects a landline or an already-odd number: all it needs
+// to do is give every downstream exact-string match (POS "Übernehmen" + guest history, the reservation form's
+// call banner) one consistent format, not validate deliverability. Whatever it can't confidently reconstruct
+// (a bare leading "0" with no way to know the country, a non-DE/AT number, garbage) is returned untouched, so
+// a call is never hidden from staff just because the number looks unusual.
+function shop_normalize_caller_id($phone) {
+	$raw = trim((string)$phone);
+	$s = preg_replace('/[\s\-\/.()]/', '', $raw);
+	if ($s === '' || !preg_match('/^\+?\d+$/', $s)) { return $raw; }
+	if (strpos($s, '00') === 0) { $s = '+'.substr($s, 2); }
+	elseif ($s[0] !== '+') {
+		if (!preg_match('/^(49|43)\d{6,13}$/', $s)) { return $raw; }
+		$s = '+'.$s;
+	}
+	// a dropped "+" sometimes keeps the national trunk "0" right after the country code (e.g. "+490151...")
+	if (strpos($s, '+490') === 0) { $s = '+49'.substr($s, 4); }
+	if (strpos($s, '+430') === 0) { $s = '+43'.substr($s, 4); }
+	return $s;
+}
 function shop_record_incoming_call($phone) {
 	shop_ensure_schema();
 	$phone = mb_substr(trim((string)$phone), 0, 40);
 	if ($phone === '') { return; }
+	$phone = mb_substr(shop_normalize_caller_id($phone), 0, 40);
 	fb_exec("INSERT INTO ".fb_t('tp_shop_calls')." (phone, received_at) VALUES (?, NOW())", 's', array($phone));
 	fb_exec("DELETE FROM ".fb_t('tp_shop_calls')." WHERE received_at < ?", 's', array(date('Y-m-d H:i:s', time() - 3600)));
 }

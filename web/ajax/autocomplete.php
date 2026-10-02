@@ -19,6 +19,7 @@ $term = $_GET['term'];
 // prevent SQL injection 
 if ($field == 'reservation_guest_name' || $field == 'reservation_booker_name' ) {
 	
+	$term = mysql_real_escape_string($term);
 	$sql = "SELECT DISTINCT ".$field." FROM $dbTables->reservations WHERE ".$field." LIKE '".$term."%' ORDER BY ".$field." ASC ";
 	$fetch = mysql_query($sql);
 		/* Retrieve and store in array the results of the query.*/

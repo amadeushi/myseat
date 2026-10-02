@@ -376,7 +376,11 @@
 @media (prefers-reduced-motion: reduce) { .st-pin-driver span { animation: none; } }
 
 /* driver page */
-.dv-big { font-size: 20px; font-weight: 700; line-height: 1.35; }
+/* the shared .st-title hero (40px, Display-Hero) is right for checkout/status/ETA moments elsewhere on /order,
+   but here it only ever greets the driver by name or shows "Link ungültig" - neither is a hero moment worth
+   outranking the address/cash-to-collect below it, so this page gets its own, smaller Display-tier size */
+.dv .st-title { font-size: 24px; }
+.dv-big { font-size: 18px; font-weight: 700; line-height: 1.35; }
 .dv-links { display: grid; gap: 10px; margin-top: 14px; }
 .shop-shell .cart-go.dv-alt { background: transparent; color: var(--gold-strong); border: 1px solid var(--border); text-decoration: none; margin-top: 10px; }
 .dv-actions { margin-top: 24px; }
@@ -384,18 +388,26 @@
 .dv-actions .cart-go { margin-top: 10px; min-height: 60px; font-size: 18px; }
 .dv-done { background: var(--success); }
 .dv-fail { background: var(--danger); }
+/* the "Fehlgeschlagen" trigger button only opens the reason form below it - giving it the same filled weight as
+   "Zugestellt" made a negative outcome compete with the primary success action; outlined like the other
+   secondary actions (Pausieren/Zurück), it still reads as danger via color alone. The form's own "Meldung
+   senden" stays filled: once a driver is already in that flow, it's the one correct next action again. */
+.shop-shell .cart-go.dv-alt.dv-fail { background: transparent; color: var(--danger); border-color: var(--danger); }
 .dv-fail-form { margin-top: 14px; }
 .dv-fail-form label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
 .dv-fail-form textarea { width: 100%; box-sizing: border-box; min-height: 80px; padding: 12px 14px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface-2); color: var(--text); font: inherit; resize: vertical; }
 /* section headers stacking "active delivery" / "own queue" / "open pool" - all three can show at once now */
-.dv-section { font-family: var(--font-display); font-weight: 400; font-size: 20px; margin: 32px 0 4px; }
+.dv-section { font-family: var(--font-display); font-weight: 400; font-size: 18px; margin: 32px 0 4px; }
 .dv-section:first-child { margin-top: 0; }
 /* the open-delivery queue a driver picks from, and his own accepted-but-not-started queue (order/driver.php) */
 .dv-list { display: grid; gap: 14px; margin-top: 14px; }
-.dv-card .dv-big { font-size: 18px; }
 .dv-card .st-lead { margin: 4px 0 14px; max-width: none; }
 .dv-card .cart-go { min-height: 52px; }
-.dv-card .cart-go:disabled { opacity: 0.6; }
+/* a flat opacity drop on the same gold fill read as "still tappable, just slightly dim" rather than "locked" -
+   a neutral surface with no fill reads as disabled even in bright outdoor light; the blocking reason moved from
+   a hover-only title attribute to visible text (see queueCardHtml() in driver.js) */
+.dv-card .cart-go:disabled { background: var(--surface-3); color: var(--text-muted); border: 1px solid var(--border-soft); opacity: 1; cursor: not-allowed; }
+.dv-locked-note { margin: 8px 0 0; font-size: 13px; color: var(--text-muted); }
 
 /* coupon */
 .co-coupon { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-soft); }

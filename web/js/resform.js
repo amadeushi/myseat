@@ -193,6 +193,35 @@
 		load();
 	}
 
+	/* ---------- incoming-call banner (Sipgate), new reservations only ---------- */
+	// the banner markup exists only in includes/new.inc.php, not in the edit form that shares this script,
+	// so this whole block is a no-op on main_page.php?p=102; same source (ajax/shop_pos.php) and cadence as
+	// the POS page's own banner, since one phone line takes both phone orders and phone reservations
+	var callBox = byId('rsv-call');
+	if (callBox) {
+		var seenCalls = {}, activeCall = null;
+		function escCall(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+		function renderCall() {
+			if (activeCall) { callBox.hidden = false; callBox.innerHTML = 'Anruf von <strong>' + escCall(activeCall.phone) + '</strong> <button type="button" class="button_dark" id="rsv-call-use">Übernehmen</button> <button type="button" class="offer-delete" id="rsv-call-dismiss">Ausblenden</button>'; }
+			else { callBox.hidden = true; callBox.innerHTML = ''; }
+		}
+		function dismissCall(id) { seenCalls[id] = true; activeCall = null; renderCall(); }
+		callBox.addEventListener('click', function (ev) {
+			if (ev.target.id === 'rsv-call-use' && activeCall) {
+				if (phone) { phone.value = activeCall.phone; phone.dispatchEvent(new Event('input')); phone.focus(); }
+				dismissCall(activeCall.id);
+				return;
+			}
+			if (ev.target.id === 'rsv-call-dismiss' && activeCall) { dismissCall(activeCall.id); }
+		});
+		function pollCall() {
+			fetch('ajax/shop_pos.php?op=last_call', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) {
+				if (r.ok && r.call && !seenCalls[r.call.id]) { activeCall = r.call; renderCall(); }
+			}).catch(function () {});
+		}
+		pollCall(); setInterval(pollCall, 5000);
+	}
+
 	/* ---------- submit checks ---------- */
 	function invalid(node, on) { if (node) { node.classList.toggle('is-invalid', on); } }
 	form.addEventListener('submit', function (e) {
