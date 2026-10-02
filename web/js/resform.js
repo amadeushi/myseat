@@ -245,10 +245,20 @@
 			return;
 		}
 		if (formMsg) { formMsg.textContent = ''; }
+		// jQuery Validate (custom.js) runs after this capture handler and can still cancel the submit; locking the
+		// button right here would leave it dead until a reload, so it is locked only once the submit went through
 		var submitBtn = byId('submit_btn');
 		if (submitBtn && !submitBtn.disabled) {
-			submitBtn.disabled = true;
-			submitBtn.classList.add('is-saving');
+			setTimeout(function () {
+				if (e.defaultPrevented) { return; }
+				submitBtn.disabled = true;
+				submitBtn.classList.add('is-saving');
+			}, 0);
 		}
 	}, true);
+	// coming back with the browser's back button restores the page with the button still locked
+	window.addEventListener('pageshow', function (ev) {
+		var b = byId('submit_btn');
+		if (ev.persisted && b) { b.disabled = false; b.classList.remove('is-saving'); }
+	});
 })();

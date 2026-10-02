@@ -52,6 +52,13 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-02 == mySeat v6.1.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: im Reservierungsformular (web/js/resform.js) konnte der Speichern-Button nach einem abgebrochenen
+   Absenden gesperrt bleiben, bis die Seite neu geladen wurde. Die Formularprüfung sperrte den Button
+   sofort, danach konnte jQuery Validate das Absenden noch abbrechen. Der Button wird jetzt erst gesperrt,
+   wenn das Absenden wirklich durchgeht, und beim Zurück-Navigieren (bfcache) wieder freigegeben.
+
 2026-10-02 == mySeat v6.1.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix: auf den Gästeseiten api/cancel.php (Reservierungsseite aus der Bestätigungsmail, Notiz) und
