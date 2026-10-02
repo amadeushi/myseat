@@ -52,6 +52,21 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-02 == mySeat v6.1.3 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: abgelaufene Absage-Kurzlinks wurden in YOURLS nie gelöscht. Das Plugin "Expiry" findet den Link, indem
+   es YOURLS_SITE + "/" von der übergebenen Adresse abschneidet. Dieses YOURLS ist als http:// konfiguriert,
+   unsere Links sind https://, also wurde die Adresse nicht gekürzt, und der Ablauf landete unter einem
+   kaputten Keyword (z. B. "httpsamdsatabc12345"), das zu keinem Link gehört. Beim Ablauf löschte das Plugin
+   dieses Phantom-Keyword, der echte Link blieb, und der Prune meldete trotzdem "success: pruned". Die
+   Statusabfrage hatte denselben Fehler und zeigte deshalb immer einen Ablauf an. Jetzt bekommt das Plugin
+   das nackte Keyword (sms_yourls_keyword()), abgelaufene Links werden beim Aufruf und beim stündlichen Prune
+   wirklich gelöscht.
+ * Fix: der stündliche Prune prüft jetzt selbst, ob er etwas getan hat (die ältesten Absage-Links dürfen
+   danach nicht mehr "beyond expiration" sein) und schreibt andernfalls eine Zeile ins Fehlerlog.
+ * Hinweis zum Betrieb: die bestehenden Absage-Links in YOURLS wurden einmalig neu gesetzt (Ablauf am Morgen
+   nach dem Reservierungstag), Altlinks zu vergangenen oder stornierten Reservierungen wurden gelöscht.
+
 2026-10-02 == mySeat v6.1.2 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix: im Reservierungsformular (web/js/resform.js) konnte der Speichern-Button nach einem abgebrochenen

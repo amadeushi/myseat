@@ -289,12 +289,23 @@ function sms_yourls_shorten($long_url, $minutes, $title = 'mySeat Absage') {
 	return array('ok' => false, 'short' => null, 'error' => $last);
 }
 
+/*
+ * The Expiry plugin finds the link by cutting YOURLS_SITE + "/" off the given short url. YOURLS_SITE is configured as
+ * http://, our links are https://, so a full url is not shortened: the plugin then stores the expiry under a mangled
+ * keyword (e.g. "httpsamdsatabc12345") that belongs to no link, and an expired link is never deleted - while the stats
+ * call, with the same mangling, keeps answering "will expire in ...". The bare keyword always works ("abc" is accepted).
+ */
+function sms_yourls_keyword($short) {
+	$p = parse_url((string)$short, PHP_URL_PATH);
+	return basename(($p !== null && $p !== false && $p !== '') ? $p : (string)$short);
+}
+
 // set the expiry of an existing short link (action=expiry, needs the signature); postx=none: delete it when expired
 function sms_yourls_set_expiry($short, $minutes) {
 	$c = sms_link_cfg();
 	$ch = curl_init($c['url']);
 	curl_setopt_array($ch, array(CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => false, CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_TIMEOUT => 4,
-		CURLOPT_POSTFIELDS => http_build_query(array('signature' => $c['sig'], 'action' => 'expiry', 'shorturl' => $short, 'format' => 'json',
+		CURLOPT_POSTFIELDS => http_build_query(array('signature' => $c['sig'], 'action' => 'expiry', 'shorturl' => sms_yourls_keyword($short), 'format' => 'json',
 			'expiry' => 'clock', 'age' => max(60, (int)$minutes), 'ageMod' => 'min', 'postx' => 'none'))));
 	$raw = curl_exec($ch);
 	curl_close($ch);
@@ -308,7 +319,7 @@ function sms_yourls_expiry_stats($short) {
 	$c = sms_link_cfg();
 	$ch = curl_init($c['url']);
 	curl_setopt_array($ch, array(CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => false, CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_TIMEOUT => 5,
-		CURLOPT_POSTFIELDS => http_build_query(array('signature' => $c['sig'], 'action' => 'expiry-stats', 'shorturl' => $short, 'format' => 'json'))));
+		CURLOPT_POSTFIELDS => http_build_query(array('signature' => $c['sig'], 'action' => 'expiry-stats', 'shorturl' => sms_yourls_keyword($short), 'format' => 'json'))));
 	$raw = curl_exec($ch);
 	$http = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
 	curl_close($ch);
@@ -317,10 +328,40 @@ function sms_yourls_expiry_stats($short) {
 	return array('http' => $http, 'message' => substr($msg, 0, 200), 'keys' => is_array($j) ? array_keys($j) : array());
 }
 
+// one signed call to the YOURLS API; returns the decoded JSON (null on any problem)
+function sms_yourls_call($fields, $timeout = 8) {
+	$c = sms_link_cfg();
+	$ch = curl_init($c['url']);
+	curl_setopt_array($ch, array(CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => false, CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_TIMEOUT => $timeout,
+		CURLOPT_POSTFIELDS => http_build_query($fields + array('signature' => $c['sig'], 'format' => 'json'))));
+	$raw = curl_exec($ch);
+	curl_close($ch);
+	$j = is_string($raw) ? json_decode($raw, true) : null;
+	return is_array($j) ? $j : null;
+}
+
 /*
- * Expired short links are deleted by the Expiry plugin when somebody opens them, so links nobody clicks would stay
- * in YOURLS. The cron therefore asks YOURLS to prune all expired links (action=prune, scope=expired) at most once
- * an hour. Never throws.
+ * "success: pruned" is also what a prune answers when it deleted nothing (that is how the wrong-keyword problem of
+ * sms_yourls_keyword() went unnoticed), so look for yourself: of the oldest cancel links in YOURLS none may be
+ * "beyond expiration" any more after a prune. Logs, never throws.
+ */
+function sms_yourls_prune_check() {
+	$j = sms_yourls_call(array('action' => 'stats', 'filter' => 'last', 'limit' => 200), 10);
+	if (!$j || empty($j['links']) || !is_array($j['links'])) { return; }
+	$old = array();
+	foreach ($j['links'] as $l) {
+		if (isset($l['url'], $l['shorturl']) && strpos($l['url'], '/api/cancel.php') !== false) { $old[] = $l['shorturl']; }
+	}
+	foreach (array_slice(array_reverse($old), 0, 5) as $short) {
+		$st = sms_yourls_expiry_stats($short);
+		if (stripos($st['message'], 'beyond expiration') !== false) { error_log('mySeat YOURLS prune: expired link still present after prune ('.sms_yourls_keyword($short).')'); return; }
+	}
+}
+
+/*
+ * The Expiry plugin deletes an expired short link when somebody opens it, so links nobody clicks would stay in
+ * YOURLS. The cron therefore asks YOURLS to prune all expired links (action=prune, scope=expired) at most once an
+ * hour and checks afterwards that it really did. Never throws.
  */
 function sms_yourls_prune_if_due() {
 	try {
@@ -335,7 +376,7 @@ function sms_yourls_prune_if_due() {
 		$http = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		curl_close($ch);
 		$j = is_string($raw) ? json_decode($raw, true) : null;
-		if ($http === 200 && is_array($j) && (int)($j['statusCode'] ?? 0) < 400) { sms_setting_set('yourls_prune_at', (string)time()); }
+		if ($http === 200 && is_array($j) && (int)($j['statusCode'] ?? 0) < 400) { sms_setting_set('yourls_prune_at', (string)time()); sms_yourls_prune_check(); }
 		else { error_log('mySeat YOURLS prune failed (HTTP '.$http.')'); }
 	} catch (Throwable $e) {
 		error_log('mySeat YOURLS prune: '.$e->getMessage());
