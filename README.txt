@@ -52,6 +52,16 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-02 == mySeat v6.1.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: auf den Gästeseiten api/cancel.php (Reservierungsseite aus der Bestätigungsmail, Notiz) und
+   api/request.php (Freigabeseite fürs Personal: Name, Telefon, E-Mail, Notiz) erschienen Umlaute und
+   Sonderzeichen als "&uuml;" usw. Gast-Text wird in der Datenbank entity-kodiert abgelegt
+   (escapeInput() in database.class.php), und diese beiden Seiten escapten ihn beim Anzeigen ein zweites
+   Mal. Die Werte werden dort jetzt erst dekodiert und dann escaped (wie schon bei Mail, SMS und
+   Kalender-Export); der Schutz vor eingeschleustem HTML bleibt erhalten, bestehende Reservierungen sind
+   sofort mitkorrigiert.
+
 2026-10-02 == mySeat v6.1.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Sipgate-Webhook (order/sipgate_webhook.php) authentifiziert jetzt per geteiltem Schlüssel in der

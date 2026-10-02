@@ -285,7 +285,7 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 			<div><dt><?php echo $h($t['guests']); ?></dt><dd><?php echo (int)$res['reservation_pax']; ?></dd></div>
 			<div class="guest-nr"><dt><?php echo $h($t['booknum']); ?></dt><dd class="guest-number"><?php echo $h($nr); ?></dd></div>
 			<?php if (trim((string)$res['reservation_notes']) !== ''): ?>
-			<div class="guest-note"><dt><?php echo $h($t['note']); ?></dt><dd><?php echo nl2br($h(trim($res['reservation_notes']))); ?></dd></div>
+			<div class="guest-note"><dt><?php echo $h($t['note']); ?></dt><dd><?php echo nl2br($h(bm_clean($res['reservation_notes']))); ?></dd></div>
 			<?php endif; ?>
 		</dl>
 

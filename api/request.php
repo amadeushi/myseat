@@ -16,6 +16,9 @@ require_once(__DIR__.'/../web/classes/approval.class.php');
 
 header('X-Robots-Tag: noindex, nofollow');
 $h = function ($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); };
+// guest text is stored entity-encoded (escapeInput() in database.class.php runs htmlentities over every POST value),
+// so values read back from the reservation row are decoded first - escaping them as-is shows "&uuml;" on the page
+$hd = function ($s) { return htmlspecialchars(html_entity_decode((string)$s, ENT_QUOTES, 'UTF-8'), ENT_QUOTES, 'UTF-8'); };
 $link = $GLOBALS['__mysql_compat_link'];
 appr_ensure_schema();
 
@@ -103,16 +106,16 @@ $icon_class = ($state === 'approved') ? 'is-success' : (($state === 'pending' ||
 		</div>
 		<div class="wizard-summary" style="display:block;text-align:left;">
 			<?php foreach (array(
-				'Gast' => $h($r['reservation_guest_name']),
-				'Telefon' => $tel !== '' ? '<a href="tel:'.$h($tel).'">'.$h($r['reservation_guest_phone']).'</a>' : '-',
-				'E-Mail' => $r['reservation_guest_email'] !== '' ? '<a href="mailto:'.$h($r['reservation_guest_email']).'">'.$h($r['reservation_guest_email']).'</a>' : '-',
+				'Gast' => $hd($r['reservation_guest_name']),
+				'Telefon' => $tel !== '' ? '<a href="tel:'.$h($tel).'">'.$hd($r['reservation_guest_phone']).'</a>' : '-',
+				'E-Mail' => $r['reservation_guest_email'] !== '' ? '<a href="mailto:'.$hd($r['reservation_guest_email']).'">'.$hd($r['reservation_guest_email']).'</a>' : '-',
 				'Buchungsnummer' => $h($r['reservation_bookingnumber']),
 			) as $label => $value): ?>
 			<div class="summary-item" style="display:flex;flex-direction:row;align-items:baseline;justify-content:space-between;gap:16px;padding:6px 0;"><span class="summary-label"><?php echo $h($label); ?></span><span class="summary-value" style="text-align:right;"><?php echo $value; ?></span></div>
 			<?php endforeach; ?>
 		</div>
 		<?php if (trim($r['reservation_notes']) !== ''): ?>
-		<p class="confirm-text"><strong>Notiz des Gastes</strong><br/><?php echo nl2br($h($r['reservation_notes'])); ?></p>
+		<p class="confirm-text"><strong>Notiz des Gastes</strong><br/><?php echo nl2br($hd($r['reservation_notes'])); ?></p>
 		<?php endif; ?>
 	<?php endif; ?>
 
