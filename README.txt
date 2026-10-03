@@ -52,6 +52,19 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.8.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Stempelkarte, Mails und Gutschein-Regel überarbeitet. Die Mails nach jedem Stempel und bei voller Karte sprechen
+   den Gast mit Vornamen an, zeigen die Stempelkarte mit den goldenen Zeus-Stempeln als Bild (order/mail/stempel-N-von-5.png,
+   für fünf Stempel pro Karte) und haben für den Gutschein einen goldenen Betrags-Kasten, im Stil der Bestellbestätigung
+   mit Gruß und Anbieterangaben. Der Gutschein wird jetzt immer komplett eingelöst: Er gilt ab einem Warenwert in Höhe
+   seines Betrags (Mindestbestellwert des Gutscheins), einen Rest-Gutschein gibt es nicht mehr. Der Code steht in der Mail
+   und lässt sich im Gutscheinfeld der Kasse von Hand eingeben; die Vorschau dort prüft persönliche Codes mit Telefon und
+   E-Mail der Kasse, die Meldungen sagen, wenn ein Code zu einer anderen Nummer gehört. Die Karte in der Kasse zeigt, was
+   bis zum Mindestwert fehlt. SMS-Text angepasst.
+ * Fix: Der Knopf zum Shop in den Stempel-Mails fehlte, wenn die Mail aus dem Backend entstand (Personal setzt
+   "erledigt"); die Adresse kommt jetzt aus shop_site_url().
+
 2026-10-05 == mySeat v6.8.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Stempelkarte im Bestellshop (nach dem Vorbild der Lieferando-Stempelkarte). Jede abgeschlossene Bestellung

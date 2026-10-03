@@ -70,7 +70,7 @@
 	// ---- stamp card: the guest is recognised by phone / e-mail of this order; a voucher of the card is taken off automatically
 	var stampTimer;
 	function stampKnown() { var f = form.elements; return f.phone.value.replace(/\D/g, '').length >= 8 || /.+@.+\..+/.test(f.email.value.trim()); }
-	function drawStamp() { if (window.AmadeusStamp && $('#co-stamp')) { AmadeusStamp.render($('#co-stamp'), S.stamp, { known: stampKnown(), next: true }); } }
+	function drawStamp() { if (window.AmadeusStamp && $('#co-stamp')) { AmadeusStamp.render($('#co-stamp'), S.stamp, { known: stampKnown(), next: true, cart: true }); } }
 	function refreshStamp() {
 		clearTimeout(stampTimer);
 		if (!$('#co-stamp') || !S.cart.length) { return; }
@@ -262,7 +262,7 @@
 	function applyCoupon(code, silent) {
 		code = String(code || '').trim(); if (!code) { return; }
 		if (!silent) { couponMsg('Einen Moment ...', false); }
-		post('coupon', { code: code, type: S.mode, lines: S.cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; }) }).then(function (r) {
+		post('coupon', { code: code, type: S.mode, phone: form.elements.phone.value, email: form.elements.email.value, lines: S.cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; }) }).then(function (r) {
 			if (r.ok) { S.coupon = { code: r.code, discount: r.discount, label: r.label }; $('#co-coupon-box').hidden = true; $('#co-coupon-toggle').hidden = true; couponMsg('Gutschein ' + r.code + ' eingelöst: ' + r.label + ', du sparst ' + fmt(r.discount) + '.', false); }
 			else { S.coupon = null; $('#co-coupon-toggle').hidden = false; if (!silent) { $('#co-coupon-box').hidden = false; } couponMsg(r.error, true); }
 			renderSummary();

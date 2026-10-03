@@ -847,8 +847,6 @@ function shop_create_order($in) {
 		if (!$test) {
 			$gk = shop_coupon_guest_keys($phone, $email);
 			fb_exec("INSERT INTO ".fb_t('tp_shop_coupon_uses')." (coupon_id, order_id, guest_key, guest_key2, discount_cents, created_at) VALUES (?, ?, ?, ?, ?, NOW())", 'iissi', array((int)$coupon['id'], $id, $gk[0], $gk[1], $discount));
-			// a stamp voucher that was only partly needed: the rest becomes a new voucher with the same end date
-			if ($coupon['source'] === 'stamp') { shop_stamp_leftover($coupon, $discount); }
 		}
 	}
 	foreach ($items as $it) {
@@ -1711,7 +1709,9 @@ function shop_coupon_check($code, $type, $sub, $keys = array('', '')) {
 	if (!$c || !(int)$c['active']) { return $no('Diesen Gutscheincode kennen wir nicht. Bitte prüfe die Schreibweise.'); }
 	// a personal coupon (stamp card) works only for the guest it was made for
 	if ($c['guest_key'] !== '' || $c['guest_key2'] !== '') {
-		if (!(($c['guest_key'] !== '' && $c['guest_key'] === $keys[0]) || ($c['guest_key2'] !== '' && $c['guest_key2'] === $keys[1]))) { return $no('Diesen Gutscheincode kennen wir nicht. Bitte prüfe die Schreibweise.'); }
+		if (!(($c['guest_key'] !== '' && $c['guest_key'] === $keys[0]) || ($c['guest_key2'] !== '' && $c['guest_key2'] === $keys[1]))) {
+			return $no(($keys[0] !== '' || $keys[1] !== '') ? 'Dieser Gutschein gehört zu einer anderen Telefonnummer oder E-Mail-Adresse. Bitte gib die an, mit der du bestellt hast.' : 'Dieser Gutschein ist persönlich. Bitte gib zuerst deine Telefonnummer oder E-Mail-Adresse an.');
+		}
 	}
 	$now = time();
 	if ($c['valid_from'] && strtotime($c['valid_from']) > $now) { return $no('Dieser Gutschein ist erst ab '.date('d.m.Y', strtotime($c['valid_from'])).' gültig.'); }
@@ -1740,8 +1740,6 @@ function shop_coupon_release($orderId) {
 	foreach (fb_rows("SELECT id, coupon_id FROM ".fb_t('tp_shop_coupon_uses')." WHERE order_id = ?", 'i', array((int)$orderId)) as $u) {
 		fb_exec("DELETE FROM ".fb_t('tp_shop_coupon_uses')." WHERE id = ?", 'i', array((int)$u['id']));
 		shop_coupon_unreserve((int)$u['coupon_id']);
-		// the rest voucher made from a stamp voucher goes again, the original one is valid again (not twice the money)
-		fb_exec("DELETE FROM ".fb_t('tp_shop_coupons')." WHERE parent_id = ? AND source = 'stamp' AND used = 0", 'i', array((int)$u['coupon_id']));
 	}
 }
 
@@ -2093,7 +2091,8 @@ function shop_basket_mark($token, $status, $orderId) {
  * (5 stamps) becomes a personal voucher worth 10 % of the goods of those orders. A stamp counts 12 months, a voucher 90 days.
  * The guest is recognised by phone and e-mail of the order (the same keys the coupons use). The voucher is a coupon of the own
  * coupon system (tp_shop_coupons.source = 'stamp', fixed amount, one use, bound to the guest keys) and is taken off the next
- * order automatically; if it was only partly needed the rest becomes a new voucher with the same end date. Numbers: shop
+ * order automatically. It is always used up completely: it applies from a goods value equal to its amount (min_order_cents), so
+ * there is no rest voucher. Numbers: shop
  * settings stamp_percent / stamp_goal / stamp_months / voucher_days.
  */
 function shop_stamp_cfg() {
@@ -2123,15 +2122,15 @@ function shop_stamp_award($orderId) {
 	$st = fb_exec("INSERT IGNORE INTO ".fb_t('tp_shop_stamps')." (order_id, guest_key, guest_key2, base_cents, earned_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)", 'ississ',
 		array((int)$o['id'], $keys[0], $keys[1], $base, date('Y-m-d H:i:s'), date('Y-m-d H:i:s', strtotime('+'.$cfg['months'].' months'))));
 	if (!$st || mysqli_stmt_affected_rows($st) !== 1) { return; }
-	$issued = shop_stamp_check($keys, $o['phone'], $o['email']);
-	if (!$issued) { shop_stamp_notify_stamp($o['email'], count(shop_stamp_open($keys)), $cfg['goal']); }
+	$issued = shop_stamp_check($keys, $o['phone'], $o['email'], $o['customer_name']);
+	if (!$issued) { shop_stamp_notify_stamp($o['email'], $o['customer_name'], $keys); }
 }
 
 /*
  * A full card (goal stamps that did not expire) becomes a voucher; repeated while enough stamps are left. Returns how many vouchers
  * were made. The stamps are used up even for a worthless card, so it cannot come up again and again.
  */
-function shop_stamp_check($keys, $phone = '', $email = '') {
+function shop_stamp_check($keys, $phone = '', $email = '', $name = '') {
 	$cfg = shop_stamp_cfg(); $made = 0;
 	$db = fb_db(); $lock = 'shop_stamp_'.substr(sha1($keys[0].'|'.$keys[1]), 0, 24);
 	mysqli_query($db, "SELECT GET_LOCK('".$lock."', 5)");
@@ -2146,7 +2145,7 @@ function shop_stamp_check($keys, $phone = '', $email = '') {
 			if ($value > 0) {
 				$until = date('Y-m-d H:i:s', time() + $cfg['days'] * 86400);
 				$c = shop_stamp_issue($keys, $value, $until, 0, 'Stempelkarte');
-				if ($c) { $cid = (int)$c['id']; $made++; shop_stamp_notify_voucher($phone, $email, $value, strtotime($until)); }
+				if ($c) { $cid = (int)$c['id']; $made++; shop_stamp_notify_voucher($phone, $email, $value, strtotime($until), $name, $c['code']); }
 			}
 			fb_exec("UPDATE ".fb_t('tp_shop_stamps')." SET coupon_id = ? WHERE id IN (".implode(',', $ids).")", 'i', array($cid));
 		}
@@ -2166,9 +2165,10 @@ function shop_stamp_code() {
 // a personal voucher in the own coupon system; returns the coupon row or null
 function shop_stamp_issue($keys, $value, $validUntil, $parentId, $note) {
 	$code = shop_stamp_code();
+	// always used up completely: it applies from a goods value that equals its amount (no rest voucher)
 	$st = fb_exec("INSERT INTO ".fb_t('tp_shop_coupons')." (code, note, kind, value, max_discount_cents, min_order_cents, applies, valid_from, valid_until, max_uses, per_guest, used, active, created_at, source, guest_key, guest_key2, parent_id)
-		VALUES (?, ?, 'fixed', ?, 0, 0, 'all', NULL, ?, 1, 0, 0, 1, ?, 'stamp', ?, ?, ?)", 'ssissssi',
-		array($code, $note, (int)$value, $validUntil, date('Y-m-d H:i:s'), $keys[0], $keys[1], $parentId > 0 ? (int)$parentId : null));
+		VALUES (?, ?, 'fixed', ?, 0, ?, 'all', NULL, ?, 1, 0, 0, 1, ?, 'stamp', ?, ?, ?)", 'ssiissssi',
+		array($code, $note, (int)$value, (int)$value, $validUntil, date('Y-m-d H:i:s'), $keys[0], $keys[1], $parentId > 0 ? (int)$parentId : null));
 	return $st ? shop_coupon_by_code($code) : null;
 }
 // the voucher the guest can use now (the one that ends first), or null; vouchers stay valid when the program is switched off
@@ -2177,11 +2177,6 @@ function shop_stamp_voucher($keys) {
 	shop_ensure_schema();
 	return fb_row("SELECT * FROM ".fb_t('tp_shop_coupons')." WHERE source = 'stamp' AND active = 1 AND used < max_uses AND (valid_until IS NULL OR valid_until > ?) AND ".shop_stamp_match()." ORDER BY valid_until, id LIMIT 1",
 		'sss', array(date('Y-m-d H:i:s'), $keys[0], $keys[1]));
-}
-function shop_stamp_leftover($coupon, $used) {
-	$rest = (int)$coupon['value'] - (int)$used;
-	if ($rest <= 0) { return; }
-	shop_stamp_issue(array($coupon['guest_key'], $coupon['guest_key2']), $rest, $coupon['valid_until'], (int)$coupon['id'], 'Stempelkarte (Rest)');
 }
 
 // what the pages show: the card of this guest (keys from phone/e-mail), the voucher and what it would take off this cart
@@ -2196,48 +2191,90 @@ function shop_stamp_state($keys, $type = 'delivery', $sub = 0) {
 	$v = shop_stamp_voucher($keys);
 	if ($v) {
 		$chk = shop_coupon_check($v['code'], $type, (int)$sub, $keys);
-		$out['voucher'] = array('value' => (int)$v['value'], 'until' => date('d.m.Y', strtotime($v['valid_until'])), 'discount' => $chk['ok'] ? (int)$chk['discount'] : 0);
+		$out['voucher'] = array('value' => (int)$v['value'], 'until' => date('d.m.Y', strtotime($v['valid_until'])), 'discount' => $chk['ok'] ? (int)$chk['discount'] : 0,
+			'min' => (int)$v['min_order_cents'], 'missing' => max(0, (int)$v['min_order_cents'] - (int)$sub), 'code' => $v['code']);
 	}
 	return $out;
 }
 
 // ---- notices to the guest: a mail for every stamp, a mail or an SMS for a full card
-function shop_stamp_mail($to, $subject, $headline, $lead, $btnLabel, $btnUrl) {
+function shop_stamp_first_name($name) { return trim((string)strtok(trim((string)$name), ' ')); }
+function shop_stamp_shop_url() {
+	// the mails are made in the backend (staff sets the order to "done"), where shop_base_url() of the order pages does not exist
+	try { $u = rtrim((string)shop_site_url(), '/'); } catch (Throwable $e) { $u = ''; }
+	return $u !== '' ? $u.'/order/' : '';
+}
+// the card as a picture for the mail (order/mail/stempel-N-von-5.png, made for the default of five stamps)
+function shop_stamp_card_image($n, $goal) {
+	$base = shop_stamp_shop_url();
+	return ($goal === 5 && $n >= 1 && $n <= 5 && $base !== '') ? $base.'mail/stempel-'.(int)$n.'-von-5.png' : '';
+}
+/*
+ * One mail of the stamp card in the look of the order confirmation (white card, serif headline, gold box, brown button, provider
+ * lines). $m: subject, headline, lead, image, alt, box (label, value, note) or null, after, btn, url, signoff.
+ */
+function shop_stamp_mail($to, $m) {
 	global $settings;
 	require_once __DIR__.'/shop_mail.class.php';
 	$from = trim((string)shop_setting('notify_email'));
+	$to = trim((string)$to);
 	if ($to === '' || $from === '' || !filter_var($from, FILTER_VALIDATE_EMAIL) || !filter_var($to, FILTER_VALIDATE_EMAIL)) { return; }
 	$brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 	$h = function ($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); };
 	$font = 'font-family:Arial,Helvetica,sans-serif;';
-	$html = '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'.$h($subject).'</title></head>'
+	$serif = 'font-family:Georgia,\'Times New Roman\',serif;';
+	$legal = bm_legal_lines(array());
+	$links = array();
+	if (!empty($settings['imprintUrl'])) { $links[] = '<a href="'.$h($settings['imprintUrl']).'" style="color:#8a6d3b;">Impressum</a>'; }
+	if (!empty($settings['privacyUrl'])) { $links[] = '<a href="'.$h($settings['privacyUrl']).'" style="color:#8a6d3b;">Datenschutz</a>'; }
+	$footer = $legal ? '<tr><td style="'.$font.'padding:16px 32px 24px;border-top:1px solid #e6e0d2;font-size:12px;line-height:1.6;color:#6e685c;"><strong>Angaben zum Anbieter</strong><br>'.implode('<br>', array_map($h, $legal)).($links ? '<br>'.implode(' &middot; ', $links) : '').'</td></tr>' : '';
+	$html = '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'.$h($m['subject']).'</title></head>'
 		.'<body style="margin:0;padding:0;background-color:#f4f1ea;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f1ea;"><tr><td align="center" style="padding:24px 12px;">'
 		.'<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background-color:#ffffff;border:1px solid #e6e0d2;">'
-		.'<tr><td style="padding:30px 32px 6px;"><div style="font-family:Georgia,\'Times New Roman\',serif;font-size:28px;color:#1c1a18;">'.$h($headline).'</div>'
-		.'<div style="'.$font.'font-size:15px;color:#555;line-height:1.6;padding-top:10px;">'.$h($lead).'</div></td></tr>'
-		.($btnUrl !== '' ? '<tr><td style="padding:18px 32px 8px;"><a href="'.$h($btnUrl).'" style="'.$font.'display:inline-block;padding:13px 24px;background:#8a6d3b;border-radius:6px;font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;">'.$h($btnLabel).'</a></td></tr>' : '')
-		.'<tr><td style="padding:14px 32px 30px;"><div style="'.$font.'font-size:13px;color:#777;line-height:1.6;">'.$h($brand).'</div></td></tr></table></td></tr></table></body></html>';
-	$plain = $headline."\r\n\r\n".$lead."\r\n".($btnUrl !== '' ? "\r\n".$btnLabel.': '.$btnUrl."\r\n" : '')."\r\n".$brand."\r\n";
-	bm_send_guest_mail($to, array('subject' => $subject, 'plain' => $plain, 'html' => $html, 'ics' => '', 'ics_filename' => ''), $brand, $from);
+		.'<tr><td style="padding:30px 32px 6px;"><div style="'.$serif.'font-size:28px;color:#1c1a18;">'.$h($m['headline']).'</div>'
+		.'<div style="'.$font.'font-size:15px;color:#555;line-height:1.6;padding-top:8px;">'.$h($m['lead']).'</div></td></tr>'
+		.($m['image'] !== '' ? '<tr><td style="padding:18px 32px 4px;"><img src="'.$h($m['image']).'" width="496" alt="'.$h($m['alt']).'" style="display:block;width:100%;max-width:496px;height:auto;border:0;border-radius:10px;"></td></tr>' : '')
+		.(!empty($m['box']) ? '<tr><td style="padding:14px 32px 4px;"><div style="background:#f8f2e4;border:1px solid #e6d9b8;border-radius:10px;padding:14px 18px;"><div style="'.$font.'font-size:13px;color:#7a6a45;">'.$h($m['box']['label']).'</div>'
+			.'<div style="'.$serif.'font-size:40px;line-height:1.1;color:#6b5330;">'.$h($m['box']['value']).'</div><div style="'.$font.'font-size:13px;color:#7a6a45;padding-top:2px;">'.$h($m['box']['note']).'</div></div></td></tr>' : '')
+		.'<tr><td style="padding:14px 32px 4px;"><div style="'.$font.'font-size:15px;color:#555;line-height:1.6;">'.$h($m['after']).'</div></td></tr>'
+		.($m['url'] !== '' ? '<tr><td style="padding:14px 32px 6px;"><a href="'.$h($m['url']).'" style="'.$font.'display:inline-block;padding:13px 24px;background:#8a6d3b;border-radius:6px;font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;">'.$h($m['btn']).'</a></td></tr>' : '')
+		.'<tr><td style="padding:14px 32px 30px;"><div style="'.$font.'font-size:14px;color:#555;line-height:1.6;">'.$h($m['signoff']).'</div></td></tr>'
+		.$footer.'</table></td></tr></table></body></html>';
+	$plain = $m['headline']."\r\n\r\n".$m['lead']."\r\n\r\n".(!empty($m['box']) ? $m['box']['label'].': '.$m['box']['value'].' ('.$m['box']['note'].")\r\n\r\n" : '').$m['after']."\r\n".($m['url'] !== '' ? "\r\n".$m['btn'].': '.$m['url']."\r\n" : '')."\r\n".$m['signoff']."\r\n";
+	bm_send_guest_mail($to, array('subject' => $m['subject'], 'plain' => $plain, 'html' => $html, 'ics' => '', 'ics_filename' => ''), $brand, $from);
 }
-function shop_stamp_shop_url() {
-	if (function_exists('shop_base_url')) { return shop_base_url().'/order/'; }
-	global $settings;
-	return !empty($settings['siteUrl']) ? rtrim($settings['siteUrl'], '/').'/order/' : '';
-}
-function shop_stamp_notify_stamp($email, $count, $goal) {
+function shop_stamp_signoff() { global $settings; return 'Guten Appetit wünscht dein Team von '.(!empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus'); }
+
+// after every stamp (not for the one that fills the card, that gets the voucher mail)
+function shop_stamp_notify_stamp($email, $name, $keys) {
 	try {
 		if (trim((string)$email) === '') { return; }
-		$left = max(0, $goal - $count);
-		shop_stamp_mail(trim($email), 'Dein Stempel '.$count.' von '.$goal, 'Stempel '.$count.' von '.$goal,
-			'Danke für deine Bestellung! Du hast einen Stempel bekommen. '.($left > 0 ? 'Noch '.$left.($left === 1 ? ' Stempel' : ' Stempel').' bis zu deinem Gutschein.' : ''), 'Zur Speisekarte', shop_stamp_shop_url());
+		$st = shop_stamp_state($keys);
+		$n = (int)$st['count']; $goal = (int)$st['goal']; $left = max(0, $goal - $n); $first = shop_stamp_first_name($name);
+		shop_stamp_mail(trim($email), array(
+			'subject' => 'Dein Stempel '.$n.' von '.$goal.($first !== '' ? ', '.$first : '').'!',
+			'headline' => $first !== '' ? 'Danke, '.$first.'!' : 'Danke!',
+			'lead' => 'Schön, dass du bei uns bestellt hast. Dafür gibt es einen Stempel auf deine Karte.',
+			'image' => shop_stamp_card_image($n, $goal), 'alt' => 'Deine Stempelkarte: '.$n.' von '.$goal.' Stempeln', 'box' => null,
+			'after' => ($left === 1 ? 'Noch 1 Stempel' : 'Noch '.$left.' Stempel').' bis zu deinem Gutschein. Mit der vollen Karte schenken wir dir '.$st['percent'].' % deiner Bestellungen zurück, und wir ziehen den Gutschein automatisch ab.'.($st['until'] !== '' ? ' Deine Stempel gelten bis zum '.$st['until'].'.' : ''),
+			'btn' => 'Wieder bestellen', 'url' => shop_stamp_shop_url(), 'signoff' => shop_stamp_signoff()));
 	} catch (Throwable $e) { error_log('mySeat stamp notice: '.$e->getMessage()); }
 }
-function shop_stamp_notify_voucher($phone, $email, $value, $until) {
+// when the card is full: the voucher, by mail, or by SMS for a guest without e-mail
+function shop_stamp_notify_voucher($phone, $email, $value, $until, $name = '', $code = '') {
 	try {
-		$lead = 'Deine Stempelkarte ist voll! Du hast einen Gutschein über '.shop_money($value).', gültig bis '.date('d.m.Y', $until).'. Er wird bei deiner nächsten Bestellung automatisch abgezogen, auch wenn du ihn auf mehrere Bestellungen verteilst.';
-		if (trim((string)$email) !== '') { shop_stamp_mail(trim($email), 'Dein Stempelkarten-Gutschein über '.shop_money($value), 'Stempelkarte voll, Gutschein da', $lead, 'Jetzt bestellen', shop_stamp_shop_url()); return; }
+		$first = shop_stamp_first_name($name); $cfg = shop_stamp_cfg();
+		if (trim((string)$email) !== '') {
+			shop_stamp_mail(trim($email), array(
+				'subject' => 'Geschafft'.($first !== '' ? ', '.$first : '').': dein Gutschein über '.shop_money($value),
+				'headline' => 'Geschafft'.($first !== '' ? ', '.$first : '').'!',
+				'lead' => 'Deine Stempelkarte ist voll. Zur Belohnung schenken wir dir einen Gutschein.',
+				'image' => shop_stamp_card_image($cfg['goal'], $cfg['goal']), 'alt' => 'Deine volle Stempelkarte', 'box' => array('label' => 'Dein Gutschein', 'value' => shop_money($value), 'note' => 'gültig bis '.date('d.m.Y', $until).' · ab '.shop_money($value).' Warenwert'),
+				'after' => 'Wir ziehen ihn bei deiner nächsten Bestellung automatisch ab, du musst nichts eingeben. Er gilt für eine Bestellung ab '.shop_money($value).' Warenwert und wird dann komplett abgezogen.'.($code !== '' ? ' Falls du ihn lieber selbst eingibst: '.$code : ''),
+				'btn' => 'Jetzt bestellen', 'url' => shop_stamp_shop_url(), 'signoff' => shop_stamp_signoff()));
+			return;
+		}
 		$m = sms_normalize_phone(html_entity_decode((string)$phone, ENT_QUOTES, 'UTF-8'));
-		if ($m !== null && sms_enabled()) { global $settings; $b = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus'; sms_enqueue(null, $m, 'voucher', sms_gsm_clean($b.': Stempelkarte voll! Gutschein '.shop_money($value).' bis '.date('d.m.Y', $until).', wird bei der naechsten Bestellung abgezogen.')); }
+		if ($m !== null && sms_enabled()) { global $settings; $b = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus'; sms_enqueue(null, $m, 'voucher', sms_gsm_clean($b.': Geschafft'.($first !== '' ? ', '.$first : '').'! Stempelkarte voll, Gutschein '.shop_money($value).' bis '.date('d.m.Y', $until).', ab '.shop_money($value).' Warenwert. Wird automatisch abgezogen.')); }
 	} catch (Throwable $e) { error_log('mySeat voucher notice: '.$e->getMessage()); }
 }

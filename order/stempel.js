@@ -30,7 +30,8 @@
 		for (var i = 0; i < goal; i++) { h += slot(i, i < count, o.fresh === i, !!o.next && i === count); }
 		h += '</div>';
 		if (st.voucher) {
-			h += '<div class="stp-ticket"><span>Gutschein, wird automatisch abgezogen<small>gültig bis ' + esc(st.voucher.until) + (st.voucher.discount > 0 ? ' · bei dieser Bestellung −' + fmt(st.voucher.discount) : '') + '</small></span><b>' + fmt(st.voucher.value) + '</b></div>';
+			h += '<div class="stp-ticket"><span>Gutschein, wird automatisch abgezogen<small>gültig bis ' + esc(st.voucher.until) + ' · ab ' + fmt(st.voucher.min || st.voucher.value) + ' Warenwert' +
+				(st.voucher.discount > 0 ? ' · bei dieser Bestellung −' + fmt(st.voucher.discount) : (o.cart && st.voucher.missing > 0 ? ' · dir fehlen noch ' + fmt(st.voucher.missing) : '')) + '</small></span><b>' + fmt(st.voucher.value) + '</b></div>';
 		}
 		if (o.known && st.until && count > 0 && !o.full) { h += '<p class="stp-hint">Deine Stempel gelten bis ' + esc(st.until) + '.</p>'; }
 		el.innerHTML = h + '</div>';

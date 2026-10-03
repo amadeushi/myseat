@@ -97,7 +97,8 @@ if ($op === 'coupon') {
 	$lines = (isset($body['lines']) && is_array($body['lines'])) ? array_slice($body['lines'], 0, 60) : array(); $sub = 0;
 	foreach ($lines as $l) { $r = shop_price_line(is_array($l) ? $l : array()); if (!$r['ok']) { api_out(array('ok' => false, 'error' => $r['error'])); } $sub += $r['line']['line_cents']; }
 	$type = (isset($body['type']) && $body['type'] === 'pickup') ? 'pickup' : 'delivery';
-	$r = shop_coupon_check(isset($body['code']) ? (string)$body['code'] : '', $type, $sub);
+	// personal coupons (stamp card) are checked with the phone / e-mail the guest typed in the checkout
+	$r = shop_coupon_check(isset($body['code']) ? (string)$body['code'] : '', $type, $sub, shop_coupon_guest_keys(mb_substr((string)(isset($body['phone']) ? $body['phone'] : ''), 0, 40), mb_substr((string)(isset($body['email']) ? $body['email'] : ''), 0, 160)));
 	api_out($r['ok'] ? array('ok' => true, 'code' => $r['coupon']['code'], 'discount' => $r['discount'], 'label' => shop_coupon_describe($r['coupon'])) : array('ok' => false, 'error' => $r['error']));
 }
 

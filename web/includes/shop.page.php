@@ -62,7 +62,7 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 		<label class="offer-check"><input type="checkbox" name="sms_orders" value="1"<?php echo $sh_check('sms_orders'); ?>/> SMS an den Gast, wenn die Lieferung losfährt oder die Abholung bereit ist (nur bei Handynummer und eingerichtetem SMS-Versand)</label>
 
 		<h4 class="sms-sub">Stempelkarte</h4>
-		<small class="offer-help">Jede abgeschlossene Bestellung eines Gastes ist ein Stempel (erkannt an Telefonnummer und E-Mail der Bestellung). Ist die Karte voll, bekommt der Gast einen persönlichen Gutschein in Höhe des eingestellten Anteils der Warenwerte dieser Bestellungen. Er wird bei der nächsten Bestellung automatisch abgezogen und kann sich auf mehrere Bestellungen verteilen. Die Gutscheine sehen Sie unter Gutscheine (Code STEMPEL-...). Ein Gutschein bleibt gültig, auch wenn Sie die Stempelkarte ausschalten.</small>
+		<small class="offer-help">Jede abgeschlossene Bestellung eines Gastes ist ein Stempel (erkannt an Telefonnummer und E-Mail der Bestellung). Ist die Karte voll, bekommt der Gast einen persönlichen Gutschein in Höhe des eingestellten Anteils der Warenwerte dieser Bestellungen. Er wird bei der nächsten passenden Bestellung automatisch und komplett abgezogen. Er gilt ab einem Warenwert in Höhe des Gutscheins, einen Rest gibt es nicht. Die Gutscheine sehen Sie unter Gutscheine (Code STEMPEL-...). Ein Gutschein bleibt gültig, auch wenn Sie die Stempelkarte ausschalten.</small>
 		<label class="offer-check"><input type="checkbox" name="stamp_on" value="1"<?php echo $sh_check('stamp_on'); ?>/> Stempelkarte anbieten</label>
 		<div class="shop-grid">
 			<label class="offer-label" for="sh-sp">Gutschein in Prozent der Warenwerte</label>
