@@ -286,6 +286,22 @@
 			return '<svg viewBox="0 0 48 48" focusable="false"><ellipse cx="26" cy="30" rx="20" ry="17" fill="#000" fill-opacity=".3"/><circle cx="24" cy="24" r="20" fill="#f3ead8" stroke="#a89572" stroke-width="2.5"/><circle cx="24" cy="24" r="15.5" fill="#d9ccb0" stroke="#a89572" stroke-width="1.2"/><circle cx="24" cy="24" r="12.5" fill="' + st.c + '"/>' + fl + '<path d="M15.5 21a10.5 10.5 0 0 1 8-6" stroke="#fff" stroke-opacity=".55" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>';
 		}
 		var dipNodes = {};
+		// a sauce cup holds about 125 ml, roughly 6 cm across, i.e. a fifth of a 30 cm pizza (a bit less of the larger Flammkuchen): the bowls
+		// are sized from the pizza as drawn, so they grow and shrink with it. On a phone the dips row takes height from the pizza itself, hence two passes.
+		function sizeDips() {
+			var st = $('.pz-stage'); if (!st) { return; }
+			var sr = st.getBoundingClientRect(), sumH = $('.pz-sum').getBoundingClientRect().height;
+			var wide = matchMedia('(min-width: 900px), (orientation: landscape) and (max-height: 620px)').matches;
+			// the pizza as it would be drawn without dips: its dough and its board in px
+			var avH = sr.height - sumH - 6, dough = oval ? Math.min(sr.width * .96, 760, avH * 344 / 232) * (2 * DX / 344) : Math.min(sr.width * .92, avH) * (2 * R / 248);
+			var b = Math.max(46, Math.min(96, Math.round(dough * (oval ? .18 : .22))));
+			var boardW = oval ? dough * (332 / 272) : dough * (236 / 200);
+			// beside the board when the table has room (a round pizza leaves it even on a phone), else a column with a strip reserved for it on a wide stage, else a row below
+			var fits = (sr.width - boardW) / 2 >= b + 14;
+			st.style.setProperty('--dip', b + 'px');
+			st.classList.toggle('dips-side', fits || wide);
+			st.classList.toggle('dips-pad', wide && !fits);
+		}
 		function syncDips(firstPaint) {
 			var box = $('.pz-dips'), want = {};
 			Object.keys(sel.opts).map(Number).forEach(function (id) {
@@ -304,6 +320,7 @@
 			});
 			Object.keys(dipNodes).forEach(function (id) { if (!want[id]) { dipNodes[id].forEach(function (n) { box.removeChild(n); }); delete dipNodes[id]; } });
 			$('.pz-stage').classList.toggle('has-dips', box.children.length > 0);
+			sizeDips();
 		}
 
 		function syncPizza(addedId) {
@@ -461,6 +478,8 @@
 		renderPanel();
 		syncPizza(0);
 		if (typeof dlg.showModal === 'function') { dlg.showModal(); } else { dlg.setAttribute('open', ''); }
+		sizeDips();
+		if (window.ResizeObserver) { if (dlg._pzRO) { dlg._pzRO.disconnect(); } dlg._pzRO = new ResizeObserver(sizeDips); dlg._pzRO.observe($('.pz-stage')); }
 		return true;
 	}
 

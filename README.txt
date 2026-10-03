@@ -52,6 +52,14 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-04 == mySeat v6.5.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: Soßentöpfchen im Wunschpizza-Konfigurator waren zu klein. Die Schälchen (ca. 125 ml, rund 6 cm) werden jetzt im
+   Verhältnis zur gezeichneten Pizza dargestellt (rund ca. 22 %, Flammkuchen ca. 18 % des Teigdurchmessers, begrenzt auf
+   46 bis 96 px) und wachsen mit der Darstellung. Bei der runden Pizza stehen sie auch auf dem Handy als Spalte im freien
+   Tischstreifen neben dem Brett, ohne die Pizza zu verkleinern; beim breiten Flammkuchen auf dem Handy bleiben sie als
+   Reihe darunter. Die Größe passt sich bei Drehen und Größenänderung des Fensters an.
+
 2026-10-04 == mySeat v6.5.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Flammkuchen im Wunschpizza-Konfigurator. Das Gericht bekommt im Speisekarten-Editor statt des Hakens die
