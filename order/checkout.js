@@ -3,7 +3,7 @@
 (function () {
 	'use strict';
 	var KEY = 'amadeusCartV2', GUEST = 'amadeusGuestV1', TOKEN = document.body.dataset.token;
-	var S = { mode: 'delivery', cart: [], info: null, zone: null, zoneKey: '', zoneAmbiguous: false, zoneWords: '', w3wKey: '', slots: null, tipPct: 0, tipCustom: '', when: 'asap', pay: '', busy: false, coupon: null, group: null };
+	var S = { mode: 'delivery', cart: [], info: null, zone: null, zoneKey: '', zoneAmbiguous: false, zoneWords: '', w3wKey: '', slots: null, tipPct: 0, tipCustom: '', when: 'asap', pay: '', busy: false, coupon: null, group: null, stamp: null, voucher: null, stampSig: '' };
 	var GKEY = 'amadeusBasketV1';
 	var form = document.getElementById('co-form');
 
@@ -40,7 +40,7 @@
 	function subtotal() { return S.cart.reduce(function (s, l) { return s + l.unit * l.qty; }, 0); }
 	function fee() { return S.mode === 'delivery' && S.zone ? S.zone.fee : 0; }
 	function min() { if (S.mode === 'delivery') { return S.zone ? S.zone.min : (S.info ? S.info.min_delivery : 0); } return S.info ? S.info.min_pickup : 0; }
-	function discount() { return S.coupon ? S.coupon.discount : 0; }
+	function discount() { return S.coupon ? S.coupon.discount : (S.voucher ? S.voucher.discount : 0); }
 	// tip as a percentage of the subtotal (not the delivery fee); "Wunschbetrag" overrides it with a free amount
 	function tipCents() {
 		if (S.tipPct === 'custom') { return Math.max(0, Math.round((parseFloat(String(S.tipCustom).replace(',', '.')) || 0) * 100)); }
@@ -57,12 +57,31 @@
 		}).join('');
 		var h = '<div class="cart-row"><span>Zwischensumme</span><span>' + fmt(subtotal()) + '</span></div>';
 		if (S.coupon) { h += '<div class="cart-row coupon"><span>Gutschein ' + esc(S.coupon.code) + ' <button type="button" class="co-coupon-off" id="co-coupon-off">entfernen</button></span><span>&minus;' + fmt(S.coupon.discount) + '</span></div>'; }
+		else if (S.voucher && S.voucher.discount > 0) { h += '<div class="cart-row coupon"><span>Stempelkarten-Gutschein</span><span>&minus;' + fmt(S.voucher.discount) + '</span></div>'; }
 		if (S.mode === 'delivery') { h += '<div class="cart-row muted"><span>Liefergebühr</span><span>' + (S.zone ? fmt(S.zone.fee) : 'nach Adresse') + '</span></div>'; }
 		if (tipCents() > 0) { h += '<div class="cart-row muted"><span>Trinkgeld</span><span>' + fmt(tipCents()) + '</span></div>'; }
 		h += '<div class="cart-row total"><span>Gesamt</span><span>' + fmt(total()) + '</span></div>';
 		var m = min(); if (m > 0 && subtotal() < m) { h += '<p class="cart-min">Noch ' + fmt(m - subtotal()) + ' bis zum Mindestbestellwert von ' + fmt(m) + '.</p>'; }
 		$('#co-totals').innerHTML = h;
 		renderPay();
+		refreshStamp();
+	}
+
+	// ---- stamp card: the guest is recognised by phone / e-mail of this order; a voucher of the card is taken off automatically
+	var stampTimer;
+	function stampKnown() { var f = form.elements; return f.phone.value.replace(/\D/g, '').length >= 8 || /.+@.+\..+/.test(f.email.value.trim()); }
+	function drawStamp() { if (window.AmadeusStamp && $('#co-stamp')) { AmadeusStamp.render($('#co-stamp'), S.stamp, { known: stampKnown(), next: true }); } }
+	function refreshStamp() {
+		clearTimeout(stampTimer);
+		if (!$('#co-stamp') || !S.cart.length) { return; }
+		var f = form.elements, sig = [f.phone.value.trim(), f.email.value.trim(), subtotal(), S.mode].join('|');
+		if (sig === S.stampSig) { return; }
+		S.stampSig = sig;
+		post('stamp_state', { phone: f.phone.value, email: f.email.value, type: S.mode, lines: S.cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; }) }).then(function (r) {
+			if (!r.ok) { return; }
+			S.stamp = r; S.voucher = (r.voucher && r.voucher.discount > 0) ? r.voucher : null;
+			drawStamp(); renderSummary();
+		}).catch(function () {});
 	}
 	// why the button is still disabled, in words
 	function reason() {
@@ -308,6 +327,7 @@
 	});
 
 	load(); prefill();
+	form.addEventListener('input', function (ev) { if (ev.target && (ev.target.name === 'phone' || ev.target.name === 'email')) { clearTimeout(stampTimer); stampTimer = setTimeout(refreshStamp, 600); } });
 	// coming from a shared basket (checkout.php?g=...): the lines are everybody's, the organizer of that basket orders and pays
 	var gTok = ''; try { gTok = new URLSearchParams(location.search).get('g') || ''; } catch (e) {}
 	var gSaved = null; try { gSaved = JSON.parse(localStorage.getItem(GKEY) || 'null'); } catch (e) {}

@@ -61,6 +61,20 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 		<input type="email" id="sh-mail" name="notify_email" maxlength="160" value="<?php echo $sh_e($sh['notify_email']); ?>"/>
 		<label class="offer-check"><input type="checkbox" name="sms_orders" value="1"<?php echo $sh_check('sms_orders'); ?>/> SMS an den Gast, wenn die Lieferung losfährt oder die Abholung bereit ist (nur bei Handynummer und eingerichtetem SMS-Versand)</label>
 
+		<h4 class="sms-sub">Stempelkarte</h4>
+		<small class="offer-help">Jede abgeschlossene Bestellung eines Gastes ist ein Stempel (erkannt an Telefonnummer und E-Mail der Bestellung). Ist die Karte voll, bekommt der Gast einen persönlichen Gutschein in Höhe des eingestellten Anteils der Warenwerte dieser Bestellungen. Er wird bei der nächsten Bestellung automatisch abgezogen und kann sich auf mehrere Bestellungen verteilen. Die Gutscheine sehen Sie unter Gutscheine (Code STEMPEL-...). Ein Gutschein bleibt gültig, auch wenn Sie die Stempelkarte ausschalten.</small>
+		<label class="offer-check"><input type="checkbox" name="stamp_on" value="1"<?php echo $sh_check('stamp_on'); ?>/> Stempelkarte anbieten</label>
+		<div class="shop-grid">
+			<label class="offer-label" for="sh-sp">Gutschein in Prozent der Warenwerte</label>
+			<input type="text" id="sh-sp" name="stamp_percent" inputmode="numeric" value="<?php echo $sh_e($sh['stamp_percent']); ?>"/>
+			<label class="offer-label" for="sh-sg">Stempel pro Karte</label>
+			<input type="text" id="sh-sg" name="stamp_goal" inputmode="numeric" value="<?php echo $sh_e($sh['stamp_goal']); ?>"/>
+			<label class="offer-label" for="sh-sm">Stempel gültig (Monate)</label>
+			<input type="text" id="sh-sm" name="stamp_months" inputmode="numeric" value="<?php echo $sh_e($sh['stamp_months']); ?>"/>
+			<label class="offer-label" for="sh-sd">Gutschein gültig (Tage)</label>
+			<input type="text" id="sh-sd" name="voucher_days" inputmode="numeric" value="<?php echo $sh_e($sh['voucher_days']); ?>"/>
+		</div>
+
 		<h4 class="sms-sub">Standort des Restaurants</h4>
 		<small class="offer-help">Für die Karte auf der Statusseite: Gäste sehen, wo wir sind und wohin geliefert wird. Ohne Adresse zeigt die Karte nur das Ziel.</small>
 		<div class="shop-grid">

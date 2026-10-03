@@ -35,6 +35,7 @@ $delivery = $order && $order['type'] === 'delivery';
 	<title>Deine Bestellung &ndash; <?php echo shop_h($brand); ?></title>
 	<link rel="stylesheet" href="../web/fonts/fonts.css"/>
 	<link rel="stylesheet" href="shop.css?v=<?php echo @filemtime(__DIR__.'/shop.css'); ?>"/>
+	<link rel="stylesheet" href="stempel.css?v=<?php echo @filemtime(__DIR__.'/stempel.css'); ?>"/>
 </head>
 <body class="shop-shell" data-token="<?php echo shop_h($_SESSION['shop_token']); ?>">
 	<header class="shop-top">
@@ -128,6 +129,27 @@ $delivery = $order && $order['type'] === 'delivery';
 		<link rel="stylesheet" href="vendor/leaflet/leaflet.css"/>
 		<script src="vendor/leaflet/leaflet.js"></script>
 		<script src="track.js?v=<?php echo @filemtime(__DIR__.'/track.js'); ?>"></script>
+		<?php endif; ?>
+
+		<?php
+			// stamp card: what this order brings (or brought) the guest; the stamp lands once, when the finished order is seen first
+			if ($st !== 'cancelled' && $st !== 'failed' && shop_stamp_cfg()['on']):
+				$sKeys = shop_coupon_guest_keys($order['phone'], $order['email']);
+				$sState = shop_stamp_state($sKeys, $delivery ? 'delivery' : 'pickup', 0);
+				$sRow = fb_row("SELECT coupon_id FROM ".fb_t('tp_shop_stamps')." WHERE order_id = ?", 'i', array((int)$order['id']));
+				$sFull = $sRow && (int)$sRow['coupon_id'] > 0;
+				$sFresh = $sFull ? $sState['goal'] - 1 : (($sRow && $sState['count'] > 0) ? $sState['count'] - 1 : -1);
+				$sCfg = array('state' => $sState, 'fresh' => $sFresh, 'full' => $sFull, 'done' => $st === 'done', 'known' => shop_stamp_has_keys($sKeys));
+		?>
+		<div id="st-stamp" data-cfg="<?php echo shop_h(json_encode($sCfg)); ?>"></div>
+		<script src="stempel.js?v=<?php echo @filemtime(__DIR__.'/stempel.js'); ?>"></script>
+		<script>
+		(function () {
+			var el = document.getElementById('st-stamp'), c = JSON.parse(el.dataset.cfg), key = 'amadeusStampSeen:' + <?php echo json_encode($token); ?>, fresh = -1;
+			try { if (c.done && c.fresh >= 0 && !localStorage.getItem(key)) { fresh = c.fresh; localStorage.setItem(key, '1'); } } catch (e) {}
+			AmadeusStamp.render(el, c.state, { known: c.known, next: !c.done, fresh: fresh, full: c.full && fresh >= 0 });
+		})();
+		</script>
 		<?php endif; ?>
 
 		<div class="st-box">

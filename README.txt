@@ -52,6 +52,23 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.8.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Stempelkarte im Bestellshop (nach dem Vorbild der Lieferando-Stempelkarte). Jede abgeschlossene Bestellung
+   ("erledigt" im Backend) ist ein Stempel; Test-, stornierte und fehlgeschlagene Bestellungen zählen nicht. Der Gast
+   wird wie bei den Gutscheinen an Telefonnummer und E-Mail der Bestellung erkannt. Ist die Karte voll (5 Stempel),
+   entsteht ein persönlicher Gutschein über 10 % der Warenwerte dieser Bestellungen: ein Gutschein des eigenen
+   Gutscheinsystems (Code STEMPEL-..., fester Betrag, einmal einlösbar, an die Gast-Schlüssel gebunden). Stempel gelten
+   12 Monate, der Gutschein 90 Tage. Er wird bei der nächsten Bestellung automatisch abgezogen, es sei denn, der Gast gibt
+   einen eigenen Code ein; wird nur ein Teil gebraucht, entsteht für den Rest ein neuer Gutschein mit gleichem Ablauf, eine
+   stornierte Bestellung stellt den ursprünglichen Gutschein wieder her. Für jeden Stempel geht eine Mail an den Gast, für
+   eine volle Stempelkarte eine Mail oder (ohne E-Mail) eine SMS. Neu: Tabelle tp_shop_stamps, Spalten source, guest_key,
+   guest_key2, parent_id an tp_shop_coupons (werden selbst angelegt); Schnittstelle order/api.php op=stamp_state;
+   Einstellungen stamp_on, stamp_percent, stamp_goal, stamp_months, voucher_days (Backend: Einstellungen, Lieferservice,
+   "Stempelkarte"). Optik: Zeus als goldener Stempel im Ring "AMADEUS DELIVERY" (order/stempel.css, stempel.js,
+   zeus-stamp.png); in der Kasse erscheint die Karte, sobald Telefon oder E-Mail eingegeben sind, auf der Statusseite
+   schlägt der neue Stempel einmal auf.
+
 2026-10-05 == mySeat v6.7.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Kurzlink für die gemeinsame Bestellung. Sobald eine Gruppe läuft, legt der Server einmal einen Kurzlink über das

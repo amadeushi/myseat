@@ -21,6 +21,7 @@ $imprint = (!empty($settings['imprintUrl']) && preg_match('#^https?://#i', $sett
 	<title>Zur Kasse &ndash; <?php echo shop_h($brand); ?></title>
 	<link rel="stylesheet" href="../web/fonts/fonts.css"/>
 	<link rel="stylesheet" href="shop.css?v=<?php echo @filemtime(__DIR__.'/shop.css'); ?>"/>
+	<link rel="stylesheet" href="stempel.css?v=<?php echo @filemtime(__DIR__.'/stempel.css'); ?>"/>
 </head>
 <body class="shop-shell checkout" data-token="<?php echo shop_h($_SESSION['shop_token']); ?>">
 	<header class="shop-top">
@@ -77,6 +78,8 @@ $imprint = (!empty($settings['imprintUrl']) && preg_match('#^https?://#i', $sett
 				<input type="text" name="website" class="co-trap" tabindex="-1" autocomplete="off" aria-hidden="true"/>
 			</fieldset>
 
+			<div id="co-stamp" class="co-sec-stamp"></div>
+
 			<fieldset class="co-sec">
 				<legend>Bezahlung</legend>
 				<div id="co-pay" class="co-pay"></div>
@@ -120,6 +123,7 @@ $imprint = (!empty($settings['imprintUrl']) && preg_match('#^https?://#i', $sett
 			<p class="co-why" id="co-why" role="status" aria-live="polite"></p>
 		</aside>
 	</div>
+	<script src="stempel.js?v=<?php echo @filemtime(__DIR__.'/stempel.js'); ?>"></script>
 	<script src="checkout.js?v=<?php echo @filemtime(__DIR__.'/checkout.js'); ?>"></script>
 </body>
 </html>

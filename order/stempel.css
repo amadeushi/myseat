@@ -1,0 +1,31 @@
+/* Stempelkarte (order pages): round stamps with the Amadeus Delivery ring, Zeus as the stamp, the voucher as a ticket.
+   Used by checkout.php and status.php through stempel.js. Colors come from .shop-shell (gold on anthracite). */
+.stp { margin: 0 0 18px; padding: 18px 16px 16px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); }
+#st-stamp { margin-top: 28px; }
+.stp-head h3 { font-family: var(--font-display); font-weight: 400; font-size: 26px; line-height: 1.15; }
+.shop-shell .stp-head p { margin: 4px 0 14px; color: var(--text-muted); font-size: 14px; line-height: 1.5; }
+.stp-row { display: grid; grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr)); gap: 10px; }
+.stp-slot { position: relative; aspect-ratio: 1; container-type: inline-size; --r: 0deg; }
+.stp-slot svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.stp-disc { fill: var(--surface); stroke: var(--gold); stroke-width: 3; }
+.stp-inner { fill: none; stroke: var(--gold); stroke-width: 1.4; opacity: 0.6; }
+.stp-text { fill: var(--gold); font: 600 20px/1 Raleway, Arial, sans-serif; }
+.stp-slot.is-empty .stp-disc { fill: none; stroke-width: 2; stroke-dasharray: 8 9; opacity: 0.4; }
+.stp-slot.is-empty .stp-inner, .stp-slot.is-empty .stp-text, .stp-slot.is-empty .stp-dog { display: none; }
+.stp-slot.is-next .stp-disc { opacity: 0.85; }
+.stp-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: clamp(18px, 7cqw, 30px); color: var(--text-muted); font-variant-numeric: lining-nums; }
+.stp-slot:not(.is-empty) .stp-num { display: none; }
+.stp-dog { position: absolute; left: 13.8%; top: 13.8%; width: 72.4%; height: 72.4%; border-radius: 50%; overflow: hidden; transform: rotate(var(--r)); }
+.stp-dog i { position: absolute; left: 5.4%; top: 1.2%; width: 89.3%; aspect-ratio: 360 / 482; background: url(zeus-stamp.png) center / 100% 100% no-repeat;
+	-webkit-mask-image: linear-gradient(to bottom, #000 58%, transparent 82%); mask-image: linear-gradient(to bottom, #000 58%, transparent 82%); }
+@container (max-width: 70px) { .stp-text { display: none; } }
+/* the one moment: the stamp lands */
+.stp-slot.is-fresh .stp-dog { animation: stp-thump 640ms cubic-bezier(0.16, 1, 0.3, 1) both 250ms; }
+.stp-slot.is-fresh svg { animation: stp-ring 640ms cubic-bezier(0.16, 1, 0.3, 1) both 250ms; }
+@keyframes stp-thump { 0% { transform: scale(1.6) rotate(calc(var(--r) + 10deg)); opacity: 0; } 55% { opacity: 1; } 100% { transform: scale(1) rotate(var(--r)); opacity: 1; } }
+@keyframes stp-ring { 0% { transform: scale(1.25); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .stp-slot.is-fresh .stp-dog, .stp-slot.is-fresh svg { animation: none; } }
+.stp-ticket { margin-top: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; }
+.stp-ticket small { display: block; color: var(--text-muted); font-size: 12px; margin-top: 2px; }
+.stp-ticket b { font-family: var(--font-display); font-weight: 400; font-size: 28px; color: var(--gold-strong); white-space: nowrap; font-variant-numeric: lining-nums tabular-nums; }
+.shop-shell .stp-hint { margin-top: 12px; color: var(--text-muted); font-size: 12px; line-height: 1.5; }

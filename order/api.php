@@ -131,6 +131,18 @@ if (in_array($op, array('driver_list', 'driver_claim', 'driver_start', 'driver_p
 	api_out(array_merge(array('ok' => true), shop_driver_state($driverId)));
 }
 
+// stamp card of a guest who types phone / e-mail in the checkout: stamps, voucher and what it takes off this cart (limited per visitor)
+if ($op === 'stamp_state') {
+	$_SESSION['shop_stamp_hits'] = isset($_SESSION['shop_stamp_hits']) ? $_SESSION['shop_stamp_hits'] : array();
+	$_SESSION['shop_stamp_hits'] = array_values(array_filter($_SESSION['shop_stamp_hits'], function ($t) { return $t > time() - 3600; }));
+	if (count($_SESSION['shop_stamp_hits']) >= 60) { api_out(array('ok' => false, 'error' => 'Zu viele Abfragen.')); }
+	$_SESSION['shop_stamp_hits'][] = time();
+	$keys = shop_coupon_guest_keys(mb_substr((string)(isset($body['phone']) ? $body['phone'] : ''), 0, 40), mb_substr((string)(isset($body['email']) ? $body['email'] : ''), 0, 160));
+	$lines = (isset($body['lines']) && is_array($body['lines'])) ? array_slice($body['lines'], 0, 60) : array(); $sub = 0;
+	foreach ($lines as $l) { $r = shop_price_line(is_array($l) ? $l : array()); if ($r['ok']) { $sub += $r['line']['line_cents']; } }
+	api_out(array_merge(array('ok' => true), shop_stamp_state($keys, (isset($body['type']) && $body['type'] === 'pickup') ? 'pickup' : 'delivery', $sub)));
+}
+
 // shared basket ("Gemeinsam bestellen"): several guests fill one basket, the organizer orders and pays (see shop_basket_* in shop.class.php)
 if (strpos($op, 'basket_') === 0) {
 	$g = (string)(isset($body['g']) ? $body['g'] : ''); $me = (string)(isset($body['me']) ? $body['me'] : '');
