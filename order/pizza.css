@@ -1,5 +1,6 @@
 /* Pizza configurator (order/pizza.js). A warm island inside the dark shop: wooden table, raw dough on a board, a parchment ingredient tray.
- * Everything is namespaced pz-*; the rest of the shop keeps its gold-on-black look. */
+ * Everything is namespaced pz-*; the rest of the shop keeps its gold-on-black look. The chrome around the island (bars, buttons, chosen states)
+ * wears the shop colors (see the last block); the table, the dough, the ingredient drawings and the parchment keep their own warm colors. */
 .pz {
 	--wood: #4a2f1a; --wood-d: #2d1b0e; --paper: #efdfbd; --paper-2: #f8ecd0; --ink: #3a2413; --ink-2: #6b4f30; --cream: #fff6df;
 	--tomato: #c63d2a; --tomato-d: #a82f1e; --line: #cdb27f;
@@ -124,3 +125,26 @@
 	.pz-pc, .pz-melt, .pz-flecks, .pz-dip, .pz-pizza.is-bump, .pz-hint { animation: none; }
 	.pz-pour, .pz-tile, .pz-add { transition: none; }
 }
+
+/* Shop colors for the chrome: charcoal bars with a gold hairline, gold main button like the cart, dark-gold chosen states. Warm art stays as it is. */
+.pz { --g: #c9a259; --g2: #e2c07f; --gi: #1a1408; --s: #151312; --gl: rgba(201, 162, 89, .28); background: var(--s); }
+.pz-top, .pz-foot { background: var(--s); }
+.pz-top { border-bottom: 1px solid var(--gl); }
+.pz-foot { border-top: 1px solid var(--gl); }
+.pz-back { background: rgba(243, 237, 225, .09); color: #f3ede1; }
+.pz-back:hover { background: rgba(243, 237, 225, .17); color: #f3ede1; }
+.pz-reset { border: 1px solid var(--gl); color: var(--g2); }
+.pz-reset:hover { border-color: var(--g); background: rgba(201, 162, 89, .1); color: var(--g2); }
+.pz-step { background: rgba(243, 237, 225, .09); }
+.pz-qty { color: #f3ede1; }
+.pz-qty:hover { background: rgba(243, 237, 225, .17); color: #f3ede1; }
+.pz-add { background: var(--g); color: var(--gi); }
+.pz-add:hover { background: var(--g2); color: var(--gi); }
+.pz-add.is-blocked { background: #242220; color: var(--g2); box-shadow: inset 0 0 0 1px var(--gl); }
+.pz-add.is-blocked:hover { background: #242220; color: var(--g2); }
+.pz-top :focus-visible, .pz-foot :focus-visible, .pz-stage :focus-visible { outline-color: var(--g2); }
+.pz-hint, .pz-sum { background: rgba(21, 19, 18, .88); }
+.pz-chip[aria-pressed="true"] { background: var(--s); border-color: var(--g); color: var(--g2); }
+.pz-count, .pz-badge { background: var(--s); color: var(--g2); box-shadow: 0 0 0 1.5px var(--g); }
+.pz-tile[aria-pressed="true"] { border-color: #a8873f; box-shadow: inset 0 0 0 2px #a8873f; }
+.pz-tile[aria-pressed="true"] .pz-ico-wrap::after { background-color: var(--s); }

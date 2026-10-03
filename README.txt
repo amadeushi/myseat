@@ -52,6 +52,14 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.8.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: Der Wunschpizza-Konfigurator trägt jetzt die Farben des Shops. Die Schaltfläche "In den Warenkorb" ist Gold mit
+   dunkler Schrift wie im Warenkorb, Kopf- und Fußleiste sind schwarz mit feiner Goldlinie, Zurück, "Neu belegen" und die
+   Mengenwahl im Shop-Stil, gewählte Teigsorte, Zähler und Haken dunkel mit Gold, der Rahmen der gewählten Zutat ein gedecktes
+   Gold. Pizza, Holztisch, Zutaten-Symbole, Soßen-Schälchen und das Pergament-Tablett sind unverändert, ebenso die rote
+   Markierung bei fehlenden Pflichtangaben (order/pizza.css).
+
 2026-10-05 == mySeat v6.8.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Stempelkarte, Mails und Gutschein-Regel überarbeitet. Die Mails nach jedem Stempel und bei voller Karte sprechen
