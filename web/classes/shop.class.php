@@ -156,6 +156,38 @@ function shop_ensure_schema() {
 	if (!fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_baskets')." LIKE 'short_url'")) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_baskets')." ADD `short_url` VARCHAR(120) NULL"); }
 	$ocol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'driver_id'");
 	if (!$ocol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `driver_id` INT UNSIGNED NULL, ADD KEY `driver` (`driver_id`)"); }
+	// guest accounts (order/konto): an account is a confirmed phone number and/or e-mail address, kept only as the same
+	// hashes the stamp card and the coupons use (shop_coupon_guest_keys), so orders and stamps of that guest are found without a migration.
+	// A sign-in code and a sign-in link belong to one row: whichever is used first uses up the other (see shop_account.class.php)
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_accounts')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `key_phone` CHAR(40) NULL, `key_mail` CHAR(40) NULL, `mask_phone` VARCHAR(40) NOT NULL DEFAULT '', `mask_mail` VARCHAR(80) NOT NULL DEFAULT '',
+		`name` VARCHAR(80) NOT NULL DEFAULT '', `created_at` DATETIME NOT NULL, `last_login_at` DATETIME NULL, UNIQUE KEY `kp` (`key_phone`), UNIQUE KEY `km` (`key_mail`)) $opts");
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_login_codes')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `kind` VARCHAR(5) NOT NULL, `target_key` CHAR(40) NOT NULL, `purpose` VARCHAR(5) NOT NULL DEFAULT 'login', `account_id` INT UNSIGNED NULL,
+		`code_hash` CHAR(64) NOT NULL, `link_hash` CHAR(64) NOT NULL, `attempts` TINYINT NOT NULL DEFAULT 0, `used_at` DATETIME NULL, `expires_at` DATETIME NOT NULL,
+		`ip_hash` CHAR(16) NOT NULL DEFAULT '', `created_at` DATETIME NOT NULL, UNIQUE KEY `lnk` (`link_hash`), KEY `tgt` (`target_key`, `created_at`), KEY `ip` (`ip_hash`, `created_at`), KEY `day` (`kind`, `created_at`)) $opts");
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_sessions')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `token_hash` CHAR(64) NOT NULL, `account_id` INT UNSIGNED NOT NULL, `created_at` DATETIME NOT NULL, `last_seen` DATETIME NOT NULL,
+		`expires_at` DATETIME NOT NULL, `ua` VARCHAR(80) NOT NULL DEFAULT '', UNIQUE KEY `tok` (`token_hash`), KEY `acc` (`account_id`), KEY `exp` (`expires_at`)) $opts");
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_favorites')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `account_id` INT UNSIGNED NOT NULL, `product_id` INT UNSIGNED NOT NULL, `variation_id` INT UNSIGNED NOT NULL DEFAULT 0, `opts` TEXT NULL,
+		`note` VARCHAR(200) NOT NULL DEFAULT '', `sig` CHAR(40) NOT NULL, `created_at` DATETIME NOT NULL, UNIQUE KEY `fav` (`account_id`, `sig`)) $opts");
+	// reordering needs ids: the variation of an order line (the option ids sit in the options JSON since v6.9)
+	if (!fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_order_items')." LIKE 'variation_id'")) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_order_items')." ADD `variation_id` INT UNSIGNED NULL"); }
+	// what the guest typed to sign in, so the order form can be filled with it (the account itself only holds hashes)
+	if (!fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_login_codes')." LIKE 'target_plain'")) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_login_codes')." ADD `target_plain` VARCHAR(160) NOT NULL DEFAULT ''"); }
+	if (!fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_accounts')." LIKE 'contact_phone'")) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_accounts')." ADD `contact_phone` VARCHAR(30) NOT NULL DEFAULT '', ADD `contact_mail` VARCHAR(160) NOT NULL DEFAULT ''"); }
+	// delivery address of the account (filled in the shop and the checkout), and the account an order was placed under (only those collect stamps)
+	if (!fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_accounts')." LIKE 'addr_street'")) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_accounts')." ADD `addr_street` VARCHAR(120) NOT NULL DEFAULT '', ADD `addr_zip` VARCHAR(10) NOT NULL DEFAULT '', ADD `addr_city` VARCHAR(80) NOT NULL DEFAULT '', ADD `addr_note` VARCHAR(200) NOT NULL DEFAULT ''"); }
+	if (!fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'account_id'")) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `account_id` INT UNSIGNED NULL"); }
+	// the guest keys of an order (phone, e-mail), filled when the account looks at its history (shop_account_backfill_keys)
+	// (columns and keys in separate statements: one combined ALTER failed on a MariaDB, and without the columns nothing below works)
+	if (!fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'guest_key'")) {
+		mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `guest_key` CHAR(40) NOT NULL DEFAULT '', ADD `guest_key2` CHAR(40) NOT NULL DEFAULT ''");
+	}
+	foreach (array('gk1' => 'guest_key', 'gk2' => 'guest_key2') as $kn => $kc) {
+		if (!fb_rows("SHOW INDEX FROM ".fb_t('tp_shop_orders')." WHERE Key_name = '$kn'")) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD KEY `$kn` (`$kc`)"); }
+	}
 	$done = true;
 	shop_migrate_groups();
 }
@@ -221,6 +253,9 @@ function shop_defaults() {
 		'sms_orders' => '1',        // SMS to the guest when the delivery is on its way / the pickup is ready (only with SMS sending set up)
 		'stamp_on' => '1',          // stamp card: every finished order is a stamp, a full card becomes a voucher (see shop_stamp_*)
 		'stamp_percent' => '10', 'stamp_goal' => '5', 'stamp_months' => '12', 'voucher_days' => '90',
+		'account_on' => '1',        // guest accounts: sign-in by code or link, order history, favorites (see shop_account.class.php)
+		'account_sms' => '1',       // sign-in codes by SMS (otherwise only by e-mail); needs SMS sending set up
+		'account_sms_daily' => '100', // at most this many sign-in SMS a day (every one costs money)
 		'origin_street' => '', 'origin_zip' => '', 'origin_city' => '', // where the restaurant is (map of the order status)
 	);
 }
@@ -237,6 +272,14 @@ function shop_setting_set($k, $v) {
 	fb_exec("REPLACE INTO ".fb_t('tp_shop_settings')." (k, v, updated_at) VALUES (?, ?, NOW())", 'ss', array($k, (string)$v));
 }
 function shop_flag($k) { return shop_setting($k) === '1'; }
+// Sender of the mails to guests (sign-in code, stamp card): the shop's notification address, else the address of the property.
+function shop_mail_from() {
+	$from = trim((string)shop_setting('notify_email'));
+	if ($from !== '' && filter_var($from, FILTER_VALIDATE_EMAIL)) { return $from; }
+	$r = fb_row("SELECT email FROM ".fb_t('properties')." ORDER BY id LIMIT 1");
+	$p = $r ? trim((string)$r['email']) : '';
+	return filter_var($p, FILTER_VALIDATE_EMAIL) ? $p : '';
+}
 
 function shop_cents($eur) { return (int)round(((float)str_replace(',', '.', (string)$eur)) * 100); }
 function shop_money($cents) { return number_format($cents / 100, 2, ',', '.').' €'; }
@@ -348,13 +391,13 @@ function shop_price_line($l) {
 			if ($q <= 0) { continue; }
 			if ($q > $it['max']) { return array('ok' => false, 'error' => '"'.$it['title'].'" kann bei "'.$p['title'].'" höchstens '.$it['max'].' mal gewählt werden.'); }
 			$sum += $q; $extras += $it['price'] * $q;
-			$chosen[] = array('group' => $g['title'], 'title' => $it['title'], 'qty' => $q, 'price' => $it['price']);
+			$chosen[] = array('id' => $it['id'], 'group' => $g['title'], 'title' => $it['title'], 'qty' => $q, 'price' => $it['price']);
 		}
 		if ($sum < $g['min']) { return array('ok' => false, 'error' => 'Bitte bei "'.$p['title'].'" mindestens '.$g['min'].' aus "'.$g['title'].'" wählen.'); }
 		if ($g['max'] > 0 && $sum > $g['max']) { return array('ok' => false, 'error' => 'Bei "'.$p['title'].'" sind höchstens '.$g['max'].' aus "'.$g['title'].'" möglich.'); }
 	}
 	$unit = $base + (int)round($extras * $mult);
-	return array('ok' => true, 'line' => array('product_id' => $pid, 'title' => $p['title'], 'variation' => $vtitle, 'options' => $chosen, 'qty' => $qty, 'unit_cents' => $unit,
+	return array('ok' => true, 'line' => array('product_id' => $pid, 'vid' => $vtitle !== '' ? (int)$found['id'] : 0, 'title' => $p['title'], 'variation' => $vtitle, 'options' => $chosen, 'qty' => $qty, 'unit_cents' => $unit,
 		'line_cents' => $unit * $qty, 'note' => mb_substr(trim((string)(isset($l['note']) ? $l['note'] : '')), 0, 200)));
 }
 
@@ -808,9 +851,11 @@ function shop_create_order($in) {
 	$codeIn = shop_coupon_normalize(isset($in['coupon']) ? $in['coupon'] : '');
 	// a voucher of the stamp card is used up automatically, unless the guest entered a code of his own
 	$auto = false;
-	if ($codeIn === '') { $av = shop_stamp_voucher(shop_coupon_guest_keys($phone, $email)); if ($av) { $codeIn = $av['code']; $auto = true; } }
+	// signed in: the keys of the account count, not what was typed into the form (set by api.php from the session, never from the browser)
+	$gkeys = (!empty($in['acc_id']) && !empty($in['acc_keys']) && is_array($in['acc_keys'])) ? $in['acc_keys'] : shop_coupon_guest_keys($phone, $email);
+	if ($codeIn === '') { $av = shop_stamp_voucher($gkeys); if ($av) { $codeIn = $av['code']; $auto = true; } }
 	if ($codeIn !== '') {
-		$cr = shop_coupon_check($codeIn, $type, $sub, shop_coupon_guest_keys($phone, $email));
+		$cr = shop_coupon_check($codeIn, $type, $sub, $gkeys);
 		if (!$cr['ok'] && !$auto) { return array('ok' => false, 'error' => $cr['error']); }
 		if ($cr['ok']) { $coupon = $cr['coupon']; $discount = $cr['discount']; }
 	}
@@ -842,16 +887,17 @@ function shop_create_order($in) {
 		return array('ok' => false, 'error' => 'Die Bestellung konnte nicht gespeichert werden. Bitte versuche es noch einmal.');
 	}
 	$id = (int)mysqli_insert_id($db);
+	if (!empty($in['acc_id'])) { fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET account_id = ? WHERE id = ?", 'ii', array((int)$in['acc_id'], $id)); }
 	if ($coupon) {
 		fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET coupon_code = ?, discount_cents = ? WHERE id = ?", 'sii', array($coupon['code'], $discount, $id));
 		if (!$test) {
-			$gk = shop_coupon_guest_keys($phone, $email);
+			$gk = $gkeys;
 			fb_exec("INSERT INTO ".fb_t('tp_shop_coupon_uses')." (coupon_id, order_id, guest_key, guest_key2, discount_cents, created_at) VALUES (?, ?, ?, ?, ?, NOW())", 'iissi', array((int)$coupon['id'], $id, $gk[0], $gk[1], $discount));
 		}
 	}
 	foreach ($items as $it) {
-		fb_exec("INSERT INTO ".fb_t('tp_shop_order_items')." (order_id, product_id, title, variation, options, qty, unit_cents, line_cents, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-			'iisssiiis', array($id, $it['product_id'], $it['title'], $it['variation'], json_encode($it['options'], JSON_UNESCAPED_UNICODE), $it['qty'], $it['unit_cents'], $it['line_cents'], $it['note']));
+		fb_exec("INSERT INTO ".fb_t('tp_shop_order_items')." (order_id, product_id, variation_id, title, variation, options, qty, unit_cents, line_cents, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+			'iiisssiiis', array($id, $it['product_id'], $it['vid'] > 0 ? $it['vid'] : null, $it['title'], $it['variation'], json_encode($it['options'], JSON_UNESCAPED_UNICODE), $it['qty'], $it['unit_cents'], $it['line_cents'], $it['note']));
 	}
 	shop_log($id, 'created', $pay);
 	return array('ok' => true, 'order' => shop_order($id), 'items' => shop_order_items($id));
@@ -921,8 +967,8 @@ function shop_create_manual_order($in) {
 	if (!$ok) { return array('ok' => false, 'error' => 'Die Bestellung konnte nicht gespeichert werden. Bitte versuche es noch einmal.'); }
 	$id = (int)mysqli_insert_id(fb_db());
 	foreach ($items as $it) {
-		fb_exec("INSERT INTO ".fb_t('tp_shop_order_items')." (order_id, product_id, title, variation, options, qty, unit_cents, line_cents, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-			'iisssiiis', array($id, $it['product_id'], $it['title'], $it['variation'], json_encode($it['options'], JSON_UNESCAPED_UNICODE), $it['qty'], $it['unit_cents'], $it['line_cents'], $it['note']));
+		fb_exec("INSERT INTO ".fb_t('tp_shop_order_items')." (order_id, product_id, variation_id, title, variation, options, qty, unit_cents, line_cents, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+			'iiisssiiis', array($id, $it['product_id'], $it['vid'] > 0 ? $it['vid'] : null, $it['title'], $it['variation'], json_encode($it['options'], JSON_UNESCAPED_UNICODE), $it['qty'], $it['unit_cents'], $it['line_cents'], $it['note']));
 	}
 	shop_log($id, 'created', 'phone: '.$pay);
 	return array('ok' => true, 'order' => shop_order($id));
@@ -2117,6 +2163,15 @@ function shop_stamp_award($orderId) {
 	$o = shop_order((int)$orderId);
 	if (!$o || !empty($o['is_test'])) { return; }
 	$keys = shop_coupon_guest_keys($o['phone'], $o['email']);
+	// stamps are only collected with a guest account: the order must have been placed signed in, and then the account's keys count
+	if (shop_flag('account_on')) {
+		$a = !empty($o['account_id']) ? fb_row("SELECT key_phone, key_mail, contact_phone, contact_mail FROM ".fb_t('tp_shop_accounts')." WHERE id = ?", 'i', array((int)$o['account_id'])) : null;
+		if (!$a) { return; }
+		// the mail / SMS about stamps and voucher go to what the order held, else to what the guest signed in with
+		if (trim((string)$o['email']) === '') { $o['email'] = (string)$a['contact_mail']; }
+		if (trim((string)$o['phone']) === '') { $o['phone'] = (string)$a['contact_phone']; }
+		$keys = array($a['key_phone'] !== null ? $a['key_phone'] : '', $a['key_mail'] !== null ? $a['key_mail'] : '');
+	}
 	if (!shop_stamp_has_keys($keys)) { return; }
 	$base = max(0, (int)$o['subtotal_cents'] - (int)$o['discount_cents']);
 	$st = fb_exec("INSERT IGNORE INTO ".fb_t('tp_shop_stamps')." (order_id, guest_key, guest_key2, base_cents, earned_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)", 'ississ',
@@ -2216,9 +2271,9 @@ function shop_stamp_card_image($n, $goal) {
 function shop_stamp_mail($to, $m) {
 	global $settings;
 	require_once __DIR__.'/shop_mail.class.php';
-	$from = trim((string)shop_setting('notify_email'));
+	$from = shop_mail_from();
 	$to = trim((string)$to);
-	if ($to === '' || $from === '' || !filter_var($from, FILTER_VALIDATE_EMAIL) || !filter_var($to, FILTER_VALIDATE_EMAIL)) { return; }
+	if ($to === '' || $from === '' || !filter_var($to, FILTER_VALIDATE_EMAIL)) { return; }
 	$brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 	$h = function ($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); };
 	$font = 'font-family:Arial,Helvetica,sans-serif;';

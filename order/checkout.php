@@ -23,7 +23,7 @@ $imprint = (!empty($settings['imprintUrl']) && preg_match('#^https?://#i', $sett
 	<link rel="stylesheet" href="shop.css?v=<?php echo @filemtime(__DIR__.'/shop.css'); ?>"/>
 	<link rel="stylesheet" href="stempel.css?v=<?php echo @filemtime(__DIR__.'/stempel.css'); ?>"/>
 </head>
-<body class="shop-shell checkout" data-token="<?php echo shop_h($_SESSION['shop_token']); ?>">
+<body class="shop-shell checkout" data-token="<?php echo shop_h($_SESSION['shop_token']); ?>" data-account="<?php echo shop_acc_enabled() ? '1' : '0'; ?>">
 	<header class="shop-top">
 		<div class="shop-top-in">
 			<a class="shop-logo" href="./" aria-label="<?php echo shop_h($brand); ?>"><?php echo brand_logo_html($brand, 'brand-logo'); ?></a>

@@ -1,0 +1,103 @@
+/* Guest account (order/konto.js): header button, sign-in dialog, account dialog (orders, favorites, stamp card), hearts, favorites row.
+   Colors, radii and fonts come from .shop-shell (shop.css): gold on anthracite, nothing new. */
+
+/* header button */
+.acc-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: transparent; color: var(--gold-strong); font-size: 14px; font-weight: 700; transition: background 150ms ease, border-color 150ms ease; }
+.acc-btn:hover { background: rgba(201, 162, 89, 0.14); border-color: var(--gold); }
+.shop-top-in .acc-btn { margin-left: 0; }
+@media (max-width: 899px) { .shop-top-in .shop-logo { order: -2; } .shop-top-in .acc-btn { margin-left: auto; order: -1; } }
+
+/* dialog: the group dialog's card, taller content scrolls inside */
+.gb-dialog.acc-dialog { width: min(520px, calc(100% - 16px)); max-height: calc(100% - 24px); overflow: auto; overscroll-behavior: contain; }
+.acc-form .acc-code { font-size: 28px; letter-spacing: 0.4em; text-align: center; font-variant-numeric: tabular-nums; padding-left: 0.4em; }
+.shop-shell .acc-form .acc-fine, .shop-shell .acc-fine { color: var(--text-muted); font-size: 13px; line-height: 1.5; }
+.acc-resend { justify-self: center; min-height: 44px; border: 0; background: transparent; color: var(--gold); font-size: 14px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.acc-resend:hover:not(:disabled) { color: var(--gold-strong); }
+.acc-resend:disabled { color: var(--text-muted); text-decoration: none; cursor: default; }
+
+/* the account */
+.acc-view { padding: 20px 18px 18px; display: grid; gap: 14px; }
+.acc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.shop-shell .acc-head h2 { font-family: var(--font-display); font-weight: 400; font-size: 30px; line-height: 1.1; }
+.shop-shell .acc-head h2:focus { outline: none; }
+.shop-shell .acc-who { margin-top: 4px; color: var(--text-muted); font-size: 13px; overflow-wrap: anywhere; }
+.acc-x { flex: none; width: 44px; height: 44px; border: 1px solid var(--border-soft); border-radius: 50%; background: var(--surface-2); color: var(--text); font-size: 24px; line-height: 1; }
+.acc-x:hover { border-color: var(--border); }
+
+.acc-tabs { display: flex; gap: 4px; background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: var(--radius-pill); padding: 3px; }
+.acc-tabs [role="tab"] { flex: 1 1 auto; min-height: 44px; padding: 0 6px; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 600; white-space: nowrap; transition: background 150ms ease, color 150ms ease; }
+@media (min-width: 400px) { .acc-tabs [role="tab"] { font-size: 14px; padding: 0 10px; } }
+.acc-tabs [role="tab"][aria-selected="true"] { background: var(--gold); color: #1a1408; }
+
+.acc-panel { display: grid; gap: 12px; align-content: start; min-height: 120px; }
+.shop-shell .acc-empty { padding: 18px 4px; color: var(--text-muted); font-size: 14px; line-height: 1.6; }
+.acc-panel .stp { margin: 0; }
+
+.acc-order { padding: 14px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface-2); display: grid; gap: 10px; }
+.acc-order header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.acc-order header strong { display: block; font-size: 15px; }
+.acc-order header span { display: block; margin-top: 2px; color: var(--text-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.shop-shell a.acc-chip { flex: none; padding: 4px 10px; border: 1px solid var(--gold); border-radius: var(--radius-pill); color: var(--gold-strong); font-size: 12px; font-weight: 700; text-decoration: none; }
+.acc-items { display: grid; gap: 6px; font-size: 14px; line-height: 1.4; }
+.acc-items li span { color: var(--text-muted); }
+.acc-items small { display: block; color: var(--text-muted); font-size: 13px; }
+.acc-order-act { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.acc-order-act .gb-btn { flex: 1 1 180px; }
+.acc-order-act a { font-size: 14px; font-weight: 600; }
+.shop-shell .acc-note { flex: 1 1 100%; color: var(--gold-strong); font-size: 13px; line-height: 1.5; }
+.shop-shell .acc-order .gb-err { margin: 0; color: var(--danger); font-size: 13px; }
+
+.acc-favlist { display: grid; gap: 10px; }
+.acc-fav { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: center; padding: 14px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface-2); }
+.acc-fav strong { font-size: 15px; }
+.acc-fav strong span { color: var(--text-muted); font-weight: 500; }
+.acc-fav small { display: block; margin-top: 2px; color: var(--text-muted); font-size: 13px; }
+.acc-fav b { display: block; margin-top: 4px; color: var(--gold); font-variant-numeric: tabular-nums; }
+.acc-fav-act { display: flex; align-items: center; gap: 8px; }
+.acc-fav.is-gone { opacity: 0.7; }
+.acc-icon { flex: none; width: 44px; height: 44px; border: 1px solid var(--border-soft); border-radius: 50%; background: transparent; color: var(--text-muted); display: inline-flex; align-items: center; justify-content: center; }
+.acc-icon:hover { color: var(--danger); border-color: var(--danger); }
+@media (max-width: 479px) { .acc-fav { grid-template-columns: 1fr; } .acc-fav-act { justify-content: space-between; } .acc-fav-act .gb-btn { flex: 1; } }
+
+.acc-more { border-top: 1px solid var(--border-soft); padding-top: 10px; }
+.acc-more summary { min-height: 44px; display: flex; align-items: center; color: var(--text-muted); font-size: 14px; font-weight: 600; cursor: pointer; }
+.acc-more summary:hover { color: var(--gold); }
+.acc-more-in { display: grid; gap: 8px; padding-top: 6px; }
+.acc-more-in .gb-btn { width: 100%; }
+.gb-btn.acc-danger { color: var(--danger); border-color: rgba(226, 134, 124, 0.4); }
+.gb-btn.acc-danger:hover { border-color: var(--danger); }
+
+/* hearts: on dishes without choices and on cart lines */
+.fav-btn { flex: none; width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: var(--text-muted); display: inline-flex; align-items: center; justify-content: center; transition: color 150ms ease; }
+.fav-btn:hover { color: var(--gold-strong); }
+.fav-btn.is-on { color: var(--gold); }
+.fav-btn.is-on svg path { fill: currentColor; }
+.shop-item-buy .fav-btn { margin-right: auto; }
+.cart-qty .fav-btn { margin-left: 4px; }
+.cart-qty .fav-btn + .cart-edit { margin-left: 0; }
+@media (prefers-reduced-motion: reduce) { .fav-btn, .acc-btn, .acc-tabs [role="tab"], .acc-favchip { transition: none; } }
+
+/* favorites above the menu */
+.acc-favs { max-width: 1240px; margin: 0 auto; padding: 14px 16px 0; }
+.acc-favs[hidden] { display: none; }
+.shop-shell .acc-favs h2 { font-family: var(--font-display); font-weight: 400; font-size: 24px; line-height: 1.15; margin-bottom: 8px; }
+.acc-favs-list { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.acc-favchip { flex: none; scroll-snap-align: start; display: grid; gap: 2px; min-height: 56px; max-width: 280px; padding: 8px 14px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); color: var(--text); text-align: left; transition: border-color 150ms ease, background 150ms ease; }
+.acc-favchip:hover { border-color: var(--gold); background: rgba(201, 162, 89, 0.1); }
+.acc-favchip span { font-size: 15px; font-weight: 700; line-height: 1.3; }
+.acc-favchip em { color: var(--text-muted); font-style: normal; font-weight: 500; }
+.acc-favchip small { color: var(--gold); font-size: 12px; font-weight: 600; line-height: 1.3; }
+
+/* the page behind the sign-in link */
+.shop-shell .st-title + .st-lead { margin-top: 12px; }
+.shop-shell .st-again + .st-lead { margin-top: 18px; color: var(--text-muted); font-size: 14px; }
+
+/* hint on the status page */
+.shop-shell .st-account { margin-top: 18px; padding: 14px 16px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface-2); color: var(--text-muted); font-size: 14px; line-height: 1.55; }
+
+/* delivery address of the account */
+.acc-addr { display: grid; gap: 12px; }
+.acc-addr-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 12px; }
+.acc-addr-msg { margin: 0; min-height: 1.4em; font-size: 14px; color: var(--text-muted); }
+.acc-addr-msg.ok { color: var(--gold-strong); }
+.acc-addr-msg.bad { color: var(--danger); }

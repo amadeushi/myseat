@@ -2,7 +2,8 @@
    the browser; the server recomputes every price when the order is placed. */
 (function () {
 	'use strict';
-	var body = document.body, ACCEPT = body.dataset.accepting === '1', KEY = 'amadeusCartV2', TOKEN = body.dataset.token;
+	var body = document.body, ACCEPT = body.dataset.accepting === '1', KEY = 'amadeusCartV2', TOKEN = body.dataset.token, ACCOUNT = body.dataset.account === '1';
+	var HEART = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 21s-7-4.35-9.33-8.9C1.07 8.9 3.2 5 6.9 5c2 0 3.6 1.1 5.1 3.1C13.5 6.1 15.1 5 17.1 5c3.7 0 5.83 3.9 4.23 7.1C19 16.65 12 21 12 21z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>';
 	var state = { mode: 'delivery', cart: [], info: null, zone: null, group: null, gv: null };
 
 	function $(s, r) { return (r || document).querySelector(s); }
@@ -324,7 +325,7 @@
 		h += state.cart.map(function (l, i) {
 			return '<div class="cart-line"><h3>' + esc(l.title) + (l.vtitle ? ' <span class="cart-opts">(' + esc(l.vtitle) + ')</span>' : '') + '</h3><span class="cart-lineprice">' + fmt(l.unit * l.qty) + '</span>' +
 				(l.optText ? '<p class="cart-opts">' + esc(l.optText) + '</p>' : '') + (l.note ? '<p class="cart-opts">Hinweis: ' + esc(l.note) + '</p>' : '') +
-				'<div class="cart-qty"><button type="button" class="qty-btn' + (l.qty === 1 ? ' is-trash' : '') + '" data-i="' + i + '" data-d="-1" aria-label="' + (l.qty === 1 ? 'Entfernen' : 'Weniger') + '">' + (l.qty === 1 ? ICON_TRASH : '&minus;') + '</button><span class="qty-num" aria-live="polite">' + l.qty + '</span><button type="button" class="qty-btn" data-i="' + i + '" data-d="1" aria-label="Mehr">+</button>' + (l.ch ? '<button type="button" class="cart-edit" data-edit="' + i + '">Ändern</button>' : '') + '</div></div>';
+				'<div class="cart-qty"><button type="button" class="qty-btn' + (l.qty === 1 ? ' is-trash' : '') + '" data-i="' + i + '" data-d="-1" aria-label="' + (l.qty === 1 ? 'Entfernen' : 'Weniger') + '">' + (l.qty === 1 ? ICON_TRASH : '&minus;') + '</button><span class="qty-num" aria-live="polite">' + l.qty + '</span><button type="button" class="qty-btn" data-i="' + i + '" data-d="1" aria-label="Mehr">+</button>' + (ACCOUNT ? '<button type="button" class="fav-btn" data-fav-i="' + i + '" aria-pressed="false" aria-label="' + esc(l.title) + ' als Favorit merken">' + HEART + '</button>' : '') + (l.ch ? '<button type="button" class="cart-edit" data-edit="' + i + '">Ändern</button>' : '') + '</div></div>';
 		}).join('');
 		refreshUpsell();
 		var ups = upsell();
@@ -335,10 +336,12 @@
 		}
 		h += '<div class="cart-sum"><div class="cart-row"><span>Zwischensumme</span><span>' + fmt(sub) + '</span></div>' +
 			(state.mode === 'delivery' ? '<div class="cart-row muted"><span>Liefergebühr</span><span>' + (state.zone ? fmt(state.zone.fee) : 'nach Adresse') + '</span></div>' : '') + '</div>';
+		if (ACCOUNT && +body.dataset.stamp > 0) { h += '<p class="cart-stamp" data-stamp-hint hidden></p>'; }
 		h += '<a class="cart-go" href="checkout.php"' + (below ? ' aria-disabled="true" tabindex="-1"' : '') + '>' + (below ? 'Noch ' + fmt(min - sub) + ' bis zur Kasse' : 'Zur Kasse · ' + fmt(sub)) + '</a>' +
 			'<p class="cart-trust">Frisch für dich zubereitet. Bezahlen kannst du online, bar oder mit Karte.</p>' +
 			'<button type="button" class="cart-clear" data-clear>Warenkorb leeren</button>' + groupInvite();
 		box.innerHTML = h;
+		document.dispatchEvent(new CustomEvent('amadeus:cart'));
 	}
 	// ---- shared basket ("Gemeinsam bestellen"): everybody fills one basket on the server, one person (the organizer) orders and pays.
 	// This browser only keeps who it is in that basket (token + secret member id); lines, names and prices come from the server.
@@ -707,6 +710,25 @@
 		if (q) { var l = state.cart[+q.dataset.i]; l.qty += +q.dataset.d; if (l.qty <= 0) { state.cart.splice(+q.dataset.i, 1); } save(); renderCart(); return; }
 		var rm = t.closest('.cart-remove'); if (rm) { state.cart.splice(+rm.dataset.i, 1); save(); renderCart(); }
 	});
+
+	// what the guest account (konto.js) needs: put lines of an earlier order or a favorite into the cart, look at the cart
+	window.AmadeusShop = {
+		fmt: fmt, esc: esc, toast: toast, heart: HEART,
+		accepting: ACCEPT,
+		cart: function () { return state.cart; },
+		subtotal: function () { return subtotal(); },
+		mode: function () { return state.mode; },
+		openCart: function () { cartOpen(true); },
+		addMany: function (lines) {
+			if (!ACCEPT) { return; }
+			lines.forEach(function (l) {
+				if (state.group) { gAdd(l); return; }
+				var k = lineKey(l), hit = state.cart.filter(function (x) { return lineKey(x) === k; })[0];
+				if (hit) { hit.qty = Math.min(50, hit.qty + l.qty); } else { state.cart.push(l); }
+			});
+			save(); renderCart();
+		}
+	};
 
 	load();
 	if (ACCEPT) { gInit(); }

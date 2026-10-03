@@ -449,7 +449,9 @@ function sms_attempt($id) {
 	$retry = ($http === 0 || $http === 429 || $http >= 500);
 	if ($http === 0) { $unreachable = true; }
 	$i = (int)$id;
-	if ($retry && $attempts < SMS_MAX_ATTEMPTS && (int)$row['age_s'] < SMS_MAX_AGE_SECONDS) {
+	// a sign-in code is worthless after its 10 minutes: no retries after 5
+	$maxAge = ($row['event_type'] === 'login') ? 300 : SMS_MAX_AGE_SECONDS;
+	if ($retry && $attempts < SMS_MAX_ATTEMPTS && (int)$row['age_s'] < $maxAge) {
 		$delay = SMS_BACKOFF[min($attempts, count(SMS_BACKOFF)) - 1];
 		$st = mysqli_prepare($db, "UPDATE ".fb_t('tp_sms_outbox')." SET attempts = ?, last_error = ?, next_attempt_at = DATE_ADD(NOW(), INTERVAL ? SECOND), updated_at = NOW() WHERE id = ?");
 		mysqli_stmt_bind_param($st, 'isii', $attempts, $reason, $delay, $i); mysqli_stmt_execute($st);

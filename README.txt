@@ -52,6 +52,43 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.9.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Kundenkonto im Bestellshop. Gäste melden sich ohne Passwort mit E-Mail-Adresse oder Handynummer an: Sie bekommen einen
+   6-stelligen Code und einen Link (bei SMS ein Kurzlink über YOURLS, nur im GSM-Alphabet und in einer SMS; ohne YOURLS nur der
+   Code). Code und Link gehören zu einer Anmeldung, wer einen nutzt, entwertet den anderen; beide gelten 10 Minuten, der Code
+   hält 5 Fehlversuche aus. Die Seite hinter dem Link (order/anmelden.php) zeigt nur einen Knopf, damit Mail-Scanner und
+   Linkvorschauen ihn nicht verbrauchen. Codes und Sitzungen liegen nur als Hash in der Datenbank, die Antwort verrät nie, ob es
+   ein Konto gibt, und es gibt Grenzen je Adresse (3 in 15 Minuten), je Besucher (10 pro Stunde) und ein Tageslimit für Anmelde-SMS.
+   Das Konto ist die bestätigte Nummer oder Adresse: Die früheren Bestellungen und die Stempel werden über dieselben Schlüssel
+   gefunden wie bei der Stempelkarte, es ist nichts zu übernehmen. Eine zweite Angabe lässt sich später bestätigen und
+   ergänzen. Im Konto: Bestellungen mit "Nochmal bestellen" (Preise von heute, nicht mehr verfügbare Gerichte und neue Preise
+   werden genannt), Favoriten (Herz am Gericht und in jeder Warenkorbzeile, auch für eine selbst belegte Pizza, dazu eine
+   Favoritenzeile über der Karte) und die Stempelkarte. Abmelden, auf allen Geräten abmelden und Konto löschen (Bestellungen
+   bleiben aufbewahrt). In der Kasse füllt ein angemeldeter Gast Name, Telefon, E-Mail und Adresse der letzten Bestellung aus.
+   Einstellungen: Einstellungen > Lieferservice > Kundenkonto (an/aus, Code auch per SMS, Anmelde-SMS pro Tag, Vorgabe 100).
+   Neue Tabellen tp_shop_accounts, tp_shop_login_codes, tp_shop_sessions, tp_shop_favorites sowie die Spalten
+   tp_shop_order_items.variation_id und tp_shop_orders.guest_key/guest_key2 legt das System beim ersten Aufruf selbst an.
+   Bestellpositionen speichern jetzt zusätzlich die IDs von Variante und Optionen, damit sich eine Bestellung sicher wiederholen
+   lässt (ältere Bestellungen werden über die Titel zugeordnet). Dateien: web/classes/shop_account.class.php,
+   order/konto.js, order/konto.css, order/anmelden.php.
+ * New: Stempel gibt es nur noch mit Kundenkonto. Eine Bestellung merkt sich das Konto, unter dem sie aufgegeben wurde
+   (tp_shop_orders.account_id); nur solche Bestellungen bekommen einen Stempel, und zwar auf der Karte des Kontos, auch wenn in
+   der Kasse eine andere Nummer steht. Der Stempel-Gutschein wird ebenfalls über die Schlüssel des Kontos geprüft. Im Warenkorb
+   und in der Kasse steht für Gäste ohne Anmeldung ein dezenter Hinweis, wie viel Stempel-Guthaben ihnen bei dieser Bestellung
+   entgeht. Ist das Kundenkonto ausgeschaltet, gilt die Stempelkarte wie bisher.
+ * New: Reiter "Meine Daten" im Konto: Name, Telefonnummer (Kontakt, keine zweite Anmeldung) und Lieferadresse mit Hinweis für den
+   Fahrer. Die Adresse wird nur gespeichert, wenn dorthin geliefert wird, und zeigt gleich Liefergebühr und Mindestbestellwert.
+   Beim Anmelden landet sie im Feld "Liefert ihr zu mir" der Shopseite (Prüfung, Gebühr und Mindestbestellwert im Warenkorb) und
+   in der Kasse. Die Kasse füllt außerdem Telefon, E-Mail und Name aus der Anmeldung vor. Das Konto lernt Name und Nummer aus
+   der ersten Bestellung (Spalten tp_shop_accounts.contact_phone/contact_mail/addr_*, tp_shop_login_codes.target_plain).
+ * Fix: Die Anmelde-Mail ging nicht raus, wenn im Shop keine Absenderadresse eingetragen war ("Senden nicht möglich"). Mails
+   des Kontos und der Stempelkarte nehmen dann die E-Mail-Adresse aus den Stammdaten (shop_mail_from()).
+ * Fix: Die Kasse zeigt den Stempelstand nur noch dem angemeldeten Gast. Wer eine fremde Nummer eintippt, sieht nicht mehr,
+   wie viele Stempel sie hat (ein vorhandener Gutschein wird weiter abgezogen und angezeigt, denn er gilt für die Bestellung).
+   Ohne Anmeldung zeigt die Kasse den allgemeinen Hinweis und einen Link zum Anmelden. Die Statusseite bekommt einen Hinweis
+   auf das Konto.
+
 2026-10-05 == mySeat v6.8.2 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix: Der Wunschpizza-Konfigurator trägt jetzt die Farben des Shops. Die Schaltfläche "In den Warenkorb" ist Gold mit

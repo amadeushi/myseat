@@ -318,6 +318,9 @@
 .cart-up-item { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 14px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: transparent; color: var(--text); font-size: 14px; font-weight: 600; text-align: left; transition: background 150ms ease, border-color 150ms ease; }
 .cart-up-item:hover { background: rgba(201, 162, 89, 0.12); border-color: var(--gold); }
 .cart-up-item small { color: var(--gold-strong); font-size: 13px; font-weight: 700; white-space: nowrap; }
+.shop-shell .cart-stamp { margin-top: 10px; color: var(--text-muted); font-size: 13px; text-align: center; text-wrap: balance; }
+.shop-shell .cart-stamp strong { color: var(--text); font-weight: 600; }
+.shop-shell .cart-stamp-btn { background: none; border: 0; padding: 0; font: inherit; color: var(--gold-strong); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 .shop-shell .cart-trust { margin-top: 12px; color: var(--text-muted); font-size: 13px; text-align: center; }
 .cart-clear { display: block; margin: 8px auto 0; min-height: 44px; border: 0; background: transparent; color: var(--text-muted); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
 .shop-inbag { margin-left: 10px; color: var(--success); font-size: 13px; font-weight: 700; }

@@ -69,8 +69,42 @@
 
 	// ---- stamp card: the guest is recognised by phone / e-mail of this order; a voucher of the card is taken off automatically
 	var stampTimer;
-	function stampKnown() { var f = form.elements; return f.phone.value.replace(/\D/g, '').length >= 8 || /.+@.+\..+/.test(f.email.value.trim()); }
-	function drawStamp() { if (window.AmadeusStamp && $('#co-stamp')) { AmadeusStamp.render($('#co-stamp'), S.stamp, { known: stampKnown(), next: true, cart: true }); } }
+	// the number of stamps is only shown to the signed-in guest (the server only fills it in for the owner of the typed phone / e-mail)
+	var ACCOUNT = document.body.dataset.account === '1';
+	function stampAuthed() { return !!(S.stamp && S.stamp.authed); }
+	function drawStamp() {
+		var el = $('#co-stamp'); if (!window.AmadeusStamp || !el) { return; }
+		AmadeusStamp.render(el, S.stamp, { known: stampAuthed(), next: true, cart: true });
+		if (ACCOUNT && !stampAuthed() && el.firstChild) {
+			var p = document.createElement('p'), pc = +(S.stamp && S.stamp.percent) || 0, lost = Math.round(Math.max(0, subtotal() - discount()) * pc / 100);
+			p.className = 'stp-hint';
+			p.innerHTML = S.signedIn ? 'Diese Nummer oder E-Mail gehört nicht zu deinem Konto, dafür gibt es keinen Stempel.'
+				: (lost > 0 ? 'Ohne Kundenkonto entgehen dir bei dieser Bestellung ca. <strong>' + fmt(lost) + '</strong> Stempel-Guthaben. ' : '') + '<a href="./?konto=1">Jetzt anmelden</a>';
+			el.firstChild.appendChild(p);
+		}
+	}
+	// signed in: name, phone, e-mail and address of the last order fill the form (only fields that are still empty)
+	function accountPrefill() {
+		if (!ACCOUNT) { return; }
+		fetch('api.php?op=me&type=' + S.mode, { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) {
+			if (!r.ok || !r.signed_in) { return; }
+			S.signedIn = true;
+			// the number or address typed to sign in comes first, then what the last order held
+			var p = Object.assign({}, r.profile || {}), c = r.contact || {}, filled = false;
+			if (c.phone) { p.phone = c.phone; }
+			if (c.name) { p.name = c.name; }
+			if (c.mail) { p.email = c.mail; }
+			REMEMBER.forEach(function (k) { var el = form.elements[k]; if (p[k] && el && !el.value) { el.value = p[k]; filled = true; } });
+			// the delivery address saved in the account replaces what the browser remembered
+			var ad = r.address;
+			if (ad && !S.addrApplied) {
+				S.addrApplied = true;
+				[['street', 'street'], ['zip', 'zip'], ['city', 'city'], ['address_note', 'note']].forEach(function (m) { var el = form.elements[m[0]]; if (el && ad[m[1]] !== undefined && ad[m[1]] !== '') { el.value = ad[m[1]]; filled = true; } });
+			}
+			if (filled && S.cart.length && S.mode === 'delivery') { checkZone(); }
+			S.stampSig = ''; refreshStamp();
+		}).catch(function () {});
+	}
 	function refreshStamp() {
 		clearTimeout(stampTimer);
 		if (!$('#co-stamp') || !S.cart.length) { return; }
@@ -326,7 +360,7 @@
 		}).catch(function () { var msg = 'Das hat nicht geklappt. Bitte versuche es noch einmal.'; err.textContent = msg; S.busy = false; updateSubmit(); $('#co-why').textContent = msg; err.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); });
 	});
 
-	load(); prefill();
+	load(); prefill(); accountPrefill();
 	form.addEventListener('input', function (ev) { if (ev.target && (ev.target.name === 'phone' || ev.target.name === 'email')) { clearTimeout(stampTimer); stampTimer = setTimeout(refreshStamp, 600); } });
 	// coming from a shared basket (checkout.php?g=...): the lines are everybody's, the organizer of that basket orders and pays
 	var gTok = ''; try { gTok = new URLSearchParams(location.search).get('g') || ''; } catch (e) {}

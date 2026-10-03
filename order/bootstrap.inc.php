@@ -11,6 +11,7 @@ include(__DIR__.'/../web/classes/connect.db.php');
 require_once(__DIR__.'/../web/classes/shop.class.php');
 require_once(__DIR__.'/../web/classes/brand.class.php');
 require_once(__DIR__.'/../web/classes/shop_mail.class.php');
+require_once(__DIR__.'/../web/classes/shop_account.class.php');
 
 shop_ensure_schema();
 $shop_staff = !empty($_SESSION['valid_user']);

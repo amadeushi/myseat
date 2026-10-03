@@ -151,6 +151,9 @@ $delivery = $order && $order['type'] === 'delivery';
 		})();
 		</script>
 		<?php endif; ?>
+		<?php if (shop_acc_enabled() && !shop_acc_current()): ?>
+		<p class="st-account">Alle deine Bestellungen, Lieblingsgerichte und deine Stempelkarte findest du in deinem Konto. <a href="./?konto=1">Jetzt anmelden</a></p>
+		<?php endif; ?>
 
 		<div class="st-box">
 			<h2>Deine Bestellung</h2>

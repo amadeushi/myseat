@@ -75,6 +75,15 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 			<input type="text" id="sh-sd" name="voucher_days" inputmode="numeric" value="<?php echo $sh_e($sh['voucher_days']); ?>"/>
 		</div>
 
+		<h4 class="sms-sub">Kundenkonto</h4>
+		<small class="offer-help">Gäste melden sich im Shop ohne Passwort mit E-Mail-Adresse oder Handynummer an: Sie bekommen einen 6-stelligen Code und einen Link (bei SMS ein Kurzlink über YOURLS, wenn dort "Kurzlink" eingerichtet ist). Danach sehen sie ihre früheren Bestellungen und können sie nachbestellen, speichern Lieblingsgerichte und sehen ihre Stempelkarte. Das Konto ist die bestätigte Nummer oder Adresse, die Bestellungen werden darüber gefunden. Der Anmelde-Code per SMS braucht eingerichteten SMS-Versand, per Mail die E-Mail-Adresse oben.</small>
+		<label class="offer-check"><input type="checkbox" name="account_on" value="1"<?php echo $sh_check('account_on'); ?>/> Kundenkonto anbieten</label>
+		<label class="offer-check"><input type="checkbox" name="account_sms" value="1"<?php echo $sh_check('account_sms'); ?>/> Anmelde-Code auch per SMS schicken (sonst nur per E-Mail)</label>
+		<div class="shop-grid">
+			<label class="offer-label" for="sh-asd">Anmelde-SMS pro Tag (höchstens)</label>
+			<input type="text" id="sh-asd" name="account_sms_daily" inputmode="numeric" value="<?php echo $sh_e($sh['account_sms_daily']); ?>"/>
+		</div>
+
 		<h4 class="sms-sub">Standort des Restaurants</h4>
 		<small class="offer-help">Für die Karte auf der Statusseite: Gäste sehen, wo wir sind und wohin geliefert wird. Ohne Adresse zeigt die Karte nur das Ziel.</small>
 		<div class="shop-grid">

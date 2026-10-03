@@ -15,6 +15,7 @@ $menu = $shop_public ? shop_menu() : array();
 $has_conf = false;
 foreach ($menu as $c0) { foreach ($c0['products'] as $p0) { if (!empty($p0['configurator'])) { $has_conf = true; } } }
 $notice = (string)shop_setting('notice');
+$acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order history, favorites, stamp card (konto.js)
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -28,8 +29,9 @@ $notice = (string)shop_setting('notice');
 	<link rel="stylesheet" href="../web/fonts/fonts.css"/>
 	<link rel="stylesheet" href="shop.css?v=<?php echo @filemtime(__DIR__.'/shop.css'); ?>"/>
 	<?php if ($has_conf): ?><link rel="stylesheet" href="pizza.css?v=<?php echo @filemtime(__DIR__.'/pizza.css'); ?>"/><?php endif; ?>
+	<?php if ($acc_on): ?><link rel="stylesheet" href="stempel.css?v=<?php echo @filemtime(__DIR__.'/stempel.css'); ?>"/><link rel="stylesheet" href="konto.css?v=<?php echo @filemtime(__DIR__.'/konto.css'); ?>"/><?php endif; ?>
 </head>
-<body class="shop-shell" data-token="<?php echo shop_h($_SESSION['shop_token']); ?>" data-accepting="<?php echo $shop_accepting ? '1' : '0'; ?>">
+<body class="shop-shell" data-token="<?php echo shop_h($_SESSION['shop_token']); ?>" data-accepting="<?php echo $shop_accepting ? '1' : '0'; ?>" data-account="<?php echo $acc_on ? '1' : '0'; ?>" data-stamp="<?php $sc = shop_stamp_cfg(); echo ($acc_on && $sc['on']) ? (int)$sc['percent'] : 0; ?>">
 <?php if (!$shop_public): ?>
 	<main class="shop-soon">
 		<?php echo brand_logo_html($brand, 'brand-logo'); ?>
@@ -46,6 +48,7 @@ $notice = (string)shop_setting('notice');
 			</div>
 			<p class="shop-status" id="shop-status" role="status" aria-live="polite"></p>
 			<?php if ($shop_accepting): ?><button type="button" class="shop-group-btn" id="gb-top" data-gb-new hidden>Gemeinsam bestellen</button><?php endif; ?>
+			<?php if ($acc_on): ?><button type="button" class="acc-btn" id="acc-btn" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="8.500" r="3.800" fill="none" stroke="currentColor" stroke-width="1.700"/><path d="M4.500 20c.7-3.700 3.700-5.700 7.500-5.700s6.800 2 7.500 5.700" fill="none" stroke="currentColor" stroke-width="1.700" stroke-linecap="round"/></svg><span id="acc-btn-label">Anmelden</span></button><?php endif; ?>
 			<div class="shop-zone" id="shop-zone">
 				<button type="button" class="shop-zone-toggle" id="shop-zone-toggle" aria-expanded="false" aria-controls="shop-zone-box">Liefert ihr zu mir?</button>
 				<p class="shop-zone-result" id="shop-zone-result" role="status" aria-live="polite"></p>
@@ -78,6 +81,8 @@ $notice = (string)shop_setting('notice');
 		</div>
 	</div>
 	<?php endif; ?>
+
+	<?php if ($acc_on): ?><section class="acc-favs" id="acc-favs" aria-label="Deine Favoriten" hidden></section><?php endif; ?>
 
 	<div class="shop-layout">
 		<nav class="shop-cats" id="shop-cats" aria-label="Kategorien">
@@ -139,9 +144,11 @@ $notice = (string)shop_setting('notice');
 	<dialog class="gb-dialog" id="group-dialog" aria-label="Gemeinsam bestellen"></dialog>
 	<?php if ($has_conf): ?><dialog class="pz" id="pizza-dialog" aria-labelledby="pz-title"></dialog><?php endif; ?>
 	<?php endif; ?>
+	<?php if ($acc_on): ?><dialog class="gb-dialog acc-dialog" id="acc-dialog" aria-labelledby="acc-title"></dialog><?php endif; ?>
 	<div class="shop-toast" id="shop-toast" role="status" aria-live="polite"></div>
 	<?php if ($has_conf): ?><script src="pizza.js?v=<?php echo @filemtime(__DIR__.'/pizza.js'); ?>"></script><?php endif; ?>
 	<script src="shop.js?v=<?php echo @filemtime(__DIR__.'/shop.js'); ?>"></script>
+	<?php if ($acc_on): ?><script src="stempel.js?v=<?php echo @filemtime(__DIR__.'/stempel.js'); ?>"></script><script src="konto.js?v=<?php echo @filemtime(__DIR__.'/konto.js'); ?>"></script><?php endif; ?>
 <?php endif; ?>
 </body>
 </html>

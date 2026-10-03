@@ -141,7 +141,51 @@ if ($op === 'stamp_state') {
 	$keys = shop_coupon_guest_keys(mb_substr((string)(isset($body['phone']) ? $body['phone'] : ''), 0, 40), mb_substr((string)(isset($body['email']) ? $body['email'] : ''), 0, 160));
 	$lines = (isset($body['lines']) && is_array($body['lines'])) ? array_slice($body['lines'], 0, 60) : array(); $sub = 0;
 	foreach ($lines as $l) { $r = shop_price_line(is_array($l) ? $l : array()); if ($r['ok']) { $sub += $r['line']['line_cents']; } }
-	api_out(array_merge(array('ok' => true), shop_stamp_state($keys, (isset($body['type']) && $body['type'] === 'pickup') ? 'pickup' : 'delivery', $sub)));
+	// anybody can type a number here: the number of stamps is only shown to the signed-in owner of those keys, and then it is the
+	// account's own keys that are counted (not a typed number next to the own e-mail). The voucher still has to be shown, it is
+	// taken off the order whoever places it
+	$acc = shop_acc_current(); $ak = $acc ? shop_acc_keys($acc) : array('', '');
+	$mine = $acc && (($keys[0] !== '' && $keys[0] === $ak[0]) || ($keys[1] !== '' && $keys[1] === $ak[1]));
+	$st = shop_stamp_state($mine ? $ak : $keys, (isset($body['type']) && $body['type'] === 'pickup') ? 'pickup' : 'delivery', $sub);
+	$st['authed'] = (bool)$mine;
+	if (!$mine) { $st['count'] = 0; $st['saved'] = 0; $st['until'] = ''; }
+	api_out(array_merge(array('ok' => true), $st));
+}
+
+// ---- guest account: sign-in by code or link, overview, reorder, favorites (see shop_account.class.php)
+if (in_array($op, array('me', 'login_request', 'login_verify', 'link_request', 'addr_save', 'logout', 'logout_all', 'acc_delete', 'reorder', 'fav_add', 'fav_remove'), true)) {
+	if (!shop_acc_enabled()) { api_out(array('ok' => false, 'error' => 'Das Kundenkonto ist gerade nicht verfügbar.', 'off' => true)); }
+	$acc = shop_acc_current();
+	$str = function ($k, $max) use ($body) { return mb_substr((string)(isset($body[$k]) ? $body[$k] : ''), 0, $max); };
+	if ($op === 'me') {
+		if (!$acc) { api_out(array('ok' => true, 'signed_in' => false, 'sms' => sms_enabled() && shop_flag('account_sms'))); }
+		api_out(array_merge(shop_acc_overview($acc, (isset($_GET['type']) && $_GET['type'] === 'pickup') ? 'pickup' : 'delivery'), array('signed_in' => true)));
+	}
+	if ($op === 'login_request') { api_out(shop_acc_request($str('target', 160))); }
+	if ($op === 'login_verify') {
+		$r = shop_acc_verify_code($str('target', 160), $str('code', 12));
+		if (!$r['ok']) { api_out($r); }
+		api_out(array_merge(shop_acc_overview(shop_acc_current()), array('signed_in' => true)));
+	}
+	if (!$acc) { api_out(array('ok' => false, 'error' => 'Bitte melde dich an.', 'signed_out' => true), 401); }
+	if ($op === 'link_request') { api_out(shop_acc_request($str('target', 160), 'link', (int)$acc['id'])); }
+	if ($op === 'addr_save') {
+		// the address lookup asks an outside service: it shares the limit of the zone check
+		$_SESSION['shop_zone_hits'] = isset($_SESSION['shop_zone_hits']) ? $_SESSION['shop_zone_hits'] : array();
+		$_SESSION['shop_zone_hits'] = array_values(array_filter($_SESSION['shop_zone_hits'], function ($t) { return $t > time() - 3600; }));
+		if (count($_SESSION['shop_zone_hits']) >= 30) { api_out(array('ok' => false, 'error' => 'Zu viele Adressprüfungen. Bitte versuche es später noch einmal.')); }
+		$_SESSION['shop_zone_hits'][] = time();
+		$r = shop_acc_address_save($acc, $str('street', 120), $str('zip', 10), $str('city', 80), $str('note', 200), $str('name', 80), $str('phone', 30));
+		if (!$r['ok']) { api_out($r); }
+		shop_acc_current(true);
+		api_out(array_merge(shop_acc_overview(shop_acc_current()), array('signed_in' => true, 'removed' => !empty($r['removed']), 'zone' => isset($r['zone']) ? $r['zone'] : null)));
+	}
+	if ($op === 'logout') { shop_acc_logout(false); api_out(array('ok' => true)); }
+	if ($op === 'logout_all') { shop_acc_logout(true); api_out(array('ok' => true)); }
+	if ($op === 'acc_delete') { shop_acc_delete($acc); api_out(array('ok' => true)); }
+	if ($op === 'reorder') { api_out(shop_acc_reorder($acc, (int)(isset($body['order_id']) ? $body['order_id'] : 0))); }
+	if ($op === 'fav_add') { $r = shop_acc_fav_add($acc, isset($body['line']) && is_array($body['line']) ? $body['line'] : array()); api_out($r['ok'] ? array('ok' => true, 'favs' => shop_acc_favs($acc)) : $r); }
+	if ($op === 'fav_remove') { shop_acc_fav_remove($acc, (int)(isset($body['id']) ? $body['id'] : 0)); api_out(array('ok' => true, 'favs' => shop_acc_favs($acc))); }
 }
 
 // shared basket ("Gemeinsam bestellen"): several guests fill one basket, the organizer orders and pays (see shop_basket_* in shop.class.php)
@@ -177,9 +221,15 @@ if ($op === 'create') {
 		$own = trim((string)(isset($body['note']) ? $body['note'] : ''));
 		$body['note'] = mb_substr('Gemeinsame Bestellung: '.implode(', ', $gl['names']).($own !== '' ? ' – '.mb_substr($own, 0, 300) : ''), 0, 500);
 	}
+	// signed in: the order belongs to the account (stamps, voucher); taken from the session, never from the browser
+	unset($body['acc_id'], $body['acc_keys']);
+	$accNow = shop_acc_current();
+	if ($accNow) { $body['acc_id'] = (int)$accNow['id']; $body['acc_keys'] = shop_acc_keys($accNow); }
 	$r = shop_create_order($body);
 	if (!$r['ok']) { api_out(array('ok' => false, 'error' => $r['error'])); }
 	$order = $r['order'];
+	// the account learns name and number from its first order, so the customer record is complete without typing it twice
+	if ($accNow) { fb_exec("UPDATE ".fb_t('tp_shop_accounts')." SET name = IF(name = '', ?, name), contact_phone = IF(contact_phone = '', ?, contact_phone) WHERE id = ?", 'ssi', array(mb_substr(trim((string)$order['customer_name']), 0, 80), mb_substr(trim((string)$order['phone']), 0, 30), (int)$accNow['id'])); }
 	if ($basket !== '') { shop_basket_mark($basket, 'ordered', (int)$order['id']); }
 	if ($order['payment_method'] === 'mollie') {
 		$p = shop_mollie_create($order, shop_base_url());
