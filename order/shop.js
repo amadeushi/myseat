@@ -336,10 +336,14 @@
 	var dlg = $('#product-dialog');
 	var dlgTrigger = null;
 	if (dlg) { dlg.addEventListener('close', function () { if (dlgTrigger && typeof dlgTrigger.focus === 'function') { dlgTrigger.focus(); } dlgTrigger = null; }); }
+	var pizzaDlg = $('#pizza-dialog');
+	if (pizzaDlg) { pizzaDlg.addEventListener('close', function () { if (dlgTrigger && typeof dlgTrigger.focus === 'function') { dlgTrigger.focus(); } dlgTrigger = null; }); }
 	function openProduct(id, edit) {
 		dlgTrigger = document.activeElement;
 		fetch('api.php?op=product&id=' + encodeURIComponent(id), { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) {
 			if (!r.ok) { toast(r.error || 'Das hat nicht geklappt.'); return; }
+			// a dish with the configurator switched on opens the pizza table instead (order/pizza.js); without it, or if it fails to load, the normal dialog does the same job
+			if (r.product.configurator && window.PizzaLab && window.PizzaLab.open(r.product, edit, { fmt: fmt, esc: esc, cleanTitle: cleanTitle, add: addLine, replace: replaceLine })) { return; }
 			buildDialog(r.product, edit);
 		}).catch(function () { toast('Das hat nicht geklappt.'); });
 	}

@@ -90,6 +90,11 @@ function shop_ensure_schema() {
 	if (!$dcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `driver_lat` DOUBLE NULL, ADD `driver_lng` DOUBLE NULL, ADD `driver_at` DATETIME NULL"); }
 	$col = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'ip_hash'");
 	if (!$col) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `ip_hash` CHAR(16) NOT NULL DEFAULT ''"); }
+	// pizza configurator: a dish can offer the guest "build it yourself"; an option can carry the symbol it shows on the pizza
+	$cfcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_products')." LIKE 'configurator'");
+	if (!$cfcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_products')." ADD `configurator` TINYINT NOT NULL DEFAULT 0"); }
+	$iccol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_group_items')." LIKE 'icon'");
+	if (!$iccol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_group_items')." ADD `icon` VARCHAR(20) NOT NULL DEFAULT ''"); }
 	$frcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'fail_reason'");
 	if (!$frcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `fail_reason` VARCHAR(255) NOT NULL DEFAULT ''"); }
 	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_calls')." (
@@ -252,20 +257,46 @@ function shop_product_detail($id) {
 	$all = shop_catalog_product((int)$id);
 	return $all;
 }
+/*
+ * The symbol an option shows on the guest's pizza in the configurator ('' = it is not a topping, e.g. a dip). An explicit
+ * choice in the menu editor wins, 'none' switches the symbol off, an empty value follows from the name (the menu came from
+ * Resmio, so names like "Peperoni (mild)" or "Sambal Hollandaise auf Pizza" decide; the more specific rule comes first).
+ */
+function shop_item_icon($title, $icon = '') {
+	$icon = (string)$icon;
+	if ($icon === 'none') { return ''; }
+	if ($icon !== '') { return preg_match('/^[a-z_]{2,20}$/', $icon) ? $icon : ''; }
+	$t = mb_strtolower((string)$title, 'UTF-8');
+	$rules = array(
+		'/zum dippen/' => 'dip',
+		'/korean/' => 'sauce_korean', '/sambal/' => 'sauce_sambal', '/hollandaise/' => 'sauce_hollandaise', '/creme fra|crème fra/u' => 'sauce_creme',
+		'/barbecue|bbq/' => 'sauce_bbq', '/knoblauch\s*so/u' => 'sauce_garlic', '/curry\s*so/u' => 'sauce_curry', '/so(ß|ss)e/u' => 'sauce_other',
+		'/salami/' => 'salami', '/sucuk/' => 'sucuk', '/schinken/' => 'ham', '/hähnchen|haehnchen|chicken/u' => 'chicken', '/thunfisch/' => 'tuna',
+		'/gamba|garnele|shrimp/' => 'shrimp', '/nugget/' => 'nugget', '/patty|beyond/' => 'patty',
+		'/mozzarella/' => 'mozzarella', '/parmigiano|parmesan/' => 'parmesan', '/gorgonzola/' => 'gorgonzola', '/schafsk|feta/u' => 'feta', '/k(ä|ae)se|schmelz/u' => 'melt',
+		'/spinat/' => 'spinach', '/getr(\.|ocknet).*tomat/' => 'sundried', '/tomate/' => 'tomato', '/zwiebel/' => 'onion', '/olive/' => 'olive', '/peperoni/' => 'pepperoni',
+		'/paprika/' => 'pepper', '/mais/' => 'corn', '/brokkoli|broccoli/' => 'broccoli', '/artischock/' => 'artichoke', '/ananas/' => 'pineapple', '/rucola/' => 'arugula',
+		'/kapern/' => 'caper', '/champignon|pilz/' => 'mushroom',
+	);
+	foreach ($rules as $re => $key) { if (preg_match($re, $t)) { return $key; } }
+	return '';
+}
+
 function shop_catalog_product($id) {
-	$p = fb_row("SELECT id, category_id, title, description, image_url, price_cents, allergens FROM ".fb_t('tp_shop_products')." WHERE id = ? AND active = 1", 'i', array((int)$id));
+	$p = fb_row("SELECT id, category_id, title, description, image_url, price_cents, allergens, configurator FROM ".fb_t('tp_shop_products')." WHERE id = ? AND active = 1", 'i', array((int)$id));
 	if (!$p) { return null; }
+	$p['configurator'] = (int)$p['configurator'];
 	$p['variations'] = array();
 	foreach (fb_rows("SELECT id, title, price_cents, multiplier FROM ".fb_t('tp_shop_variations')." WHERE product_id = ? ORDER BY sort, id", 'i', array((int)$id)) as $v) {
 		$p['variations'][] = array('id' => (int)$v['id'], 'title' => $v['title'], 'price' => (int)$v['price_cents'], 'mult' => (float)$v['multiplier']);
 	}
 	$groups = array();
-	foreach (fb_rows("SELECT gi.id, g.id AS group_id, gi.title, gi.price_cents, gi.max_qty, g.title AS gtitle, g.min_qty, g.max_qty AS gmax
+	foreach (fb_rows("SELECT gi.id, g.id AS group_id, gi.title, gi.price_cents, gi.max_qty, gi.icon, g.title AS gtitle, g.min_qty, g.max_qty AS gmax
 		FROM ".fb_t('tp_shop_product_groups')." pg JOIN ".fb_t('tp_shop_modgroups')." g ON g.id = pg.group_id JOIN ".fb_t('tp_shop_group_items')." gi ON gi.group_id = g.id
 		WHERE pg.product_id = ? ORDER BY pg.sort, g.id, gi.sort, gi.id", 'i', array((int)$id)) as $m) {
 		$g = (int)$m['group_id'];
 		if (!isset($groups[$g])) { $groups[$g] = array('id' => $g, 'title' => $m['gtitle'], 'min' => (int)$m['min_qty'], 'max' => (int)$m['gmax'], 'items' => array()); }
-		$groups[$g]['items'][] = array('id' => (int)$m['id'], 'title' => $m['title'], 'price' => (int)$m['price_cents'], 'max' => (int)$m['max_qty']);
+		$groups[$g]['items'][] = array('id' => (int)$m['id'], 'title' => $m['title'], 'price' => (int)$m['price_cents'], 'max' => (int)$m['max_qty'], 'icon' => shop_item_icon($m['title'], $m['icon']));
 	}
 	$p['groups'] = array_values($groups);
 	$p['price'] = (int)$p['price_cents']; unset($p['price_cents']);
@@ -633,7 +664,7 @@ function shop_find_zone_w3w($words) {
 function shop_menu() {
 	shop_ensure_schema();
 	$cats = fb_rows("SELECT id, name, description FROM ".fb_t('tp_shop_categories')." WHERE active = 1 ORDER BY sort, id");
-	$prods = fb_rows("SELECT p.id, p.category_id, p.title, p.description, p.image_url, p.price_cents,
+	$prods = fb_rows("SELECT p.id, p.category_id, p.title, p.description, p.image_url, p.price_cents, p.configurator,
 			(SELECT COUNT(*) FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id) AS nvar,
 			(SELECT MIN(v.price_cents) FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id) AS vmin,
 			(SELECT COUNT(*) FROM ".fb_t('tp_shop_product_groups')." pg WHERE pg.product_id = p.id) AS nmod
@@ -1211,17 +1242,18 @@ function shop_me_group_rows() {
 			OR EXISTS (SELECT 1 FROM ".fb_t('tp_shop_product_groups')." pg WHERE pg.group_id = g.id) OR g.resmio_id IS NULL ORDER BY g.title, g.id") as $g) {
 		$groups[(int)$g['id']] = array('id' => (int)$g['id'], 'title' => $g['title'], 'min' => (int)$g['min_qty'], 'max' => (int)$g['max_qty'], 'used' => (int)$g['used'], 'items' => array());
 	}
-	foreach (fb_rows("SELECT id, group_id, title, price_cents, max_qty FROM ".fb_t('tp_shop_group_items')." ORDER BY sort, id") as $i) {
-		if (isset($groups[(int)$i['group_id']])) { $groups[(int)$i['group_id']]['items'][] = array('id' => (int)$i['id'], 'title' => $i['title'], 'price' => (int)$i['price_cents'], 'max' => (int)$i['max_qty']); }
+	foreach (fb_rows("SELECT id, group_id, title, price_cents, max_qty, icon FROM ".fb_t('tp_shop_group_items')." ORDER BY sort, id") as $i) {
+		// icon: what is stored ('' = automatic, 'none', or a symbol key); auto: the symbol the name leads to when it is automatic
+		if (isset($groups[(int)$i['group_id']])) { $groups[(int)$i['group_id']]['items'][] = array('id' => (int)$i['id'], 'title' => $i['title'], 'price' => (int)$i['price_cents'], 'max' => (int)$i['max_qty'], 'icon' => (string)$i['icon'], 'auto' => shop_item_icon($i['title'], '')); }
 	}
 	return $groups;
 }
 function shop_me_products($onlyId = 0) {
 	$where = $onlyId ? "WHERE id = ".(int)$onlyId : '';
 	$out = array();
-	foreach (fb_rows("SELECT id, category_id, title, description, image_url, price_cents, allergens, active FROM ".fb_t('tp_shop_products')." $where ORDER BY sort, id") as $p) {
+	foreach (fb_rows("SELECT id, category_id, title, description, image_url, price_cents, allergens, active, configurator FROM ".fb_t('tp_shop_products')." $where ORDER BY sort, id") as $p) {
 		$out[(int)$p['id']] = array('id' => (int)$p['id'], 'category_id' => (int)$p['category_id'], 'title' => $p['title'], 'description' => $p['description'], 'image_url' => $p['image_url'],
-			'price' => (int)$p['price_cents'], 'allergens' => $p['allergens'], 'active' => (int)$p['active'], 'variations' => array(), 'groups' => array());
+			'price' => (int)$p['price_cents'], 'allergens' => $p['allergens'], 'active' => (int)$p['active'], 'configurator' => (int)$p['configurator'], 'variations' => array(), 'groups' => array());
 	}
 	if ($out) {
 		foreach (fb_rows("SELECT id, product_id, title, price_cents, multiplier FROM ".fb_t('tp_shop_variations')." ORDER BY sort, id") as $v) {
@@ -1297,6 +1329,7 @@ function shop_me_save_product($d) {
 	$desc = mb_substr(trim((string)(isset($d['description']) ? $d['description'] : '')), 0, 800);
 	$all = mb_substr(trim((string)(isset($d['allergens']) ? $d['allergens'] : '')), 0, 400);
 	$active = empty($d['active']) ? 0 : 1;
+	$conf = empty($d['configurator']) ? 0 : 1;
 	$vars = array();
 	foreach ((isset($d['variations']) && is_array($d['variations'])) ? array_slice($d['variations'], 0, 20) : array() as $v) {
 		$vt = mb_substr(trim((string)(isset($v['title']) ? $v['title'] : '')), 0, 120);
@@ -1312,10 +1345,10 @@ function shop_me_save_product($d) {
 	}
 	if ($id) {
 		if (!fb_row("SELECT id FROM ".fb_t('tp_shop_products')." WHERE id = ?", 'i', array($id))) { return array('ok' => false, 'error' => 'Dieses Gericht gibt es nicht mehr.'); }
-		fb_exec("UPDATE ".fb_t('tp_shop_products')." SET category_id = ?, title = ?, description = ?, image_url = ?, price_cents = ?, allergens = ?, active = ? WHERE id = ?", 'isssisii', array($cat, $title, $desc, $image, $price, $all, $active, $id));
+		fb_exec("UPDATE ".fb_t('tp_shop_products')." SET category_id = ?, title = ?, description = ?, image_url = ?, price_cents = ?, allergens = ?, active = ?, configurator = ? WHERE id = ?", 'isssisiii', array($cat, $title, $desc, $image, $price, $all, $active, $conf, $id));
 	} else {
 		$max = fb_row("SELECT COALESCE(MAX(sort), 0) AS m FROM ".fb_t('tp_shop_products')." WHERE category_id = ?", 'i', array($cat));
-		fb_exec("INSERT INTO ".fb_t('tp_shop_products')." (category_id, title, description, image_url, price_cents, allergens, active, sort) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", 'isssisid', array($cat, $title, $desc, $image, $price, $all, $active, (float)$max['m'] + 1));
+		fb_exec("INSERT INTO ".fb_t('tp_shop_products')." (category_id, title, description, image_url, price_cents, allergens, active, configurator, sort) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", 'isssisiid', array($cat, $title, $desc, $image, $price, $all, $active, $conf, (float)$max['m'] + 1));
 		$id = (int)mysqli_insert_id(fb_db());
 	}
 	// variations: keep the ids that stay, add new ones, drop the rest
@@ -1354,7 +1387,9 @@ function shop_me_save_group($d) {
 		if ($t === '') { continue; }
 		$pc = shop_cents(isset($i['price']) ? $i['price'] : 0);
 		if ($pc < 0 || $pc > 50000) { return array('ok' => false, 'error' => 'Der Preis von "'.$t.'" ist nicht sinnvoll.'); }
-		$items[] = array('id' => (int)(isset($i['id']) ? $i['id'] : 0), 'title' => $t, 'price' => $pc, 'max' => max(1, min(9, (int)(isset($i['max']) ? $i['max'] : 1))));
+		$ic = isset($i['icon']) ? (string)$i['icon'] : '';
+		$items[] = array('id' => (int)(isset($i['id']) ? $i['id'] : 0), 'title' => $t, 'price' => $pc, 'max' => max(1, min(9, (int)(isset($i['max']) ? $i['max'] : 1))),
+			'icon' => ($ic === 'none' || preg_match('/^[a-z_]{2,20}$/', $ic)) ? $ic : '');
 	}
 	if ($min > 0 && count($items) < $min) { return array('ok' => false, 'error' => 'Für "mindestens '.$min.'" braucht die Gruppe mindestens '.$min.' Optionen.'); }
 	if ($id) {
@@ -1368,8 +1403,8 @@ function shop_me_save_group($d) {
 	foreach ($items as $it) {
 		$n++;
 		$own = $it['id'] ? fb_row("SELECT id FROM ".fb_t('tp_shop_group_items')." WHERE id = ? AND group_id = ?", 'ii', array($it['id'], $id)) : null;
-		if ($own) { fb_exec("UPDATE ".fb_t('tp_shop_group_items')." SET title = ?, price_cents = ?, max_qty = ?, sort = ? WHERE id = ?", 'siidi', array($it['title'], $it['price'], $it['max'], $n, $it['id'])); $keep[] = $it['id']; }
-		else { fb_exec("INSERT INTO ".fb_t('tp_shop_group_items')." (group_id, title, price_cents, max_qty, sort) VALUES (?, ?, ?, ?, ?)", 'isiid', array($id, $it['title'], $it['price'], $it['max'], $n)); $keep[] = (int)mysqli_insert_id(fb_db()); }
+		if ($own) { fb_exec("UPDATE ".fb_t('tp_shop_group_items')." SET title = ?, price_cents = ?, max_qty = ?, icon = ?, sort = ? WHERE id = ?", 'siisdi', array($it['title'], $it['price'], $it['max'], $it['icon'], $n, $it['id'])); $keep[] = $it['id']; }
+		else { fb_exec("INSERT INTO ".fb_t('tp_shop_group_items')." (group_id, title, price_cents, max_qty, icon, sort) VALUES (?, ?, ?, ?, ?, ?)", 'isiisd', array($id, $it['title'], $it['price'], $it['max'], $it['icon'], $n)); $keep[] = (int)mysqli_insert_id(fb_db()); }
 	}
 	foreach (fb_rows("SELECT id FROM ".fb_t('tp_shop_group_items')." WHERE group_id = ?", 'i', array($id)) as $r) {
 		if (!in_array((int)$r['id'], $keep, true)) { fb_exec("DELETE FROM ".fb_t('tp_shop_group_items')." WHERE id = ?", 'i', array((int)$r['id'])); }

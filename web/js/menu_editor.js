@@ -123,6 +123,8 @@
 			'<label class="me-l" for="me-all">Allergene und Zusatzstoffe</label><input id="me-all" maxlength="400" value="' + esc(d.allergens) + '" placeholder="z. B. Weizen, Milch, Eier"/>' +
 			'<label class="me-l" for="me-img">Bild (Adresse, https://...)</label><input id="me-img" maxlength="300" value="' + esc(d.image_url) + '"/>' +
 			'<label class="offer-check"><input type="checkbox" id="me-active"' + (d.active ? ' checked' : '') + '/> Im Shop sichtbar</label>' +
+			'<label class="offer-check"><input type="checkbox" id="me-conf"' + (d.configurator ? ' checked' : '') + '/> Als Wunschpizza anbieten (Konfigurator)</label>' +
+			'<p class="me-help">Der Gast belegt einen rohen Teigling selbst: er tippt Zutaten an, sie verteilen sich gleichmäßig auf der Pizza. Die Zutaten sind die Optionen der Zubehörgruppen unten, ihre Preise gelten wie sonst auch.</p>' +
 			'<h5 class="me-sub">Varianten <small>Größen oder Sorten mit eigenem Preis</small></h5>' +
 			(d.variations.length ? '<p class="me-help">"Zubehör ×" ist ein Faktor für die Preise der Zubehörgruppen bei dieser Variante - bei 1,3 kostet ein Extra-Belag 30&nbsp;% mehr als am Grundpreis.</p>' : '') +
 			'<div class="me-rows" id="me-vars">' + (d.variations.length ? varHead() : '') + d.variations.map(varRow).join('') + '</div>' +
@@ -133,7 +135,7 @@
 	}
 	function readDish() {
 		return { id: sel.draft.id || 0, title: $('#me-title').value, category_id: +$('#me-cat').value, price: $('#me-price').value, description: $('#me-desc').value, allergens: $('#me-all').value,
-			image_url: $('#me-img').value, active: $('#me-active').checked ? 1 : 0, groups: sel.draft.groups.slice(),
+			image_url: $('#me-img').value, active: $('#me-active').checked ? 1 : 0, configurator: $('#me-conf').checked ? 1 : 0, groups: sel.draft.groups.slice(),
 			variations: $$('.me-var').map(function (r) { return { id: +r.dataset.id || 0, title: $('.v-t', r).value, price: $('.v-p', r).value, mult: $('.v-m', r).value }; }) };
 	}
 
@@ -149,9 +151,19 @@
 	}
 
 	// ---- group form
+	// symbols of the pizza configurator (order/pizza.js draws them); "" = the name decides (shop_item_icon() on the server), "none" = not a topping
+	var ICONS = { tomato: 'Tomate', spinach: 'Spinat', onion: 'Zwiebel', olive: 'Olive', pepperoni: 'Peperoni', pepper: 'Paprika', corn: 'Mais', broccoli: 'Brokkoli', artichoke: 'Artischocke', pineapple: 'Ananas',
+		sundried: 'Getrocknete Tomate', arugula: 'Rucola', caper: 'Kapern', mushroom: 'Champignon', melt: 'Geschmolzener Käse', parmesan: 'Parmesan', gorgonzola: 'Gorgonzola', mozzarella: 'Mozzarella', feta: 'Schafskäse',
+		ham: 'Schinken', salami: 'Salami', sucuk: 'Sucuk', chicken: 'Hähnchen', tuna: 'Thunfisch', shrimp: 'Garnele', nugget: 'Nugget', patty: 'Patty', sauce_hollandaise: 'Soße Hollandaise', sauce_sambal: 'Soße Sambal',
+		sauce_creme: 'Soße Crème fraîche', sauce_bbq: 'Soße BBQ', sauce_korean: 'Soße Korean BBQ', sauce_garlic: 'Soße Knoblauch', sauce_curry: 'Soße Curry', sauce_other: 'Soße (andere)', dip: 'Dip (Beilage)' };
+	function iconSelect(i) {
+		var cur = i.icon || '', auto = i.auto ? 'Automatisch: ' + (ICONS[i.auto] || i.auto) : 'Automatisch (kein Belag)';
+		return '<select class="i-i" aria-label="Symbol im Pizza-Konfigurator" title="Symbol im Pizza-Konfigurator"><option value=""' + (cur === '' ? ' selected' : '') + '>' + esc(auto) + '</option><option value="none"' + (cur === 'none' ? ' selected' : '') + '>Kein Belag</option>' +
+			Object.keys(ICONS).map(function (k) { return '<option value="' + k + '"' + (cur === k ? ' selected' : '') + '>' + esc(ICONS[k]) + '</option>'; }).join('') + '</select>';
+	}
 	function itemRow(i) {
-		return '<div class="me-row me-item" data-id="' + (i.id || 0) + '"><input class="i-t" value="' + esc(i.title) + '" placeholder="Name der Option" aria-label="Name der Option"/><input class="i-p" inputmode="decimal" value="' + eur(i.price || 0) + '" aria-label="Aufpreis in Euro"/>' +
-			'<input class="i-m" type="number" min="1" max="9" value="' + (i.max || 1) + '" aria-label="Höchstens wie oft wählbar" title="Höchstens wie oft wählbar"/>' + rowTools() + '</div>';
+		return '<div class="me-row me-row5 me-item" data-id="' + (i.id || 0) + '"><input class="i-t" value="' + esc(i.title) + '" placeholder="Name der Option" aria-label="Name der Option"/><input class="i-p" inputmode="decimal" value="' + eur(i.price || 0) + '" aria-label="Aufpreis in Euro"/>' +
+			'<input class="i-m" type="number" min="1" max="9" value="' + (i.max || 1) + '" aria-label="Höchstens wie oft wählbar" title="Höchstens wie oft wählbar"/>' + iconSelect(i) + rowTools() + '</div>';
 	}
 	function groupForm() {
 		var g = sel.draft, isNew = !g.id, users = D.products.filter(function (p) { return p.groups.indexOf(g.id) >= 0; });
@@ -160,7 +172,7 @@
 			'<div class="me-two"><div><label class="me-l" for="me-gmin">Mindestens wählen</label><input id="me-gmin" type="number" min="0" max="20" value="' + g.min + '"/></div>' +
 			'<div><label class="me-l" for="me-gmax">Höchstens wählen (0 = beliebig viele)</label><input id="me-gmax" type="number" min="0" max="50" value="' + g.max + '"/></div></div>' +
 			'<p class="me-rule" id="me-rule"></p>' +
-			'<h5 class="me-sub">Optionen</h5><div class="me-rows" id="me-items"><div class="me-row me-head"><span>Name</span><span>Aufpreis €</span><span title="Wie oft wählbar">max.</span><span></span></div>' + g.items.map(itemRow).join('') + '</div>' +
+			'<h5 class="me-sub">Optionen</h5><p class="me-help">Symbol: Nur für den Pizza-Konfigurator. Bei „Automatisch“ erkennt das System die Zutat am Namen.</p><div class="me-rows" id="me-items"><div class="me-row me-row5 me-head"><span>Name</span><span>Aufpreis €</span><span title="Wie oft wählbar">max.</span><span>Symbol</span><span></span></div>' + g.items.map(itemRow).join('') + '</div>' +
 			'<div class="me-actions"><button type="button" class="me-mini me-add" data-additem>+ Option</button><button type="button" class="me-mini" data-bulk>Mehrere einfügen</button></div>' +
 			'<div class="me-bulk" id="me-bulk" hidden><label class="me-l" for="me-bulk-t">Eine Option pro Zeile, Preis nach einem Semikolon (z. B. Ketchup; 0,50)</label><textarea id="me-bulk-t" rows="5"></textarea><button type="button" class="button_dark" data-bulkok>Übernehmen</button></div>' +
 			(isNew ? '' : '<p class="me-help">Verwendet bei: ' + (users.length ? users.map(function (p) { return '<a href="#" data-goprod="' + p.id + '">' + esc(p.title) + '</a>'; }).join(', ') : 'noch keinem Gericht') + '</p>') +
@@ -168,7 +180,7 @@
 	}
 	function readGroup() {
 		return { id: sel.draft.id || 0, title: $('#me-gtitle').value, min: +$('#me-gmin').value || 0, max: +$('#me-gmax').value || 0,
-			items: $$('.me-item').map(function (r) { return { id: +r.dataset.id || 0, title: $('.i-t', r).value, price: $('.i-p', r).value, max: +$('.i-m', r).value || 1 }; }) };
+			items: $$('.me-item').map(function (r) { return { id: +r.dataset.id || 0, title: $('.i-t', r).value, price: $('.i-p', r).value, max: +$('.i-m', r).value || 1, icon: $('.i-i', r).value }; }) };
 	}
 	function showRule() {
 		var el = $('#me-rule'); if (!el) { return; }

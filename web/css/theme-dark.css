@@ -1956,6 +1956,8 @@ button.orders-kitchen:disabled { opacity: .5; cursor: wait; }
 .me-sub small { color: var(--text-muted); font-weight: 500; font-size: 12px; margin-left: 6px; }
 .me-rows { display: grid; gap: 6px; }
 .me-row { display: grid; grid-template-columns: minmax(0, 1fr) 84px 70px auto; gap: 6px; align-items: center; }
+.me-row5 { grid-template-columns: minmax(0, 1fr) 84px 64px minmax(120px, 160px) auto; }
+.me-row5 select { min-width: 0; }
 .me-head { color: var(--text-muted); font-size: 12px; font-weight: 600; }
 .me-assigned { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; margin-bottom: 6px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface-2); }
 .me-assigned-t { display: grid; min-width: 0; }

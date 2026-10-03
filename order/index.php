@@ -11,6 +11,9 @@ if (!$shop_public) {
 	header('Retry-After: 3600');
 }
 $menu = $shop_public ? shop_menu() : array();
+// pizza configurator: its stylesheet and script only travel when a dish has it switched on
+$has_conf = false;
+foreach ($menu as $c0) { foreach ($c0['products'] as $p0) { if (!empty($p0['configurator'])) { $has_conf = true; } } }
 $notice = (string)shop_setting('notice');
 ?>
 <!DOCTYPE html>
@@ -24,6 +27,7 @@ $notice = (string)shop_setting('notice');
 	<title>Bestellen &ndash; <?php echo shop_h($brand); ?></title>
 	<link rel="stylesheet" href="../web/fonts/fonts.css"/>
 	<link rel="stylesheet" href="shop.css?v=<?php echo @filemtime(__DIR__.'/shop.css'); ?>"/>
+	<?php if ($has_conf): ?><link rel="stylesheet" href="pizza.css?v=<?php echo @filemtime(__DIR__.'/pizza.css'); ?>"/><?php endif; ?>
 </head>
 <body class="shop-shell" data-token="<?php echo shop_h($_SESSION['shop_token']); ?>" data-accepting="<?php echo $shop_accepting ? '1' : '0'; ?>">
 <?php if (!$shop_public): ?>
@@ -100,7 +104,8 @@ $notice = (string)shop_setting('notice');
 						<?php if ($p['image_url'] !== ''): ?><img class="shop-item-img" src="<?php echo shop_h($p['image_url']); ?>" alt="" loading="lazy" width="80" height="80"/><?php endif; ?>
 						<div class="shop-item-buy">
 							<span class="shop-price"><?php echo ($choices && (int)$p['nvar'] > 0) ? 'ab ' : ''; ?><?php echo shop_money($from); ?></span>
-							<?php if ($shop_accepting): ?><button type="button" class="shop-add" aria-label="<?php echo shop_h($p['title']); ?> <?php echo $choices ? 'auswählen' : 'hinzufügen'; ?>"><?php echo $choices ? 'Wählen' : '+'; ?></button><?php endif; ?>
+							<?php $conf = !empty($p['configurator']); ?>
+							<?php if ($shop_accepting): ?><button type="button" class="shop-add" aria-label="<?php echo shop_h($p['title']); ?> <?php echo $conf ? 'selbst belegen' : ($choices ? 'auswählen' : 'hinzufügen'); ?>"><?php echo $conf ? 'Belegen' : ($choices ? 'Wählen' : '+'); ?></button><?php endif; ?>
 						</div>
 					</li>
 					<?php endforeach; ?>
@@ -130,8 +135,10 @@ $notice = (string)shop_setting('notice');
 		<span class="cartbar-total" id="cartbar-total"></span>
 	</button>
 	<dialog class="shop-dialog" id="product-dialog" aria-labelledby="pd-title"></dialog>
+	<?php if ($has_conf): ?><dialog class="pz" id="pizza-dialog" aria-labelledby="pz-title"></dialog><?php endif; ?>
 	<?php endif; ?>
 	<div class="shop-toast" id="shop-toast" role="status" aria-live="polite"></div>
+	<?php if ($has_conf): ?><script src="pizza.js?v=<?php echo @filemtime(__DIR__.'/pizza.js'); ?>"></script><?php endif; ?>
 	<script src="shop.js?v=<?php echo @filemtime(__DIR__.'/shop.js'); ?>"></script>
 <?php endif; ?>
 </body>

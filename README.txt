@@ -52,6 +52,20 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-03 == mySeat v6.4.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Wunschpizza-Konfigurator im Bestellshop. Ein Gericht bekommt im Speisekarten-Editor den Haken "Als Wunschpizza
+   anbieten (Konfigurator)"; dann steht auf der Karte "Belegen", und der Gast belegt einen rohen Teigling selbst
+   (order/pizza.js, order/pizza.css): Holztisch, Teigling auf der Schaufel, gemalte Zutaten in einer Zutatenliste nach
+   den Optionsgruppen des Gerichts. Antippen legt die Zutat auf den Teig, jede Portion verteilt sich in sechs Teilen
+   im 60-Grad-Abstand (symmetrisch), Soßen als Wirbel. Der Konfigurator füllt dieselbe Warenkorbposition wie der
+   normale Produktdialog (Optionen, Mengen, Teigart), Preise und Grenzen rechnet weiter der Server; die Küche liest
+   die Zutaten wie bisher. Ohne den Haken, oder wenn pizza.js nicht lädt, bleibt der normale Dialog.
+ * New: jede Option einer Zubehörgruppe hat ein Symbol für den Konfigurator (Spalte tp_shop_group_items.icon, leer =
+   automatisch nach dem Namen über shop_item_icon(), "none" = kein Belag); das Gericht hat tp_shop_products.configurator.
+   Beide Spalten legt shop_ensure_schema() an. Im Gruppen-Editor gibt es dafür eine Auswahl "Symbol".
+ * New: PRODUCT.md (Impeccable-Produktkontext) mit Nutzern, Zweck und Randbedingungen des Systems.
+
 2026-10-03 == mySeat v6.3.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Sperrzeiten des Tischplans wirken jetzt auch bei der Online-Verfügbarkeit "Nach Zählung". An einem Tag,
