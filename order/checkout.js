@@ -3,7 +3,8 @@
 (function () {
 	'use strict';
 	var KEY = 'amadeusCartV2', GUEST = 'amadeusGuestV1', TOKEN = document.body.dataset.token;
-	var S = { mode: 'delivery', cart: [], info: null, zone: null, zoneKey: '', zoneAmbiguous: false, zoneWords: '', w3wKey: '', slots: null, tipPct: 0, tipCustom: '', when: 'asap', pay: '', busy: false, coupon: null };
+	var S = { mode: 'delivery', cart: [], info: null, zone: null, zoneKey: '', zoneAmbiguous: false, zoneWords: '', w3wKey: '', slots: null, tipPct: 0, tipCustom: '', when: 'asap', pay: '', busy: false, coupon: null, group: null };
+	var GKEY = 'amadeusBasketV1';
 	var form = document.getElementById('co-form');
 
 	function $(s, r) { return (r || document).querySelector(s); }
@@ -51,6 +52,7 @@
 	function renderSummary() {
 		$('#co-lines').innerHTML = S.cart.map(function (l) {
 			return '<div class="cart-line"><h3>' + l.qty + '× ' + esc(l.title) + (l.vtitle ? ' <span class="cart-opts">(' + esc(l.vtitle) + ')</span>' : '') + '</h3><span class="cart-lineprice">' + fmt(l.unit * l.qty) + '</span>' +
+				(l.who ? '<p class="cart-opts">für ' + esc(l.who) + '</p>' : '') +
 				(l.optText ? '<p class="cart-opts">' + esc(l.optText) + '</p>' : '') + (l.note ? '<p class="cart-opts">Hinweis: ' + esc(l.note) + '</p>' : '') + '</div>';
 		}).join('');
 		var h = '<div class="cart-row"><span>Zwischensumme</span><span>' + fmt(subtotal()) + '</span></div>';
@@ -293,20 +295,35 @@
 		post('create', {
 			type: S.mode, when: when, payment: S.pay, tip: tipCents(), name: f.name.value, phone: f.phone.value, email: f.email.value, note: f.note.value,
 			street: f.street.value, zip: f.zip.value, city: f.city.value, words: S.zoneWords, address_note: f.address_note.value, website: f.website.value, coupon: S.coupon ? S.coupon.code : '',
-			lines: S.cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; })
+			lines: S.cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; }),
+			group: S.group ? S.group.token : '', me: S.group ? S.group.me : ''
 		}).then(function (r) {
 			if (!r.ok) { var msg = r.error || 'Das hat nicht geklappt.'; err.textContent = msg; S.busy = false; updateSubmit(); $('#co-why').textContent = msg; err.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); return; }
-			try { var d = JSON.parse(localStorage.getItem(KEY) || '{}'); d.cart = []; localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) {}
+			try {
+				if (S.group) { localStorage.removeItem(GKEY); } // the shared basket is done; the own cart stays as it was
+				else { var d = JSON.parse(localStorage.getItem(KEY) || '{}'); d.cart = []; localStorage.setItem(KEY, JSON.stringify(d)); }
+			} catch (e) {}
 			location.href = r.redirect;
 		}).catch(function () { var msg = 'Das hat nicht geklappt. Bitte versuche es noch einmal.'; err.textContent = msg; S.busy = false; updateSubmit(); $('#co-why').textContent = msg; err.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); });
 	});
 
 	load(); prefill();
-	if (!S.cart.length) { $('#co-empty').hidden = false; $$('.co-sec').forEach(function (s) { s.hidden = true; }); }
+	// coming from a shared basket (checkout.php?g=...): the lines are everybody's, the organizer of that basket orders and pays
+	var gTok = ''; try { gTok = new URLSearchParams(location.search).get('g') || ''; } catch (e) {}
+	var gSaved = null; try { gSaved = JSON.parse(localStorage.getItem(GKEY) || 'null'); } catch (e) {}
+	if (/^[a-f0-9]{24}$/.test(gTok) && gSaved && gSaved.token === gTok && /^[a-f0-9]{32}$/.test(gSaved.me)) { S.group = gSaved; S.cart = []; }
+	function showEmpty() { $('#co-empty').hidden = false; $$('.co-sec').forEach(function (s) { s.hidden = true; }); }
+	if (!S.cart.length && !S.group) { showEmpty(); }
 	fetch('api.php?op=state', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) {
 		if (!r.ok || !r.accepting) { location.href = './'; return; }
 		S.info = r;
-		if (S.cart.length) { setMode(S.mode); checkZone(); }
+		if (!S.group) { if (S.cart.length) { setMode(S.mode); checkZone(); } return; }
+		return post('basket_view', { g: S.group.token, me: S.group.me }).then(function (v) {
+			if (!v.ok || !v.joined || !v.owner || v.status === 'ordered') { location.href = './'; return; }
+			v.members.forEach(function (m) { m.lines.forEach(function (l) { if (!l.unavailable) { var c = {}; Object.keys(l).forEach(function (k) { c[k] = l[k]; }); c.who = m.name; S.cart.push(c); } }); });
+			if (!S.cart.length) { showEmpty(); return; }
+			setMode(S.mode); checkZone(); renderSummary();
+		});
 	});
 	renderSummary();
 	try { var pc = new URLSearchParams(location.search).get('code'); if (pc && S.cart.length) { $('#co-coupon-in').value = pc; applyCoupon(pc, false); } } catch (e) {}

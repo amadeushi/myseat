@@ -52,6 +52,17 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.6.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Gemeinsam bestellen im Bestellshop. Ein Gast startet im Warenkorb oder über den Knopf in der Kopfzeile eine
+   gemeinsame Bestellung, gibt seinen Namen ein und teilt den Link. Wer den Link öffnet, nennt seinen Namen und füllt
+   den gemeinsamen Warenkorb mit seinen Gerichten (auch mit dem Wunschpizza-Konfigurator). Der Warenkorb ist nach Personen
+   getrennt, jede Person sieht ihre Zwischensumme, ändern kann sie nur die eigenen Gerichte, die bestellende Person alle.
+   Die Ansicht aktualisiert sich alle paar Sekunden. Eine Person schließt den Warenkorb ab (danach ist er gesperrt),
+   geht normal zur Kasse und bezahlt, auch online. Auf dem Bon steht bei jedem Gericht "für <Name>", die Bestellnotiz
+   nennt alle Teilnehmer. Der Korb verfällt sechs Stunden nach der letzten Aktivität. Neue Tabellen (werden selbst
+   angelegt): tp_shop_baskets, tp_shop_basket_members, tp_shop_basket_lines; Schnittstelle: order/api.php op=basket_*.
+
 2026-10-04 == mySeat v6.5.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix: Soßentöpfchen im Wunschpizza-Konfigurator waren zu klein. Die Schälchen (ca. 125 ml, rund 6 cm) werden jetzt im

@@ -45,6 +45,7 @@ $notice = (string)shop_setting('notice');
 				<button type="button" class="mode-btn" data-mode="pickup" aria-pressed="false">Abholung</button>
 			</div>
 			<p class="shop-status" id="shop-status" role="status" aria-live="polite"></p>
+			<?php if ($shop_accepting): ?><button type="button" class="shop-group-btn" id="gb-top" data-gb-new hidden>Gemeinsam bestellen</button><?php endif; ?>
 			<div class="shop-zone" id="shop-zone">
 				<button type="button" class="shop-zone-toggle" id="shop-zone-toggle" aria-expanded="false" aria-controls="shop-zone-box">Liefert ihr zu mir?</button>
 				<p class="shop-zone-result" id="shop-zone-result" role="status" aria-live="polite"></p>
@@ -135,6 +136,7 @@ $notice = (string)shop_setting('notice');
 		<span class="cartbar-total" id="cartbar-total"></span>
 	</button>
 	<dialog class="shop-dialog" id="product-dialog" aria-labelledby="pd-title"></dialog>
+	<dialog class="gb-dialog" id="group-dialog" aria-label="Gemeinsam bestellen"></dialog>
 	<?php if ($has_conf): ?><dialog class="pz" id="pizza-dialog" aria-labelledby="pz-title"></dialog><?php endif; ?>
 	<?php endif; ?>
 	<div class="shop-toast" id="shop-toast" role="status" aria-live="polite"></div>

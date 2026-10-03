@@ -131,15 +131,45 @@ if (in_array($op, array('driver_list', 'driver_claim', 'driver_start', 'driver_p
 	api_out(array_merge(array('ok' => true), shop_driver_state($driverId)));
 }
 
+// shared basket ("Gemeinsam bestellen"): several guests fill one basket, the organizer orders and pays (see shop_basket_* in shop.class.php)
+if (strpos($op, 'basket_') === 0) {
+	$g = (string)(isset($body['g']) ? $body['g'] : ''); $me = (string)(isset($body['me']) ? $body['me'] : '');
+	if ($op === 'basket_create' || $op === 'basket_join') {
+		// creating and joining are limited per visitor, like the address lookup
+		$_SESSION['shop_basket_hits'] = isset($_SESSION['shop_basket_hits']) ? $_SESSION['shop_basket_hits'] : array();
+		$_SESSION['shop_basket_hits'] = array_values(array_filter($_SESSION['shop_basket_hits'], function ($t) { return $t > time() - 3600; }));
+		if (count($_SESSION['shop_basket_hits']) >= 20) { api_out(array('ok' => false, 'error' => 'Zu viele Versuche. Bitte versuche es später noch einmal.')); }
+		$_SESSION['shop_basket_hits'][] = time();
+		$nm = isset($body['name']) ? $body['name'] : '';
+		api_out($op === 'basket_create' ? shop_basket_create($nm) : shop_basket_join($g, $nm));
+	}
+	if ($op === 'basket_view') { api_out(shop_basket_view($g, $me, (string)(isset($body['rev']) ? $body['rev'] : ''))); }
+	if ($op === 'basket_add') { api_out(shop_basket_add($g, $me, isset($body['line']) ? $body['line'] : array())); }
+	if ($op === 'basket_qty') { api_out(shop_basket_set_qty($g, $me, (int)(isset($body['id']) ? $body['id'] : 0), (int)(isset($body['qty']) ? $body['qty'] : 0))); }
+	if ($op === 'basket_status') { api_out(shop_basket_set_status($g, $me, (string)(isset($body['to']) ? $body['to'] : ''))); }
+	if ($op === 'basket_close') { api_out(shop_basket_close($g, $me)); }
+	api_out(array('ok' => false, 'error' => 'Unbekannte Anfrage.'), 400);
+}
+
 if ($op === 'create') {
 	if (!empty($body['website'])) { api_out(array('ok' => false, 'error' => 'Die Bestellung konnte nicht abgeschickt werden.')); } // hidden field: only robots fill it
 	$body['ip'] = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '';
+	// an order from a shared basket: the lines come from the basket (never from the browser), each marked with who it is for
+	$basket = (string)(isset($body['group']) ? $body['group'] : '');
+	if ($basket !== '') {
+		$gl = shop_basket_order_lines($basket, isset($body['me']) ? (string)$body['me'] : '');
+		if (!$gl['ok']) { api_out(array('ok' => false, 'error' => $gl['error'])); }
+		$body['lines'] = $gl['lines'];
+		$own = trim((string)(isset($body['note']) ? $body['note'] : ''));
+		$body['note'] = mb_substr('Gemeinsame Bestellung: '.implode(', ', $gl['names']).($own !== '' ? ' – '.mb_substr($own, 0, 300) : ''), 0, 500);
+	}
 	$r = shop_create_order($body);
 	if (!$r['ok']) { api_out(array('ok' => false, 'error' => $r['error'])); }
 	$order = $r['order'];
+	if ($basket !== '') { shop_basket_mark($basket, 'ordered', (int)$order['id']); }
 	if ($order['payment_method'] === 'mollie') {
 		$p = shop_mollie_create($order, shop_base_url());
-		if (!$p['ok']) { shop_set_status((int)$order['id'], 'cancelled', 'Zahlung nicht möglich'); api_out(array('ok' => false, 'error' => $p['error'])); }
+		if (!$p['ok']) { shop_set_status((int)$order['id'], 'cancelled', 'Zahlung nicht möglich'); if ($basket !== '') { shop_basket_mark($basket, 'locked', 0); } api_out(array('ok' => false, 'error' => $p['error'])); }
 		api_out(array('ok' => true, 'redirect' => $p['url']));
 	}
 	shop_after_order_placed($order['id']);

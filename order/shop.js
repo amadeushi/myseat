@@ -3,7 +3,7 @@
 (function () {
 	'use strict';
 	var body = document.body, ACCEPT = body.dataset.accepting === '1', KEY = 'amadeusCartV2', TOKEN = body.dataset.token;
-	var state = { mode: 'delivery', cart: [], info: null, zone: null };
+	var state = { mode: 'delivery', cart: [], info: null, zone: null, group: null, gv: null };
 
 	function $(s, r) { return (r || document).querySelector(s); }
 	function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
@@ -254,6 +254,7 @@
 	// ---- cart
 	function lineKey(l) { return [l.pid, l.vid, Object.keys(l.opts).sort().map(function (k) { return k + ':' + l.opts[k]; }).join(','), l.note].join('|'); }
 	function addLine(l) {
+		if (state.group) { gAdd(l); return; }
 		var k = lineKey(l), hit = state.cart.filter(function (x) { return lineKey(x) === k; })[0];
 		if (hit) { hit.qty = Math.min(50, hit.qty + l.qty); } else { state.cart.push(l); }
 		save(); renderCart(); toast('Zum Warenkorb hinzugefügt');
@@ -265,8 +266,15 @@
 		for (var j = state.cart.length - 1; j >= 0; j--) { if (j !== i && lineKey(state.cart[j]) === k) { l.qty = Math.min(50, l.qty + state.cart[j].qty); state.cart.splice(j, 1); if (j < i) { i--; } } }
 		save(); renderCart(); toast('Änderung gespeichert');
 	}
-	function subtotal() { return state.cart.reduce(function (s, l) { return s + l.unit * l.qty; }, 0); }
-	function count() { return state.cart.reduce(function (s, l) { return s + l.qty; }, 0); }
+	// in a shared basket the lines come from the server (everybody's), otherwise from this browser
+	function cartLines() {
+		if (!state.group) { return state.cart; }
+		var out = [];
+		if (state.gv && state.gv.members) { state.gv.members.forEach(function (m) { m.lines.forEach(function (l) { if (!l.unavailable) { out.push(l); } }); }); }
+		return out;
+	}
+	function subtotal() { return cartLines().reduce(function (s, l) { return s + l.unit * l.qty; }, 0); }
+	function count() { return cartLines().reduce(function (s, l) { return s + l.qty; }, 0); }
 	function minOrder() { if (!state.info) { return 0; } return state.mode === 'delivery' ? (state.zone ? state.zone.min : state.info.min_delivery) : state.info.min_pickup; }
 
 	var ICON_TRASH = '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M4 6h12M8 6V4h4v2M6 6l.7 10h6.6L14 6M8.5 9v4.5M11.5 9v4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -296,15 +304,17 @@
 	function renderCart() {
 		var box = $('#cart-body'); if (!box) { return; }
 		var n = count(), sub = subtotal(), min = minOrder(), below = min > 0 && sub < min;
-		var bar = $('#cartbar'); if (bar) { bar.hidden = n === 0; $('#cartbar-count').textContent = n; $('#cartbar-total').textContent = fmt(sub); $('.cartbar-label', bar).textContent = below ? 'Noch ' + fmt(min - sub) + ' bis zum Mindestbestellwert' : 'Warenkorb ansehen'; }
+		var bar = $('#cartbar'); if (bar) { bar.hidden = n === 0 && !state.group; $('#cartbar-count').textContent = n; $('#cartbar-total').textContent = fmt(sub); $('.cartbar-label', bar).textContent = state.group ? 'Gemeinsamer Warenkorb' : (below ? 'Noch ' + fmt(min - sub) + ' bis zum Mindestbestellwert' : 'Warenkorb ansehen'); }
+		var gtop = $('#gb-top'); if (gtop) { gtop.hidden = !!state.group; }
 		// what the guest already has, right in the menu
-		var per = {}; state.cart.forEach(function (l) { per[l.pid] = (per[l.pid] || 0) + l.qty; });
+		var per = {}; cartLines().forEach(function (l) { per[l.pid] = (per[l.pid] || 0) + l.qty; });
 		$$('.shop-item').forEach(function (li) {
 			var m = $('.shop-inbag', li), q = per[li.dataset.id] || 0;
 			if (q && !m) { m = document.createElement('span'); m.className = 'shop-inbag'; $('.shop-price', li).after(m); }
 			if (m) { m.textContent = q ? q + '× im Warenkorb' : ''; m.hidden = !q; }
 		});
-		if (!n) { box.innerHTML = '<p class="cart-empty">Dein Warenkorb ist noch leer.<br/>Such dir etwas Feines aus, wir kochen es frisch für dich.</p>'; return; }
+		if (state.group) { renderGroupCart(box, sub, min, below); return; }
+		if (!n) { box.innerHTML = '<p class="cart-empty">Dein Warenkorb ist noch leer.<br/>Such dir etwas Feines aus, wir kochen es frisch für dich.</p>' + groupInvite(); return; }
 		var s0 = state.info ? state.info[state.mode] : null, h = '';
 		if (s0) { h += '<p class="cart-eta">' + (state.mode === 'delivery' ? 'Lieferung' : 'Abholung') + (s0.open ? ' in etwa ' + s0.lead + ' Minuten' : ' zurzeit nicht möglich' + (s0.next ? ', ' + s0.next : '')) + '</p>'; }
 		if (min > 0) {
@@ -327,9 +337,141 @@
 			(state.mode === 'delivery' ? '<div class="cart-row muted"><span>Liefergebühr</span><span>' + (state.zone ? fmt(state.zone.fee) : 'nach Adresse') + '</span></div>' : '') + '</div>';
 		h += '<a class="cart-go" href="checkout.php"' + (below ? ' aria-disabled="true" tabindex="-1"' : '') + '>' + (below ? 'Noch ' + fmt(min - sub) + ' bis zur Kasse' : 'Zur Kasse · ' + fmt(sub)) + '</a>' +
 			'<p class="cart-trust">Frisch für dich zubereitet. Bezahlen kannst du online, bar oder mit Karte.</p>' +
-			'<button type="button" class="cart-clear" data-clear>Warenkorb leeren</button>';
+			'<button type="button" class="cart-clear" data-clear>Warenkorb leeren</button>' + groupInvite();
 		box.innerHTML = h;
 	}
+	// ---- shared basket ("Gemeinsam bestellen"): everybody fills one basket on the server, one person (the organizer) orders and pays.
+	// This browser only keeps who it is in that basket (token + secret member id); lines, names and prices come from the server.
+	var GKEY = 'amadeusBasketV1', gSeq = 0, gApplied = 0, gRev = '';
+	function gLoad() {
+		try { var d = JSON.parse(localStorage.getItem(GKEY) || 'null'); if (d && /^[a-f0-9]{24}$/.test(d.token) && /^[a-f0-9]{32}$/.test(d.me)) { state.group = d; } } catch (e) {}
+	}
+	function gSave() { try { if (state.group) { localStorage.setItem(GKEY, JSON.stringify(state.group)); } else { localStorage.removeItem(GKEY); } } catch (e) {} }
+	function gPost(op, data) {
+		data = data || {}; data.op = op; data.token = TOKEN;
+		if (state.group) { if (data.g === undefined) { data.g = state.group.token; } if (data.me === undefined) { data.me = state.group.me; } }
+		return fetch('api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(data) }).then(function (r) { return r.json(); });
+	}
+	function gLink() { return location.href.split('#')[0].split('?')[0] + '?g=' + state.group.token; }
+	// the newest answer wins; "same" means nothing changed since the revision this page already shows
+	function gRefresh(force) {
+		if (!state.group) { return Promise.resolve(); }
+		var seq = ++gSeq;
+		return gPost('basket_view', { rev: force ? '' : gRev }).then(function (r) {
+			if (!state.group || seq < gApplied) { return; }
+			gApplied = seq;
+			if (r.gone) { gEnd('Die gemeinsame Bestellung ist beendet.'); return; }
+			if (!r.ok) { return; }
+			if (!r.joined) { gEnd('Du bist bei dieser gemeinsamen Bestellung nicht mehr dabei.'); return; }
+			if (r.same) { return; }
+			gRev = r.rev; state.gv = r; renderCart();
+		}).catch(function () {});
+	}
+	function gEnd(msg) { state.group = null; state.gv = null; gRev = ''; gSave(); if (msg) { toast(msg); } renderCart(); }
+	function gAdd(l) {
+		gPost('basket_add', { line: { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note } }).then(function (r) {
+			toast(r.ok ? 'Zum gemeinsamen Warenkorb hinzugefügt' : (r.error || 'Das hat nicht geklappt.'));
+			return gRefresh(true);
+		}).catch(function () { toast('Das hat nicht geklappt.'); });
+	}
+	function gStart(name) {
+		return gPost('basket_create', { name: name }).then(function (r) {
+			if (!r.ok) { throw new Error(r.error); }
+			state.group = { token: r.token, me: r.me, name: r.name }; gSave(); gRev = '';
+			// what this guest already had in the own cart moves into the shared one
+			var mine = state.cart.slice();
+			return mine.reduce(function (p, l) { return p.then(function () { return gPost('basket_add', { line: { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note } }); }); }, Promise.resolve())
+				.then(function () { state.cart = []; save(); return gRefresh(true); });
+		});
+	}
+	function gJoin(token, name) {
+		return gPost('basket_join', { g: token, name: name }).then(function (r) {
+			if (!r.ok) { throw new Error(r.error); }
+			state.group = { token: token, me: r.me, name: name }; gSave(); gRev = ''; return gRefresh(true);
+		});
+	}
+	function gShare() {
+		var url = gLink();
+		if (navigator.share) { navigator.share({ title: 'Gemeinsam bestellen', text: 'Such dir etwas aus, wir bestellen zusammen:', url: url }).catch(function () {}); return; }
+		var sel = function () { var i = $('[data-gb-link]'); if (i) { i.focus(); i.select(); } toast('Link markiert, bitte kopieren'); };
+		if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(url).then(function () { toast('Link kopiert'); }, sel); } else { sel(); }
+	}
+	function gDialog(mode, token, ownerName) {
+		var d = $('#group-dialog'); if (!d) { return; }
+		var join = mode === 'join', saved = '';
+		try { saved = String(JSON.parse(localStorage.getItem(GUEST) || '{}').name || '').split(' ')[0]; } catch (e) {}
+		d.innerHTML = '<form class="gb-form" novalidate><h2>Gemeinsam bestellen</h2><p>' + (join
+			? esc(ownerName) + ' hat dich zu einer gemeinsamen Bestellung eingeladen. Such dir dein Essen aus, ' + esc(ownerName) + ' schickt am Ende alles zusammen ab und bezahlt.'
+			: 'Du bekommst einen Link für die anderen. Jede Person sucht sich ihre Sachen selbst aus. Am Ende schickst du alles zusammen ab und bezahlst.') +
+			'</p><label class="co-f"><span>Dein Name (die anderen sehen ihn)</span><input type="text" name="n" maxlength="24" autocomplete="given-name" value="' + esc(saved) + '"/></label>' +
+			'<p class="gb-err" role="alert"></p><div class="gb-actions"><button type="button" class="gb-btn ghost" data-gb-cancel>Abbrechen</button><button type="submit" class="gb-btn solid">' + (join ? 'Mitmachen' : 'Los geht’s') + '</button></div></form>';
+		var f = $('form', d), err = $('.gb-err', d), busy = false;
+		f.onsubmit = function (ev) {
+			ev.preventDefault(); if (busy) { return; }
+			var nm = f.n.value.trim(); if (!nm) { err.textContent = 'Bitte gib deinen Namen an.'; f.n.focus(); return; }
+			busy = true; err.textContent = '';
+			(join ? gJoin(token, nm) : gStart(nm)).then(function () { d.close(); cartOpen(true); }).catch(function (e) { busy = false; err.textContent = (e && e.message) || 'Das hat nicht geklappt.'; });
+		};
+		$('[data-gb-cancel]', d).onclick = function () { d.close(); };
+		if (typeof d.showModal === 'function') { d.showModal(); } else { d.setAttribute('open', ''); }
+		f.n.focus();
+	}
+	function groupInvite() {
+		if (!ACCEPT) { return ''; }
+		return '<div class="gb-invite"><h3>Zu mehreren bestellen?</h3><p>Ihr füllt einen gemeinsamen Warenkorb, jede Person sucht sich ihre Sachen selbst aus. Eine Person schickt ab und bezahlt.</p><button type="button" class="gb-btn" data-gb-new>Gemeinsam bestellen</button></div>';
+	}
+	function gLine(l) {
+		return '<div class="cart-line"><h3>' + esc(l.title) + (l.vtitle ? ' <span class="cart-opts">(' + esc(l.vtitle) + ')</span>' : '') + '</h3><span class="cart-lineprice">' + (l.unavailable ? '' : fmt(l.unit * l.qty)) + '</span>' +
+			(l.optText ? '<p class="cart-opts">' + esc(l.optText) + '</p>' : '') + (l.note ? '<p class="cart-opts">Hinweis: ' + esc(l.note) + '</p>' : '') +
+			(l.can
+				? '<div class="cart-qty"><button type="button" class="qty-btn' + (l.qty === 1 ? ' is-trash' : '') + '" data-gid="' + l.id + '" data-q="' + (l.qty - 1) + '" aria-label="' + (l.qty === 1 ? 'Entfernen' : 'Weniger') + '">' + (l.qty === 1 ? ICON_TRASH : '&minus;') + '</button><span class="qty-num" aria-live="polite">' + l.qty + '</span>' +
+					(l.unavailable ? '' : '<button type="button" class="qty-btn" data-gid="' + l.id + '" data-q="' + (l.qty + 1) + '" aria-label="Mehr">+</button>') + '</div>'
+				: (l.qty > 1 ? '<p class="cart-opts">Menge: ' + l.qty + '</p>' : '')) + '</div>';
+	}
+	function renderGroupCart(box, sub, min, below) {
+		var v = state.gv;
+		if (!v) { box.innerHTML = '<p class="cart-empty">Der gemeinsame Warenkorb wird geladen ...</p>'; return; }
+		var done = v.status === 'ordered', locked = v.status === 'locked', np = v.members.length;
+		var h = '<div class="gb-head"><p class="gb-kicker">Gemeinsame Bestellung</p><p class="gb-who">' + (v.owner ? 'Du bestellst und bezahlst. ' : esc(v.owner_name) + ' bestellt und bezahlt. ') + np + (np === 1 ? ' Person ist dabei.' : ' Personen sind dabei.') + '</p>';
+		if (!done) { h += '<label class="gb-link"><span>Link zum Teilen</span><input type="text" readonly value="' + esc(gLink()) + '" data-gb-link/></label><button type="button" class="gb-btn" data-gb-share>Link teilen</button>'; }
+		h += '</div>';
+		if (done) { h += '<p class="gb-state is-done">Die Bestellung ist abgeschickt. Guten Appetit!</p>'; }
+		else if (locked) { h += '<p class="gb-state">Der Warenkorb ist abgeschlossen. ' + (v.owner ? 'Du bist an der Kasse.' : esc(v.owner_name) + ' ist an der Kasse.') + '</p>'; }
+		v.members.forEach(function (m) {
+			h += '<section class="gb-member"><header><h3>' + esc(m.name) + (m.mine ? ' <small>(du)</small>' : '') + (m.owner && !m.mine ? ' <small>bezahlt</small>' : '') + '</h3><span>' + fmt(m.sum) + '</span></header>';
+			h += m.lines.length ? m.lines.map(gLine).join('') : '<p class="gb-none">Noch nichts ausgewählt.</p>';
+			h += '</section>';
+		});
+		h += '<div class="cart-sum"><div class="cart-row total"><span>Zusammen</span><span>' + fmt(sub) + '</span></div></div>';
+		if (v.owner && !done) {
+			var empty = count() === 0;
+			h += '<button type="button" class="cart-go" data-gb-checkout' + (below || empty ? ' aria-disabled="true"' : '') + '>' + (empty ? 'Noch nichts im Warenkorb' : (below ? 'Noch ' + fmt(min - sub) + ' bis zur Kasse' : 'Abschließen und zur Kasse · ' + fmt(sub))) + '</button>';
+			if (locked) { h += '<button type="button" class="gb-btn ghost" data-gb-reopen>Warenkorb wieder öffnen</button>'; }
+		}
+		if (!v.owner && !done) { h += '<p class="cart-trust">Du musst nichts weiter tun. ' + esc(v.owner_name) + ' schickt die Bestellung ab und bezahlt.</p>'; }
+		if (done) { h += '<button type="button" class="gb-btn" data-gb-leave data-now>Fertig, neue Bestellung starten</button>'; }
+		else if (v.owner) { h += '<button type="button" class="cart-clear" data-gb-end data-label="Gemeinsame Bestellung beenden">Gemeinsame Bestellung beenden</button>'; }
+		else { h += '<button type="button" class="cart-clear" data-gb-leave data-label="Gemeinsame Bestellung verlassen">Gemeinsame Bestellung verlassen</button>'; }
+		box.innerHTML = h;
+	}
+	// opened with an invitation link (?g=...): ask for a name first, or just carry on when this browser is already in
+	function gInit() {
+		gLoad();
+		var q = ''; try { q = new URLSearchParams(location.search).get('g') || ''; } catch (e) {}
+		if (!/^[a-f0-9]{24}$/.test(q)) { q = ''; }
+		if (q) { try { history.replaceState(null, '', location.pathname); } catch (e) {} }
+		if (q && !(state.group && state.group.token === q)) {
+			gPost('basket_view', { g: q, me: '' }).then(function (r) {
+				if (r.gone) { toast('Diese gemeinsame Bestellung gibt es nicht mehr.'); }
+				else if (r.ok && r.joined === false) { if (r.status !== 'open') { toast('Hier wird gerade bestellt, du kannst nicht mehr beitreten.'); } else { gDialog('join', q, r.owner_name); } }
+			}).catch(function () {});
+		}
+		if (state.group) { renderCart(); gRefresh(true); }
+		setInterval(function () { if (state.group && !document.hidden) { gRefresh(false); } }, 6000);
+		document.addEventListener('visibilitychange', function () { if (state.group && !document.hidden) { gRefresh(false); } });
+	}
+	document.addEventListener('focusin', function (ev) { if (ev.target && ev.target.matches && ev.target.matches('[data-gb-link]')) { ev.target.select(); } });
+
 	function cartOpen(on) { var c = $('#shop-cart'); if (c) { c.classList.toggle('is-open', on); document.documentElement.style.overflow = on ? 'hidden' : ''; } }
 	document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') { var c = $('#shop-cart'); if (c && c.classList.contains('is-open')) { cartOpen(false); } } });
 
@@ -518,6 +660,27 @@
 			else { addLine({ pid: +item.dataset.id, title: item.dataset.title, vid: 0, vtitle: '', opts: {}, optText: '', unit: +item.dataset.price, qty: 1, note: '' }); }
 			return;
 		}
+		if (t.closest('[data-gb-new]')) { gDialog('create'); return; }
+		var gq = t.closest('[data-gid]');
+		if (gq) { gPost('basket_qty', { id: +gq.dataset.gid, qty: +gq.dataset.q }).then(function (r) { if (!r.ok) { toast(r.error || 'Das hat nicht geklappt.'); } return gRefresh(true); }).catch(function () { toast('Das hat nicht geklappt.'); }); return; }
+		if (t.closest('[data-gb-share]')) { gShare(); return; }
+		var gco = t.closest('[data-gb-checkout]');
+		if (gco) {
+			if (gco.getAttribute('aria-disabled') === 'true') { return; }
+			gPost('basket_status', { to: 'locked' }).then(function (r) { if (!r.ok) { toast(r.error || 'Das hat nicht geklappt.'); return gRefresh(true); } location.href = 'checkout.php?g=' + state.group.token; }).catch(function () { toast('Das hat nicht geklappt.'); });
+			return;
+		}
+		if (t.closest('[data-gb-reopen]')) { gPost('basket_status', { to: 'open' }).then(function () { return gRefresh(true); }); return; }
+		var glv = t.closest('[data-gb-leave],[data-gb-end]');
+		if (glv) {
+			var gend = glv.hasAttribute('data-gb-end');
+			if (!glv.dataset.armed && !glv.hasAttribute('data-now')) {
+				glv.dataset.armed = '1'; glv.textContent = gend ? 'Wirklich beenden? Alle Wünsche gehen verloren.' : 'Deine Gerichte bleiben im Warenkorb. Wirklich verlassen?';
+				setTimeout(function () { glv.dataset.armed = ''; glv.textContent = glv.dataset.label || ''; }, 4000); return;
+			}
+			if (gend) { gPost('basket_close').then(function () { gEnd('Die gemeinsame Bestellung ist beendet.'); cartOpen(false); }); } else { gEnd(glv.hasAttribute('data-now') ? '' : 'Du hast die gemeinsame Bestellung verlassen.'); cartOpen(false); }
+			return;
+		}
 		if (t.closest('#cartbar')) { cartOpen(true); return; }
 		if (t.closest('#cart-close')) { cartOpen(false); return; }
 		var ed = t.closest('[data-edit]');
@@ -539,6 +702,7 @@
 	});
 
 	load();
+	if (ACCEPT) { gInit(); }
 	setMode(state.mode);
 	watchCategories();
 	initSearch();

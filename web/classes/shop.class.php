@@ -133,6 +133,17 @@ function shop_ensure_schema() {
 		`active` TINYINT NOT NULL DEFAULT 1, `created_at` DATETIME NOT NULL, UNIQUE KEY `device` (`device_id`)) $opts");
 	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_driver_positions')." (
 		`driver_id` INT UNSIGNED NOT NULL PRIMARY KEY, `lat` DOUBLE NOT NULL, `lng` DOUBLE NOT NULL, `updated_at` DATETIME NOT NULL) $opts");
+	// shared basket ("Gemeinsam bestellen"): see shop_basket_create()
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_baskets')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `token` CHAR(24) NOT NULL, `owner` CHAR(32) NOT NULL, `status` VARCHAR(10) NOT NULL DEFAULT 'open',
+		`order_id` INT UNSIGNED NULL, `created_at` DATETIME NOT NULL, `expires_at` DATETIME NOT NULL, UNIQUE KEY `tok` (`token`), KEY `exp` (`expires_at`)) $opts");
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_basket_members')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `basket_id` INT UNSIGNED NOT NULL, `member` CHAR(32) NOT NULL, `name` VARCHAR(24) NOT NULL,
+		`created_at` DATETIME NOT NULL, UNIQUE KEY `mem` (`basket_id`, `member`)) $opts");
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_basket_lines')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `basket_id` INT UNSIGNED NOT NULL, `member` CHAR(32) NOT NULL, `pid` INT UNSIGNED NOT NULL,
+		`vid` INT UNSIGNED NOT NULL DEFAULT 0, `opts` TEXT NULL, `qty` INT NOT NULL DEFAULT 1, `note` VARCHAR(200) NOT NULL DEFAULT '', `created_at` DATETIME NOT NULL,
+		KEY `bsk` (`basket_id`)) $opts");
 	$ocol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'driver_id'");
 	if (!$ocol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `driver_id` INT UNSIGNED NULL, ADD KEY `driver` (`driver_id`)"); }
 	$done = true;
@@ -1805,4 +1816,222 @@ function shop_upsell_candidates($cartProductIds, $limit = 3) {
 		}
 	}
 	return array('learned' => $learned, 'items' => $items);
+}
+
+/*
+ * ---- shared basket ("Gemeinsam bestellen"): several guests fill one basket, one person (the organizer) orders and pays.
+ * Tables tp_shop_baskets / _members / _lines. A member is known only by a secret id (`me`) that the server hands out and the
+ * browser keeps; it is never part of an answer to anybody else. Lines are stored as choices only (dish, variation, options,
+ * amount, note) and priced from the menu on every read, exactly like the single cart. status: open (everybody may change
+ * their lines), locked (the organizer is at the checkout), ordered (the order exists).
+ */
+function shop_basket_clean_name($n) {
+	return mb_substr(trim(preg_replace('/\s+/u', ' ', strip_tags((string)$n))), 0, 24);
+}
+function shop_basket_hex($s, $len) {
+	$s = preg_replace('/[^a-f0-9]/', '', (string)$s);
+	return strlen($s) === $len ? $s : '';
+}
+function shop_basket_get($token) {
+	$token = shop_basket_hex($token, 24);
+	if ($token === '') { return null; }
+	$b = fb_row("SELECT * FROM ".fb_t('tp_shop_baskets')." WHERE token = ?", 's', array($token));
+	return ($b && strtotime($b['expires_at']) >= time()) ? $b : null;
+}
+function shop_basket_touch($id, $seconds = 21600) {
+	fb_exec("UPDATE ".fb_t('tp_shop_baskets')." SET expires_at = ? WHERE id = ?", 'si', array(date('Y-m-d H:i:s', time() + $seconds), (int)$id));
+}
+function shop_basket_member($b, $me) {
+	$me = shop_basket_hex($me, 32);
+	return $me === '' ? null : fb_row("SELECT * FROM ".fb_t('tp_shop_basket_members')." WHERE basket_id = ? AND member = ?", 'is', array((int)$b['id'], $me));
+}
+function shop_basket_delete($id) {
+	foreach (array('tp_shop_basket_lines', 'tp_shop_basket_members') as $t) { fb_exec("DELETE FROM ".fb_t($t)." WHERE basket_id = ?", 'i', array((int)$id)); }
+	fb_exec("DELETE FROM ".fb_t('tp_shop_baskets')." WHERE id = ?", 'i', array((int)$id));
+}
+function shop_basket_add_member($bid, $name) {
+	$taken = array_map(function ($r) { return mb_strtolower($r['name']); }, fb_rows("SELECT name FROM ".fb_t('tp_shop_basket_members')." WHERE basket_id = ?", 'i', array((int)$bid)));
+	$base = $name; $n = 1;
+	while (in_array(mb_strtolower($name), $taken, true)) { $n++; $name = mb_substr($base, 0, 20).' '.$n; }
+	$me = bin2hex(random_bytes(16));
+	fb_exec("INSERT INTO ".fb_t('tp_shop_basket_members')." (basket_id, member, name, created_at) VALUES (?, ?, ?, ?)", 'isss', array((int)$bid, $me, $name, date('Y-m-d H:i:s')));
+	return $me;
+}
+
+function shop_basket_create($name) {
+	$name = shop_basket_clean_name($name);
+	if ($name === '') { return array('ok' => false, 'error' => 'Bitte gib deinen Namen an.'); }
+	foreach (fb_rows("SELECT id FROM ".fb_t('tp_shop_baskets')." WHERE expires_at < ?", 's', array(date('Y-m-d H:i:s', time() - 86400))) as $r) { shop_basket_delete((int)$r['id']); }
+	$token = bin2hex(random_bytes(12)); $now = date('Y-m-d H:i:s');
+	$me = bin2hex(random_bytes(16));
+	if (!fb_exec("INSERT INTO ".fb_t('tp_shop_baskets')." (token, owner, status, created_at, expires_at) VALUES (?, ?, 'open', ?, ?)", 'ssss', array($token, $me, $now, date('Y-m-d H:i:s', time() + 21600)))) {
+		return array('ok' => false, 'error' => 'Die gemeinsame Bestellung konnte nicht angelegt werden.');
+	}
+	$bid = (int)mysqli_insert_id(fb_db());
+	fb_exec("INSERT INTO ".fb_t('tp_shop_basket_members')." (basket_id, member, name, created_at) VALUES (?, ?, ?, ?)", 'isss', array($bid, $me, $name, $now));
+	return array('ok' => true, 'token' => $token, 'me' => $me, 'name' => $name);
+}
+
+function shop_basket_join($token, $name) {
+	$b = shop_basket_get($token);
+	if (!$b) { return array('ok' => false, 'error' => 'Diese gemeinsame Bestellung gibt es nicht mehr.'); }
+	if ($b['status'] !== 'open') { return array('ok' => false, 'error' => 'Hier wird gerade bestellt, du kannst nicht mehr beitreten.'); }
+	$name = shop_basket_clean_name($name);
+	if ($name === '') { return array('ok' => false, 'error' => 'Bitte gib deinen Namen an.'); }
+	$n = fb_row("SELECT COUNT(*) AS n FROM ".fb_t('tp_shop_basket_members')." WHERE basket_id = ?", 'i', array((int)$b['id']));
+	if ($n && (int)$n['n'] >= 30) { return array('ok' => false, 'error' => 'Es sind schon 30 Personen dabei.'); }
+	$me = shop_basket_add_member($b['id'], $name);
+	shop_basket_touch($b['id']);
+	return array('ok' => true, 'me' => $me);
+}
+
+// one choice list as stored: {optionId: amount} with positive whole amounts, in a fixed order, so equal choices compare equal
+function shop_basket_opts_json($opts) {
+	$o = array();
+	if (is_array($opts)) { foreach ($opts as $k => $v) { if ((int)$k > 0 && (int)$v > 0) { $o[(int)$k] = (int)$v; } } }
+	ksort($o);
+	return json_encode($o, JSON_FORCE_OBJECT);
+}
+
+/*
+ * What a member sees: everybody's lines grouped by person, priced from the menu. $rev is the revision the browser already
+ * shows - when nothing changed since, only {same:true} comes back (the page asks every few seconds, pricing is the costly part).
+ */
+function shop_basket_view($token, $me, $rev = '') {
+	$b = shop_basket_get($token);
+	if (!$b) { return array('ok' => false, 'gone' => true, 'error' => 'Diese gemeinsame Bestellung gibt es nicht mehr.'); }
+	$bid = (int)$b['id'];
+	$members = fb_rows("SELECT member, name FROM ".fb_t('tp_shop_basket_members')." WHERE basket_id = ? ORDER BY id", 'i', array($bid));
+	$ownerName = ''; $mine = null;
+	$meId = shop_basket_hex($me, 32);
+	foreach ($members as $m) {
+		if ($m['member'] === $b['owner']) { $ownerName = $m['name']; }
+		if ($meId !== '' && $m['member'] === $meId) { $mine = $m; }
+	}
+	if (!$mine) { return array('ok' => true, 'joined' => false, 'status' => $b['status'], 'owner_name' => $ownerName); }
+	$rows = fb_rows("SELECT id, member, pid, vid, opts, qty, note FROM ".fb_t('tp_shop_basket_lines')." WHERE basket_id = ? ORDER BY id", 'i', array($bid));
+	$sig = $b['status'].'|'.count($members);
+	foreach ($members as $m) { $sig .= '|'.$m['name']; }
+	foreach ($rows as $r) { $sig .= '|'.$r['id'].':'.$r['qty']; }
+	$cur = substr(md5($sig), 0, 12);
+	if ($rev !== '' && $rev === $cur) { return array('ok' => true, 'joined' => true, 'same' => true); }
+	$isOwner = ($mine['member'] === $b['owner']);
+	$per = array(); $sub = 0; $count = 0;
+	foreach ($members as $m) { $per[$m['member']] = array('name' => $m['name'], 'mine' => ($m['member'] === $mine['member']), 'owner' => ($m['member'] === $b['owner']), 'lines' => array(), 'sum' => 0); }
+	foreach ($rows as $r) {
+		if (!isset($per[$r['member']])) { continue; }
+		$opts = json_decode((string)$r['opts'], true); $opts = is_array($opts) ? $opts : array();
+		$p = shop_price_line(array('pid' => (int)$r['pid'], 'vid' => (int)$r['vid'], 'opts' => $opts, 'qty' => (int)$r['qty'], 'note' => $r['note']));
+		$can = ($b['status'] === 'open' && ($isOwner || $r['member'] === $mine['member']));
+		if (!$p['ok']) {
+			$per[$r['member']]['lines'][] = array('id' => (int)$r['id'], 'title' => 'Nicht mehr verfügbar', 'vtitle' => '', 'optText' => '', 'unit' => 0, 'qty' => (int)$r['qty'], 'note' => '', 'unavailable' => true, 'can' => $can);
+			continue;
+		}
+		$l = $p['line'];
+		$parts = array();
+		foreach ($l['options'] as $o) { $parts[] = ($o['qty'] > 1 ? $o['qty'].'× ' : '').$o['title']; }
+		$per[$r['member']]['lines'][] = array('id' => (int)$r['id'], 'pid' => (int)$r['pid'], 'vid' => (int)$r['vid'], 'opts' => (object)$opts, 'title' => $l['title'], 'vtitle' => $l['variation'],
+			'optText' => implode(', ', $parts), 'unit' => $l['unit_cents'], 'qty' => $l['qty'], 'note' => $l['note'], 'can' => $can);
+		$per[$r['member']]['sum'] += $l['line_cents']; $sub += $l['line_cents']; $count += $l['qty'];
+	}
+	// the person looking comes first
+	$list = array_values($per);
+	usort($list, function ($a, $b2) { return ($b2['mine'] ? 1 : 0) - ($a['mine'] ? 1 : 0); });
+	return array('ok' => true, 'joined' => true, 'status' => $b['status'], 'owner' => $isOwner, 'owner_name' => $ownerName, 'name' => $mine['name'], 'members' => $list,
+		'subtotal' => $sub, 'count' => $count, 'rev' => $cur);
+}
+
+function shop_basket_for_change($token, $me, $needOpen) {
+	$b = shop_basket_get($token);
+	if (!$b) { return array('ok' => false, 'error' => 'Diese gemeinsame Bestellung gibt es nicht mehr.'); }
+	$m = shop_basket_member($b, $me);
+	if (!$m) { return array('ok' => false, 'error' => 'Du bist bei dieser gemeinsamen Bestellung nicht dabei.'); }
+	if ($needOpen && $b['status'] === 'locked') { return array('ok' => false, 'error' => 'Der Warenkorb ist abgeschlossen, es wird gerade bestellt.'); }
+	if ($needOpen && $b['status'] === 'ordered') { return array('ok' => false, 'error' => 'Die Bestellung ist schon abgeschickt.'); }
+	return array('ok' => true, 'basket' => $b, 'member' => $m, 'owner' => ($m['member'] === $b['owner']));
+}
+
+function shop_basket_add($token, $me, $line) {
+	$c = shop_basket_for_change($token, $me, true);
+	if (!$c['ok']) { return $c; }
+	$b = $c['basket']; $bid = (int)$b['id'];
+	$line = is_array($line) ? $line : array();
+	$r = shop_price_line($line);
+	if (!$r['ok']) { return $r; }
+	$tot = fb_row("SELECT COUNT(*) AS n, SUM(member = ?) AS mine FROM ".fb_t('tp_shop_basket_lines')." WHERE basket_id = ?", 'si', array($c['member']['member'], $bid));
+	$opts = shop_basket_opts_json(isset($line['opts']) ? $line['opts'] : array());
+	$vid = (int)(isset($line['vid']) ? $line['vid'] : 0); $qty = max(1, min(50, (int)(isset($line['qty']) ? $line['qty'] : 1)));
+	$note = mb_substr(trim((string)(isset($line['note']) ? $line['note'] : '')), 0, 160);
+	$hit = fb_row("SELECT id, qty FROM ".fb_t('tp_shop_basket_lines')." WHERE basket_id = ? AND member = ? AND pid = ? AND vid = ? AND opts = ? AND note = ?", 'isiiss',
+		array($bid, $c['member']['member'], (int)$line['pid'], $vid, $opts, $note));
+	if ($hit) {
+		fb_exec("UPDATE ".fb_t('tp_shop_basket_lines')." SET qty = ? WHERE id = ?", 'ii', array(min(50, (int)$hit['qty'] + $qty), (int)$hit['id']));
+	} else {
+		if ($tot && ((int)$tot['n'] >= 150 || (int)$tot['mine'] >= 40)) { return array('ok' => false, 'error' => 'Der gemeinsame Warenkorb ist voll.'); }
+		fb_exec("INSERT INTO ".fb_t('tp_shop_basket_lines')." (basket_id, member, pid, vid, opts, qty, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", 'isiisiss',
+			array($bid, $c['member']['member'], (int)$line['pid'], $vid, $opts, $qty, $note, date('Y-m-d H:i:s')));
+	}
+	shop_basket_touch($bid);
+	return array('ok' => true);
+}
+
+// $qty <= 0 removes the line; a member changes his own lines, the organizer every line
+function shop_basket_set_qty($token, $me, $lineId, $qty) {
+	$c = shop_basket_for_change($token, $me, true);
+	if (!$c['ok']) { return $c; }
+	$bid = (int)$c['basket']['id'];
+	$l = fb_row("SELECT id, member FROM ".fb_t('tp_shop_basket_lines')." WHERE id = ? AND basket_id = ?", 'ii', array((int)$lineId, $bid));
+	if (!$l) { return array('ok' => true); }
+	if (!$c['owner'] && $l['member'] !== $c['member']['member']) { return array('ok' => false, 'error' => 'Du kannst nur deine eigenen Gerichte ändern.'); }
+	if ((int)$qty <= 0) { fb_exec("DELETE FROM ".fb_t('tp_shop_basket_lines')." WHERE id = ?", 'i', array((int)$l['id'])); }
+	else { fb_exec("UPDATE ".fb_t('tp_shop_basket_lines')." SET qty = ? WHERE id = ?", 'ii', array(min(50, (int)$qty), (int)$l['id'])); }
+	shop_basket_touch($bid);
+	return array('ok' => true);
+}
+
+// the organizer locks the basket while he is at the checkout (nobody changes it under him) and may open it again
+function shop_basket_set_status($token, $me, $to) {
+	$c = shop_basket_for_change($token, $me, false);
+	if (!$c['ok']) { return $c; }
+	if (!$c['owner']) { return array('ok' => false, 'error' => 'Das kann nur die Person, die bestellt.'); }
+	if ($c['basket']['status'] === 'ordered') { return array('ok' => false, 'error' => 'Die Bestellung ist schon abgeschickt.'); }
+	if (!in_array($to, array('open', 'locked'), true)) { return array('ok' => false, 'error' => 'Unbekannter Zustand.'); }
+	fb_exec("UPDATE ".fb_t('tp_shop_baskets')." SET status = ? WHERE id = ?", 'si', array($to, (int)$c['basket']['id']));
+	shop_basket_touch($c['basket']['id']);
+	return array('ok' => true);
+}
+
+function shop_basket_close($token, $me) {
+	$c = shop_basket_for_change($token, $me, false);
+	if (!$c['ok']) { return $c; }
+	if (!$c['owner']) { return array('ok' => false, 'error' => 'Das kann nur die Person, die bestellt.'); }
+	shop_basket_delete($c['basket']['id']);
+	return array('ok' => true);
+}
+
+// the lines of the order, as the checkout takes them; each carries the name of the person it is for (the kitchen sees it on the bon)
+function shop_basket_order_lines($token, $me) {
+	$c = shop_basket_for_change($token, $me, false);
+	if (!$c['ok']) { return $c; }
+	if (!$c['owner']) { return array('ok' => false, 'error' => 'Nur die Person, die bestellt, kann die gemeinsame Bestellung abschicken.'); }
+	if ($c['basket']['status'] === 'ordered') { return array('ok' => false, 'error' => 'Diese gemeinsame Bestellung ist schon abgeschickt.'); }
+	$names = array();
+	foreach (fb_rows("SELECT member, name FROM ".fb_t('tp_shop_basket_members')." WHERE basket_id = ?", 'i', array((int)$c['basket']['id'])) as $m) { $names[$m['member']] = $m['name']; }
+	$lines = array(); $who = array();
+	foreach (fb_rows("SELECT member, pid, vid, opts, qty, note FROM ".fb_t('tp_shop_basket_lines')." WHERE basket_id = ? ORDER BY id", 'i', array((int)$c['basket']['id'])) as $r) {
+		$opts = json_decode((string)$r['opts'], true);
+		$n = isset($names[$r['member']]) ? $names[$r['member']] : '';
+		$lines[] = array('pid' => (int)$r['pid'], 'vid' => (int)$r['vid'], 'opts' => is_array($opts) ? $opts : array(), 'qty' => (int)$r['qty'],
+			'note' => mb_substr(($n !== '' ? 'für '.$n : '').($r['note'] !== '' ? ($n !== '' ? ' – ' : '').$r['note'] : ''), 0, 200));
+		if ($n !== '') { $who[$n] = true; }
+	}
+	if (!$lines) { return array('ok' => false, 'error' => 'Der gemeinsame Warenkorb ist leer.'); }
+	return array('ok' => true, 'lines' => $lines, 'names' => array_keys($who));
+}
+
+function shop_basket_mark($token, $status, $orderId) {
+	$b = shop_basket_get($token);
+	if (!$b) { return; }
+	fb_exec("UPDATE ".fb_t('tp_shop_baskets')." SET status = ?, order_id = ? WHERE id = ?", 'sii', array($status, $orderId > 0 ? $orderId : null, (int)$b['id']));
+	if ($status === 'ordered') { shop_basket_touch($b['id'], 3600); }
 }
