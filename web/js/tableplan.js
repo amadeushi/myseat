@@ -12,7 +12,7 @@
 	var GRID = 10;
 	var st = {
 		areas: [], area: null, tables: [], links: [], closures: [], autoAssign: true,
-		availabilityMode: 'counter', counter: null,
+		availabilityMode: 'counter', counter: null, hideClosed: false,
 		dayVer: 0, previewOpen: false, previewPax: 2, preview: null,
 		selected: null,          // table_id (editor)
 		edit: false, linkMode: false, linkFirst: null,
@@ -133,6 +133,13 @@
 		});
 	}
 	function isClosed(areaId) { return !!st.day && st.day.closed.indexOf(areaId) >= 0; }
+	// the tabs shown in the viewer: with "hide closed areas" the areas closed on this day drop out (never in the editor,
+	// and never all of them - an empty plan would look broken)
+	function visibleAreas() {
+		if (st.edit || !st.hideClosed) { return st.areas; }
+		var open = st.areas.filter(function (a) { return !isClosed(a.area_id); });
+		return open.length ? open : st.areas;
+	}
 	function asgOf(tid) {
 		if (!st.day) { return []; }
 		return st.day.reservations.filter(function (r) { return r.tables.indexOf(tid) >= 0; });
@@ -310,6 +317,8 @@
 	}
 
 	function render() {
+		var shown = visibleAreas();
+		if (shown.length && !shown.some(function (a) { return a.area_id === st.area; })) { st.area = shown[0].area_id; st.selected = null; }
 		Array.prototype.slice.call(canvas.querySelectorAll('.tp-table, .tp-closed-note')).forEach(function (n) { canvas.removeChild(n); });
 		tablesOfArea(st.area).forEach(function (t) { canvas.appendChild(tableNode(t)); });
 		if (!st.edit && isClosed(st.area)) { canvas.appendChild(closureNote(st.area)); }
@@ -338,7 +347,7 @@
 
 	function renderTabs() {
 		while (tabs.firstChild) { tabs.removeChild(tabs.firstChild); }
-		st.areas.forEach(function (a) {
+		visibleAreas().forEach(function (a) {
 			var n = tablesOfArea(a.area_id).length;
 			var closed = !st.edit && isClosed(a.area_id);
 			tabs.appendChild(el('button', {
@@ -586,6 +595,14 @@
 				st.autoAssign = r.autoAssign; say('Gespeichert');
 			});
 		});
+		var hideClosed = el('input', { type: 'checkbox' });
+		hideClosed.checked = st.hideClosed;
+		hideClosed.addEventListener('change', function () {
+			api('setting_save', { hideClosed: hideClosed.checked }).then(function (r) {
+				if (!r.ok) { say(r.error || 'Speichern fehlgeschlagen', true); hideClosed.checked = st.hideClosed; return; }
+				st.hideClosed = !!r.hideClosed; render(); say('Gespeichert');
+			});
+		});
 		var mode = el('select', {}, [
 			el('option', { value: 'counter', text: 'Nach Zählung (bisher)' }),
 			el('option', { value: 'tables', text: 'Nach Tischplan' })
@@ -609,6 +626,7 @@
 		panel.appendChild(el('div', { 'class': 'tp-areabox' }, [
 			el('h3', { text: 'Einstellung' }),
 			el('label', { 'class': 'tp-check' }, [auto, el('span', { text: 'Neue Reservierungen automatisch einem Tisch zuweisen' })]),
+			el('label', { 'class': 'tp-check' }, [hideClosed, el('span', { text: 'Gesperrte Bereiche im Tischplan ausblenden (nur Ansicht, im Bearbeitungsmodus bleiben alle sichtbar)' })]),
 			field('Online-Verfügbarkeit', mode),
 			c ? el('p', { 'class': 'tp-hint', text: 'Bisherige Grenzen: ' + c.maxCapacity + ' Plätze, ' + c.maxTables + ' Tische. Tischplan: ' + c.planSeats + ' Plätze, ' + c.planTables + ' Tische. Die Vorschau in der Tagesansicht zeigt, was Gäste bei „Nach Tischplan“ buchen könnten.' }) : null
 		]));
@@ -652,6 +670,10 @@
 	function closurePanel(ar) {
 		var box = el('div', { 'class': 'tp-areabox' }, [el('h3', { text: 'Sperrzeiten' })]);
 		var mine = st.closures.filter(function (c) { return c.area_id === ar.area_id; });
+		// closures only count when the online availability follows the table plan (tp_online_fits() returns null in 'counter' mode)
+		if (st.availabilityMode !== 'tables') {
+			box.appendChild(el('p', { 'class': 'tp-hint tp-hint-warn', text: 'Achtung: Die Online-Verfügbarkeit steht auf „Nach Zählung“. In diesem Modus werden Sperrzeiten nicht berücksichtigt, der Bereich bleibt online buchbar. Zum Aktivieren die Online-Verfügbarkeit unten auf „Nach Tischplan“ umstellen.' }));
+		}
 		if (!mine.length) { box.appendChild(el('p', { 'class': 'tp-hint', text: 'Der Bereich ist immer verfügbar. Mit einem Sperrzeitraum ist er z. B. im Winter nicht buchbar, ohne dass er gelöscht werden muss.' })); }
 		mine.forEach(function (c) {
 			var range = fmtDate(c.date_from) + (c.date_to ? ' – ' + fmtDate(c.date_to) : ' – unbefristet');
@@ -667,16 +689,22 @@
 		var to = el('input', { type: 'date' });
 		var yearly = el('input', { type: 'checkbox' });
 		var note = el('input', { type: 'text', maxlength: '80', placeholder: 'z. B. Winterpause' });
+		// the page-wide message sits below the whole plan; feedback for this form has to appear next to its button
+		var cmsg = el('p', { 'class': 'tp-closure-msg', role: 'alert' });
+		function cfail(text) { cmsg.textContent = text; cmsg.className = 'tp-closure-msg tp-msg-error'; }
 		box.appendChild(el('div', { 'class': 'tp-closure-form' }, [
 			field('Gesperrt von', from),
 			field('bis (leer = unbefristet)', to),
 			el('label', { 'class': 'tp-check' }, [yearly, el('span', { text: 'jedes Jahr wiederholen' })]),
 			field('Notiz', note),
 			btn('Sperrzeitraum hinzufügen', 'button_dark tp-primary', function () {
-				if (!from.value) { say('Bitte „Gesperrt von“ eintragen', true); return; }
-				if (yearly.checked && !to.value) { say('Für eine jährliche Sperre bitte auch „bis“ eintragen', true); return; }
-				addClosure({ area_id: ar.area_id, date_from: from.value, date_to: to.value, yearly: yearly.checked, note: note.value });
-			})
+				cmsg.textContent = '';
+				if (!from.value) { cfail('Bitte „Gesperrt von“ eintragen'); from.focus(); return; }
+				if (to.value && to.value < from.value) { cfail('„bis“ liegt vor „von“'); to.focus(); return; }
+				if (yearly.checked && !to.value) { cfail('Für eine jährliche Sperre bitte auch „bis“ eintragen'); to.focus(); return; }
+				addClosure({ area_id: ar.area_id, date_from: from.value, date_to: to.value, yearly: yearly.checked, note: note.value }, cfail);
+			}),
+			cmsg
 		]));
 		return box;
 	}
@@ -808,9 +836,9 @@
 		});
 	}
 
-	function addClosure(c) {
+	function addClosure(c, fail) {
 		api('closure_save', { closure: c }).then(function (r) {
-			if (!r.ok) { say(r.error || 'Sperrzeitraum konnte nicht gespeichert werden', true); return; }
+			if (!r.ok) { (fail || function (t) { say(t, true); })(r.error || 'Sperrzeitraum konnte nicht gespeichert werden'); return; }
 			st.closures = normClosures(r.closures);
 			render();
 			say('Sperrzeitraum gespeichert');
@@ -1032,6 +1060,7 @@
 		st.closures = normClosures(r.closures);
 		st.autoAssign = !!r.autoAssign;
 		st.availabilityMode = r.availabilityMode;
+		st.hideClosed = !!r.hideClosed;
 		st.counter = r.counter;
 		render();
 		loadDay();

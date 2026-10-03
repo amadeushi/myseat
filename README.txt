@@ -52,6 +52,24 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-03 == mySeat v6.2.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Tischplan, Einstellung "Gesperrte Bereiche im Tischplan ausblenden". Ist sie an, fällt der Reiter eines
+   Bereichs an den Tagen weg, an denen er gesperrt ist (z. B. der Außenbereich im Winter). Nur die Ansicht: im
+   Bearbeitungsmodus bleiben alle Bereiche sichtbar, und sind an einem Tag alle gesperrt, bleiben auch alle
+   sichtbar. Reservierungen, Sperrzeiten und die Online-Verfügbarkeit ändern sich nicht (Schlüssel
+   hide_closed_areas in tp_settings, ajax/tp.php setting_save / load).
+ * Fix: beim Anlegen eines Sperrzeitraums im Tischplan gab es keine sichtbare Rückmeldung: die Meldung stand
+   unter dem gesamten Plan, außerhalb des Bildschirms. Fehler erscheinen jetzt direkt unter dem Button, die
+   Seitenmeldung klebt am unteren Fensterrand. Zusätzlich wird geprüft, dass "bis" nicht vor "von" liegt.
+ * Fix: Sperrzeiten wirken nur bei der Online-Verfügbarkeit "Nach Tischplan" (tp_online_fits() entscheidet im
+   Modus "Nach Zählung" nicht), was nirgends stand. Über den Sperrzeiten erscheint jetzt ein Hinweis, solange
+   der Modus "Nach Zählung" ist.
+ * Fix: /order/ zeigte sich angemeldeten Mitarbeitern immer (Vorschau), auch ohne den Haken "Bestellseite für
+   Gäste sichtbar", ohne dass es erkennbar war. Jetzt steht in dem Fall ein Banner "Vorschau für Mitarbeiter:
+   Gäste sehen diese Seite nicht" auf der Seite, und die Einstellung erklärt es. Für Gäste gilt unverändert
+   "Bestellen kommt bald" (HTTP 503).
+
 2026-10-02 == mySeat v6.1.3 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix: abgelaufene Absage-Kurzlinks wurden in YOURLS nie gelöscht. Das Plugin "Expiry" findet den Link, indem

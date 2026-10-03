@@ -31,6 +31,7 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 
 	<form class="sms-form" id="shop-form" autocomplete="off">
 		<label class="offer-check"><input type="checkbox" name="public" value="1"<?php echo $sh_check('public'); ?>/> Bestellseite für Gäste sichtbar</label>
+		<small class="offer-help">Ohne Haken sehen Gäste „Bestellen kommt bald“. Du selbst siehst die Seite trotzdem, solange du im Backend angemeldet bist (Vorschau für Mitarbeiter). Zum Prüfen ein privates Fenster ohne Anmeldung öffnen.</small>
 		<label class="offer-check"><input type="checkbox" name="accepting" value="1"<?php echo $sh_check('accepting'); ?>/> Bestellungen annehmen (sonst nur ansehen)</label>
 		<label class="offer-check"><input type="checkbox" name="test_mode" value="1"<?php echo $sh_check('test_mode'); ?>/> Testmodus: Bestellungen sind Tests, keine Mails, löschbar</label>
 

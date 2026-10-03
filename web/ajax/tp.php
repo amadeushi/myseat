@@ -69,6 +69,7 @@ switch ($action) {
 			'closures' => tp_list_closures($outlet_id),
 			'autoAssign' => tp_get_setting('auto_assign', '1') === '1',
 			'availabilityMode' => tp_availability_mode(),
+			'hideClosed' => tp_get_setting('hide_closed_areas', '0') === '1',
 			'counter' => tp_counter_info($outlet_id),
 			'ok'       => true,
 			'outlet'   => $outlet_id,
@@ -152,7 +153,11 @@ switch ($action) {
 			}
 			tp_set_setting('availability_mode', $mode);
 		}
-		tp_out(array('ok' => true, 'autoAssign' => tp_get_setting('auto_assign', '1') === '1', 'availabilityMode' => tp_availability_mode()));
+		if (array_key_exists('hideClosed', $data)) {
+			tp_set_setting('hide_closed_areas', !empty($data['hideClosed']) ? '1' : '0');
+		}
+		tp_out(array('ok' => true, 'autoAssign' => tp_get_setting('auto_assign', '1') === '1', 'availabilityMode' => tp_availability_mode(),
+			'hideClosed' => tp_get_setting('hide_closed_areas', '0') === '1'));
 
 	case 'free_tables':
 		$date = isset($data['date']) ? (string)$data['date'] : '';

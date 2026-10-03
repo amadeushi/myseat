@@ -86,8 +86,17 @@
 	border: 1px solid var(--danger, #e2867c); border-radius: var(--radius-sm, 6px); padding: 6px 12px;
 }
 .tp-danger:hover { background: rgba(226,134,124,.12); }
+/* the message element sits below the whole plan, so it sticks to the bottom of the window while it has text */
 .tp-msg { min-height: 20px; margin: 12px 0 0; color: var(--success, #8fbf7a); }
+.tp-msg:not(:empty) {
+	position: sticky; bottom: 12px; z-index: 5; padding: 10px 14px;
+	background: var(--surface-2, #1c1a17); border: 1px solid var(--border-soft, #3a352c); border-radius: var(--radius-sm, 6px);
+}
 .tp-msg-error { color: var(--danger, #e2867c); }
+.tp-msg-error:not(:empty) { border-color: var(--danger, #e2867c); }
+.tp-hint-warn { color: var(--gold-strong, #e2c07f); background: rgba(201,164,89,.08); border: 1px solid var(--border, rgba(201,164,89,.22)); border-radius: var(--radius-sm, 6px); padding: 8px 10px; }
+.tp-closure-msg { margin: 8px 0 0; font-size: 14px; }
+.tp-closure-msg:empty { display: none; }
 #tp-mode-toggle.is-active { color: var(--gold-strong, #e2c07f); }
 
 @media (max-width: 900px) {
