@@ -147,6 +147,7 @@ if (strpos($op, 'basket_') === 0) {
 	if ($op === 'basket_add') { api_out(shop_basket_add($g, $me, isset($body['line']) ? $body['line'] : array())); }
 	if ($op === 'basket_qty') { api_out(shop_basket_set_qty($g, $me, (int)(isset($body['id']) ? $body['id'] : 0), (int)(isset($body['qty']) ? $body['qty'] : 0))); }
 	if ($op === 'basket_status') { api_out(shop_basket_set_status($g, $me, (string)(isset($body['to']) ? $body['to'] : ''))); }
+	if ($op === 'basket_link') { api_out(shop_basket_link($g, $me, shop_base_url().'/order/?g='.preg_replace('/[^a-f0-9]/', '', $g))); }
 	if ($op === 'basket_close') { api_out(shop_basket_close($g, $me)); }
 	api_out(array('ok' => false, 'error' => 'Unbekannte Anfrage.'), 400);
 }

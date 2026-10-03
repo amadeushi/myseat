@@ -144,6 +144,7 @@ function shop_ensure_schema() {
 		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `basket_id` INT UNSIGNED NOT NULL, `member` CHAR(32) NOT NULL, `pid` INT UNSIGNED NOT NULL,
 		`vid` INT UNSIGNED NOT NULL DEFAULT 0, `opts` TEXT NULL, `qty` INT NOT NULL DEFAULT 1, `note` VARCHAR(200) NOT NULL DEFAULT '', `created_at` DATETIME NOT NULL,
 		KEY `bsk` (`basket_id`)) $opts");
+	if (!fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_baskets')." LIKE 'short_url'")) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_baskets')." ADD `short_url` VARCHAR(120) NULL"); }
 	$ocol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'driver_id'");
 	if (!$ocol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `driver_id` INT UNSIGNED NULL, ADD KEY `driver` (`driver_id`)"); }
 	$done = true;
@@ -1943,7 +1944,25 @@ function shop_basket_view($token, $me, $rev = '') {
 	$list = array_values($per);
 	usort($list, function ($a, $b2) { return ($b2['mine'] ? 1 : 0) - ($a['mine'] ? 1 : 0); });
 	return array('ok' => true, 'joined' => true, 'status' => $b['status'], 'owner' => $isOwner, 'owner_name' => $ownerName, 'name' => $mine['name'], 'members' => $list,
-		'subtotal' => $sub, 'count' => $count, 'rev' => $cur);
+		'subtotal' => $sub, 'count' => $count, 'rev' => $cur, 'short' => (string)$b['short_url']);
+}
+
+/*
+ * Short link for the invitation (own YOURLS, like the cancel link; it expires after 24 hours). Made once, on the first request of
+ * a member, and kept with the basket; '' when YOURLS is off or does not answer - the page then keeps showing the long link.
+ */
+function shop_basket_link($token, $me, $longUrl) {
+	$c = shop_basket_for_change($token, $me, false);
+	if (!$c['ok']) { return $c; }
+	$b = $c['basket'];
+	if ((string)$b['short_url'] !== '') { return array('ok' => true, 'link' => $b['short_url']); }
+	if (!sms_link_ready()) { return array('ok' => true, 'link' => ''); }
+	try {
+		$res = sms_yourls_shorten($longUrl, 1440, 'mySeat Gemeinsam bestellen');
+	} catch (Throwable $e) { $res = array('ok' => false, 'error' => $e->getMessage()); }
+	if (empty($res['ok']) || empty($res['short'])) { error_log('mySeat basket link: '.(isset($res['error']) ? $res['error'] : 'no short link')); return array('ok' => true, 'link' => ''); }
+	fb_exec("UPDATE ".fb_t('tp_shop_baskets')." SET short_url = ? WHERE id = ?", 'si', array(mb_substr($res['short'], 0, 120), (int)$b['id']));
+	return array('ok' => true, 'link' => $res['short']);
 }
 
 function shop_basket_for_change($token, $me, $needOpen) {

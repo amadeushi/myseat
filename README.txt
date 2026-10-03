@@ -52,6 +52,13 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.7.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Kurzlink für die gemeinsame Bestellung. Sobald eine Gruppe läuft, legt der Server einmal einen Kurzlink über das
+   eigene YOURLS an (wie beim Absagelink, Ablauf nach 24 Stunden) und speichert ihn am Korb (tp_shop_baskets.short_url,
+   wird selbst angelegt). Das Teilen-Feld und der Teilen-Dialog zeigen ihn statt des langen Links; ist YOURLS aus oder
+   antwortet nicht, bleibt der lange Link. Schnittstelle: order/api.php op=basket_link.
+
 2026-10-05 == mySeat v6.6.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix: Gemeinsame Bestellung: Hat jemand den Warenkorb geändert, während bei der bestellenden Person noch eine ältere

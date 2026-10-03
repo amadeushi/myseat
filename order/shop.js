@@ -352,7 +352,14 @@
 		if (state.group) { if (data.g === undefined) { data.g = state.group.token; } if (data.me === undefined) { data.me = state.group.me; } }
 		return fetch('api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(data) }).then(function (r) { return r.json(); });
 	}
-	function gLink() { return location.href.split('#')[0].split('?')[0] + '?g=' + state.group.token; }
+	// the short link (YOURLS) once there is one, else the long one
+	function gLink() { return (state.gv && state.gv.short) || (location.href.split('#')[0].split('?')[0] + '?g=' + state.group.token); }
+	var gLinkAsked = '';
+	function gAskShort() {
+		if (!state.group || (state.gv && state.gv.short) || gLinkAsked === state.group.token) { return; }
+		gLinkAsked = state.group.token;
+		gPost('basket_link').then(function (r) { if (r.ok && r.link && state.gv) { state.gv.short = r.link; renderCart(); } }).catch(function () {});
+	}
 	// the newest answer wins; "same" means nothing changed since the revision this page already shows
 	function gRefresh(force) {
 		if (!state.group) { return Promise.resolve(); }
@@ -364,7 +371,7 @@
 			if (!r.ok) { return; }
 			if (!r.joined) { gEnd('Du bist bei dieser gemeinsamen Bestellung nicht mehr dabei.'); return; }
 			if (r.same) { return; }
-			gRev = r.rev; state.gv = r; renderCart();
+			gRev = r.rev; state.gv = r; renderCart(); gAskShort();
 		}).catch(function () {});
 	}
 	function gEnd(msg) { state.group = null; state.gv = null; gRev = ''; gSave(); if (msg) { toast(msg); } renderCart(); }
