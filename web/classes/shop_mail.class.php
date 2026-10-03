@@ -18,8 +18,8 @@ function shop_mail_item_lines($items) {
 
 function shop_notify_order($o) {
 	global $settings;
-	$from = trim((string)shop_setting('notify_email'));
-	if ($from === '' || !filter_var($from, FILTER_VALIDATE_EMAIL)) { return; }
+	$from = shop_mail_from();
+	if ($from === '') { return; }
 	$brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 	$h = function ($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); };
 	$delivery = ($o['type'] === 'delivery');

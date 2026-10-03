@@ -52,6 +52,12 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.9.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: Die Bestellbestätigung an den Gast und die Kopie an das Restaurant gingen nicht raus, wenn im Shop keine Absenderadresse
+   eingetragen war (Einstellungen > Lieferservice > E-Mail). Sie nehmen dann wie die Mails des Kundenkontos die E-Mail-Adresse
+   aus den Stammdaten (shop_mail_from()). Datei: web/classes/shop_mail.class.php.
+
 2026-10-05 == mySeat v6.9.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Kundenkonto im Bestellshop. Gäste melden sich ohne Passwort mit E-Mail-Adresse oder Handynummer an: Sie bekommen einen
