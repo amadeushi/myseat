@@ -52,6 +52,22 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-04 == mySeat v6.5.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Flammkuchen im Wunschpizza-Konfigurator. Das Gericht bekommt im Speisekarten-Editor statt des Hakens die
+   Auswahl "Wunschpizza-Konfigurator": Aus / Pizza (rund) / Flammkuchen (oval, extra dünn, Holzbrett); gespeichert
+   als tp_shop_products.configurator 0 / 1 / 2. Beim Flammkuchen liegt der Teig als flaches Oval auf einem länglichen
+   Holzbrett, darunter Tomatensoße, darüber die Käseschicht ("Inklusive: Tomatensoße, Käse"), und eine Portion
+   legt vier gespiegelte Teile (links/rechts, oben/unten) statt sechs im Kreis.
+ * New: Soßen zum Dippen stehen als Schälchen mit ihrer Soße neben dem Brett (Spalte rechts auf breitem Bildschirm,
+   Reihe darunter auf dem Handy) statt auf der Pizza.
+ * New: unter jeder Wunschpizza liegt die erste Käseschicht bereits (bei der veganen Pizza oder einem veganen Teig
+   Pizzaschmelz); "Doppelt Käse" legt eine zweite Schicht darüber. Unter der Pizza steht "Inklusive: ...".
+ * New: der Dinkel-Roggen-Teig (Variantenname mit Dinkel, Roggen oder Vollkorn) hat einen dunkleren Boden mit Kleieflocken
+   und Haferkörnern, der beim Wechsel der Teigart sofort getauscht wird.
+ * Fix: Soßenfarben nach den echten Soßen: Sambal Hollandaise gelb mit leichtem Rotstich und Sambal-Flecken, Barbecue
+   rötlich braun, Sticky Korean BBQ dunkelbraun und glänzend mit Sesam.
+
 2026-10-03 == mySeat v6.4.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Wunschpizza-Konfigurator im Bestellshop. Ein Gericht bekommt im Speisekarten-Editor den Haken "Als Wunschpizza

@@ -41,10 +41,12 @@
 		nugget: { t: 'piece', o: 1, k: 1.05, g: '<rect x="9" y="15" width="46" height="35" rx="15" fill="#cd8e3f" stroke="#7b4a17" stroke-width="3.5" transform="rotate(-12 32 32)"/><g fill="#e9b56a"><circle cx="24" cy="28" r="3"/><circle cx="36" cy="37" r="2.6"/><circle cx="43" cy="26" r="2.3"/></g>' },
 		patty: { t: 'piece', o: 1, k: 1.05, g: '<circle cx="32" cy="32" r="24" fill="#6a3d28" stroke="#33190d" stroke-width="3.5"/><g fill="#8c5a3c"><circle cx="22" cy="24" r="5"/><circle cx="38" cy="22" r="4.5"/><circle cx="30" cy="36" r="5.5"/><circle cx="43" cy="38" r="4"/><circle cx="19" cy="40" r="3.5"/></g><path d="M14 28a19 19 0 0 1 11-12" stroke="#a46b46" stroke-width="3" fill="none" stroke-linecap="round"/>' },
 		sauce_hollandaise: { t: 'sauce', c: '#f0d35c', g: drop('#f0d35c', '#a98a1a') },
-		sauce_sambal: { t: 'sauce', c: '#d9532b', g: drop('#d9532b', '#8c2a10') },
+		// Sambal Hollandaise: a yellow hollandaise with a slight red cast and flecks of sambal oelek (f)
+		sauce_sambal: { t: 'sauce', c: '#efb55c', f: '#c4402b', g: drop('#efb55c', '#a8651f') + '<g fill="#c4402b"><circle cx="26" cy="39" r="2.1"/><circle cx="36" cy="45" r="1.9"/><circle cx="31" cy="31" r="1.7"/><circle cx="39" cy="37" r="1.6"/><circle cx="24" cy="46" r="1.4"/></g>' },
 		sauce_creme: { t: 'sauce', c: '#f6f0e2', g: drop('#f6f0e2', '#b8ad92') },
-		sauce_bbq: { t: 'sauce', c: '#6b2e1b', g: drop('#6b2e1b', '#34150b') },
-		sauce_korean: { t: 'sauce', c: '#9a2a22', g: drop('#9a2a22', '#521510') },
+		sauce_bbq: { t: 'sauce', c: '#9a3d20', g: drop('#9a3d20', '#58200d') },
+		// Sticky Korean BBQ: a dark brown, glossy sticky glaze with sesame seeds (f); the barbecue above is the redder one
+		sauce_korean: { t: 'sauce', c: '#4a2a1b', f: '#f6eedc', g: drop('#4a2a1b', '#21100a') + '<path d="M24 20c-3 6-3 12 0 18" fill="none" stroke="#b58a6a" stroke-opacity=".75" stroke-width="2.4" stroke-linecap="round"/><g fill="#f6eedc" stroke="#9a6b3a" stroke-width=".5"><ellipse cx="28" cy="40" rx="2" ry="1.2" transform="rotate(25 28 40)"/><ellipse cx="36" cy="35" rx="2" ry="1.2" transform="rotate(-30 36 35)"/><ellipse cx="32" cy="46" rx="2" ry="1.2" transform="rotate(60 32 46)"/><ellipse cx="38" cy="43" rx="1.8" ry="1.1" transform="rotate(10 38 43)"/><ellipse cx="30" cy="30" rx="1.8" ry="1.1" transform="rotate(-50 30 30)"/></g>' },
 		sauce_garlic: { t: 'sauce', c: '#f4ecd6', g: drop('#f4ecd6', '#bcae88') },
 		sauce_curry: { t: 'sauce', c: '#e2a626', g: drop('#e2a626', '#8f6410') },
 		sauce_other: { t: 'sauce', c: '#d4a762', g: drop('#d4a762', '#8a6528') },
@@ -73,12 +75,37 @@
 			});
 			chosen.push(best); pts = pts.concat(points(best));
 		}
-		return chosen;
+		return chosen.map(function (c) { return { pts: points(c) }; });
+	})();
+	// the oval (Flammkuchen): a portion is four pieces, mirrored left/right and top/bottom, so the layout is symmetric on both axes
+	var DX = 136, DY = 84;                              // semi-axes of the oval dough
+	var ORBITS_OVAL = (function () {
+		var cand = [], chosen = [], pts = [];
+		[.22, .38, .54, .68, .8].forEach(function (rf) { for (var t = 10; t <= 80; t += 10) { cand.push({ r: rf, t: t }); } });
+		function points(o) { var a = o.t * Math.PI / 180, x = o.r * DX * Math.cos(a), y = o.r * DY * Math.sin(a); return [[x, y], [-x, y], [-x, -y], [x, -y]]; }
+		var first = cand.filter(function (c) { return c.r === .54 && c.t === 40; })[0];
+		chosen.push(first); pts = pts.concat(points(first));
+		while (chosen.length < 36) {
+			var best = null, bd = -1;
+			cand.forEach(function (c) {
+				if (chosen.indexOf(c) >= 0) { return; }
+				var d = 1e9;
+				points(c).forEach(function (p) { pts.forEach(function (q) { var dd = Math.hypot(p[0] - q[0], p[1] - q[1]); if (dd < d) { d = dd; } }); });
+				if (d > bd) { bd = d; best = c; }
+			});
+			chosen.push(best); pts = pts.concat(points(best));
+		}
+		return chosen.map(function (c) { return { pts: points(c) }; });
 	})();
 	function seed(str) { var h = 0, i; for (i = 0; i < str.length; i++) { h = (h * 31 + str.charCodeAt(i)) % 360; } return h; }
 	function wobble(r, amp, n, ph) {
 		var d = '', i, steps = 72, a, rr;
 		for (i = 0; i <= steps; i++) { a = i / steps * Math.PI * 2; rr = r + amp * Math.sin(a * n + ph); d += (i ? 'L' : 'M') + (rr * Math.cos(a)).toFixed(1) + ' ' + (rr * Math.sin(a)).toFixed(1); }
+		return d + 'Z';
+	}
+	function wobbleE(rx, ry, amp, n, ph) {
+		var d = '', i, steps = 90, a, f;
+		for (i = 0; i <= steps; i++) { a = i / steps * Math.PI * 2; f = 1 + amp / 100 * Math.sin(a * n + ph); d += (i ? 'L' : 'M') + (rx * f * Math.cos(a)).toFixed(1) + ' ' + (ry * f * Math.sin(a)).toFixed(1); }
 		return d + 'Z';
 	}
 	function el(tag, attrs, parent) {
@@ -116,6 +143,7 @@
 		sprite();
 		var sel = { vid: p.variations.length ? p.variations[0].id : 0, opts: {}, qty: 1 };
 		var items = {}, alloc = {}, ringOf = {}, tried = false, tab = 0, editing = !!edit;
+		var oval = p.configurator === 2, ORB = oval ? ORBITS_OVAL : ORBITS;          // 2 = Flammkuchen: oval, extra thin, on a long board
 		function $$(s, r) { return Array.prototype.slice.call((r || dlg).querySelectorAll(s)); }
 		function $(s) { return dlg.querySelector(s); }
 		p.groups.forEach(function (g) { g.items.forEach(function (it) { items[it.id] = { it: it, g: g }; }); });
@@ -150,7 +178,7 @@
 			'<h2 id="pz-title">' + esc(p.title) + '</h2><button type="button" class="pz-reset" hidden>Neu belegen</button></header>' +
 			'<div class="pz-stage"><svg class="pz-wood" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' + wood() + '</svg>' +
 			'<svg class="pz-pizza" viewBox="-124 -124 248 248" role="img" aria-label="Deine Pizza von oben"></svg>' +
-			'<p class="pz-hint">Tippe eine Zutat an, sie landet auf dem Teig.</p><p class="pz-sum"></p></div>' +
+			'<div class="pz-dips" aria-hidden="true"></div><p class="pz-sum"></p></div>' +
 			'<section class="pz-bench">' + teig + '<div class="pz-tabs" role="tablist" aria-label="Zutaten">' + tabs + '</div><div class="pz-panel" id="pz-panel" role="tabpanel"></div></section>' +
 			'<footer class="pz-foot"><span class="pz-step"><button type="button" class="pz-qty" id="pz-minus" aria-label="Weniger">&minus;</button><span class="pz-qnum" id="pz-qnum">1</span><button type="button" class="pz-qty" id="pz-plus" aria-label="Mehr">+</button></span>' +
 			'<button type="button" class="pz-add" id="pz-add"><span id="pz-add-label"></span><span id="pz-add-price"></span></button></footer><p class="pz-live" role="status" aria-live="polite"></p>';
@@ -158,28 +186,128 @@
 		/* pizza drawing */
 		var svg = $('.pz-pizza');
 		var defs = el('defs', {}, svg), i, rs;
-		var g1 = el('radialGradient', { id: 'pz-g-dough', cx: '42%', cy: '36%', r: '70%' }, defs); el('stop', { offset: '0', 'stop-color': '#f6e2b6' }, g1); el('stop', { offset: '1', 'stop-color': '#e3bf84' }, g1);
+		var g1 = el('radialGradient', { id: 'pz-g-dough', cx: '42%', cy: '36%', r: '70%' }, defs), s1a = el('stop', { offset: '0', 'stop-color': '#f6e2b6' }, g1), s1b = el('stop', { offset: '1', 'stop-color': '#e3bf84' }, g1);
 		var g2 = el('radialGradient', { id: 'pz-g-board', cx: '40%', cy: '35%', r: '80%' }, defs); el('stop', { offset: '0', 'stop-color': '#6a6561' }, g2); el('stop', { offset: '1', 'stop-color': '#3d3935' }, g2);
-		el('circle', { cx: 6, cy: 9, r: 119, fill: '#000', 'fill-opacity': '.38' }, svg);
-		el('circle', { r: 118, fill: 'url(#pz-g-board)', stroke: '#2a2724', 'stroke-width': 3 }, svg);
-		el('circle', { r: 110, fill: 'none', stroke: '#8a847d', 'stroke-opacity': '.35', 'stroke-width': 1.5 }, svg);
-		el('circle', { cx: 2, cy: 4, r: R + 2, fill: '#000', 'fill-opacity': '.28' }, svg);
-		el('circle', { r: R, fill: 'url(#pz-g-dough)', stroke: '#c79a55', 'stroke-width': 3 }, svg);
-		el('circle', { r: 91, fill: 'none', stroke: '#d7ad68', 'stroke-width': 2 }, svg);
-		el('circle', { r: 95.5, fill: 'none', stroke: '#fff4d2', 'stroke-opacity': '.55', 'stroke-width': 3 }, svg);
-		var deco = el('g', {}, svg);
-		for (i = 0; i < 26; i++) { rs = (i * 137.5) % 360; var rr = 93 + (i % 3) * 2, a = rs * Math.PI / 180; el('circle', { cx: (rr * Math.cos(a)).toFixed(1), cy: (rr * Math.sin(a)).toFixed(1), r: 1.6 + (i % 4) * .7, fill: i % 2 ? '#c99a55' : '#fff1c9', 'fill-opacity': i % 2 ? '.5' : '.7' }, deco); }
-		for (i = 0; i < 34; i++) { rs = (i * 53.7) % 360; var rd = 14 + ((i * 29) % 70), b = rs * Math.PI / 180; el('circle', { cx: (rd * Math.cos(b)).toFixed(1), cy: (rd * Math.sin(b)).toFixed(1), r: .9 + (i % 3) * .5, fill: '#fff', 'fill-opacity': '.35' }, deco); }
-		var layerSauce = el('g', {}, svg), layerMelt = el('g', {}, svg), layerPieces = el('g', {}, svg);
+		if (oval) {
+			// a long wooden board (Flammkuchen brett) instead of the round peel
+			svg.setAttribute('viewBox', '-172 -116 344 232'); svg.classList.add('is-oval'); svg.style.aspectRatio = '344 / 232';
+			var g3 = el('linearGradient', { id: 'pz-g-brett', x1: '0', y1: '0', x2: '0', y2: '1' }, defs); el('stop', { offset: '0', 'stop-color': '#c9a06b' }, g3); el('stop', { offset: '1', 'stop-color': '#a87a46' }, g3);
+			el('rect', { x: -160, y: -92, width: 332, height: 208, rx: 26, fill: '#000', 'fill-opacity': '.38' }, svg);
+			el('rect', { x: -166, y: -100, width: 332, height: 208, rx: 26, fill: 'url(#pz-g-brett)', stroke: '#6b4423', 'stroke-width': 3 }, svg);
+			el('rect', { x: -158, y: -92, width: 316, height: 192, rx: 20, fill: 'none', stroke: '#e6c896', 'stroke-opacity': '.45', 'stroke-width': 1.5 }, svg);
+			for (i = 0; i < 9; i++) { var gy = -84 + i * 21 + (i % 3) * 3; el('path', { d: 'M-156 ' + gy + 'c70 -5 130 5 200 0s90 -5 110 2', fill: 'none', stroke: '#6b4423', 'stroke-opacity': '.2', 'stroke-width': 1.3 }, svg); }
+			el('circle', { cx: 148, cy: 4, r: 6.5, fill: '#4a2c16', 'fill-opacity': '.75' }, svg);
+			el('ellipse', { cx: 2, cy: 4, rx: DX + 2, ry: DY + 2, fill: '#000', 'fill-opacity': '.28' }, svg);
+		} else {
+			el('circle', { cx: 6, cy: 9, r: 119, fill: '#000', 'fill-opacity': '.38' }, svg);
+			el('circle', { r: 118, fill: 'url(#pz-g-board)', stroke: '#2a2724', 'stroke-width': 3 }, svg);
+			el('circle', { r: 110, fill: 'none', stroke: '#8a847d', 'stroke-opacity': '.35', 'stroke-width': 1.5 }, svg);
+			el('circle', { cx: 2, cy: 4, r: R + 2, fill: '#000', 'fill-opacity': '.28' }, svg);
+		}
+		// the dough: light wheat dough, or darker whole-grain dough with bran flecks and oat flakes for a spelt-rye variation (the title decides)
+		var doughG = el('g', {}, svg);
+		function wholeGrain() { var v = cur(); return !!v && /dinkel|roggen|vollkorn/i.test(v.title); }
+		// the thin oval dough: no raised rim, an uneven baked edge with a few charred blisters; whole grain adds bran flecks and oat flakes
+		function drawOvalDough(c, whole) {
+			var k, ang, f, x, y;
+			el('path', { d: wobbleE(DX, DY, 1.1, 9, .3), fill: 'url(#pz-g-dough)', stroke: c.edge, 'stroke-width': 3, 'stroke-linejoin': 'round' }, doughG);
+			el('path', { d: wobbleE(DX - 5, DY - 4, 1.1, 9, .3), fill: 'none', stroke: c.hi, 'stroke-opacity': c.hia, 'stroke-width': 2.4 }, doughG);
+			for (k = 0; k < 30; k++) { ang = ((k * 137.5) % 360) * Math.PI / 180; f = .9 + (k % 4) * .02; x = DX * f * Math.cos(ang); y = DY * f * Math.sin(ang); el('ellipse', { cx: x.toFixed(1), cy: y.toFixed(1), rx: 2 + (k % 3), ry: 1.4 + (k % 2) * .6, fill: k % 3 ? c.dk : '#7a4a22', 'fill-opacity': k % 3 ? '.5' : '.6', transform: 'rotate(' + ((k * 37) % 180) + ' ' + x.toFixed(1) + ' ' + y.toFixed(1) + ')' }, doughG); }
+			for (k = 0; k < 40; k++) { ang = ((k * 53.7) % 360) * Math.PI / 180; f = .12 + ((k * 29) % 78) / 100; el('circle', { cx: (DX * f * Math.cos(ang)).toFixed(1), cy: (DY * f * Math.sin(ang)).toFixed(1), r: .9 + (k % 3) * .5, fill: c.fl, 'fill-opacity': c.fa }, doughG); }
+			if (whole) {
+				for (k = 0; k < 90; k++) { ang = ((k * 97.3 + 11) % 360) * Math.PI / 180; f = .08 + ((k * 41) % 84) / 100; x = DX * f * Math.cos(ang); y = DY * f * Math.sin(ang); el('ellipse', { cx: x.toFixed(1), cy: y.toFixed(1), rx: 1.1 + (k % 4) * .5, ry: .7 + (k % 3) * .3, fill: '#5c3a1b', 'fill-opacity': '.5', transform: 'rotate(' + ((k * 47) % 180) + ' ' + x.toFixed(1) + ' ' + y.toFixed(1) + ')' }, doughG); }
+				for (k = 0; k < 28; k++) { ang = ((k * 163.7 + 40) % 360) * Math.PI / 180; f = .1 + ((k * 37) % 80) / 100; x = DX * f * Math.cos(ang); y = DY * f * Math.sin(ang); el('ellipse', { cx: x.toFixed(1), cy: y.toFixed(1), rx: 3, ry: 1.7, fill: '#f1dfb8', 'fill-opacity': '.8', stroke: '#b99455', 'stroke-width': .5, transform: 'rotate(' + ((k * 71) % 180) + ' ' + x.toFixed(1) + ' ' + y.toFixed(1) + ')' }, doughG); }
+			}
+		}
+		function drawDough() {
+			var whole = wholeGrain(), c = whole ? { a: '#d6ad72', b: '#b6844d', edge: '#94672f', ring: '#a77b41', hi: '#efd29c', hia: '.42', dk: '#8a5f2c', lt: '#e4c28c', fl: '#f0dfbd', fa: '.28' } : { a: '#f6e2b6', b: '#e3bf84', edge: '#c79a55', ring: '#d7ad68', hi: '#fff4d2', hia: '.55', dk: '#c99a55', lt: '#fff1c9', fl: '#fff', fa: '.35' };
+			s1a.setAttribute('stop-color', c.a); s1b.setAttribute('stop-color', c.b);
+			while (doughG.firstChild) { doughG.removeChild(doughG.firstChild); }
+			if (oval) { drawOvalDough(c, whole); return; }
+			el('circle', { r: R, fill: 'url(#pz-g-dough)', stroke: c.edge, 'stroke-width': 3 }, doughG);
+			el('circle', { r: 91, fill: 'none', stroke: c.ring, 'stroke-width': 2 }, doughG);
+			el('circle', { r: 95.5, fill: 'none', stroke: c.hi, 'stroke-opacity': c.hia, 'stroke-width': 3 }, doughG);
+			var k, ang, rad;
+			for (k = 0; k < 26; k++) { ang = ((k * 137.5) % 360) * Math.PI / 180; rad = 93 + (k % 3) * 2; el('circle', { cx: (rad * Math.cos(ang)).toFixed(1), cy: (rad * Math.sin(ang)).toFixed(1), r: 1.6 + (k % 4) * .7, fill: k % 2 ? c.dk : c.lt, 'fill-opacity': k % 2 ? '.5' : '.7' }, doughG); }
+			for (k = 0; k < 34; k++) { ang = ((k * 53.7) % 360) * Math.PI / 180; rad = 14 + ((k * 29) % 70); el('circle', { cx: (rad * Math.cos(ang)).toFixed(1), cy: (rad * Math.sin(ang)).toFixed(1), r: .9 + (k % 3) * .5, fill: c.fl, 'fill-opacity': c.fa }, doughG); }
+			if (whole) {
+				// bran flecks (dark) and oat flakes (light, tilted) over the whole dough, deterministic like everything else
+				for (k = 0; k < 70; k++) { ang = ((k * 97.3 + 11) % 360) * Math.PI / 180; rad = 8 + ((k * 41) % 82); el('ellipse', { cx: (rad * Math.cos(ang)).toFixed(1), cy: (rad * Math.sin(ang)).toFixed(1), rx: 1.1 + (k % 4) * .5, ry: .7 + (k % 3) * .3, fill: '#5c3a1b', 'fill-opacity': '.5', transform: 'rotate(' + ((k * 47) % 180) + ' ' + (rad * Math.cos(ang)).toFixed(1) + ' ' + (rad * Math.sin(ang)).toFixed(1) + ')' }, doughG); }
+				for (k = 0; k < 22; k++) { ang = ((k * 163.7 + 40) % 360) * Math.PI / 180; rad = 10 + ((k * 37) % 78); el('ellipse', { cx: (rad * Math.cos(ang)).toFixed(1), cy: (rad * Math.sin(ang)).toFixed(1), rx: 3, ry: 1.7, fill: '#f1dfb8', 'fill-opacity': '.8', stroke: '#b99455', 'stroke-width': .5, transform: 'rotate(' + ((k * 71) % 180) + ' ' + (rad * Math.cos(ang)).toFixed(1) + ' ' + (rad * Math.sin(ang)).toFixed(1) + ')' }, doughG); }
+			}
+		}
+		drawDough();
+		var layerBase = el('g', {}, svg), layerSauce = el('g', {}, svg), layerMelt = el('g', {}, svg), layerPieces = el('g', {}, svg);
 		var nodes = { sauce: {}, melt: {}, piece: {} };
+
+		// the cheese that is already on every pizza (under the sauce swirls and the toppings); a vegan pizza (title, or a dough
+		// called vegan) gets paler Pizzaschmelz. "Doppelt Käse" and the like add a second layer on top (layerMelt)
+		function isVegan() { var v = cur(); return /vegan/i.test(p.title) || (!!v && /vegan/i.test(v.title)); }
+		function baseName() { var ch = isVegan() ? 'Pizzaschmelz (vegan)' : 'Käse'; return oval ? 'Tomatensoße, ' + ch : ch; }
+		function drawBase() {
+			while (layerBase.firstChild) { layerBase.removeChild(layerBase.firstChild); }
+			var vg = isVegan(), k, ang, rad;
+			if (oval) {
+				// Flammkuchenart: tomato sauce spread over the thin dough, the cheese melted over it
+				el('path', { d: wobbleE(DX - 7, DY - 6, 1.4, 8, .5), fill: '#c8452f', 'fill-opacity': '.88', stroke: '#8f2a18', 'stroke-opacity': '.45', 'stroke-width': 1.4 }, layerBase);
+				for (k = 0; k < 22; k++) { ang = ((k * 131.3 + 17) % 360) * Math.PI / 180; var fq = .15 + ((k * 31) % 72) / 100; el('ellipse', { cx: (DX * fq * Math.cos(ang)).toFixed(1), cy: (DY * fq * Math.sin(ang)).toFixed(1), rx: 7 + (k % 3) * 2, ry: 1.6, fill: '#e56a50', 'fill-opacity': '.4', transform: 'rotate(' + ((k * 53) % 180) + ' ' + (DX * fq * Math.cos(ang)).toFixed(1) + ' ' + (DY * fq * Math.sin(ang)).toFixed(1) + ')' }, layerBase); }
+				el('path', { d: wobbleE(DX - 16, DY - 13, 2.4, 9, .9), fill: vg ? '#f3e19a' : '#f2cf68', 'fill-opacity': vg ? '.6' : '.66', stroke: vg ? '#d9c070' : '#e0b13c', 'stroke-opacity': '.5', 'stroke-width': 1.5 }, layerBase);
+				for (k = 0; k < (vg ? 10 : 18); k++) { ang = ((k * 151.3 + 23) % 360) * Math.PI / 180; var fc = .1 + ((k * 37) % 72) / 100; el('ellipse', { cx: (DX * fc * Math.cos(ang)).toFixed(1), cy: (DY * fc * Math.sin(ang)).toFixed(1), rx: 3 + (k % 3), ry: 2 + (k % 2), fill: vg ? '#e6cf86' : '#d9a336', 'fill-opacity': vg ? '.4' : '.5' }, layerBase); }
+				return;
+			}
+			el('path', { d: wobble(83, 3.4, 9, .7), fill: vg ? '#f3e19a' : '#f2cf68', 'fill-opacity': vg ? '.72' : '.8', stroke: vg ? '#d9c070' : '#e0b13c', 'stroke-opacity': '.55', 'stroke-width': 1.6 }, layerBase);
+			for (k = 0; k < (vg ? 9 : 16); k++) { ang = ((k * 151.3 + 23) % 360) * Math.PI / 180; rad = 10 + ((k * 37) % 66); el('ellipse', { cx: (rad * Math.cos(ang)).toFixed(1), cy: (rad * Math.sin(ang)).toFixed(1), rx: 3 + (k % 3), ry: 2 + (k % 2), fill: vg ? '#e6cf86' : '#d9a336', 'fill-opacity': vg ? '.4' : '.5' }, layerBase); }
+		}
+		drawBase();
 
 		/* orbits and rings: stable, a removed ingredient frees its places, the others never move */
 		var usedOrbit = {};
-		function takeOrbit() { var n; for (n = 0; n < ORBITS.length; n++) { if (!usedOrbit[n]) { usedOrbit[n] = true; return n; } } return -1; }
+		function takeOrbit() { var n; for (n = 0; n < ORB.length; n++) { if (!usedOrbit[n]) { usedOrbit[n] = true; return n; } } return -1; }
 		function freeOrbit(n) { delete usedOrbit[n]; }
 		function takeRing() { var n, used = {}; Object.keys(ringOf).forEach(function (k) { used[ringOf[k]] = true; }); for (n = 0; n < RINGS.length; n++) { if (!used[n]) { return n; } } return RINGS.length - 1; }
 
+		/* dips ("zum Dippen") do not go on the pizza: each chosen one stands beside the board as a little bowl of its sauce */
+		function dipStyle(title) {
+			var t = String(title).toLowerCase();
+			if (/korean/.test(t)) { return { c: '#4a2a1b', f: '#f6eedc' }; }
+			if (/sambal/.test(t)) { return { c: '#efb55c', f: '#c4402b' }; }
+			if (/hollandaise/.test(t)) { return { c: '#f0d35c' }; }
+			if (/kr(ä|ae)uter|quark/.test(t)) { return { c: '#eef0d8', f: '#6f9a3e' }; }
+			if (/knoblauch/.test(t)) { return { c: '#f4ecd6' }; }
+			if (/curry/.test(t)) { return { c: '#e2a626' }; }
+			if (/chili/.test(t)) { return { c: '#c8321f', f: '#f1a08a' }; }
+			if (/barbecue|bbq/.test(t)) { return { c: '#9a3d20' }; }
+			if (/champignon|rahm/.test(t)) { return { c: '#d9c7a6', f: '#8c7447' }; }
+			return { c: '#d4a762' };
+		}
+		function bowlSvg(st) {
+			var fl = '', k, a, r;
+			if (st.f) { for (k = 0; k < 6; k++) { a = (k * 137.5) * Math.PI / 180; r = 3 + (k % 3) * 3; fl += '<circle cx="' + (24 + r * Math.cos(a)).toFixed(1) + '" cy="' + (24 + r * Math.sin(a)).toFixed(1) + '" r="1.3" fill="' + st.f + '"/>'; } }
+			return '<svg viewBox="0 0 48 48" focusable="false"><ellipse cx="26" cy="30" rx="20" ry="17" fill="#000" fill-opacity=".3"/><circle cx="24" cy="24" r="20" fill="#f3ead8" stroke="#a89572" stroke-width="2.5"/><circle cx="24" cy="24" r="15.5" fill="#d9ccb0" stroke="#a89572" stroke-width="1.2"/><circle cx="24" cy="24" r="12.5" fill="' + st.c + '"/>' + fl + '<path d="M15.5 21a10.5 10.5 0 0 1 8-6" stroke="#fff" stroke-opacity=".55" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>';
+		}
+		var dipNodes = {};
+		function syncDips(firstPaint) {
+			var box = $('.pz-dips'), want = {};
+			Object.keys(sel.opts).map(Number).forEach(function (id) {
+				var it = items[id].it;
+				if (it.icon !== 'dip') { return; }
+				var q = Math.min(sel.opts[id], 3);
+				want[id] = q;
+				var cur = dipNodes[id];
+				if (cur && cur.length === q) { return; }
+				(cur || []).forEach(function (n) { box.removeChild(n); });
+				dipNodes[id] = [];
+				for (var k = 0; k < q; k++) {
+					var d = document.createElement('span'); d.className = 'pz-dip' + (firstPaint ? ' is-still' : ''); d.title = name(it); d.innerHTML = bowlSvg(dipStyle(it.title));
+					box.appendChild(d); dipNodes[id].push(d);
+				}
+			});
+			Object.keys(dipNodes).forEach(function (id) { if (!want[id]) { dipNodes[id].forEach(function (n) { box.removeChild(n); }); delete dipNodes[id]; } });
+			$('.pz-stage').classList.toggle('has-dips', box.children.length > 0);
+		}
+
 		function syncPizza(addedId) {
+			syncDips(!addedId && !Object.keys(dipNodes).length);
 			var ids = Object.keys(sel.opts).map(Number).filter(function (id) { return isOnPizza(items[id].it); }), want = {}, delay = 0;
 			ids.forEach(function (id) {
 				var it = items[id].it, art = artOf(it);
@@ -187,35 +315,40 @@
 					if (ringOf[id] == null) { ringOf[id] = takeRing(); }
 					want['s' + id] = true;
 					if (!nodes.sauce[id]) {
-						var ri = RINGS[ringOf[id]], dd = wobble(ri, 2.2, 7, ringOf[id]);
+						var ri = RINGS[ringOf[id]], dd = oval ? wobbleE(ri * DX / R, ri * DY / R, 2.2, 7, ringOf[id]) : wobble(ri, 2.2, 7, ringOf[id]);
 						var shade = el('path', { d: dd, fill: 'none', stroke: '#6b3f12', 'stroke-opacity': '.32', 'stroke-width': 13, 'stroke-linejoin': 'round' }, layerSauce);
 						var path = el('path', { d: dd, fill: 'none', stroke: art.c, 'stroke-width': 10.5, 'stroke-linejoin': 'round', 'stroke-opacity': '.96' }, layerSauce);
-						var shine = el('path', { d: wobble(ri - 2.2, 1.6, 7, ringOf[id] + .6), fill: 'none', stroke: '#fff', 'stroke-opacity': '.3', 'stroke-width': 2.4 }, layerSauce);
+						var flecks = null;
+						if (art.f) { flecks = el('path', { d: dd, fill: 'none', stroke: art.f, 'stroke-width': 3.2, 'stroke-dasharray': '1.1 7.5', 'stroke-linecap': 'round', 'stroke-opacity': '.9', 'class': 'pz-flecks' }, layerSauce); }
+						var shine = el('path', { d: oval ? wobbleE((ri - 2.2) * DX / R, (ri - 2.2) * DY / R, 1.6, 7, ringOf[id] + .6) : wobble(ri - 2.2, 1.6, 7, ringOf[id] + .6), fill: 'none', stroke: '#fff', 'stroke-opacity': '.3', 'stroke-width': 2.4 }, layerSauce);
 						var len = path.getTotalLength ? path.getTotalLength() : 400;
 						path.style.strokeDasharray = len; path.style.strokeDashoffset = len; path.classList.add('pz-pour');
 						void path.getBoundingClientRect(); path.style.strokeDashoffset = 0;
-						nodes.sauce[id] = [shade, path, shine];
+						nodes.sauce[id] = flecks ? [shade, path, flecks, shine] : [shade, path, shine];
 					}
 				} else if (art.t === 'melt') {
 					want['m' + id] = true;
 					if (!nodes.melt[id]) {
 						var k = Object.keys(nodes.melt).length;
-						nodes.melt[id] = [el('path', { d: wobble(82 - k * 7, 3.2, 8, k * 1.3), fill: art.c, 'fill-opacity': '.62', stroke: '#e0b13c', 'stroke-opacity': '.5', 'stroke-width': 1.6, class: 'pz-melt' }, layerMelt)];
+						var mr = 76 - k * 6;
+						nodes.melt[id] = [el('path', { d: oval ? wobbleE(mr * DX / R * .93, mr * DY / R * .93, 3.2, 8, k * 1.3 + 1.9) : wobble(mr, 3.2, 8, k * 1.3 + 1.9), fill: art.c, 'fill-opacity': '.55', stroke: '#e0b13c', 'stroke-opacity': '.5', 'stroke-width': 1.6, class: 'pz-melt' }, layerMelt)];
 					}
 				}
 			});
 			ids.forEach(function (id) {
 				var it = items[id].it, art = artOf(it);
 				if (art.t !== 'piece') { return; }
-				var need = (sel.opts[id] || 0) * art.o, have = alloc[id] || (alloc[id] = []);
+				// the oval is larger and a portion has four pieces instead of six, so it takes half as many orbits again
+				var need = Math.ceil((sel.opts[id] || 0) * art.o * (oval ? 1.5 : 1)), have = alloc[id] || (alloc[id] = []);
 				while (have.length < need) { var o = takeOrbit(); if (o < 0) { break; } have.push(o); }
 				while (have.length > need) { freeOrbit(have.pop()); }
 				have.forEach(function (oi) {
-					for (var j = 0; j < 6; j++) {
+					var pts = ORB[oi].pts;
+					for (var j = 0; j < pts.length; j++) {
 						var key = id + '|' + oi + '|' + j; want[key] = true;
 						if (nodes.piece[key]) { continue; }
-						var orb = ORBITS[oi], ang = orb.t0 + j * 60, rad = ang * Math.PI / 180, sc = 26 * art.k / 64;
-						var outer = el('g', { transform: 'translate(' + (orb.r * Math.cos(rad)).toFixed(1) + ' ' + (orb.r * Math.sin(rad)).toFixed(1) + ') rotate(' + (ang + seed(String(id))).toFixed(0) + ') scale(' + sc.toFixed(3) + ')' }, layerPieces);
+						var ang = Math.atan2(pts[j][1], pts[j][0]) * 180 / Math.PI, sc = 26 * art.k / 64;
+						var outer = el('g', { transform: 'translate(' + pts[j][0].toFixed(1) + ' ' + pts[j][1].toFixed(1) + ') rotate(' + (ang + seed(String(id))).toFixed(0) + ') scale(' + sc.toFixed(3) + ')' }, layerPieces);
 						var inner = el('g', { 'class': 'pz-pc' }, outer);
 						inner.style.animationDelay = (addedId === id ? (delay += 34) : 0) + 'ms';
 						if (!addedId) { inner.style.animation = 'none'; }
@@ -265,8 +398,9 @@
 			if (rule) { rule.textContent = (g.min > 0 ? 'Pflicht: ' + (g.min === g.max ? 'genau ' + g.min : 'mindestens ' + g.min) + '. ' : '') + (g.max > 0 ? sum + ' von ' + g.max + ' gewählt' : sum + ' gewählt'); rule.classList.toggle('is-missing', tried && sum < g.min); }
 			var names = [];
 			p.groups.forEach(function (gg) { gg.items.forEach(function (it) { var q = sel.opts[it.id]; if (q) { names.push((q > 1 ? q + '× ' : '') + name(it)); } }); });
-			$('.pz-sum').textContent = names.length ? 'Auf deiner Pizza: ' + names.join(', ') : '';
-			$('.pz-hint').hidden = total > 0;
+			// every pizza comes with its first layer of cheese (Pizzaschmelz on a vegan one): it is not an option, so it is named here
+			var inc = 'Inklusive: ' + baseName();
+			$('.pz-sum').textContent = names.length ? inc + ' · Dazu: ' + names.join(', ') : inc + ' · Tippe unten eine Zutat an, sie landet auf dem Teig.';
 			$('.pz-reset').hidden = total === 0;
 			$$('.pz-tab').forEach(function (t, i) { t.classList.toggle('is-missing', tried && p.groups[i].min > 0 && groupSum(p.groups[i]) < p.groups[i].min); });
 			$('#pz-qnum').textContent = sel.qty;
@@ -293,7 +427,12 @@
 			var t = ev.target;
 			if (t.closest('.pz-back')) { dlg.close(); return; }
 			var tb = t.closest('.pz-tab'); if (tb) { tab = +tb.dataset.tab; renderPanel(); return; }
-			var ch = t.closest('.pz-chip'); if (ch) { sel.vid = +ch.dataset.v; refresh(); return; }
+			var ch = t.closest('.pz-chip');
+			if (ch) {
+				var was = wholeGrain(), wasV = isVegan(); sel.vid = +ch.dataset.v;
+				if (wholeGrain() !== was || isVegan() !== wasV) { drawDough(); drawBase(); var pz = $('.pz-pizza'); pz.classList.remove('is-bump'); void pz.getBoundingClientRect(); pz.classList.add('is-bump'); }
+				refresh(); return;
+			}
 			var ls = t.closest('.pz-less'); if (ls) { change(+ls.dataset.less, -1); return; }
 			var tile = t.closest('.pz-tile');
 			if (tile) { var id = +tile.dataset.id; if (items[id].it.max === 1 && sel.opts[id]) { if (items[id].g.min > 0) { return; } change(id, -1); } else { change(id, 1); } return; }

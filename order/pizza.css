@@ -25,7 +25,17 @@
 
 .pz-stage { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; justify-items: center; min-height: 0; overflow: hidden; }
 .pz-wood { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pz-stage { grid-template-rows: minmax(0, 1fr) auto auto; }
+.pz-pizza { grid-row: 1; }
+.pz-sum { grid-row: 3; }
+/* dips: little bowls of sauce on the table - a row under the board on a phone, a column to its right where there is room */
+.pz-dips { grid-row: 2; position: relative; z-index: 1; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 2px 12px 6px; }
+.pz-dips:empty { display: none; }
+.pz-dip { display: block; width: 42px; height: 42px; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .45)); animation: pz-drop 340ms cubic-bezier(.16, 1, .3, 1) both; }
+.pz-dip.is-still { animation: none; }
+.pz-dip svg { display: block; width: 100%; height: 100%; }
 .pz-pizza { position: relative; align-self: center; height: 100%; max-height: min(100%, 92vw); aspect-ratio: 1; padding: 4px 0; filter: drop-shadow(0 12px 16px rgba(0, 0, 0, .5)); }
+.pz-pizza.is-oval { height: auto; width: 96%; max-width: 760px; max-height: 100%; }
 .pz-pizza.is-bump { animation: pz-bump 320ms cubic-bezier(.16, 1, .3, 1); }
 .pz-hint { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); margin: 0; padding: 7px 14px; border-radius: 999px; background: rgba(45, 27, 14, .86); color: var(--cream); font-size: 13px; font-weight: 600; white-space: nowrap; animation: pz-nudge 2.2s ease-in-out infinite; }
 .pz-sum { position: relative; z-index: 1; margin: 0 12px 8px; padding: 5px 10px; border-radius: 10px; background: rgba(45, 27, 14, .82); color: var(--cream); font-size: 13px; line-height: 1.35; text-align: center; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
@@ -93,6 +103,10 @@
 	.pz-stage { grid-column: 1; grid-row: 2; }
 	.pz-bench { grid-column: 2; grid-row: 2; }
 	.pz-pizza { max-height: min(100%, 70vh); }
+	.pz-dips { grid-row: 1 / -1; position: absolute; right: 14px; top: 0; bottom: 0; flex-direction: column; flex-wrap: wrap-reverse; align-content: center; justify-content: center; padding: 0; }
+	.pz-stage.has-dips { padding-right: 68px; }
+	.pz-stage.has-dips .pz-pizza { max-width: 100%; }
+	.pz-stage.has-dips .pz-pizza.is-oval { width: 100%; }
 	.pz-foot { justify-content: flex-end; }
 	.pz-add { flex: 0 1 380px; }
 }
@@ -103,8 +117,9 @@
 @keyframes pz-nudge { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -4px); } }
 .pz-pc { animation: pz-drop 340ms cubic-bezier(.16, 1, .3, 1) both; }
 .pz-melt { animation: pz-fade 500ms ease both; }
+.pz-flecks { animation: pz-fade 400ms ease 450ms both; }
 .pz-pour { transition: stroke-dashoffset 700ms cubic-bezier(.16, 1, .3, 1); }
 @media (prefers-reduced-motion: reduce) {
-	.pz-pc, .pz-melt, .pz-pizza.is-bump, .pz-hint { animation: none; }
+	.pz-pc, .pz-melt, .pz-flecks, .pz-dip, .pz-pizza.is-bump, .pz-hint { animation: none; }
 	.pz-pour, .pz-tile, .pz-add { transition: none; }
 }

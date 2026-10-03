@@ -1329,7 +1329,7 @@ function shop_me_save_product($d) {
 	$desc = mb_substr(trim((string)(isset($d['description']) ? $d['description'] : '')), 0, 800);
 	$all = mb_substr(trim((string)(isset($d['allergens']) ? $d['allergens'] : '')), 0, 400);
 	$active = empty($d['active']) ? 0 : 1;
-	$conf = empty($d['configurator']) ? 0 : 1;
+	$conf = max(0, min(2, (int)(isset($d['configurator']) ? $d['configurator'] : 0))); // 0 = off, 1 = round pizza, 2 = Flammkuchen (oval, extra thin)
 	$vars = array();
 	foreach ((isset($d['variations']) && is_array($d['variations'])) ? array_slice($d['variations'], 0, 20) : array() as $v) {
 		$vt = mb_substr(trim((string)(isset($v['title']) ? $v['title'] : '')), 0, 120);

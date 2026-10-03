@@ -123,8 +123,8 @@
 			'<label class="me-l" for="me-all">Allergene und Zusatzstoffe</label><input id="me-all" maxlength="400" value="' + esc(d.allergens) + '" placeholder="z. B. Weizen, Milch, Eier"/>' +
 			'<label class="me-l" for="me-img">Bild (Adresse, https://...)</label><input id="me-img" maxlength="300" value="' + esc(d.image_url) + '"/>' +
 			'<label class="offer-check"><input type="checkbox" id="me-active"' + (d.active ? ' checked' : '') + '/> Im Shop sichtbar</label>' +
-			'<label class="offer-check"><input type="checkbox" id="me-conf"' + (d.configurator ? ' checked' : '') + '/> Als Wunschpizza anbieten (Konfigurator)</label>' +
-			'<p class="me-help">Der Gast belegt einen rohen Teigling selbst: er tippt Zutaten an, sie verteilen sich gleichmäßig auf der Pizza. Die Zutaten sind die Optionen der Zubehörgruppen unten, ihre Preise gelten wie sonst auch.</p>' +
+			'<label class="me-l" for="me-conf">Wunschpizza-Konfigurator</label><select id="me-conf"><option value="0"' + (!d.configurator ? ' selected' : '') + '>Aus (normale Auswahl)</option><option value="1"' + (d.configurator === 1 ? ' selected' : '') + '>Pizza (rund)</option><option value="2"' + (d.configurator === 2 ? ' selected' : '') + '>Flammkuchen (oval, extra dünn, Holzbrett)</option></select>' +
+			'<p class="me-help">Der Gast belegt einen rohen Teigling selbst: er tippt Zutaten an, sie verteilen sich gleichmäßig auf der Pizza. Die Zutaten sind die Optionen der Zubehörgruppen unten, ihre Preise gelten wie sonst auch. Beim Flammkuchen sind Tomatensoße und Käse inklusive.</p>' +
 			'<h5 class="me-sub">Varianten <small>Größen oder Sorten mit eigenem Preis</small></h5>' +
 			(d.variations.length ? '<p class="me-help">"Zubehör ×" ist ein Faktor für die Preise der Zubehörgruppen bei dieser Variante - bei 1,3 kostet ein Extra-Belag 30&nbsp;% mehr als am Grundpreis.</p>' : '') +
 			'<div class="me-rows" id="me-vars">' + (d.variations.length ? varHead() : '') + d.variations.map(varRow).join('') + '</div>' +
@@ -135,7 +135,7 @@
 	}
 	function readDish() {
 		return { id: sel.draft.id || 0, title: $('#me-title').value, category_id: +$('#me-cat').value, price: $('#me-price').value, description: $('#me-desc').value, allergens: $('#me-all').value,
-			image_url: $('#me-img').value, active: $('#me-active').checked ? 1 : 0, configurator: $('#me-conf').checked ? 1 : 0, groups: sel.draft.groups.slice(),
+			image_url: $('#me-img').value, active: $('#me-active').checked ? 1 : 0, configurator: +$('#me-conf').value || 0, groups: sel.draft.groups.slice(),
 			variations: $$('.me-var').map(function (r) { return { id: +r.dataset.id || 0, title: $('.v-t', r).value, price: $('.v-p', r).value, mult: $('.v-m', r).value }; }) };
 	}
 
