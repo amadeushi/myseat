@@ -1893,6 +1893,14 @@ function shop_basket_opts_json($opts) {
 	return json_encode($o, JSON_FORCE_OBJECT);
 }
 
+// a short fingerprint of what is in the basket (status, people, lines and amounts): equal fingerprint = nothing changed
+function shop_basket_rev($status, $members, $rows) {
+	$sig = $status.'|'.count($members);
+	foreach ($members as $m) { $sig .= '|'.$m['name']; }
+	foreach ($rows as $r) { $sig .= '|'.$r['id'].':'.$r['qty']; }
+	return substr(md5($sig), 0, 12);
+}
+
 /*
  * What a member sees: everybody's lines grouped by person, priced from the menu. $rev is the revision the browser already
  * shows - when nothing changed since, only {same:true} comes back (the page asks every few seconds, pricing is the costly part).
@@ -1910,10 +1918,7 @@ function shop_basket_view($token, $me, $rev = '') {
 	}
 	if (!$mine) { return array('ok' => true, 'joined' => false, 'status' => $b['status'], 'owner_name' => $ownerName); }
 	$rows = fb_rows("SELECT id, member, pid, vid, opts, qty, note FROM ".fb_t('tp_shop_basket_lines')." WHERE basket_id = ? ORDER BY id", 'i', array($bid));
-	$sig = $b['status'].'|'.count($members);
-	foreach ($members as $m) { $sig .= '|'.$m['name']; }
-	foreach ($rows as $r) { $sig .= '|'.$r['id'].':'.$r['qty']; }
-	$cur = substr(md5($sig), 0, 12);
+	$cur = shop_basket_rev($b['status'], $members, $rows);
 	if ($rev !== '' && $rev === $cur) { return array('ok' => true, 'joined' => true, 'same' => true); }
 	$isOwner = ($mine['member'] === $b['owner']);
 	$per = array(); $sub = 0; $count = 0;
@@ -2010,15 +2015,21 @@ function shop_basket_close($token, $me) {
 }
 
 // the lines of the order, as the checkout takes them; each carries the name of the person it is for (the kitchen sees it on the bon)
-function shop_basket_order_lines($token, $me) {
+function shop_basket_order_lines($token, $me, $rev = '') {
 	$c = shop_basket_for_change($token, $me, false);
 	if (!$c['ok']) { return $c; }
 	if (!$c['owner']) { return array('ok' => false, 'error' => 'Nur die Person, die bestellt, kann die gemeinsame Bestellung abschicken.'); }
 	if ($c['basket']['status'] === 'ordered') { return array('ok' => false, 'error' => 'Diese gemeinsame Bestellung ist schon abgeschickt.'); }
 	$names = array();
-	foreach (fb_rows("SELECT member, name FROM ".fb_t('tp_shop_basket_members')." WHERE basket_id = ?", 'i', array((int)$c['basket']['id'])) as $m) { $names[$m['member']] = $m['name']; }
+	$members = fb_rows("SELECT member, name FROM ".fb_t('tp_shop_basket_members')." WHERE basket_id = ? ORDER BY id", 'i', array((int)$c['basket']['id']));
+	foreach ($members as $m) { $names[$m['member']] = $m['name']; }
+	$rows = fb_rows("SELECT id, member, pid, vid, opts, qty, note FROM ".fb_t('tp_shop_basket_lines')." WHERE basket_id = ? ORDER BY id", 'i', array((int)$c['basket']['id']));
+	// the checkout page shows the basket as it was when it loaded; if somebody changed it since, the organizer first looks again
+	if ($rev !== '' && $rev !== shop_basket_rev($c['basket']['status'], $members, $rows)) {
+		return array('ok' => false, 'changed' => true, 'error' => 'Der gemeinsame Warenkorb wurde inzwischen geändert. Bitte lade die Seite neu und prüfe die Bestellung.');
+	}
 	$lines = array(); $who = array();
-	foreach (fb_rows("SELECT member, pid, vid, opts, qty, note FROM ".fb_t('tp_shop_basket_lines')." WHERE basket_id = ? ORDER BY id", 'i', array((int)$c['basket']['id'])) as $r) {
+	foreach ($rows as $r) {
 		$opts = json_decode((string)$r['opts'], true);
 		$n = isset($names[$r['member']]) ? $names[$r['member']] : '';
 		$lines[] = array('pid' => (int)$r['pid'], 'vid' => (int)$r['vid'], 'opts' => is_array($opts) ? $opts : array(), 'qty' => (int)$r['qty'],

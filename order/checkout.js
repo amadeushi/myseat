@@ -296,7 +296,7 @@
 			type: S.mode, when: when, payment: S.pay, tip: tipCents(), name: f.name.value, phone: f.phone.value, email: f.email.value, note: f.note.value,
 			street: f.street.value, zip: f.zip.value, city: f.city.value, words: S.zoneWords, address_note: f.address_note.value, website: f.website.value, coupon: S.coupon ? S.coupon.code : '',
 			lines: S.cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; }),
-			group: S.group ? S.group.token : '', me: S.group ? S.group.me : ''
+			group: S.group ? S.group.token : '', me: S.group ? S.group.me : '', rev: S.group ? (S.group.rev || '') : ''
 		}).then(function (r) {
 			if (!r.ok) { var msg = r.error || 'Das hat nicht geklappt.'; err.textContent = msg; S.busy = false; updateSubmit(); $('#co-why').textContent = msg; err.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); return; }
 			try {
@@ -320,6 +320,7 @@
 		if (!S.group) { if (S.cart.length) { setMode(S.mode); checkZone(); } return; }
 		return post('basket_view', { g: S.group.token, me: S.group.me }).then(function (v) {
 			if (!v.ok || !v.joined || !v.owner || v.status === 'ordered') { location.href = './'; return; }
+			S.group.rev = v.rev; // what the order is checked against: changed basket = the organizer looks again first
 			v.members.forEach(function (m) { m.lines.forEach(function (l) { if (!l.unavailable) { var c = {}; Object.keys(l).forEach(function (k) { c[k] = l[k]; }); c.who = m.name; S.cart.push(c); } }); });
 			if (!S.cart.length) { showEmpty(); return; }
 			setMode(S.mode); checkZone(); renderSummary();

@@ -157,7 +157,7 @@ if ($op === 'create') {
 	// an order from a shared basket: the lines come from the basket (never from the browser), each marked with who it is for
 	$basket = (string)(isset($body['group']) ? $body['group'] : '');
 	if ($basket !== '') {
-		$gl = shop_basket_order_lines($basket, isset($body['me']) ? (string)$body['me'] : '');
+		$gl = shop_basket_order_lines($basket, isset($body['me']) ? (string)$body['me'] : '', isset($body['rev']) ? (string)$body['rev'] : '');
 		if (!$gl['ok']) { api_out(array('ok' => false, 'error' => $gl['error'])); }
 		$body['lines'] = $gl['lines'];
 		$own = trim((string)(isset($body['note']) ? $body['note'] : ''));

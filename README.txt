@@ -52,6 +52,13 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.6.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: Gemeinsame Bestellung: Hat jemand den Warenkorb geändert, während bei der bestellenden Person noch eine ältere
+   Kasse offen war (zum Beispiel nach dem Wiedereröffnen), wurde mehr bestellt als angezeigt. Die Kasse merkt sich jetzt
+   den Stand des Korbs (Fingerabdruck aus Status, Personen und Mengen, op=create mit rev); hat er sich geändert, wird
+   nichts abgeschickt und die Person bekommt den Hinweis, die Seite neu zu laden und die Bestellung zu prüfen.
+
 2026-10-05 == mySeat v6.6.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Gemeinsam bestellen im Bestellshop. Ein Gast startet im Warenkorb oder über den Knopf in der Kopfzeile eine
