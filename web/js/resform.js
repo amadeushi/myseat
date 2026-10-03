@@ -137,6 +137,8 @@
 			d.tables.forEach(function (t) {
 				var selected = !!st.sel[t.table_id];
 				if (st.area && t.area_id !== st.area) { return; }
+				// tables of an area that is closed on this day are not offered at all (kept only when already chosen, so they can be unchosen)
+				if (t.state === 'closed' && !selected) { return; }
 				if (st.show === 'free' && t.state !== 'free' && !selected) { return; }
 				var cls = 'rsv-chip' + (selected ? ' is-sel' : '') + (t.state === 'busy' ? ' is-busy' : '') + (t.state === 'closed' ? ' is-closed' : '') +
 					(t.state === 'free' && t.seats >= need ? ' is-fit' : '') + ((!st.selAny && (d.auto || []).indexOf(t.table_id) >= 0) ? ' is-suggest' : '');
@@ -145,7 +147,7 @@
 					el('span', { 'class': 'rsv-chip-name', text: t.name }),
 					el('span', { 'class': 'rsv-chip-seats', text: String(t.seats) })
 				]);
-				if (t.state === 'closed') { b.disabled = true; }
+				if (t.state === 'closed' && !selected) { b.disabled = true; }
 				b.addEventListener('click', function () {
 					st.sel[t.table_id] = !st.sel[t.table_id];
 					st.selAny = anySelected();
@@ -159,9 +161,14 @@
 		var fillAreas = function () {
 			var cur = areaSel.value;
 			while (areaSel.options.length > 1) { areaSel.remove(1); }
-			st.data.areas.forEach(function (a) { areaSel.appendChild(el('option', { value: String(a.area_id), text: a.area_name })); });
+			// an area whose tables are all closed that day is left out of the list
+			var areas = st.data.areas.filter(function (a) {
+				return st.data.tables.some(function (t) { return t.area_id === a.area_id && (t.state !== 'closed' || st.sel[t.table_id]); });
+			});
+			areas.forEach(function (a) { areaSel.appendChild(el('option', { value: String(a.area_id), text: a.area_name })); });
 			areaSel.value = cur;
-			areaSel.style.display = st.data.areas.length > 1 ? '' : 'none';
+			st.area = parseInt(areaSel.value, 10) || 0;
+			areaSel.style.display = areas.length > 1 ? '' : 'none';
 		};
 
 		var load = function () {

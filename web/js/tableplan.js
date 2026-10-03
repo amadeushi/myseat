@@ -670,9 +670,9 @@
 	function closurePanel(ar) {
 		var box = el('div', { 'class': 'tp-areabox' }, [el('h3', { text: 'Sperrzeiten' })]);
 		var mine = st.closures.filter(function (c) { return c.area_id === ar.area_id; });
-		// closures only count when the online availability follows the table plan (tp_online_fits() returns null in 'counter' mode)
+		// in 'counter' mode maxCapacity() shrinks the limits by the closed area's share of the plan (tp_closed_share())
 		if (st.availabilityMode !== 'tables') {
-			box.appendChild(el('p', { 'class': 'tp-hint tp-hint-warn', text: 'Achtung: Die Online-Verfügbarkeit steht auf „Nach Zählung“. In diesem Modus werden Sperrzeiten nicht berücksichtigt, der Bereich bleibt online buchbar. Zum Aktivieren die Online-Verfügbarkeit unten auf „Nach Tischplan“ umstellen.' }));
+			box.appendChild(el('p', { 'class': 'tp-hint', text: 'Online-Verfügbarkeit „Nach Zählung“: Während einer Sperre werden die Grenzen für Plätze und Tische um den Anteil dieses Bereichs am Tischplan verkleinert. Genauer geht es mit „Nach Tischplan“, dann sind die Tische des Bereichs gar nicht buchbar.' }));
 		}
 		if (!mine.length) { box.appendChild(el('p', { 'class': 'tp-hint', text: 'Der Bereich ist immer verfügbar. Mit einem Sperrzeitraum ist er z. B. im Winter nicht buchbar, ohne dass er gelöscht werden muss.' })); }
 		mine.forEach(function (c) {

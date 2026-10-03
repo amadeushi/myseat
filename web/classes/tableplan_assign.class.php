@@ -116,6 +116,25 @@ function tp_closed_area_ids($outlet_id, $date) {
 	return array_keys($out);
 }
 
+/*
+ * Share (0..1) of the table plan's seats and tables that lie in areas closed on a date. The counter mode of the
+ * online availability knows no areas, so maxCapacity() shrinks its limits by this share on such a day (a share, not
+ * the area's seats, because the outlet limits are often lower than the seats of the plan).
+ * Returns array('seats' => float, 'tables' => float); zeros when nothing is closed or the plan has no tables.
+ */
+function tp_closed_share($outlet_id, $date) {
+	$closed = tp_closed_area_ids($outlet_id, $date);
+	if (!$closed) { return array('seats' => 0.0, 'tables' => 0.0); }
+	$seats = 0; $tables = 0; $cseats = 0; $ctables = 0;
+	foreach (tp_list_tables($outlet_id) as $t) {
+		if (!(int)$t['active']) { continue; }
+		$seats += (int)$t['seats']; $tables++;
+		if (in_array((int)$t['area_id'], $closed, true)) { $cseats += (int)$t['seats']; $ctables++; }
+	}
+	if ($seats < 1 || $tables < 1) { return array('seats' => 0.0, 'tables' => 0.0); }
+	return array('seats' => $cseats / $seats, 'tables' => $ctables / $tables);
+}
+
 // returns the saved closure row or false
 function tp_save_closure($outlet_id, $d) {
 	tp_ensure_closure_schema();

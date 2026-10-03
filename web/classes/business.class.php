@@ -897,6 +897,25 @@ function maxCapacity(){
 	$_SESSION['outlet_max_capacity'] += (isset($capacity['outlet_child_capacity'])       ? $capacity['outlet_child_capacity']       : 0);
 	$_SESSION['outlet_max_tables']   += (isset($capacity['outlet_child_tables'])         ? $capacity['outlet_child_tables']         : 0);
 	$_SESSION['passerby_max_pax']    += (isset($capacity['outlet_child_passer_max_pax']) ? $capacity['outlet_child_passer_max_pax'] : 0);
+
+	// table plan area closures: the counter mode knows no areas, so on a day an area is closed the limits shrink by
+	// the share of seats/tables that area has in the plan ("Nach Tischplan" decides by the plan itself and skips this)
+	try {
+		if (is_file(__DIR__.'/tableplan_assign.class.php') && !empty($_SESSION['outletID']) && !empty($_SESSION['selectedDate'])) {
+			require_once __DIR__.'/tableplan_assign.class.php';
+			if (tp_availability_mode() === 'counter') {
+				$share = tp_closed_share((int)$_SESSION['outletID'], (string)$_SESSION['selectedDate']);
+				if ($share['seats'] > 0 && $_SESSION['outlet_max_capacity'] > 0) {
+					$_SESSION['outlet_max_capacity'] = (int)floor($_SESSION['outlet_max_capacity'] * (1 - $share['seats']));
+				}
+				if ($share['tables'] > 0 && $_SESSION['outlet_max_tables'] > 0) {
+					$_SESSION['outlet_max_tables'] = ($share['tables'] >= 1) ? 0 : max(1, (int)round($_SESSION['outlet_max_tables'] * (1 - $share['tables'])));
+				}
+			}
+		}
+	} catch (Throwable $e) {
+		error_log('mySeat maxCapacity closures: '.$e->getMessage());
+	}
 	return TRUE;
 }
 

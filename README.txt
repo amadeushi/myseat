@@ -52,6 +52,21 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-03 == mySeat v6.3.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Sperrzeiten des Tischplans wirken jetzt auch bei der Online-Verfügbarkeit "Nach Zählung". An einem Tag,
+   an dem ein Bereich gesperrt ist, verkleinert maxCapacity() die Grenzen für Plätze und Tische um den Anteil,
+   den dieser Bereich am Tischplan hat (tp_closed_share() in tableplan_assign.class.php). Anteilig und nicht
+   absolut, weil die Outlet-Grenzen meist unter den Plätzen des Plans liegen. Gilt für die Online-Buchung, das
+   Backend und das Dashboard. Bereits gebuchte Reservierungen werden nicht verschoben. Bei "Nach Tischplan"
+   ändert sich nichts, dort entscheidet der Plan selbst.
+ * New: im Backend-Formular für Reservierungen (resform.js) werden Tische eines an diesem Tag gesperrten Bereichs
+   nicht mehr angeboten, auch nicht grau in der Ansicht "Alle", und ein Bereich, dessen Tische alle gesperrt
+   sind, fehlt in der Bereichsauswahl. Ein bereits gewählter Tisch in einem gesperrten Bereich bleibt sichtbar
+   und lässt sich jetzt abwählen (vorher war sein Chip deaktiviert).
+ * Fix: der Hinweis über den Sperrzeiten im Tischplan sagte bei "Nach Zählung", Sperrzeiten würden nicht
+   berücksichtigt. Er beschreibt jetzt die anteilige Verkleinerung der Grenzen.
+
 2026-10-03 == mySeat v6.2.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Tischplan, Einstellung "Gesperrte Bereiche im Tischplan ausblenden". Ist sie an, fällt der Reiter eines
