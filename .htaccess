@@ -14,3 +14,20 @@ RedirectMatch 404 (^|/)\.git
 	Header always set X-Content-Type-Options "nosniff"
 	Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
+
+# ---- Two domains, one installation: app.amds.at is for guests (order page, account, order status, driver page),
+# reservierung.amds.at for the backend, the monitors and the table reservations. Nothing happens here until app.amds.at points at this folder
+# (KAS > Domains > Subdomains, same target folder as reservierung.amds.at).
+<IfModule mod_rewrite.c>
+	RewriteEngine On
+	# the start page of the guest domain is the order page
+	RewriteCond %{HTTP_HOST} ^app\.amds\.at$ [NC]
+	RewriteRule ^$ /order/ [R=302,L]
+	# backend, reservations and installer only exist on the main domain (the fonts stay: the order pages load them from here)
+	RewriteCond %{HTTP_HOST} ^app\.amds\.at$ [NC]
+	RewriteCond %{REQUEST_URI} !^/web/fonts/ [NC]
+	RewriteRule ^(web|PLC|api|install)(/.*)?$ https://reservierung.amds.at/$1$2 [R=308,L]
+	# guests use app.amds.at only: old order links (mails, SMS, bookmarks) lead there, with their query
+	RewriteCond %{HTTP_HOST} ^reservierung\.amds\.at$ [NC]
+	RewriteRule ^order(/.*)?$ https://app.amds.at/order$1 [R=308,L]
+</IfModule>

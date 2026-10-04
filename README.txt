@@ -52,6 +52,17 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.15.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Zwei Domains, eine Installation: app.amds.at für Gäste (Bestellseite, Konto, Bestellstatus, Fahrerseite), reservierung.amds.at
+   für Backend, Monitore und Tischreservierung. Die Weiche steht in der .htaccess: auf der App-Domain leitet "/" auf die Bestellseite,
+   Backend, Anmeldung, Reservierungs-API und Installer gehen an die Hauptdomain (308); alte Bestelllinks auf der Hauptdomain leiten
+   mit ihrer Abfrage zur App-Domain weiter.
+ * New: config/hosts.inc.php legt die Adressen zentral fest (app_url für Links an Gäste, admin_url für Stornierungs- und Bewertungslinks);
+   leer gilt die Adresse der Anfrage.
+ * Fix: Bilder der Speisekarte werden mit Pfad statt mit Domain gespeichert (/uploads/menu/...) und gelten auf beiden Domains; früher
+   mit Domain gespeicherte Bilder werden beim Öffnen des Editors umgewandelt.
+
 2026-10-05 == mySeat v6.14.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Feiertage, Ruhetage und abweichende Zeiten (Einstellungen > Lieferservice): ein Tag oder Zeitraum, geschlossen oder mit eigenen

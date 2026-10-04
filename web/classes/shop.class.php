@@ -1531,6 +1531,10 @@ function shop_me_products($onlyId = 0) {
 }
 function shop_me_load() {
 	shop_ensure_schema();
+	foreach (fb_rows("SELECT id, image_url FROM ".fb_t('tp_shop_products')." WHERE image_url LIKE 'http%/uploads/menu/%'") as $r) { // pictures saved with the domain: now by path
+		$n = shop_img_rel($r['image_url']);
+		if ($n !== $r['image_url']) { fb_exec("UPDATE ".fb_t('tp_shop_products')." SET image_url = ? WHERE id = ?", 'si', array($n, (int)$r['id'])); }
+	}
 	$cats = array();
 	foreach (fb_rows("SELECT id, name, description, active FROM ".fb_t('tp_shop_categories')." ORDER BY sort, id") as $c) {
 		$cats[] = array('id' => (int)$c['id'], 'name' => $c['name'], 'description' => $c['description'], 'active' => (int)$c['active']);
@@ -1588,7 +1592,7 @@ function shop_me_save_product($d) {
 	if (!fb_row("SELECT id FROM ".fb_t('tp_shop_categories')." WHERE id = ?", 'i', array($cat))) { return array('ok' => false, 'error' => 'Bitte wähle eine Kategorie.'); }
 	$price = shop_cents(isset($d['price']) ? $d['price'] : 0);
 	if ($price < 0 || $price > 100000) { return array('ok' => false, 'error' => 'Der Preis ist nicht sinnvoll.'); }
-	$image = trim((string)(isset($d['image_url']) ? $d['image_url'] : ''));
+	$image = shop_img_rel(trim((string)(isset($d['image_url']) ? $d['image_url'] : '')));
 	if ($image !== '' && !shop_img_is_local($image) && !preg_match('#^https://[^\s"<>]+$#i', $image)) { return array('ok' => false, 'error' => 'Die Bildadresse muss mit https:// beginnen.'); }
 	if (mb_strlen($image) > 300) { return array('ok' => false, 'error' => 'Die Bildadresse ist zu lang.'); }
 	$oldImg = $id ? fb_row("SELECT image_url FROM ".fb_t('tp_shop_products')." WHERE id = ?", 'i', array($id)) : null;
@@ -1637,11 +1641,19 @@ function shop_me_save_product($d) {
 // ---- dish pictures: kept on this server (uploads/menu). Every picture is decoded and written again (max 1200 px, WebP or JPEG), so
 // nothing but a clean image is ever stored, whatever the file was called or contained. The file name is a hash of the result.
 function shop_img_dir() { return dirname(__DIR__, 2).'/uploads/menu'; }
-function shop_img_prefix() { return rtrim(shop_site_url(), '/').'/uploads/menu/'; }
-function shop_img_is_local($url) { return strpos((string)$url, shop_img_prefix()) === 0; }
+// pictures are stored by path (/uploads/menu/<name>), never with the domain: they work on every domain the installation answers to
+function shop_img_prefix() { return rtrim((string)parse_url(shop_site_url(), PHP_URL_PATH), '/').'/uploads/menu/'; }
+// a picture saved with its full address by an earlier version (https://domain/uploads/menu/<name>) becomes the path, when the file is here
+function shop_img_rel($url) {
+	$url = (string)$url; $pre = shop_img_prefix();
+	if (preg_match('#^https?://[^/]+('.preg_quote($pre, '#').'[a-f0-9]{20}\.(webp|jpg))$#', $url, $m) && is_file(shop_img_dir().'/'.basename($m[1]))) { return $m[1]; }
+	return $url;
+}
+function shop_img_is_local($url) { return strpos(shop_img_rel($url), shop_img_prefix()) === 0; }
 function shop_img_file($url) {
-	if (!shop_img_is_local($url)) { return ''; }
-	$n = substr((string)$url, strlen(shop_img_prefix()));
+	$url = shop_img_rel($url);
+	if (strpos($url, shop_img_prefix()) !== 0) { return ''; }
+	$n = substr($url, strlen(shop_img_prefix()));
 	return preg_match('/^[a-f0-9]{20}\.(webp|jpg)$/', $n) ? shop_img_dir().'/'.$n : '';
 }
 // $bin = the bytes of an image file; array(ok, url | error)
@@ -2066,6 +2078,8 @@ function shop_drivers_live($maxAgeSeconds = 600) {
 // ---- SMS to the guest at the two moments that matter: the delivery is on its way (with the link to follow it), the pickup is ready.
 // Only for real orders with a mobile number, once per order, and only when SMS sending is set up (Einstellungen > SMS).
 function shop_site_url() {
+	require_once __DIR__.'/hosts.class.php';
+	$h = myseat_hosts(); if ($h['app'] !== '') { return $h['app']; } // config/hosts.inc.php: links for guests always lead to the guest domain
 	if (function_exists('shop_base_url')) { return shop_base_url(); } // order pages
 	require_once __DIR__.'/cancel_link.class.php';
 	return cl_site_url();

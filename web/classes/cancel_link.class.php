@@ -24,6 +24,8 @@ function cl_token_ok($reservation_id, $booking_number, $token) {
 
 // public base URL of this installation (a cron run has no request, so callers may define REMINDER_SITE_URL)
 function cl_site_url() {
+	require_once __DIR__.'/hosts.class.php';
+	$h = myseat_hosts(); if ($h['admin'] !== '') { return $h['admin']; } // config/hosts.inc.php: the main domain, whatever address the request came in on
 	if (defined('REMINDER_SITE_URL')) { return rtrim(REMINDER_SITE_URL, '/'); }
 	if (defined('FEEDBACK_SITE_URL')) { return rtrim(FEEDBACK_SITE_URL, '/'); }
 	$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
