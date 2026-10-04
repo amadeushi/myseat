@@ -118,7 +118,7 @@ body {
 		<?php else: foreach ($reviews as $r): ?>
 			<div class="card">
 				<div class="card-head">
-					<span class="card-name"><?php echo htmlspecialchars(fb_public_name($r['guest_name'])); ?></span>
+					<span class="card-name"><?php echo htmlspecialchars(fb_public_name($lang)); ?></span>
 					<span><?php echo fb_stars_static($r['rating_overall'], 18); ?></span>
 				</div>
 				<div class="card-date"><?php echo date($de ? 'd.m.Y' : 'M j, Y', strtotime($r['visit_date'])); ?></div>

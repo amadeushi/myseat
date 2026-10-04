@@ -156,10 +156,17 @@ function fb_get_by_token($token) {
 
 // only two categories are asked; the "overall" rating shown in the backend stats/list is their
 // rounded average, not a separate question to the guest
+// feedback after an order: the first tap (the food) is kept at once, even if the guest does not go on; the list of the backend shows it as it is
+function fb_partial($feedback_id, $food) {
+	fb_ensure_schema();
+	$food = max(1, min(5, (int)$food));
+	$st = fb_exec("UPDATE ".fb_t('tp_feedback')." SET rating_food=?, rating_overall=?, status='partial', submitted_at=NOW() WHERE feedback_id=? AND status='requested'", 'iii', array($food, $food, (int)$feedback_id));
+	return $st && mysqli_stmt_affected_rows($st) === 1;
+}
 function fb_submit($feedback_id, $food, $service, $comment, $consent_public) {
 	fb_ensure_schema();
 	$overall = (int)round(((int)$food + (int)$service) / 2);
-	fb_exec("UPDATE ".fb_t('tp_feedback')." SET rating_food=?, rating_service=?, rating_overall=?, comment=?, consent_public=?, status='submitted', submitted_at=NOW() WHERE feedback_id=? AND status='requested'",
+	fb_exec("UPDATE ".fb_t('tp_feedback')." SET rating_food=?, rating_service=?, rating_overall=?, comment=?, consent_public=?, status='submitted', submitted_at=NOW() WHERE feedback_id=? AND status IN ('requested', 'partial')",
 		'iiisii', array((int)$food, (int)$service, $overall, $comment, $consent_public ? 1 : 0, (int)$feedback_id));
 }
 
@@ -169,19 +176,15 @@ function fb_set_public($feedback_id, $public) {
 	fb_exec("UPDATE ".fb_t('tp_feedback')." SET is_public=? WHERE feedback_id=? AND consent_public=1", 'ii', array($public ? 1 : 0, (int)$feedback_id));
 }
 
-// first name + initial of the rest, for public display ("Klaus K." instead of the full name)
-function fb_public_name($full) {
-	$full = trim((string)$full);
-	if ($full === '') { return ''; }
-	$parts = preg_split('/\s+/', $full);
-	if (count($parts) < 2) { return $parts[0]; }
-	return $parts[0].' '.mb_substr($parts[1], 0, 1).'.';
+// public reviews are anonymous: no name, no initial. The name of the guest is not even read for the public pages (see fb_public_reviews())
+function fb_public_name($lang = 'de') {
+	return $lang === 'en' ? 'A guest' : 'Ein Gast';
 }
 
 // approved, public reviews for the embeddable widget / public page - newest first
 function fb_public_reviews($outlet_id, $limit = 20, $offset = 0) {
 	fb_ensure_schema();
-	return fb_rows("SELECT guest_name, rating_food, rating_service, rating_overall, comment, reply, visit_date
+	return fb_rows("SELECT rating_food, rating_service, rating_overall, comment, reply, visit_date
 			FROM ".fb_t('tp_feedback')."
 			WHERE outlet_id=? AND status='submitted' AND consent_public=1 AND is_public=1
 			ORDER BY visit_date DESC, feedback_id DESC LIMIT ? OFFSET ?",
@@ -216,7 +219,7 @@ function fb_reply($feedback_id, $reply) {
 // submitted feedback for the backend tab, newest visit first
 function fb_list($outlet_id, $date_from, $date_to) {
 	fb_ensure_schema();
-	return fb_rows("SELECT * FROM ".fb_t('tp_feedback')." WHERE outlet_id=? AND status='submitted' AND visit_date BETWEEN ? AND ? ORDER BY visit_date DESC, visit_time DESC",
+	return fb_rows("SELECT * FROM ".fb_t('tp_feedback')." WHERE outlet_id=? AND status IN ('submitted', 'partial') AND visit_date BETWEEN ? AND ? ORDER BY visit_date DESC, visit_time DESC",
 		'iss', array((int)$outlet_id, $date_from, $date_to));
 }
 

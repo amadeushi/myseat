@@ -74,7 +74,7 @@ body {
 		<?php else: foreach ($reviews as $r): ?>
 			<div class="item">
 				<div class="item-head">
-					<span class="item-name"><?php echo htmlspecialchars(fb_public_name($r['guest_name'])); ?></span>
+					<span class="item-name"><?php echo htmlspecialchars(fb_public_name($lang)); ?></span>
 					<span><?php echo fbw_stars($r['rating_overall'], 14); ?></span>
 				</div>
 				<?php if ($r['comment'] !== ''): ?><p class="item-comment"><?php echo nl2br(htmlspecialchars($r['comment'])); ?></p><?php endif; ?>

@@ -68,13 +68,13 @@ function fb_stars_html($n, $size = 18) {
 				<div class="fb-item-head">
 					<div>
 						<strong class="fb-item-name"><?php echo htmlspecialchars($r['guest_name']); ?></strong>
-						<span class="fb-item-date"><?php echo _feedback_from.' '.date($general['dateformat'], strtotime($r['visit_date'])); ?></span>
+						<span class="fb-item-date"><?php echo _feedback_from.' '.date($general['dateformat'], strtotime($r['visit_date'])); ?><?php echo (isset($r['kind']) && $r['kind'] === 'delivery') ? ' · Bestellung (Lieferung)' : ((isset($r['kind']) && $r['kind'] === 'pickup') ? ' · Bestellung (Abholung)' : ''); ?></span>
 					</div>
 					<div class="fb-stars-row"><?php echo fb_stars_html($r['rating_overall'], 20); ?></div>
 				</div>
 				<div class="fb-item-cats">
 					<span><?php echo _feedback_food; ?>: <?php echo fb_stars_html($r['rating_food'], 14); ?></span>
-					<span><?php echo _feedback_service; ?>: <?php echo fb_stars_html($r['rating_service'], 14); ?></span>
+					<?php if ($r['rating_service'] !== null): ?><span><?php echo (isset($r['kind']) && $r['kind'] === 'delivery') ? 'Lieferung' : ((isset($r['kind']) && $r['kind'] === 'pickup') ? 'Abholung' : _feedback_service); ?>: <?php echo fb_stars_html($r['rating_service'], 14); ?></span><?php endif; ?>
 				</div>
 				<?php if ($r['comment'] !== ''): ?><p class="fb-item-comment"><?php echo nl2br(htmlspecialchars($r['comment'])); ?></p><?php endif; ?>
 

@@ -52,6 +52,17 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.25.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Feedback-Mail nach Bestellungen (web/classes/shop_feedback.class.php, web/cron/send_order_feedback.php): zwei Stunden nach Abschluss bekommt der Gast eine freundliche Mail mit
+   einem Tipp auf die Sterne, danach eine kurze Seite (api/feedback.php) mit Kacheln und freiem Text. Läuft über den Küchenmonitor-Takt (shop_fb_tick, höchstens alle zehn Minuten) oder den Cron.
+   Hinweis an das Haus bei 1 bis 3 Sternen, bei 5 Sternen die Bitte um eine Google-Bewertung; die Antworten landen im vorhandenen Feedback-Backend (tp_feedback mit order_id und kind
+   delivery/pickup, Status requested/partial/submitted). Abmelden von der Mail per Link (tp_shop_mail_optout). Einstellungen feedback_on (Haken im Lieferservice), feedback_since,
+   feedback_outlet_id.
+ * Change: Öffentliche Bewertungen sind anonym ("Ein Gast" / "A guest", ohne Vorname und Initiale): api/reviews.php, api/reviews_widget.php, Einwilligungstexte der Feedback-Seite.
+ * New: Der Pi als Drucker "Lieferando" (tools/kitchen-pi/lieferando-drucker): das Tablet druckt den Bon im Android-Druckfenster auf den Pi (CUPS, IPP), das PDF geht an
+   order/lieferando_import.php (statt über n8n/Nextcloud). setup.sh richtet es ein, myseat-pdf ist das CUPS-Backend (Wiederholung bei Serverfehler, PDFs bleiben in /var/spool/myseat-pdf).
+
 2026-10-05 == mySeat v6.24.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Kunden (Backend-Seite p=13, Menü "Kunden"): Liste mit Suche und Ansichten (Stammgäste, Neu, Schlafend, Stempel fast voll, Gutschein offen, Mit Konto, Mit Hinweis, Auffällig),

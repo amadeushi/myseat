@@ -16,6 +16,20 @@ require_once '../web/classes/feedback.class.php';
 $token = isset($_GET['token']) ? trim($_GET['token']) : (isset($_POST['token']) ? trim($_POST['token']) : '');
 $f = $token !== '' ? fb_get_by_token($token) : null;
 
+// feedback after an order (mail "Hat's geschmeckt?", web/classes/shop_feedback.class.php): one tap in the mail is the first answer, this page asks the rest
+$isOrder = $f && isset($f['kind']) && in_array($f['kind'], array('delivery', 'pickup'), true);
+if ($isOrder) { require_once '../web/classes/shop_feedback.class.php'; shop_fb_ensure(); }
+$optedOut = false;
+if ($isOrder && isset($_GET['optout'])) {
+	fb_exec("INSERT IGNORE INTO ".fb_t('tp_shop_mail_optout')." (email_key, created_at) VALUES (?, NOW())", 's', array(shop_fb_key($f['guest_email'])));
+	$optedOut = true;
+}
+if ($isOrder && !$optedOut && $f['status'] === 'requested' && isset($_GET['r']) && (int)$_GET['r'] >= 1 && (int)$_GET['r'] <= 5) {
+	if (fb_partial($f['feedback_id'], (int)$_GET['r'])) {
+		$f = fb_get_by_token($token);
+		if ((int)$_GET['r'] <= 3) { shop_fb_alert($f, true); }
+	}
+}
 $lang = $f ? $f['lang'] : 'de';
 $de = ($lang !== 'en');
 
@@ -35,16 +49,18 @@ $brand = html_entity_decode($brand, ENT_QUOTES, 'UTF-8');
 $submitted_now = null; // rating_overall right after a successful submit, for the thank-you branch
 $error = '';
 
-if ($f && $_SERVER['REQUEST_METHOD'] === 'POST' && $f['status'] === 'requested') {
+if ($f && $_SERVER['REQUEST_METHOD'] === 'POST' && in_array($f['status'], array('requested', 'partial'), true) && !$optedOut) {
 	$food = isset($_POST['rating_food']) ? (int)$_POST['rating_food'] : 0;
+	if ($isOrder && $f['status'] === 'partial' && $f['rating_food'] !== null) { $food = (int)$f['rating_food']; }
 	$service = isset($_POST['rating_service']) ? (int)$_POST['rating_service'] : 0;
 	$comment = isset($_POST['comment']) ? trim(substr($_POST['comment'], 0, 2000)) : '';
 	$consent_public = isset($_POST['consent_public']);
 	if ($food < 1 || $food > 5 || $service < 1 || $service > 5) {
-		$error = $de ? 'Bitte vergib für jede Kategorie 1 bis 5 Sterne.' : 'Please give 1 to 5 stars for every category.';
+		$error = $isOrder ? 'Bitte tippe bei jeder Frage eine Zahl von 1 bis 5.' : ($de ? 'Bitte vergib für jede Kategorie 1 bis 5 Sterne.' : 'Please give 1 to 5 stars for every category.');
 	} else {
 		fb_submit($f['feedback_id'], $food, $service, $comment, $consent_public);
 		$submitted_now = (int)round(($food + $service) / 2);
+		if ($isOrder && ($food <= 3 || $service <= 3) && $comment !== '') { shop_fb_alert(fb_get_by_token($token), false); }
 	}
 }
 
@@ -54,7 +70,7 @@ $t = $de ? array(
 	'heading' => 'Wie war dein Besuch?', 'sub' => 'Sag uns ehrlich, was gut lief und was wir besser machen können. Beides hilft uns.',
 	'food' => 'Speisen & Getränke', 'service' => 'Service',
 	'comment_l' => 'Möchtest du uns noch etwas mitteilen? (optional)', 'submit' => 'Feedback senden',
-	'consent_l' => 'Diese Bewertung darf (mit Vorname und Initiale) öffentlich gezeigt werden.',
+	'consent_l' => 'Diese Bewertung darf anonym öffentlich gezeigt werden, ohne deinen Namen.',
 	'thanks_high_h' => 'Das freut uns riesig, danke!',
 	'thanks_high' => 'Wenn du magst, hilft uns eine kurze Bewertung auf TripAdvisor sehr, damit andere uns finden. Es dauert nur eine Minute.',
 	'thanks_low_h' => 'Danke für deine Ehrlichkeit.',
@@ -66,13 +82,25 @@ $t = $de ? array(
 	'heading' => 'How was your visit?', 'sub' => 'Tell us honestly what went well and what we can do better. Both help us.',
 	'food' => 'Food & Drinks', 'service' => 'Service',
 	'comment_l' => 'Anything else you would like to tell us? (optional)', 'submit' => 'Send feedback',
-	'consent_l' => 'This review may be shown publicly (with first name and initial).',
+	'consent_l' => 'This review may be shown publicly and anonymously, without your name.',
 	'thanks_high_h' => 'That makes us so happy, thank you!',
 	'thanks_high' => 'If you like, a short review on TripAdvisor helps others find us. It only takes a minute.',
 	'thanks_low_h' => 'Thank you for being honest.',
 	'thanks_low' => 'We are sorry, and we take it seriously. Please write to us and tell us what went wrong, we will get back to you personally.',
 	'google' => 'Rate us on Google', 'google_alt' => 'Or rate us on Google', 'tripadvisor' => 'Rate us on TripAdvisor', 'write_us' => 'Write to us directly',
 );
+if ($isOrder) {
+	$art = $f['kind'] === 'delivery' ? 'Lieferung' : 'Abholung';
+	$t['food'] = 'Wie hat es geschmeckt?'; $t['service'] = 'Wie war die '.$art.'?';
+	$t['already'] = 'Zu dieser Bestellung liegt uns bereits deine Antwort vor.';
+	$t['heading'] = $f['status'] === 'partial' ? 'Danke! Noch kurz zur '.$art : 'Hat’s geschmeckt?';
+	$t['sub'] = $f['status'] === 'partial' ? 'Dein Tipp ist schon bei uns angekommen. Zwei Fragen noch, wenn du magst.' : 'Wir wollen es ehrlich wissen, was gut war und was wir besser machen können.';
+	$t['comment_l'] = 'Möchtest du uns noch etwas sagen? (optional)'; $t['submit'] = 'Absenden';
+	$t['thanks_high_h'] = 'Das freut uns riesig, danke!';
+	$t['thanks_high'] = 'Wenn du magst, hilft uns eine kurze Bewertung auf Google sehr, damit andere uns finden. Es dauert nur eine Minute.';
+	$t['thanks_low_h'] = 'Danke, dass du es uns sagst.';
+	$t['thanks_low'] = 'Das tut uns leid, und wir nehmen es ernst. Schreib uns gern kurz, was nicht gepasst hat, wir melden uns persönlich bei dir.';
+}
 ?>
 <!DOCTYPE html>
 <html lang="<?php echo $lang; ?>">
@@ -117,6 +145,13 @@ textarea:focus { outline: none; border-color: var(--gold); }
 .consent input { margin-top: 3px; flex: 0 0 auto; }
 .submit { width: 100%; height: 50px; margin-top: 8px; font: inherit; font-size: 16px; font-weight: 700; color: var(--bg); background: var(--gold); border: 0; border-radius: 999px; cursor: pointer; }
 .submit:hover { background: var(--gold-strong); }
+.tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.tiles input { position: absolute; opacity: 0; width: 0; height: 0; }
+.tiles label { display: grid; place-items: center; min-height: 56px; border-radius: 14px; border: 1px solid var(--border-soft); background: var(--surface-2); color: var(--text); font-size: 22px; font-weight: 700; cursor: pointer; }
+.tiles label:hover { border-color: var(--gold); }
+.tiles input:checked + label { background: var(--gold); border-color: var(--gold); color: #1a1408; }
+.tiles input:focus-visible + label { outline: 2px solid var(--gold-strong); outline-offset: 2px; }
+.tile-ends { display: flex; justify-content: space-between; margin-top: 6px; font-size: 12.5px; color: var(--text-muted); }
 .stars-static { font-size: 28px; letter-spacing: 2px; color: var(--gold); margin: 4px 0 20px; }
 .ext-links { display: flex; flex-direction: column; gap: 12px; margin-top: 22px; }
 .ext-btn { display: block; text-align: center; padding: 14px; border-radius: 999px; text-decoration: none; font-weight: 700; border: 1px solid var(--border); color: var(--text); }
@@ -134,11 +169,15 @@ textarea:focus { outline: none; border-color: var(--gold); }
 		<?php if (!$f): ?>
 			<h1><?php echo htmlspecialchars($t['invalid']); ?></h1>
 
+		<?php elseif ($optedOut): ?>
+			<h1>Alles klar.</h1>
+			<p class="sub">Du bekommst keine Feedback-Mails mehr von uns. Danke, dass du bei uns bestellt hast.</p>
+
 		<?php elseif ($submitted_now !== null): ?>
-			<?php if ($submitted_now >= 4): ?>
+			<?php if ($isOrder ? ($submitted_now >= 5) : ($submitted_now >= 4)): ?>
 				<h1><?php echo htmlspecialchars($t['thanks_high_h']); ?></h1>
 				<p class="sub"><?php echo htmlspecialchars($t['thanks_high']); ?></p>
-				<?php $has_ta = !empty($outlet['outlet_tripadvisor_url']); $has_go = !empty($outlet['outlet_google_url']); ?>
+				<?php $has_ta = !$isOrder && !empty($outlet['outlet_tripadvisor_url']); $has_go = !empty($outlet['outlet_google_url']); ?>
 				<div class="ext-links">
 					<?php if ($has_ta): ?>
 						<a class="ext-btn ext-btn-primary" href="<?php echo htmlspecialchars($outlet['outlet_tripadvisor_url']); ?>" target="_blank" rel="noopener"><?php echo htmlspecialchars($t['tripadvisor']); ?></a>
@@ -168,7 +207,20 @@ textarea:focus { outline: none; border-color: var(--gold); }
 			<?php if ($error !== ''): ?><div class="notice"><?php echo htmlspecialchars($error); ?></div><?php endif; ?>
 			<form method="post" action="feedback.php">
 				<input type="hidden" name="token" value="<?php echo htmlspecialchars($token); ?>"/>
-				<?php foreach (array('rating_food' => $t['food'], 'rating_service' => $t['service']) as $field => $label): ?>
+				<?php $fields = ($isOrder && $f['status'] === 'partial') ? array('rating_service' => $t['service']) : array('rating_food' => $t['food'], 'rating_service' => $t['service']); ?>
+				<?php foreach ($fields as $field => $label): ?>
+				<?php if ($isOrder): ?>
+				<div class="group">
+					<span><?php echo htmlspecialchars($label); ?> *</span>
+					<div class="tiles">
+						<?php for ($i = 1; $i <= 5; $i++): ?>
+							<input type="radio" name="<?php echo $field; ?>" id="<?php echo $field.$i; ?>" value="<?php echo $i; ?>" required/>
+							<label for="<?php echo $field.$i; ?>"><?php echo $i; ?></label>
+						<?php endfor; ?>
+					</div>
+					<div class="tile-ends"><span>nicht gut</span><span><?php echo $field === 'rating_food' ? 'richtig lecker' : 'perfekt'; ?></span></div>
+				</div>
+				<?php continue; endif; ?>
 				<div class="group">
 					<span><?php echo htmlspecialchars($label); ?> *</span>
 					<div class="stars">

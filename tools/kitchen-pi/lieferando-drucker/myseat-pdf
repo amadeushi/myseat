@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+"""
+CUPS backend "myseat-pdf": the "printer" for Lieferando receipts. The tablet prints the order receipt to the Pi like to any
+network printer (Android print dialog -> IPP); CUPS turns the job into a PDF and hands it to this backend, which posts the PDF to
+order/lieferando_import.php of mySeat (the same interface n8n used). Installed to /usr/lib/cups/backend/ by setup.sh.
+
+Config in /etc/myseat-printer.conf (not in the project): IMPORT_URL=... and IMPORT_KEY=... (the X-Api-Key of the import).
+Every PDF is also kept in /var/spool/myseat-pdf (the newest 200), so a receipt that was not understood can be looked at later.
+
+Exit codes of a CUPS backend: 0 done, 5 cancel the job, 6 try again later.
+"""
+import os, sys, time, glob, urllib.request, urllib.error, syslog
+
+CONF = '/etc/myseat-printer.conf'
+KEEP_DIR = '/var/spool/myseat-pdf'
+KEEP_N = 200
+
+def log(msg):
+    syslog.syslog(syslog.LOG_INFO, 'myseat-pdf: ' + msg)
+    sys.stderr.write('INFO: myseat-pdf: ' + msg + '\n')
+
+def conf():
+    c = {}
+    try:
+        for line in open(CONF, encoding='utf-8'):
+            line = line.strip()
+            if line and not line.startswith('#') and '=' in line:
+                k, v = line.split('=', 1)
+                c[k.strip()] = v.strip().strip('"').strip("'")
+    except OSError:
+        pass
+    return c
+
+def keep(data, job):
+    try:
+        os.makedirs(KEEP_DIR, mode=0o750, exist_ok=True)
+        name = os.path.join(KEEP_DIR, time.strftime('%Y%m%d-%H%M%S') + '-job' + str(job) + '.pdf')
+        with open(name, 'wb') as f:
+            f.write(data)
+        os.chmod(name, 0o640)
+        for old in sorted(glob.glob(os.path.join(KEEP_DIR, '*.pdf')))[:-KEEP_N]:
+            os.remove(old)
+    except OSError as e:
+        log('could not keep the pdf: %s' % e)
+
+def main():
+    # without arguments CUPS asks which devices the backend offers
+    if len(sys.argv) == 1:
+        print('direct myseat-pdf:/ "mySeat Import" "mySeat Lieferando-Import"')
+        return 0
+    job = sys.argv[1]
+    data = open(sys.argv[6], 'rb').read() if len(sys.argv) >= 7 else sys.stdin.buffer.read()
+    if data[:4] != b'%PDF':
+        log('job %s is not a PDF (%d bytes), cancelled' % (job, len(data)))
+        return 5
+    keep(data, job)
+
+    c = conf()
+    if not c.get('IMPORT_URL') or not c.get('IMPORT_KEY'):
+        log('no IMPORT_URL / IMPORT_KEY in %s, will try again' % CONF)
+        return 6
+    req = urllib.request.Request(c['IMPORT_URL'], data=data, method='POST',
+                                 headers={'X-Api-Key': c['IMPORT_KEY'], 'Content-Type': 'application/pdf'})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            log('job %s imported: %s' % (job, r.read(400).decode('utf-8', 'replace')))
+            return 0
+    except urllib.error.HTTPError as e:
+        body = e.read(400).decode('utf-8', 'replace')
+        if e.code >= 500:
+            log('job %s: server error %d, will try again: %s' % (job, e.code, body))
+            return 6
+        # 4xx: the receipt was refused (not an order, wrong key); trying again would not help, the pdf is kept for a look
+        log('job %s refused (%d): %s' % (job, e.code, body))
+        return 5
+    except (urllib.error.URLError, OSError) as e:
+        log('job %s: no connection, will try again: %s' % (job, e))
+        return 6
+
+if __name__ == '__main__':
+    sys.exit(main())

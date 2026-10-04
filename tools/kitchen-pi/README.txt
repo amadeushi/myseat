@@ -10,3 +10,11 @@ USB-Zugriff ohne Root: /etc/udev/rules.d/99-ncr7197.rules mit
   SUBSYSTEM=="usb", ATTR{idVendor}=="0404", ATTR{idProduct}=="0312", GROUP="plugdev", MODE="0664"
 Chromium ohne Übersetzungsleiste: /etc/chromium/policies/managed/kiosk.json mit {"TranslateEnabled": false}
 Den Schlüssel des Druckdienstes erzeugt shop_print_agent_key() (Einstellung print_agent_key) beim ersten Aufruf.
+
+lieferando-drucker/   Der Pi als Drucker "Lieferando" im WLAN (Stand 2026-10-05, noch nicht am Tablet getestet). Das Lieferando-Tablet druckt den Bestellbon im
+                      Android-Druckfenster auf den Pi; der Bon geht als PDF an order/lieferando_import.php (derselbe Import wie vorher über n8n/Nextcloud).
+  setup.sh            Einrichtung auf dem Pi:  sudo ./setup.sh  (installiert cups, cups-filters, avahi-daemon; fragt Adresse und X-Api-Key des Imports,
+                      der Schlüssel steht nur in /etc/myseat-printer.conf, Rechte 600).
+  myseat-pdf          CUPS-Backend: schickt das PDF an den Import. Server nicht erreichbar oder Fehler 5xx: CUPS versucht es später erneut; Ablehnung 4xx: Auftrag
+                      verworfen. Jedes PDF bleibt in /var/spool/myseat-pdf (die letzten 200). Protokoll: journalctl -t myseat-pdf -f
+  Prüfen: avahi-browse -rt _ipp._tcp zeigt den Pi; am Tablet erscheint "Lieferando Bestellungen (mySeat)" in der Druckerliste.

@@ -294,6 +294,7 @@ function shop_defaults() {
 		'pause_pickup' => '0', 'pause_pickup_until' => '0',
 		'cust_regular_n' => '3', 'cust_regular_days' => '90', // customer backend: "Stammgast" = this many orders within this many days
 		'cust_sleep_days' => '60', 'cust_new_days' => '30',   // "Schlafend" = no order for this many days (with at least 2 orders), "Neu" = first order not older than this
+		'feedback_on' => '1', 'feedback_since' => '', 'feedback_last_run' => '0', 'feedback_outlet_id' => '0', // feedback mail after an order (web/classes/shop_feedback.class.php); feedback_since = switch-on time, only later orders count
 		'last_order_min' => '0',    // the shop takes orders until the end of the order time minus this many minutes (0 = until closing; the food may leave after closing)
 		'pos_discount_pct' => '10', // the "-10 %" key of the till (Erfassung): percent of the goods and the delivery fee
 		'kitchen_drive_min' => '15', // minutes a delivery needs to the guest: the kitchen monitor shows when the food has to leave
@@ -1692,6 +1693,7 @@ function shop_delete_test_order($id) {
 // what the kitchen screen needs and nothing more: no name, phone, address or payment of the guest
 function shop_kitchen_board() {
 	shop_ensure_schema();
+	if (is_file(__DIR__.'/shop_feedback.class.php')) { require_once __DIR__.'/shop_feedback.class.php'; shop_fb_tick(); } // sends the feedback mails that are due (every ten minutes at most)
 	$rows = fb_rows("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE status IN ('accepted', 'preparing') ORDER BY COALESCE(scheduled_at, eta_at, created_at), id");
 	$accepted = array();
 	foreach ($rows as $r) { $accepted[(int)$r['id']] = $r['accepted_at'] ? strtotime($r['accepted_at']) : strtotime($r['created_at']); }
