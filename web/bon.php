@@ -1,7 +1,7 @@
 <?php
 /*
  * Paper slip of one order for a receipt printer (72 mm). Without "full" it is the kitchen slip: number, type, time, dishes, notes,
- * only name (and the postcode of a delivery, to talk through tours) about the guest. With full=1 it is the delivery slip: name, address, what to collect (no phone number). Needs a backend login
+ * only name (and the postcode of a delivery, to talk through tours) about the guest. With full=1 it is the delivery slip: name, address, what to collect (no phone number). An order from Lieferando carries a black "LIEFERANDO" bar on top, on both slips, so it is not mixed up with the own deliveries. Needs a backend login
  * (Reservation-Edit). The monitors load it in a hidden frame and call print(); opened on its own, ?print=1 prints at once.
  */
 session_start();
@@ -47,11 +47,13 @@ $due = $o['scheduled_at'] ?: ($o['eta_at'] ?: $o['created_at']);
 		.onote { margin-left: 0; }
 		.who { margin-top: 4px; font-size: 17pt; line-height: 1.15; }
 		.small { font-size: 10pt; }
+		.src { margin: 0 0 6px; padding: 4px 0; background: #000; color: #fff; text-align: center; font-size: 21pt; font-weight: 900; letter-spacing: 0.02em; white-space: nowrap; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 		.pay { font-size: 15pt; font-weight: 800; margin-top: 6px; }
 		@media screen { body { padding: 12px; border: 1px dashed #999; margin-top: 12px; } }
 	</style>
 </head>
 <body>
+	<?php if (isset($o['source']) && $o['source'] === 'lieferando'): ?><div class="src">LIEFERANDO</div><?php endif; ?>
 	<div class="row"><h1>#<?php echo (int)$o['day_no']; ?></h1><span class="type"><?php echo $delivery ? 'Lieferung' : 'Abholung'; ?></span></div>
 	<div class="row"><span class="time"><?php echo $o['scheduled_at'] ? 'geplant ' : ''; ?><?php echo $h(substr($due, 11, 5)); ?></span><span class="small"><?php echo $h($o['number']); ?><?php echo $o['is_test'] ? ' TEST' : ''; ?></span></div>
 	<?php if (!$full): ?>
@@ -72,6 +74,7 @@ $due = $o['scheduled_at'] ?: ($o['eta_at'] ?: $o['created_at']);
 	<?php if ($full): ?>
 		<hr/>
 		<div class="pay"><?php echo $o['payment_method'] === 'mollie' ? 'online bezahlt' : ($o['payment_method'] === 'cash' ? 'BAR kassieren: ' : 'KARTE kassieren: ').shop_money($o['total_cents']); ?></div>
+		<?php if (!empty($o['pay_with_cents']) && $o['payment_method'] === 'cash'): ?><div class="small">Gast zahlt mit <?php echo shop_money((int)$o['pay_with_cents']); ?> &middot; Rückgeld <strong><?php echo shop_money((int)$o['pay_with_cents'] - (int)$o['total_cents']); ?></strong></div><?php endif; ?>
 	<?php endif; ?>
 	<hr/>
 	<div class="small">gedruckt <?php echo date('H:i'); ?> Uhr</div>

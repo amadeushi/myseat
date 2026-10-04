@@ -2061,58 +2061,6 @@ button.orders-kitchen:disabled { opacity: .5; cursor: wait; }
 .rsv-call[hidden] { display: none; }
 .pd-call { margin: 0; padding: 10px 16px; display: flex; align-items: center; gap: 12px; background: var(--surface-2); border-bottom: 1px solid var(--gold); font-size: 14px; }
 .pd-call[hidden] { display: none; }
-.pos-layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 18px; align-items: start; }
-.pos-cats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
-.pos-cat { padding: 8px 16px; min-height: 40px; border: 1px solid var(--border-soft); border-radius: var(--radius-pill); background: var(--surface); color: var(--text-muted); }
-.pos-cat.is-active { background: var(--gold); border-color: var(--gold); color: var(--ink-strong, #1a1408); font-weight: 700; }
-.pos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-.pos-item { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; padding: 12px 14px; min-height: 64px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); text-align: left; color: var(--text); }
-.pos-item[hidden] { display: none; }
-/* without an explicit background here, the generic button:hover rule's background: var(--gold-strong) wins by
-   specificity - .pos-item-price's own gold-strong text then lands on a gold-strong fill and disappears */
-.pos-item:hover { background: var(--surface); border-color: var(--gold); color: var(--text); }
-.pos-item-title { font-weight: 600; }
-.pos-item-price { color: var(--gold-strong); font-size: 13px; }
-.pos-side { display: grid; gap: 14px; align-content: start; position: sticky; top: 16px; }
-.pos-cart { display: grid; gap: 10px; padding: 14px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); max-height: 320px; overflow-y: auto; }
-.pos-line { padding-bottom: 8px; border-bottom: 1px solid var(--border-soft); }
-.pos-line:last-child { border-bottom: 0; padding-bottom: 0; }
-.pos-line.is-editable { cursor: pointer; border-radius: var(--radius-sm); }
-.pos-line.is-editable:hover { background: var(--surface-2); }
-.pos-line.is-editable:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
-.pos-cart-warn { margin: 0; font-size: 12px; color: var(--gold-strong); }
-.pos-line-var, .pos-line-opts { font-size: 12px; color: var(--text-muted); margin: 2px 0; }
-.pos-line-note { width: 100%; box-sizing: border-box; margin: 4px 0; padding: 6px 10px; font-size: 13px; min-height: 32px; }
-.pos-line-sum { display: flex; align-items: center; justify-content: space-between; font-weight: 600; }
-.pos-line-del { border: 0; background: transparent; color: var(--text-muted); font-size: 18px; line-height: 1; padding: 0 4px; }
-.pos-line-del:hover { background: transparent; color: var(--danger); }
-.pos-cart-total { display: flex; justify-content: space-between; padding-top: 8px; border-top: 1px solid var(--border); font-size: 16px; }
-.pos-form { display: grid; gap: 12px; padding: 14px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); }
-.pos-form label { display: grid; gap: 4px; font-size: 13px; color: var(--text-muted); }
-.pos-form .detail-status.is-ok { color: var(--success); }
-.pos-form .detail-status.is-warn { color: var(--gold-strong); }
-.pos-type { display: flex; gap: 16px; align-items: center; color: var(--text); font-size: 14px; }
-.pos-type label { display: flex; flex-direction: row; gap: 6px; align-items: center; }
-.pos-no-phone { display: flex; flex-direction: row; gap: 8px; align-items: center; color: var(--text); font-size: 13px; }
-.pos-no-phone[hidden] { display: none; }
-.pos-zone { font-size: 13px; color: var(--text-muted); min-height: 18px; }
-.pos-zone-pick { border: 1px solid var(--border); background: transparent; color: var(--gold-strong); border-radius: var(--radius-sm); padding: 4px 10px; margin: 2px; }
-.pos-history { display: grid; gap: 6px; }
-.pos-history-head { font-size: 12px; color: var(--text-muted); margin: 0; }
-.pos-history-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; background: var(--surface-2); border-radius: var(--radius-sm); font-size: 13px; }
-.pos-submit { width: 100%; }
-/* order/shop.css's search bar is tuned to sit sticky under the guest page's own header (top: 61px) - inside the
-   admin POS layout it is just a normal block above the product grid */
-.pos-main .shop-search-bar { position: static; padding: 0 0 14px; background: transparent; }
-.pos-main .shop-search-in { max-width: none; margin: 0; }
-@media (max-width: 900px) {
-	/* the whole .pos-side (cart + full order form) used to go static below this width, losing the glanceable
-	   running total exactly on counter-tablet widths - display:contents flattens .pos-side so .pos-cart can be
-	   sticky and visually reordered on its own, independent of the longer form, which still scrolls normally */
-	.pos-layout { grid-template-columns: 1fr; }
-	.pos-side { display: contents; }
-	.pos-cart { position: sticky; top: 0; z-index: 10; order: -1; max-height: 38vh; box-shadow: 0 8px 28px rgba(0,0,0,.5); }
-}
 /* Leaflet.draw's default toolbar control is never added to the map (every draw/edit action is one of the
    buttons above instead) - only its vertex handles need restyling to match the dark theme, the default is
    a plain white square meant for a light basemap UI */

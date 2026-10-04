@@ -52,6 +52,18 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.21.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Erfassungsseite (Kasse, main_page.php?p=12) neu gebaut nach POS-Logik: links die Karte mit Suche (Tastatur) und den Reitern Beliebt und
+   Dieser Gast, rechts der Bon in der Reihenfolge des Gesprächs (Wer, Was, Wohin, Wann, Zahlung) mit Summe, Ansage und "Anlegen" immer sichtbar.
+   Anrufer werden erkannt (Name, Adresse, Stammkunde, "Wie letztes Mal"), Zone, Gebühr, Stadtteil, Strecke und Fahrzeit erscheinen beim Tippen.
+   Ansage der Zeit (Grundzeit plus Minuten je Bestellung in der Küche, Einstellungen quote_free_orders und quote_per_order_min) und Wunschzeit.
+   Warnungen: Lieferung pausiert, außerhalb der Bestellzeiten, außerhalb des Gebiets, Mindestbestellwert, doppelte Bestellung am Tag.
+   Nach dem Anlegen: Bestätigung, "Zurücknehmen" (neue Aufträge, 10 Minuten) und "Zuletzt erfasst". Tasten F2, F3, Strg+Enter, Kassenmodus.
+ * New: "Gast zahlt mit" bei Barzahlung: Rückgeld auf dem Lieferschein und auf der Fahrerseite (neue Spalte pay_with_cents in tp_shop_orders).
+ * New: Lieferando-Bestellungen tragen auf beiden Bons einen schwarzen Streifen "LIEFERANDO" (web/bon.php, ESC/POS).
+ * Fix: "Übernehmen" früherer Bestellungen verlor die Extras (shop_guest_history).
+
 2026-10-05 == mySeat v6.20.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Fahrerkarte für die Disposition (web/fahrerkarte.php), gebaut für einen hochkant stehenden Monitor: große Karte mit dem Restaurant, den Lieferungen

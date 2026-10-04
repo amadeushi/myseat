@@ -453,6 +453,8 @@
 .dv .dv-collect-v { font-size: 34px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .dv .dv-collect.is-paid { border-color: var(--success); }
 .dv .dv-collect.is-paid .dv-collect-v { font-size: 20px; color: var(--success); }
+.dv .dv-collect-w { margin-top: 6px; font-size: 17px; color: var(--text); }
+.dv .dv-collect-w strong { color: var(--gold-strong); font-variant-numeric: tabular-nums; }
 .dv .dv-change { margin-top: 8px; }
 .dv .dv-change > summary { color: var(--gold-strong); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 .dv .dv-change-in { padding-bottom: 4px; }

@@ -108,6 +108,8 @@ function shop_ensure_schema() {
 	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_driver_track')." (
 		`id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `driver_id` INT UNSIGNED NOT NULL, `lat` DOUBLE NOT NULL, `lng` DOUBLE NOT NULL, `at` DATETIME NOT NULL,
 		KEY `drv` (`driver_id`, `at`)) $opts");
+	$wcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'pay_with_cents'"); // cash: "the guest pays with 50 euro" (till), for the change
+	if (!$wcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `pay_with_cents` INT NULL"); }
 	$pcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_drivers')." LIKE 'phone'");
 	if (!$pcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_drivers')." ADD `phone` VARCHAR(40) NOT NULL DEFAULT ''"); }
 	$col = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'ip_hash'");
@@ -282,6 +284,7 @@ function shop_defaults() {
 		'account_sms' => '1',       // sign-in codes by SMS (otherwise only by e-mail); needs SMS sending set up
 		'account_sms_daily' => '100', // at most this many sign-in SMS a day (every one costs money)
 		'origin_street' => '', 'origin_zip' => '', 'origin_city' => '', // where the restaurant is (map of the order status)
+		'quote_free_orders' => '4', 'quote_per_order_min' => '2', // the till's time to tell a caller: this many orders in the kitchen do not delay, every further one adds minutes
 		'track_days' => '7',        // how many days the way of the drivers is kept (dispatch map), 0 = it is not stored
 		'route_url' => 'https://router.project-osrm.org', // routing service for the driving way of a delivery (OSRM API), only https
 	);
@@ -1152,6 +1155,67 @@ function shop_create_order($in) {
 	return array('ok' => true, 'order' => shop_order($id), 'items' => shop_order_items($id));
 }
 
+// ---- till (web/content/orders_pos.page.php): what the caller can be told, who the caller is, the last orders of the till
+// how long an order takes now: the base from the settings (delivery or pickup time) plus a few minutes for every order in the kitchen above the free number
+// (settings quote_free_orders / quote_per_order_min), rounded up to 5 minutes; whether the shop takes orders now; times to pick from. The till can always
+// take an order - the state is information for the person on the phone, not a lock.
+function shop_pos_quote($type) {
+	shop_ensure_schema();
+	$type = $type === 'pickup' ? 'pickup' : 'delivery'; $now = time();
+	$base = max(1, ($type === 'delivery') ? (int)shop_setting('eta_delivery_min') : (int)shop_setting('lead_pickup_min'));
+	$free = max(0, (int)shop_setting('quote_free_orders')); $per = max(0, (int)shop_setting('quote_per_order_min'));
+	$row = fb_row("SELECT COUNT(*) AS n FROM ".fb_t('tp_shop_orders')." WHERE order_date = ? AND is_test = 0 AND status IN ('new', 'accepted', 'preparing')", 's', array(date('Y-m-d')));
+	$backlog = (int)$row['n']; $extra = min(40, max(0, $backlog - $free) * $per);
+	$min = (int)(ceil(($base + $extra) / 5) * 5);
+	$st = shop_state($type, $now);
+	$windows = array(); foreach (shop_windows($type, $now) as $w) { $windows[] = array(date('H:i', $w[0]), date('H:i', $w[1])); }
+	$step = max(5, (int)shop_setting('slot_min')) * 60; $t = (int)(ceil(($now + $min * 60) / $step) * $step); $slots = array();
+	for ($i = 0; $i < 8; $i++, $t += $step) { $slots[] = date('Y-m-d H:i', $t); }
+	return array('type' => $type, 'min' => $min, 'base' => $base, 'extra' => $extra, 'backlog' => $backlog, 'free' => $free, 'eta' => date('H:i', $now + $min * 60),
+		'open' => !empty($st['open']), 'paused' => !empty($st['paused']), 'paused_until' => !empty($st['paused_until']) ? date('H:i', $st['paused_until']) : '',
+		'until' => !empty($st['until']) ? date('H:i', $st['until']) : '', 'next' => !empty($st['next']) ? date('d.m. H:i', $st['next']) : '', 'note' => isset($st['note']) ? (string)$st['note'] : '',
+		'windows' => $windows, 'slots' => $slots, 'min_order_cents' => $type === 'delivery' ? shop_cents(shop_setting('min_order_delivery')) : shop_cents(shop_setting('min_order_pickup')));
+}
+// who is calling: the orders of this number (name, address, what was ordered), how often, the favourite dishes and an order that is open right now
+function shop_pos_customer($phone) {
+	$phone = trim((string)$phone);
+	if ($phone === '' || !shop_phone_ok($phone)) { return array('n' => 0, 'orders' => array(), 'open' => array(), 'fav' => array()); }
+	$orders = shop_guest_history($phone, 5);
+	$n = (int)fb_row("SELECT COUNT(*) AS n FROM ".fb_t('tp_shop_orders')." WHERE phone = ? AND is_test = 0 AND status <> 'cancelled'", 's', array($phone))['n'];
+	$open = array_map(function ($r) { return array('id' => (int)$r['id'], 'day_no' => (int)$r['day_no'], 'status' => $r['status'], 'type' => $r['type'], 'time' => substr($r['created_at'], 11, 5)); },
+		fb_rows("SELECT id, day_no, status, type, created_at FROM ".fb_t('tp_shop_orders')." WHERE phone = ? AND is_test = 0 AND order_date = ? AND status IN ('new', 'accepted', 'preparing', 'ready', 'delivering') ORDER BY id DESC LIMIT 3", 'ss', array($phone, date('Y-m-d'))));
+	$fav = array_map(function ($r) { return (int)$r['product_id']; }, fb_rows("SELECT i.product_id, SUM(i.qty) AS q FROM ".fb_t('tp_shop_order_items')." i JOIN ".fb_t('tp_shop_orders')." o ON o.id = i.order_id
+		WHERE o.phone = ? AND o.is_test = 0 AND o.status <> 'cancelled' AND i.product_id IS NOT NULL GROUP BY i.product_id ORDER BY q DESC LIMIT 8", 's', array($phone)));
+	return array('n' => $n, 'orders' => $orders, 'open' => $open, 'fav' => $fav);
+}
+// the dishes ordered most in the last 30 days (product ids), for the first tab of the till
+function shop_pos_popular($limit = 12) {
+	return array_map(function ($r) { return (int)$r['product_id']; }, fb_rows("SELECT i.product_id, SUM(i.qty) AS q FROM ".fb_t('tp_shop_order_items')." i JOIN ".fb_t('tp_shop_orders')." o ON o.id = i.order_id
+		WHERE o.is_test = 0 AND o.status <> 'cancelled' AND o.created_at > ? AND i.product_id IS NOT NULL GROUP BY i.product_id ORDER BY q DESC LIMIT ".(int)$limit, 's', array(date('Y-m-d H:i:s', time() - 30 * 86400))));
+}
+// the last orders taken at the till today; one that nobody has accepted yet (status new) and is at most 10 minutes old can still be taken back
+function shop_pos_recent($limit = 6) {
+	$rows = fb_rows("SELECT id, day_no, number, type, status, customer_name, total_cents, scheduled_at, eta_at, created_at FROM ".fb_t('tp_shop_orders')." WHERE source = 'phone' AND is_test = 0 AND order_date = ? ORDER BY id DESC LIMIT ".(int)$limit, 's', array(date('Y-m-d')));
+	return array_map(function ($r) {
+		$due = $r['scheduled_at'] ?: $r['eta_at'];
+		return array('id' => (int)$r['id'], 'day_no' => (int)$r['day_no'], 'number' => $r['number'], 'type' => $r['type'], 'status' => $r['status'], 'name' => $r['customer_name'], 'total' => (int)$r['total_cents'],
+			'time' => substr($r['created_at'], 11, 5), 'due' => $due ? substr($due, 11, 5) : '', 'scheduled' => !empty($r['scheduled_at']), 'can_cancel' => $r['status'] === 'new' && time() - strtotime($r['created_at']) <= 600);
+	}, $rows);
+}
+function shop_pos_cancel($id, $by) {
+	$o = fb_row("SELECT id, source, status, created_at FROM ".fb_t('tp_shop_orders')." WHERE id = ?", 'i', array((int)$id));
+	if (!$o || $o['source'] !== 'phone') { return array('ok' => false, 'error' => 'Diese Bestellung wurde nicht an der Kasse erfasst.'); }
+	if ($o['status'] !== 'new' || time() - strtotime($o['created_at']) > 600) { return array('ok' => false, 'error' => 'Die Bestellung ist schon angenommen oder zu alt. Bitte in der Disposition stornieren.'); }
+	return shop_set_status((int)$id, 'cancelled', $by.': an der Kasse zurückgenommen') ? array('ok' => true) : array('ok' => false, 'error' => 'Das hat nicht geklappt.');
+}
+// district and driving way of a confirmed address (for the line under the address in the till); '' / null when unknown
+function shop_pos_zone_info($lat, $lng, $street, $zip) {
+	$origin = shop_origin(); $km = null; $min = null;
+	$osm = shop_suburb_osm((float)$lat, (float)$lng);
+	if ($origin) { $rt = shop_route_osrm($origin[0], $origin[1], (float)$lat, (float)$lng); if ($rt) { $km = round($rt[0] / 1000, 1); $min = max(1, (int)round($rt[1] / 60)); } }
+	return array('suburb' => shop_suburb_label($street, $zip, $osm === null ? '' : $osm), 'km' => $km, 'min' => $min);
+}
+
 /*
  * A real order the staff types in on the guest's behalf (phone call, or an order from a delivery portal that
  * isn't technically connected) - web/content/orders_pos.page.php. Reuses the same pricing (shop_price_line())
@@ -1199,8 +1263,14 @@ function shop_create_manual_order($in) {
 	$pay = isset($in['payment']) ? (string)$in['payment'] : '';
 	if (!in_array($pay, array('cash', 'card_door'), true)) { return array('ok' => false, 'error' => 'Bitte eine Zahlart wählen.'); }
 	$total = $sub + $fee;
-	$lead = ($type === 'delivery') ? (int)shop_setting('eta_delivery_min') : (int)shop_setting('lead_pickup_min');
-	$eta = date('Y-m-d H:i:s', time() + max(1, $lead) * 60);
+	// a wish time (Y-m-d H:i) stands as the caller chose it; "as soon as possible" is the time the till told the caller (shop_pos_quote)
+	$scheduled = null; $eta = date('Y-m-d H:i:s', time() + shop_pos_quote($type)['min'] * 60);
+	if (!empty($in['when'])) {
+		$w = strtotime((string)$in['when']);
+		if ($w === false || $w < time() + 120 || $w > time() + 3 * 86400) { return array('ok' => false, 'error' => 'Die Wunschzeit liegt in der Vergangenheit oder zu weit voraus.'); }
+		$scheduled = date('Y-m-d H:i:00', $w); $eta = $scheduled;
+	}
+	$payWith = ($pay === 'cash' && !empty($in['pay_with']) && (int)$in['pay_with'] >= $total) ? min(100000, (int)$in['pay_with']) : null;
 	$token = bin2hex(random_bytes(16));
 	$number = shop_order_number();
 	$today = date('Y-m-d');
@@ -1208,11 +1278,11 @@ function shop_create_manual_order($in) {
 	$now = date('Y-m-d H:i:s');
 	$ok = fb_exec("INSERT INTO ".fb_t('tp_shop_orders')."
 		(token, number, day_no, order_date, type, status, scheduled_at, eta_at, customer_name, phone, email, street, zip, city, address_note, lat, lng, zone_id,
-		 ip_hash, subtotal_cents, fee_cents, tip_cents, total_cents, payment_method, payment_status, note, lang, source, is_test, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, 'new', NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?, 0, ?, ?, 'open', ?, 'de', 'phone', 0, ?, ?)",
-		'ssisss'.'sssssss'.'ddi'.'iii'.'ssss', array($token, $number, $dayNo, $today, $type, $eta, $name, $phone, $email, $street, $zip, $city, $addrNote,
+		 ip_hash, subtotal_cents, fee_cents, tip_cents, total_cents, payment_method, payment_status, note, lang, source, is_test, created_at, updated_at, pay_with_cents)
+		VALUES (?, ?, ?, ?, ?, 'new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?, 0, ?, ?, 'open', ?, 'de', 'phone', 0, ?, ?, ?)",
+		'ssisss'.'s'.'sssssss'.'ddi'.'iii'.'ssss'.'i', array($token, $number, $dayNo, $today, $type, $scheduled, $eta, $name, $phone, $email, $street, $zip, $city, $addrNote,
 			$lat === null ? 0 : $lat, $lng === null ? 0 : $lng, $zoneId === null ? 0 : $zoneId, $sub, $fee, $total, $pay,
-			mb_substr(trim((string)(isset($in['note']) ? $in['note'] : '')), 0, 500), $now, $now));
+			mb_substr(trim((string)(isset($in['note']) ? $in['note'] : '')), 0, 500), $now, $now, $payWith));
 	if (!$ok) { return array('ok' => false, 'error' => 'Die Bestellung konnte nicht gespeichert werden. Bitte versuche es noch einmal.'); }
 	$id = (int)mysqli_insert_id(fb_db());
 	foreach ($items as $it) {
@@ -1237,7 +1307,7 @@ function shop_guest_history($phone, $limit = 5) {
 			'total' => (int)$r['total_cents'],
 			'items' => array_map(function ($it) {
 				return array('product_id' => $it['product_id'] !== null ? (int)$it['product_id'] : null, 'title' => $it['title'], 'variation' => $it['variation'],
-					'options' => json_decode((string)$it['options'], true) ?: array(), 'qty' => (int)$it['qty'], 'note' => $it['note']);
+					'options' => is_array($it['options']) ? $it['options'] : (json_decode((string)$it['options'], true) ?: array()), 'qty' => (int)$it['qty'], 'note' => $it['note']); // shop_order_items() has decoded them already
 			}, shop_order_items((int)$r['id'])),
 		);
 	}
@@ -2378,7 +2448,7 @@ function shop_driver_order_view($o) {
 	$pay = ($o['payment_method'] === 'mollie' || $o['payment_status'] === 'paid') ? 'Bezahlt, nichts zu kassieren' :
 		(($o['payment_method'] === 'cash' ? 'BAR kassieren: ' : 'KARTE kassieren: ').shop_money((int)$o['total_cents']));
 	return array_merge(shop_driver_card($o), array('id' => (int)$o['id'], 'day_no' => (int)$o['day_no'], 'address' => $addr, 'address_note' => $o['address_note'], 'route_dest' => $routeDest,
-		'customer_name' => $o['customer_name'], 'phone' => $o['phone'], 'pay' => $pay, 'note' => $o['note'], 'since' => !empty($o['updated_at']) ? strtotime($o['updated_at']) : null,
+		'customer_name' => $o['customer_name'], 'phone' => $o['phone'], 'pay' => $pay, 'pay_with' => !empty($o['pay_with_cents']) && $o['payment_method'] === 'cash' ? (int)$o['pay_with_cents'] : 0, 'note' => $o['note'], 'since' => !empty($o['updated_at']) ? strtotime($o['updated_at']) : null,
 		'items' => shop_driver_lines($items)));
 }
 // the dishes of an order for the driver: quantity, title, size, the options as one text, the note of the guest

@@ -132,6 +132,7 @@
 		const money = o.paykind === 'paid'
 			? '<div class="dv-collect is-paid"><p class="dv-collect-l">Bezahlt</p><p class="dv-collect-v">Nichts zu kassieren</p></div>'
 			: '<div class="dv-collect is-' + o.paykind + '"><p class="dv-collect-l">' + (o.paykind === 'cash' ? 'Bar kassieren' : 'Mit Karte kassieren') + '</p><p class="dv-collect-v">' + eur(o.collect) + '</p>' +
+			(o.pay_with ? '<p class="dv-collect-w">Gast zahlt mit ' + eur(o.pay_with) + ' &middot; Rückgeld <strong>' + eur(o.pay_with - o.collect) + '</strong></p>' : '') +
 			(o.paykind === 'cash' ? '<details class="dv-change"><summary>Wechselgeld rechnen</summary><div class="dv-change-in"><div class="dv-chips" id="dv-chips"></div>' +
 				'<label for="dv-given">Gast gibt</label><input type="text" id="dv-given" inputmode="decimal" autocomplete="off" placeholder="zum Beispiel 50"/>' +
 				'<p class="dv-change-out" id="dv-change-out" aria-live="polite"></p></div></details>' : '') + '</div>';

@@ -48,6 +48,8 @@ function shop_slip_escpos($o, $items, $full) {
 	$delivery = ($o['type'] === 'delivery');
 	$due = $o['scheduled_at'] ?: ($o['eta_at'] ?: $o['created_at']);
 
+	// an order from Lieferando: a white-on-black bar on top (reverse print), so it is not mixed up with the own deliveries
+	if (isset($o['source']) && $o['source'] === 'lieferando') { $b .= "\x1ba\x01\x1dB\x01\x1d!\x11\x1bE\x01 LIEFERANDO \n\x1dB\x00\x1d!\x00\x1bE\x00\x1ba\x00\n"; }
 	$put('#'.(int)$o['day_no'], 2, true);
 	$put($delivery ? 'LIEFERUNG' : 'ABHOLUNG', 1, true);
 	$put(($o['scheduled_at'] ? 'geplant ' : '').substr($due, 11, 5), 2, true);
@@ -76,6 +78,7 @@ function shop_slip_escpos($o, $items, $full) {
 	if ($full) {
 		$rule();
 		$put($o['payment_method'] === 'mollie' ? 'online bezahlt' : ($o['payment_method'] === 'cash' ? 'BAR kassieren: ' : 'KARTE kassieren: ').shop_money($o['total_cents']), 1, true);
+		if (!empty($o['pay_with_cents']) && $o['payment_method'] === 'cash') { $put('Gast zahlt mit '.shop_money((int)$o['pay_with_cents']).', Rueckgeld '.shop_money((int)$o['pay_with_cents'] - (int)$o['total_cents']), 0, true); }
 	}
 	$rule();
 	$put('gedruckt '.date('H:i').' Uhr', 0);
