@@ -52,6 +52,12 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.12.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Lupe in jeder Spalte des Küchenmonitors: zeigt die ganze Bestellung ohne Scrollen, indem Kopf und Gerichte verkleinert werden
+   (Gerichte höchstens bis 60 %, danach scrollt die Liste wieder). Ein zweiter Tipp auf die Lupe stellt die normale Größe wieder her.
+ * New: Der Name des Gastes steht im Küchenmonitor auch bei Abholungen, um sie auseinanderzuhalten.
+
 2026-10-05 == mySeat v6.12.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Küchenmonitor zeigt bei Lieferungen Name und Postleitzahl des Gastes (zum Durchsprechen der Touren); der Küchenbon trägt Name

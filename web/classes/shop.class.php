@@ -1354,7 +1354,7 @@ function shop_kitchen_board() {
 		$out[] = array('id' => $o['id'], 'day_no' => $o['day_no'], 'number' => $o['number'], 'type' => $o['type'], 'status' => $o['status'], 'test' => $o['test'], 'source' => $o['source'],
 			'due' => $o['due'], 'scheduled' => $o['scheduled'], 'asap' => ($o['scheduled'] === ''), 'due_ts' => $dueTs, 'drive_min' => $min, 'out_ts' => $dueTs - $min * 60, 'out' => date('H:i', $dueTs - $min * 60),
 			// of a delivery only the name and the postcode: enough to talk the tours through with the kitchen, no street, no phone
-			'name' => $o['type'] === 'delivery' ? $o['name'] : '', 'zip' => $o['type'] === 'delivery' ? $o['zip'] : '',
+			'name' => $o['name'], 'zip' => $o['type'] === 'delivery' ? $o['zip'] : '',
 			'accepted_ts' => $accepted[$o['id']], 'note' => $o['note'], 'items' => $o['items']);
 	}
 	// what has to leave the kitchen first stands first
