@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.21.3 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: Bestellbestätigungen kamen bei Online-Zahlungen (Mollie) doppelt: der Webhook von Mollie und die Statusseite des Gastes fragen gleichzeitig nach dem Zahlungsstand und
+   lösten beide die Mails aus. Der Wechsel auf "bezahlt" ist jetzt atomar, nur der Aufruf, der die Zeile wirklich ändert, geht weiter (shop_mollie_sync).
+
 2026-10-05 == mySeat v6.21.2 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix: Zwei gleichzeitig eintreffende Aufträge (zwei Lieferando-Importe, ein Import und eine Telefonbestellung) bekamen dieselbe Nummer des Tages. Berechnen der Nummer und

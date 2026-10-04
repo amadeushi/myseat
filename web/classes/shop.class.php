@@ -1531,7 +1531,10 @@ function shop_mollie_sync($order) {
 	$st = $r['body']['status']; // open, pending, authorized, paid, canceled, expired, failed
 	$map = array('paid' => 'paid', 'authorized' => 'paid', 'canceled' => 'canceled', 'expired' => 'expired', 'failed' => 'failed');
 	if (isset($map[$st]) && $map[$st] !== $order['payment_status']) {
-		fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET payment_status = ?, updated_at = ? WHERE id = ?", 'ssi', array($map[$st], date('Y-m-d H:i:s'), (int)$order['id']));
+		// the webhook of Mollie and the guest coming back to the status page ask at the same moment: only the request whose UPDATE really changed the row goes on
+		// (otherwise both of them would send the order mails)
+		$upd = fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET payment_status = ?, updated_at = ? WHERE id = ? AND payment_status <> ?", 'ssis', array($map[$st], date('Y-m-d H:i:s'), (int)$order['id'], $map[$st]));
+		if (!$upd || mysqli_stmt_affected_rows($upd) < 1) { return shop_order((int)$order['id']); }
 		shop_log((int)$order['id'], 'payment', $map[$st]);
 		if ($map[$st] === 'paid' && $order['status'] === 'pending') { shop_set_status((int)$order['id'], 'new', 'Zahlung'); shop_after_order_placed((int)$order['id']); }
 		return shop_order((int)$order['id']);
