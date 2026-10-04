@@ -60,6 +60,16 @@ if ($op === 'pause_set') {
 	shop_pause_set($kind, !empty($_POST['on']), isset($_POST['minutes']) ? (int)$_POST['minutes'] : 0);
 	so_out(array('ok' => true, 'pause' => shop_pause_state()));
 }
+if ($op === 'report_print') {
+	// the two slips of the daily report to the receipt printer on the Raspberry Pi; without a running agent the page prints through the browser
+	$date = isset($_POST['date']) ? (string)$_POST['date'] : '';
+	if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || !strtotime($date)) { so_out(array('ok' => false, 'error' => 'Das Datum ist ungültig.')); }
+	if (!shop_print_agent_alive()) { so_out(array('ok' => true, 'queued' => false)); }
+	$kind = isset($_POST['kind']) ? (string)$_POST['kind'] : 'both';
+	if ($kind === 'cash' || $kind === 'both') { shop_print_enqueue_report('cash', $date); }
+	if ($kind === 'online' || $kind === 'both') { shop_print_enqueue_report('online', $date); }
+	so_out(array('ok' => true, 'queued' => true));
+}
 if ($op === 'demo') {
 	$new = shop_create_demo_order(isset($_POST['type']) ? (string)$_POST['type'] : 'delivery',
 		isset($_POST['street']) ? (string)$_POST['street'] : '', isset($_POST['zip']) ? (string)$_POST['zip'] : '', isset($_POST['city']) ? (string)$_POST['city'] : '');

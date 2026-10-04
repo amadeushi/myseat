@@ -47,6 +47,7 @@ $dp_pause = shop_pause_state();
 			<?php endforeach; ?>
 		</div>
 		<a class="k-btn" href="fahrerkarte.php">Fahrerkarte</a>
+			<a class="k-btn" href="tagesbericht.php" target="_blank" rel="noopener">Tagesbericht</a>
 		<button type="button" class="k-btn" id="k-full">Vollbild</button>
 		<a class="k-btn" href="kitchen_screen.php">Küchenbildschirm</a>
 		<a class="k-btn" href="main_page.php?p=9">Bestellungen</a>

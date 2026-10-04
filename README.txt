@@ -52,6 +52,15 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.23.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Tagesbericht (web/tagesbericht.php) als zwei kurze Bons (80 mm), aus der Disposition und aus Bestellungen zu öffnen, mit Tageswahl: Zettel Bar (Bar-Soll aufgeteilt
+   auf Fahrer, Abholung und Lieferando bar, Rückgeld, Karte an der Tür, offene und stornierte Aufträge, Zeilen zum Zählen von Hand) und Zettel Online (eigener Shop über Mollie
+   nach Zahlart, Lieferando online, zu klärende Rückzahlungen, stärkste Stunde, Top-Gerichte). Druck auf den Bondrucker über den Druckagenten oder per Browser. Neue Spalten pay_detail
+   (Zahlart bei Mollie) an tp_shop_orders sowie kind und report_date an tp_shop_print_jobs.
+ * Fix: Die Tagesabrechnung eines Fahrers (Bar und Karte an der Tür) zählte nur nicht bezahlte Bestellungen; beim Abschluss einer Lieferung wird sie aber als bezahlt gesetzt, die Summen
+   standen damit fast immer auf 0. Jetzt entscheidet die Zahlart.
+
 2026-10-05 == mySeat v6.22.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Kasse (Erfassung): Taste "-10 % Rabatt" (F6) und Taste "+ Aufschlag" (F7) unter der Summe. Der Rabatt gilt auf Speisen und Liefergebühr (Einstellung pos_discount_pct,

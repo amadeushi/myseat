@@ -112,6 +112,10 @@ function shop_ensure_schema() {
 	if (!$wcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `pay_with_cents` INT NULL"); }
 	$scol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'surcharge_cents'"); // till: a surcharge in euro and the note of discount / surcharge with its reason
 	if (!$scol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `surcharge_cents` INT NOT NULL DEFAULT 0, ADD `adjust_note` VARCHAR(160) NOT NULL DEFAULT ''"); }
+	$mcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'pay_detail'"); // how the guest paid online at Mollie (creditcard, paypal ...), for the daily report
+	if (!$mcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `pay_detail` VARCHAR(30) NOT NULL DEFAULT ''"); }
+	$kcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_print_jobs')." LIKE 'kind'"); // print jobs that are no order slip: the daily reports
+	if (!$kcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_print_jobs')." ADD `kind` VARCHAR(16) NOT NULL DEFAULT 'order', ADD `report_date` DATE NULL"); }
 	$pcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_drivers')." LIKE 'phone'");
 	if (!$pcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_drivers')." ADD `phone` VARCHAR(40) NOT NULL DEFAULT ''"); }
 	$col = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'ip_hash'");
@@ -314,6 +318,10 @@ function shop_print_agent_key() {
 	return $k;
 }
 function shop_print_agent_alive() { return time() - (int)shop_setting('print_agent_seen') <= 20; }
+function shop_print_enqueue_report($kind, $date) {
+	fb_exec("INSERT INTO ".fb_t('tp_shop_print_jobs')." (order_id, is_full, created_at, kind, report_date) VALUES (0, 0, ?, ?, ?)", 'sss', array(date('Y-m-d H:i:s'), $kind === 'online' ? 'report_online' : 'report_cash', $date));
+	return (int)mysqli_insert_id(fb_db());
+}
 function shop_print_enqueue($orderId, $full) {
 	fb_exec("INSERT INTO ".fb_t('tp_shop_print_jobs')." (order_id, is_full, created_at) VALUES (?, ?, ?)", 'iis', array((int)$orderId, $full ? 1 : 0, date('Y-m-d H:i:s')));
 	return (int)mysqli_insert_id(fb_db());
@@ -322,10 +330,14 @@ function shop_print_enqueue($orderId, $full) {
 function shop_print_claim() {
 	require_once __DIR__.'/escpos.class.php';
 	$stale = date('Y-m-d H:i:s', time() - 30);
-	$j = fb_row("SELECT id, order_id, is_full FROM ".fb_t('tp_shop_print_jobs')." WHERE printed_at IS NULL AND tries < 5 AND created_at > ? AND (claimed_at IS NULL OR claimed_at < ?) ORDER BY id LIMIT 1", 'ss', array(date('Y-m-d H:i:s', time() - 900), $stale));
+	$j = fb_row("SELECT id, order_id, is_full, kind, report_date FROM ".fb_t('tp_shop_print_jobs')." WHERE printed_at IS NULL AND tries < 5 AND created_at > ? AND (claimed_at IS NULL OR claimed_at < ?) ORDER BY id LIMIT 1", 'ss', array(date('Y-m-d H:i:s', time() - 900), $stale));
 	if (!$j) { return null; }
 	$st = fb_exec("UPDATE ".fb_t('tp_shop_print_jobs')." SET claimed_at = ?, tries = tries + 1 WHERE id = ? AND printed_at IS NULL AND (claimed_at IS NULL OR claimed_at < ?)", 'sis', array(date('Y-m-d H:i:s'), (int)$j['id'], $stale));
 	if (!$st || mysqli_stmt_affected_rows($st) !== 1) { return null; }
+	if ($j['kind'] !== 'order') { // a daily report
+		require_once __DIR__.'/shop_report.class.php';
+		return array('id' => (int)$j['id'], 'order_id' => 0, 'data' => base64_encode(shop_report_escpos($j['kind'] === 'report_online' ? 'online' : 'cash', (string)$j['report_date'])));
+	}
 	$o = shop_order((int)$j['order_id']);
 	if (!$o) { shop_print_done((int)$j['id']); return null; }
 	return array('id' => (int)$j['id'], 'order_id' => (int)$j['order_id'], 'data' => base64_encode(shop_slip_escpos($o, shop_order_items((int)$o['id']), (bool)$j['is_full'])));
@@ -1565,6 +1577,7 @@ function shop_mollie_sync($order) {
 		$upd = fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET payment_status = ?, updated_at = ? WHERE id = ? AND payment_status <> ?", 'ssis', array($map[$st], date('Y-m-d H:i:s'), (int)$order['id'], $map[$st]));
 		if (!$upd || mysqli_stmt_affected_rows($upd) < 1) { return shop_order((int)$order['id']); }
 		shop_log((int)$order['id'], 'payment', $map[$st]);
+		if ($map[$st] === 'paid' && !empty($r['body']['method'])) { fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET pay_detail = ? WHERE id = ?", 'si', array(mb_substr((string)$r['body']['method'], 0, 30), (int)$order['id'])); }
 		if ($map[$st] === 'paid' && $order['status'] === 'pending') { shop_set_status((int)$order['id'], 'new', 'Zahlung'); shop_after_order_placed((int)$order['id']); }
 		return shop_order((int)$order['id']);
 	}
@@ -2383,8 +2396,8 @@ function shop_driver_state($driverId) {
 // what this driver did since midnight: deliveries, kilometres from the restaurant, cash and card payments collected at the door
 function shop_driver_shift($driverId) {
 	$r = fb_row("SELECT SUM(status = 'done') AS n, SUM(status = 'failed') AS failed, COALESCE(SUM(CASE WHEN status = 'done' THEN route_m ELSE 0 END), 0) AS m,
-			COALESCE(SUM(CASE WHEN status = 'done' AND payment_method = 'cash' AND payment_status <> 'paid' THEN total_cents ELSE 0 END), 0) AS cash,
-			COALESCE(SUM(CASE WHEN status = 'done' AND payment_method = 'card_door' AND payment_status <> 'paid' THEN total_cents ELSE 0 END), 0) AS card
+			COALESCE(SUM(CASE WHEN status = 'done' AND payment_method = 'cash' THEN total_cents ELSE 0 END), 0) AS cash,
+			COALESCE(SUM(CASE WHEN status = 'done' AND payment_method = 'card_door' THEN total_cents ELSE 0 END), 0) AS card
 		FROM ".fb_t('tp_shop_orders')." WHERE driver_id = ? AND status IN ('done', 'failed') AND done_at >= ?", 'is', array((int)$driverId, date('Y-m-d 00:00:00')));
 	return array('done' => (int)($r['n'] ?? 0), 'failed' => (int)($r['failed'] ?? 0), 'km' => round((int)($r['m'] ?? 0) * 2 / 1000, 1), // there and back, an estimate
 		'cash' => (int)($r['cash'] ?? 0), 'card' => (int)($r['card'] ?? 0));

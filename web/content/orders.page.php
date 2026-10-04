@@ -28,6 +28,7 @@ $or_pause = shop_pause_state();
 			<button type="button" data-filter="closed" aria-pressed="false">Abgeschlossen</button>
 		</div>
 		<a class="orders-kitchen" href="main_page.php?p=12">Bestellung erfassen</a>
+		<a class="orders-kitchen" href="tagesbericht.php?date=<?php echo htmlspecialchars($or_date); ?>&amp;from=orders" target="_blank" rel="noopener">Tagesbericht</a>
 		<a class="orders-kitchen" href="preview_link.php" target="_blank" rel="noopener" title="Die Bestellseite so ansehen, wie Gäste sie sehen, auch wenn sie noch nicht freigegeben ist">Bestellseite ansehen</a>
 		<details class="orders-tools">
 			<summary>Werkzeuge</summary>
