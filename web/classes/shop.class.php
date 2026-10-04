@@ -1013,6 +1013,9 @@ function shop_pos_catalog() {
 const SHOP_STATUS_LABEL = array('pending' => 'wartet auf Zahlung', 'new' => 'neu', 'accepted' => 'angenommen', 'preparing' => 'in Zubereitung', 'ready' => 'fertig',
 	'delivering' => 'unterwegs', 'done' => 'erledigt', 'cancelled' => 'storniert', 'failed' => 'fehlgeschlagen');
 
+// the number of the day of an order is MAX + 1: two requests at the same moment would both read the same MAX, so the reading and the INSERT happen under one lock
+function shop_dayno_lock() { mysqli_query(fb_db(), "SELECT GET_LOCK('".fb_t('tp_shop_dayno')."', 10)"); }
+function shop_dayno_unlock() { mysqli_query(fb_db(), "SELECT RELEASE_LOCK('".fb_t('tp_shop_dayno')."')"); }
 function shop_order_number() {
 	$alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 	for ($try = 0; $try < 10; $try++) {
@@ -1124,6 +1127,7 @@ function shop_create_order($in) {
 	$token = bin2hex(random_bytes(16));
 	$number = shop_order_number();
 	$today = date('Y-m-d');
+	shop_dayno_lock(); // two orders arriving together (n8n imports, a phone order) must not get the same number of the day
 	$dayNo = (int)(fb_row("SELECT COALESCE(MAX(day_no), 0) + 1 AS n FROM ".fb_t('tp_shop_orders')." WHERE order_date = ?", 's', array($today))['n']);
 	$status = ($pay === 'mollie') ? 'pending' : 'new';
 	$now = date('Y-m-d H:i:s');
@@ -1138,7 +1142,7 @@ function shop_create_order($in) {
 		if ($coupon && !$test) { shop_coupon_unreserve($coupon['id']); }
 		return array('ok' => false, 'error' => 'Die Bestellung konnte nicht gespeichert werden. Bitte versuche es noch einmal.');
 	}
-	$id = (int)mysqli_insert_id($db);
+	$id = (int)mysqli_insert_id($db); shop_dayno_unlock();
 	if (!empty($in['acc_id'])) { fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET account_id = ? WHERE id = ?", 'ii', array((int)$in['acc_id'], $id)); }
 	if ($coupon) {
 		fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET coupon_code = ?, discount_cents = ? WHERE id = ?", 'sii', array($coupon['code'], $discount, $id));
@@ -1274,6 +1278,7 @@ function shop_create_manual_order($in) {
 	$token = bin2hex(random_bytes(16));
 	$number = shop_order_number();
 	$today = date('Y-m-d');
+	shop_dayno_lock(); // two orders arriving together (n8n imports, a phone order) must not get the same number of the day
 	$dayNo = (int)(fb_row("SELECT COALESCE(MAX(day_no), 0) + 1 AS n FROM ".fb_t('tp_shop_orders')." WHERE order_date = ?", 's', array($today))['n']);
 	$now = date('Y-m-d H:i:s');
 	$ok = fb_exec("INSERT INTO ".fb_t('tp_shop_orders')."
@@ -1284,7 +1289,7 @@ function shop_create_manual_order($in) {
 			$lat === null ? 0 : $lat, $lng === null ? 0 : $lng, $zoneId === null ? 0 : $zoneId, $sub, $fee, $total, $pay,
 			mb_substr(trim((string)(isset($in['note']) ? $in['note'] : '')), 0, 500), $now, $now, $payWith));
 	if (!$ok) { return array('ok' => false, 'error' => 'Die Bestellung konnte nicht gespeichert werden. Bitte versuche es noch einmal.'); }
-	$id = (int)mysqli_insert_id(fb_db());
+	$id = (int)mysqli_insert_id(fb_db()); shop_dayno_unlock();
 	foreach ($items as $it) {
 		fb_exec("INSERT INTO ".fb_t('tp_shop_order_items')." (order_id, product_id, variation_id, title, variation, options, qty, unit_cents, line_cents, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 			'iiisssiiis', array($id, $it['product_id'], $it['vid'] > 0 ? $it['vid'] : null, $it['title'], $it['variation'], json_encode($it['options'], JSON_UNESCAPED_UNICODE), $it['qty'], $it['unit_cents'], $it['line_cents'], $it['note']));
@@ -1347,6 +1352,7 @@ function shop_create_demo_order($type, $street = '', $zip = '', $city = '') {
 		}
 	}
 	$total = $sub + $fee;
+	shop_dayno_lock(); // two orders arriving together (n8n imports, a phone order) must not get the same number of the day
 	$dayNo = (int)(fb_row("SELECT COALESCE(MAX(day_no), 0) + 1 AS n FROM ".fb_t('tp_shop_orders')." WHERE order_date = ?", 's', array($today))['n']);
 	$ok = fb_exec("INSERT INTO ".fb_t('tp_shop_orders')."
 		(token, number, day_no, order_date, type, status, scheduled_at, eta_at, customer_name, phone, email, street, zip, city, address_note, lat, lng, zone_id,
@@ -1356,7 +1362,7 @@ function shop_create_demo_order($type, $street = '', $zip = '', $city = '') {
 			$type === 'delivery' ? $dStreet : '', $type === 'delivery' ? $dZip : '', $type === 'delivery' ? $dCity : '', $type === 'delivery' ? '2. Stock links' : '',
 			$lat, $lng, $zoneId, $sub, $fee, $total, 'Testbestellung zum Ausprobieren des Drucks', $now, $now));
 	if (!$ok) { return 0; }
-	$id = (int)mysqli_insert_id(fb_db());
+	$id = (int)mysqli_insert_id(fb_db()); shop_dayno_unlock();
 	foreach ($lines as $l) {
 		fb_exec("INSERT INTO ".fb_t('tp_shop_order_items')." (order_id, product_id, title, variation, options, qty, unit_cents, line_cents, note) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?)",
 			'isssiiis', array($id, $l[0], $l[1], json_encode(array_map(function ($t) { return array('title' => $t, 'qty' => 1); }, $l[2]), JSON_UNESCAPED_UNICODE), $l[3], $l[4], $l[3] * $l[4], $l[5]));

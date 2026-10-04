@@ -52,6 +52,12 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.21.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: Zwei gleichzeitig eintreffende Aufträge (zwei Lieferando-Importe, ein Import und eine Telefonbestellung) bekamen dieselbe Nummer des Tages. Berechnen der Nummer und
+   Einfügen laufen jetzt unter einer Sperre (Lieferando-Import, Kasse, Online-Bestellung, Testbestellung).
+ * New: Fahrerkarte: der Name des Gastes steht auf den Auftragskarten, bei den Stopps eines Fahrers und in den Köpfen der Auftrags- und Zuteilungsansicht.
+
 2026-10-05 == mySeat v6.21.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix: Lieferando-Import liest den Zahlungsstand richtig: nur der Block "Wichtig:" zählt. Barbestellungen ("nicht bezahlt worden", "Zahlung Bar") werden als bar und

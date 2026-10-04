@@ -242,6 +242,7 @@ function lieferando_import($pdfBytes) {
 	$token = bin2hex(random_bytes(16));
 	$number = shop_order_number();
 	$today = date('Y-m-d');
+	shop_dayno_lock();
 	$dayNo = (int)(fb_row("SELECT COALESCE(MAX(day_no), 0) + 1 AS n FROM ".fb_t('tp_shop_orders')." WHERE order_date = ?", 's', array($today))['n']);
 	$now = date('Y-m-d H:i:s');
 	// the time of the order is the one printed on the receipt (the import can come minutes later); only if it is from today and not in the future
@@ -253,8 +254,8 @@ function lieferando_import($pdfBytes) {
 		VALUES (?, ?, ?, ?, ?, 'accepted', ?, '', ?, ?, ?, ?, ?, ?, ?, 'de', 0, 'lieferando', ?, ?, ?, ?, ?, ?)",
 		'ssissssiiiisssssssi', array($token, $number, $dayNo, $today, $p['type'], $p['customer_name'], $note, $sub, $p['fee_cents'], $p['tip_cents'], $total,
 			$p['payment_method'], $p['payment_status'] === 'paid' ? 'paid' : 'open', $p['external_id'], $created, $now, $now, $p['confirmed_at'], $p['pay_with_cents'] ?: null));
-	if (!$ok) { return array('ok' => false, 'error' => 'Die Bestellung ('.$p['external_id'].') konnte nicht gespeichert werden.'); }
-	$id = (int)mysqli_insert_id($db);
+	if (!$ok) { shop_dayno_unlock(); return array('ok' => false, 'error' => 'Die Bestellung ('.$p['external_id'].') konnte nicht gespeichert werden.'); }
+	$id = (int)mysqli_insert_id($db); shop_dayno_unlock();
 	foreach ($p['items'] as $it) {
 		$productId = lieferando_find_product($it['title']);
 		$unit = $it['unit_cents'] ?: 0;

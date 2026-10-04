@@ -90,7 +90,7 @@
 			(d ? '<span class="fk-flag fk-flag--drv" style="--c:' + colorOf(d) + '">' + esc(d.name) + '</span>' : '') +
 			'<span class="fk-flag">' + esc(payText(o)) + '</span>' + (o.lat == null ? '<span class="fk-flag fk-flag--warn">ohne Standort</span>' : '');
 		return '<button type="button" class="fk-card fk-o fk-o--' + k + (sel.o === o.id ? ' is-sel' : '') + (o.late_min > 0 ? ' is-late' : '') + '" data-o="' + o.id + '"' + (d ? ' style="--c:' + colorOf(d) + '"' : '') + '>' +
-			'<span class="fk-no">' + o.day_no + '</span><span class="fk-main"><b>' + esc(place(o)) + '</b><span>' + esc(o.street) + '</span></span>' +
+			'<span class="fk-no">' + o.day_no + '</span><span class="fk-main"><b>' + esc(o.customer_name || place(o)) + '</b><span>' + (o.customer_name ? esc(place(o)) + ' · ' : '') + esc(o.street) + '</span></span>' +
 			'<span class="fk-meta"><b>' + esc(way(o)) + '</b><span>' + (o.scheduled ? 'geplant ' : 'bis ') + esc(o.due) + '</span></span><span class="fk-flags">' + flags + '</span></button>';
 	}
 	function renderLists() {
@@ -115,7 +115,7 @@
 	}
 	function orderBody(o, withCands) {
 		const d = o.driver_id ? findD(o.driver_id) : null, k = kindOf(o);
-		let h = '<div class="fk-dh"><h3>#' + o.day_no + ' · ' + esc(place(o)) + '<small>' + esc(o.street) + ', ' + esc(o.zip) + '</small></h3><button type="button" class="fk-x" data-close aria-label="Schließen">Schließen</button></div>' +
+		let h = '<div class="fk-dh"><h3>#' + o.day_no + ' · ' + esc(o.customer_name || place(o)) + '<small>' + (o.customer_name ? esc(place(o)) + ' · ' : '') + esc(o.street) + ', ' + esc(o.zip) + '</small></h3><button type="button" class="fk-x" data-close aria-label="Schließen">Schließen</button></div>' +
 			'<div class="fk-row"><span class="fk-big">' + esc(way(o)) + '</span><span class="fk-txt">' + (o.scheduled ? 'Wunschzeit ' : 'Ziel ') + esc(o.due) + ' Uhr</span>' + (o.late_min > 0 ? '<span class="fk-flag fk-flag--late">' + esc(lateText(o)) + '</span>' : '') + '</div>' +
 			(o.door ? '<p class="fk-door">Hinweis: ' + esc(o.door) + '</p>' : '') +
 			'<div class="fk-row"><span class="fk-txt">' + esc(o.customer_name) + ' · ' + esc(payText(o)) + '</span>' + (o.phone ? '<a class="fk-act" href="tel:' + esc(String(o.phone).replace(/[^0-9+]/g, '')) + '">Gast anrufen</a>' : '') + '</div>' +
@@ -151,7 +151,7 @@
 			(d.eta_min ? '<span class="fk-big">Ankunft beim Gast ca. ' + d.eta_min + ' Min</span>' : '') + (stale(d) ? '<span class="fk-flag fk-flag--warn">Position ' + esc(ageText(d)) + ': Traccar-App prüfen</span>' : '') + '</div>';
 		h += '<h4 class="fk-sub">Aufträge (' + d.stops.length + ')</h4>' + (d.stops.length ? '<div class="fk-stops">' + d.stops.map(id => {
 			const o = findO(id); if (!o) { return ''; }
-			return '<div class="fk-stop" style="--c:' + colorOf(d) + '"><span class="fk-no">' + o.day_no + '</span><span class="fk-main"><b>' + esc(place(o)) + '</b><span>' + esc(o.street) + (o.status === 'delivering' ? ' · unterwegs' : '') + '</span></span>' +
+			return '<div class="fk-stop" style="--c:' + colorOf(d) + '"><span class="fk-no">' + o.day_no + '</span><span class="fk-main"><b>' + esc(o.customer_name || place(o)) + '</b><span>' + (o.customer_name ? esc(place(o)) + ' · ' : '') + esc(o.street) + (o.status === 'delivering' ? ' · unterwegs' : '') + '</span></span>' +
 				'<span><button type="button" class="fk-act" data-pick-o="' + o.id + '">Anzeigen</button> <button type="button" class="fk-act" data-release="' + o.id + '">Zurück in den Pool</button></span></div>';
 		}).join('') + '</div>' : '<p class="fk-door">Keine Aufträge.</p>');
 		if (!compact) { h += scrubHtml(d); }
@@ -165,7 +165,7 @@
 		const st = box.scrollTop; let h = '';
 		if (d && o) {
 			const can = o.status === 'ready' && o.driver_id !== d.id;
-			h = '<div class="fk-dh"><h3>' + esc(d.name) + ' und #' + o.day_no + '<small>' + esc(place(o)) + ' · ' + esc(o.street) + '</small></h3><button type="button" class="fk-x" data-close aria-label="Schließen">Schließen</button></div>' +
+			h = '<div class="fk-dh"><h3>' + esc(d.name) + ' und #' + o.day_no + (o.customer_name ? ' ' + esc(o.customer_name) : '') + '<small>' + esc(place(o)) + ' · ' + esc(o.street) + '</small></h3><button type="button" class="fk-x" data-close aria-label="Schließen">Schließen</button></div>' +
 				'<div class="fk-link"><span>' + (can ? 'Zuteilen: #' + o.day_no + ' an ' + esc(d.name) + (d.state === 'offline' ? ' (ohne Standort)' : '') : (o.driver_id === d.id ? '#' + o.day_no + ' gehört schon zu ' + esc(d.name) : (o.status === 'delivering' ? '#' + o.day_no + ' ist schon unterwegs' : 'Noch in der Küche: Zuteilen geht bei Fertig'))) + '</span>' +
 				(can ? '<button type="button" class="fk-act fk-act--go" data-assign="' + o.id + ':' + d.id + '">Zuteilen</button>' : '') + '</div>' +
 				orderBody(o, false).replace(/<div class="fk-dh">.*?<\/div>(?=<div class="fk-row">)/, '') + driverBody(d, true);
