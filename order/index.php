@@ -68,7 +68,7 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 		</div>
 	</header>
 	<div class="shop-zone-backdrop" id="shop-zone-backdrop" hidden></div>
-	<?php if ($shop_staff && !shop_flag('public')): ?><p class="shop-notice">Vorschau für Mitarbeiter: Gäste sehen diese Seite nicht. Du siehst sie nur, weil du im Backend angemeldet bist.</p><?php endif; ?>
+	<?php if ($shop_staff && !shop_flag('public')): ?><p class="shop-notice">Vorschau für Mitarbeiter: Gäste sehen diese Seite nicht. Du siehst sie nur als Mitarbeiter.</p><?php endif; ?>
 	<?php if ($notice !== ''): ?><p class="shop-notice"><?php echo shop_h($notice); ?></p><?php endif; ?>
 	<?php if (!$shop_accepting): ?><p class="shop-notice">Wir nehmen gerade keine Bestellungen an. Du kannst dich schon in Ruhe umsehen.<?php echo $shop_staff ? ' (Vorschau für Mitarbeiter)' : ''; ?></p><?php endif; ?>
 

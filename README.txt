@@ -52,6 +52,12 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.16.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Mitarbeiter-Vorschau der Bestellseite auf der App-Domain: "Bestellseite ansehen" im Bestell-Dashboard, in der Speisekarte und in den
+   Lieferservice-Einstellungen öffnet die Seite auf app.amds.at, auch wenn sie für Gäste noch nicht freigegeben ist. Das Backend-Login gilt nur
+   auf der Hauptdomain, deshalb trägt der Link ein signiertes Kennzeichen, das zwei Minuten gilt; die Vorschau gilt danach vier Stunden.
+
 2026-10-05 == mySeat v6.15.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Zwei Domains, eine Installation: app.amds.at für Gäste (Bestellseite, Konto, Bestellstatus, Fahrerseite), reservierung.amds.at

@@ -14,7 +14,8 @@ require_once(__DIR__.'/../web/classes/shop_mail.class.php');
 require_once(__DIR__.'/../web/classes/shop_account.class.php');
 
 shop_ensure_schema();
-$shop_staff = !empty($_SESSION['valid_user']);
+// staff: logged in to the backend (same domain), or opened the preview link from the backend (order/preview.php, valid for four hours)
+$shop_staff = !empty($_SESSION['valid_user']) || (!empty($_SESSION['shop_preview_until']) && $_SESSION['shop_preview_until'] > time());
 $shop_public = shop_flag('public') || $shop_staff;
 $shop_accepting = shop_flag('accepting');
 $shop_test = shop_flag('test_mode');

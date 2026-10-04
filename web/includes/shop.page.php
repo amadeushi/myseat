@@ -36,7 +36,7 @@ $sh_webhook_url = shop_site_url().'/order/sipgate_webhook.php?key='.rawurlencode
 $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; };
 ?>
 <div class="sms-page shop-page" data-endpoint="ajax/shop_admin.php" data-token="<?php echo $sh_e($token); ?>">
-	<p class="offers-intro">Der Lieferservice nimmt Bestellungen für Lieferung und Abholung an, die Disposition und die Küche sehen sie auf ihren Monitoren. Die Bestellseite ist unter <code>/order/</code> erreichbar. Solange nichts freigegeben ist, sehen Gäste nichts.</p>
+	<p class="offers-intro">Der Lieferservice nimmt Bestellungen für Lieferung und Abholung an, die Disposition und die Küche sehen sie auf ihren Monitoren. Die Bestellseite ist unter <code>/order/</code> erreichbar. Solange nichts freigegeben ist, sehen Gäste nichts. <a href="preview_link.php" target="_blank" rel="noopener">Bestellseite als Mitarbeiter ansehen (Vorschau)</a></p>
 
 	<div class="sms-status">
 		<span class="offer-badge<?php echo $sh['public'] === '1' ? ' sms-badge-on' : ''; ?>"><?php echo $sh['public'] === '1' ? 'Seite ist sichtbar' : 'Seite ist nicht sichtbar'; ?></span>

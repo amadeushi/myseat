@@ -15,6 +15,7 @@ if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = bin2
 		</div>
 		<span class="orders-spacer"></span>
 		<a class="orders-kitchen" href="handbuch_konfigurator.php" target="_blank" rel="noopener" title="Wie neue Zutaten und Symbole im Pizza-Konfigurator funktionieren">Handbuch Konfigurator</a>
+		<a class="orders-kitchen" href="preview_link.php" target="_blank" rel="noopener" title="Die Bestellseite so ansehen, wie Gäste sie sehen, auch wenn sie noch nicht freigegeben ist">Bestellseite ansehen</a>
 		<a class="orders-kitchen" href="main_page.php?p=9">Bestellungen</a>
 		<a class="orders-kitchen" href="main_page.php?q=10">Lieferservice-Einstellungen</a>
 	</div>

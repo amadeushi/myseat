@@ -280,6 +280,22 @@ function shop_setting_set($k, $v) {
 	fb_exec("REPLACE INTO ".fb_t('tp_shop_settings')." (k, v, updated_at) VALUES (?, ?, NOW())", 'ss', array($k, (string)$v));
 }
 function shop_flag($k) { return shop_setting($k) === '1'; }
+// ---- staff preview of the order page on the guest domain: the backend login only exists on the main domain, so a logged-in member of staff
+// gets a link with a short-lived signed token (web/preview_link.php); order/preview.php checks it and opens the preview for that browser.
+function shop_preview_key() {
+	$k = (string)shop_setting('preview_key');
+	if (strlen($k) < 32) { $k = bin2hex(random_bytes(32)); shop_setting_set('preview_key', $k); }
+	return $k;
+}
+function shop_preview_token() {
+	$p = (time() + 120).'.'.bin2hex(random_bytes(6));
+	return $p.'.'.hash_hmac('sha256', $p, shop_preview_key());
+}
+function shop_preview_check($t) {
+	$a = explode('.', (string)$t);
+	if (count($a) !== 3 || !ctype_digit($a[0]) || (int)$a[0] < time() || (int)$a[0] > time() + 300) { return false; }
+	return hash_equals(hash_hmac('sha256', $a[0].'.'.$a[1], shop_preview_key()), $a[2]);
+}
 // Sender of the mails to guests (sign-in code, stamp card): the shop's notification address, else the address of the property.
 function shop_mail_from() {
 	$from = trim((string)shop_setting('notify_email'));
