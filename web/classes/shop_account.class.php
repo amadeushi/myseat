@@ -160,6 +160,7 @@ function shop_acc_consume($row, $t) {
 		}
 	}
 	if (!$acc) { return array('ok' => false, 'error' => 'Das hat gerade nicht geklappt. Bitte versuche es noch einmal.'); }
+	if (!empty($acc['blocked'])) { return array('ok' => false, 'error' => 'Dieses Konto ist gesperrt. Bitte ruf uns kurz an.'); }
 	fb_exec("UPDATE ".fb_t('tp_shop_accounts')." SET last_login_at = ? WHERE id = ?", 'si', array($now, (int)$acc['id']));
 	if (!empty($row['target_plain'])) {
 		$cc = $row['kind'] === 'phone' ? 'contact_phone' : 'contact_mail';
@@ -197,7 +198,7 @@ function shop_acc_current($reset = false) {
 	shop_ensure_schema();
 	$h = shop_acc_hash($tok); $now = shop_acc_now();
 	$s = fb_row("SELECT s.id AS sid, s.last_seen, a.* FROM ".fb_t('tp_shop_sessions')." s JOIN ".fb_t('tp_shop_accounts')." a ON a.id = s.account_id WHERE s.token_hash = ? AND s.expires_at > ?", 'ss', array($h, $now));
-	if (!$s) { return null; }
+	if (!$s || !empty($s['blocked'])) { return null; } // a blocked account (customer backend) is signed out
 	if (strtotime($s['last_seen']) < time() - 3600) {
 		fb_exec("UPDATE ".fb_t('tp_shop_sessions')." SET last_seen = ?, expires_at = ? WHERE id = ?", 'ssi', array($now, date('Y-m-d H:i:s', time() + SHOP_ACC_SESSION_DAYS * 86400), (int)$s['sid']));
 	}

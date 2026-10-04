@@ -23,7 +23,7 @@ This file is part of mySeat.
 /** Login **/
 // ** set configuration
 	//Software version - http://github.com/apmuthu/myseat
-	$sw_version = 'v6.23.0';
+	$sw_version = 'v6.24.0';
 	
 	include('../config/config.general.php');
 	
@@ -190,6 +190,14 @@ echo "<body>";
 			// POS: type in an order that did not come through the own shop (phone call, unconnected portal)
 			if ( current_user_can( 'Reservation-Edit' ) ){
 				include('content/orders_pos.page.php');
+			}else{
+				redeclare_access();
+			}
+		break;
+		case '13':
+			// customers of the delivery service: accounts, stamp cards, vouchers, notes
+			if ( current_user_can( 'Reservation-Edit' ) ){
+				include('content/customers.page.php');
 			}else{
 				redeclare_access();
 			}

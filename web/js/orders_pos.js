@@ -393,6 +393,8 @@
 			if (q.paused) { a.push(['danger', lab + ' ist pausiert' + (q.paused_until ? ' bis ' + q.paused_until + ' Uhr' : '') + '. Dem Gast sagen, dass es nicht sofort geht.']); }
 			else if (!q.open) { a.push(['warn', 'Gerade keine Bestellzeit für ' + lab + (q.note ? ' (' + q.note + ')' : '') + (q.next ? ', nächste ab ' + q.next + ' Uhr' : '') + '. Wunschzeit wählen oder ablehnen.']); }
 		}
+		var cu = S.customer && S.customer.cust;
+		if (cu && (cu.note || cu.flags.length || cu.blocked)) { a.unshift([cu.blocked ? 'danger' : (cu.warn ? 'warn' : 'info'), 'Hinweis zum Kunden: ' + cu.flags.concat(cu.blocked ? ['Konto gesperrt'] : []).join(' · ') + (cu.note ? (cu.flags.length || cu.blocked ? ' – ' : '') + cu.note : '')]); }
 		if (t === 'delivery' && S.zoneErr) { a.push(['danger', S.zoneErr]); }
 		if (S.customer && S.customer.open && S.customer.open.length) {
 			a.push(['warn', 'Hat heute schon eine Bestellung: ' + S.customer.open.map(function (o) { return '#' + o.day_no + ' ' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + ' (' + (STATUS_T[o.status] || o.status) + ', ' + o.time + ' Uhr)'; }).join(', ') + '. Ist das eine zweite?']);
@@ -473,11 +475,15 @@
 	function renderCust() {
 		var c = S.customer, root = $('#kx-cust');
 		if (!c) { root.innerHTML = ''; return; }
-		if (!c.n) { root.innerHTML = '<p class="kx-known is-new"><b>Neukunde</b> · noch keine Bestellung unter dieser Nummer.</p>'; return; }
+		var cu = c.cust, cuHtml = '';
+		if (cu) {
+			cuHtml = '<p class="kx-cust-card">' + (cu.account ? 'Stempel <b>' + cu.stamps + '/' + cu.goal + '</b>' : 'Kein Kundenkonto') + (cu.voucher ? ' · Gutschein <b>' + money(cu.voucher) + '</b> liegt bereit' : '') + ' · <a href="main_page.php?p=13&c=' + esc(cu.id) + '" target="_blank" rel="noopener">Kundenkarte</a></p>';
+		}
+		if (!c.n) { root.innerHTML = '<p class="kx-known is-new"><b>Neukunde</b> · noch keine Bestellung unter dieser Nummer.</p>' + cuHtml; return; }
 		var last = c.orders[0], h = '<p class="kx-known"><b>Stammkunde</b> · ' + c.n + (c.n === 1 ? ' Bestellung' : ' Bestellungen') + (last ? ' · zuletzt ' + esc(last.created.slice(8, 10) + '.' + last.created.slice(5, 7) + '.') : '') + (S.prefilled ? ' · Name und Adresse aus der letzten Bestellung' : '') + '</p>';
 		if (last && last.items.length) { h += '<button type="button" class="kx-last" data-i="0"><span class="kx-last-l">Wie letztes Mal</span><span class="kx-last-t">' + esc(orderSummary(last)) + '</span><b>' + money(last.total) + '</b></button>'; }
 		if (c.orders.length > 1) { h += '<details class="kx-older"><summary>Frühere Bestellungen</summary>' + c.orders.slice(1).map(function (o, i) { return '<div class="kx-older-row"><span>' + esc(o.created.slice(8, 10) + '.' + o.created.slice(5, 7) + '.') + ' · ' + esc(orderSummary(o)) + ' · ' + money(o.total) + '</span><button type="button" class="kx-mini" data-i="' + (i + 1) + '">Übernehmen</button></div>'; }).join('') + '</details>'; }
-		root.innerHTML = h;
+		root.innerHTML = cuHtml + h;
 	}
 	// a past order goes into the Bon (dishes by name; what no longer exists on the menu is named, so nothing is missed silently)
 	function applyOrder(o) {
@@ -728,4 +734,6 @@
 
 	loadCart(); renderCart(); loadMenu(); syncType(); loadRecent(); setInterval(loadQuote, 60000); fit(); setTimeout(fit, 300);
 	$('#pos-phone').focus();
+	// from the customer page: "Bestellung erfassen" brings the number along, the caller is recognised as if it had been typed
+	try { var pp = new URLSearchParams(location.search).get('phone'); if (pp) { f.elements.phone.value = pp; lookup(); } } catch (e) {}
 })();

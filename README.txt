@@ -52,6 +52,18 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.24.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Kunden (Backend-Seite p=13, Menü "Kunden"): Liste mit Suche und Ansichten (Stammgäste, Neu, Schlafend, Stempel fast voll, Gutschein offen, Mit Konto, Mit Hinweis, Auffällig),
+   daneben die Kundenkarte mit Stempelkarte, Gutscheinen, Zahlen, Notiz und Merkmalen, Konto, Bestellungen und Verlauf. Die Kunden werden aus den Bestellungen (Telefon, E-Mail) gebildet
+   und mit Konto, Stempeln und Gutscheinen verknüpft; Bestellungen ohne Nummer (Lieferando) sind keine Kunden. Von Hand: Notiz und Merkmale (Stammgast, VIP, Allergie, Vorsicht, nur passend bar),
+   Stempel gutschreiben (mit Grundbetrag, Betrag ändern, zurücknehmen), Gutschein ausstellen oder sperren, jeweils mit Grund, Verlauf und Haken "Gast benachrichtigen" (Mail oder SMS);
+   Konto sperren und überall abmelden, zwei Kunden zusammenführen, Auskunft drucken (web/kunde_auskunft.php) und Daten löschen (Bestellungen bleiben ohne Personenbezug).
+   Neue Tabellen tp_shop_customer_notes, tp_shop_customer_links, tp_shop_customer_log, neue Spalte blocked an tp_shop_accounts; die Bestellnummer der Stempel ist jetzt vorzeichenbehaftet
+   (Handstempel haben eine negative Nummer). Einstellungen cust_regular_n, cust_regular_days, cust_sleep_days, cust_new_days (ohne Oberfläche).
+ * New: Kasse: Erkennt sie den Anrufer, steht der Hinweis zum Kunden (Merkmale und Notiz) oben im Bon, dazu Stempelstand, Gutschein und ein Link auf die Kundenkarte; "Bestellung erfassen" von
+   der Kundenkarte bringt die Nummer mit (main_page.php?p=12&phone=...).
+
 2026-10-05 == mySeat v6.23.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Tagesbericht (web/tagesbericht.php) als zwei kurze Bons (80 mm), aus der Disposition und aus Bestellungen zu öffnen, mit Tageswahl: Zettel Bar (Bar-Soll aufgeteilt

@@ -74,6 +74,9 @@
 .kx #pos-address[hidden] { display: none; }
 
 .kx .kx-cust { margin-top: 10px; }
+.kx .kx-cust-card { margin-bottom: 6px; color: var(--text-muted); font-size: 15px; }
+.kx .kx-cust-card b { color: var(--gold-strong); font-variant-numeric: tabular-nums; }
+.kx .kx-cust-card a { color: var(--gold-strong); }
 .kx .kx-known { color: var(--text-muted); font-size: 15px; }
 .kx .kx-known b { color: var(--gold-strong); }
 .kx .kx-known.is-new b { color: var(--text); }

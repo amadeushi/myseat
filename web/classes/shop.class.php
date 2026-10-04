@@ -116,6 +116,18 @@ function shop_ensure_schema() {
 	if (!$mcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `pay_detail` VARCHAR(30) NOT NULL DEFAULT ''"); }
 	$kcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_print_jobs')." LIKE 'kind'"); // print jobs that are no order slip: the daily reports
 	if (!$kcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_print_jobs')." ADD `kind` VARCHAR(16) NOT NULL DEFAULT 'order', ADD `report_date` DATE NULL"); }
+	// customer backend (web/content/customers.page.php): notes and marks per customer, links of two customers that are one person, the log of manual actions, a blocked account,
+	// and stamps given by hand (they belong to no order: the order_id is a negative number, so the unique key of the stamps still holds)
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_customer_notes')." (
+		`ckey` CHAR(40) NOT NULL PRIMARY KEY, `note` TEXT NULL, `flags` VARCHAR(80) NOT NULL DEFAULT '', `updated_at` DATETIME NOT NULL, `updated_by` VARCHAR(60) NOT NULL DEFAULT '') $opts");
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_customer_links')." (
+		`a` CHAR(40) NOT NULL, `b` CHAR(40) NOT NULL, `created_at` DATETIME NOT NULL, `created_by` VARCHAR(60) NOT NULL DEFAULT '', PRIMARY KEY (`a`, `b`)) $opts");
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_customer_log')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `ckey` CHAR(40) NOT NULL DEFAULT '', `event` VARCHAR(20) NOT NULL, `detail` VARCHAR(255) NOT NULL DEFAULT '', `by_user` VARCHAR(60) NOT NULL DEFAULT '',
+		`at` DATETIME NOT NULL, KEY `ck` (`ckey`, `at`)) $opts");
+	if (!fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_accounts')." LIKE 'blocked'")) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_accounts')." ADD `blocked` TINYINT NOT NULL DEFAULT 0"); }
+	$oc = fb_row("SHOW COLUMNS FROM ".fb_t('tp_shop_stamps')." LIKE 'order_id'");
+	if ($oc && stripos((string)$oc['Type'], 'unsigned') !== false) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_stamps')." MODIFY `order_id` INT NOT NULL"); }
 	$pcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_drivers')." LIKE 'phone'");
 	if (!$pcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_drivers')." ADD `phone` VARCHAR(40) NOT NULL DEFAULT ''"); }
 	$col = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'ip_hash'");
@@ -280,6 +292,8 @@ function shop_defaults() {
 		'notice' => '',             // one line of text on top of the shop (e.g. "Heute später")
 		'pause_delivery' => '0', 'pause_delivery_until' => '0', // pause of the orders: switched in the dashboard Bestellungen, until = end (Unix time), 0 = until it is switched off
 		'pause_pickup' => '0', 'pause_pickup_until' => '0',
+		'cust_regular_n' => '3', 'cust_regular_days' => '90', // customer backend: "Stammgast" = this many orders within this many days
+		'cust_sleep_days' => '60', 'cust_new_days' => '30',   // "Schlafend" = no order for this many days (with at least 2 orders), "Neu" = first order not older than this
 		'last_order_min' => '0',    // the shop takes orders until the end of the order time minus this many minutes (0 = until closing; the food may leave after closing)
 		'pos_discount_pct' => '10', // the "-10 %" key of the till (Erfassung): percent of the goods and the delivery fee
 		'kitchen_drive_min' => '15', // minutes a delivery needs to the guest: the kitchen monitor shows when the food has to leave
@@ -1208,7 +1222,15 @@ function shop_pos_customer($phone) {
 		fb_rows("SELECT id, day_no, status, type, created_at FROM ".fb_t('tp_shop_orders')." WHERE phone = ? AND is_test = 0 AND order_date = ? AND status IN ('new', 'accepted', 'preparing', 'ready', 'delivering') ORDER BY id DESC LIMIT 3", 'ss', array($phone, date('Y-m-d'))));
 	$fav = array_map(function ($r) { return (int)$r['product_id']; }, fb_rows("SELECT i.product_id, SUM(i.qty) AS q FROM ".fb_t('tp_shop_order_items')." i JOIN ".fb_t('tp_shop_orders')." o ON o.id = i.order_id
 		WHERE o.phone = ? AND o.is_test = 0 AND o.status <> 'cancelled' AND i.product_id IS NOT NULL GROUP BY i.product_id ORDER BY q DESC LIMIT 8", 's', array($phone)));
-	return array('n' => $n, 'orders' => $orders, 'open' => $open, 'fav' => $fav);
+	// what the customer backend knows about the caller: the note and marks (they must be seen before saying yes), the stamp card, a voucher
+	$cust = null;
+	if (function_exists('shop_cust_by_phone') || is_file(__DIR__.'/shop_customers.class.php')) {
+		require_once __DIR__.'/shop_customers.class.php';
+		$c = shop_cust_by_phone($phone);
+		if ($c) { $labels = shop_cust_flag_labels(); $cust = array('id' => $c['id'], 'note' => $c['note'], 'flags' => array_map(function ($f) use ($labels) { return isset($labels[$f]) ? $labels[$f] : $f; }, $c['flags']), 'warn' => (bool)array_intersect($c['flags'], array('vorsicht', 'allergie', 'passend')) || $c['blocked'],
+			'stamps' => $c['stamps'], 'goal' => shop_stamp_cfg()['goal'], 'account' => (bool)$c['accounts'], 'voucher' => $c['voucher_value'], 'blocked' => $c['blocked']); }
+	}
+	return array('n' => $n, 'orders' => $orders, 'open' => $open, 'fav' => $fav, 'cust' => $cust);
 }
 // the dishes ordered most in the last 30 days (product ids), for the first tab of the till
 function shop_pos_popular($limit = 12) {
