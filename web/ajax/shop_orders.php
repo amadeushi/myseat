@@ -34,7 +34,7 @@ if ($op === 'kitchen') {
 if ($op === 'day') {
 	$date = (isset($_REQUEST['date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_REQUEST['date'])) ? $_REQUEST['date'] : date('Y-m-d');
 	$filter = (isset($_REQUEST['filter']) && in_array($_REQUEST['filter'], array('open', 'closed'), true)) ? $_REQUEST['filter'] : 'all';
-	so_out(array('ok' => true, 'date' => $date, 'orders' => shop_day_orders($date, $filter), 'stats' => shop_day_stats($date)));
+	so_out(array('ok' => true, 'date' => $date, 'orders' => shop_day_orders($date, $filter), 'stats' => shop_day_stats($date), 'pause' => shop_pause_state()));
 }
 if ($op === 'drivers_live') {
 	so_out(array('ok' => true, 'origin' => shop_origin(), 'drivers' => shop_drivers_live()));
@@ -43,6 +43,11 @@ if ($op === 'drivers_live') {
 // everything below changes something: POST with the token
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['token']) || empty($_SESSION['shop_admin_token']) || !hash_equals($_SESSION['shop_admin_token'], (string)$_POST['token'])) {
 	so_out(array('ok' => false, 'error' => 'Die Sitzung ist abgelaufen. Bitte lade die Seite neu.'));
+}
+if ($op === 'pause_set') {
+	$kind = (isset($_POST['kind']) && $_POST['kind'] === 'pickup') ? 'pickup' : 'delivery';
+	shop_pause_set($kind, !empty($_POST['on']), isset($_POST['minutes']) ? (int)$_POST['minutes'] : 0);
+	so_out(array('ok' => true, 'pause' => shop_pause_state()));
 }
 if ($op === 'demo') {
 	$new = shop_create_demo_order(isset($_POST['type']) ? (string)$_POST['type'] : 'delivery',

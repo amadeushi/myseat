@@ -43,7 +43,7 @@ $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 	</header>
 	<p class="k-offline" id="k-offline" role="alert" hidden>Keine Verbindung. Ich versuche es weiter ...</p>
 	<main class="ks-board" id="ks-board" aria-live="polite"></main>
-	<p class="k-overflow" id="ks-overflow" role="status" hidden></p>
+	<nav class="ks-nav" id="ks-nav" aria-label="Seiten der Bestellungen" hidden></nav>
 	<script src="js/monitor_sound.js?v=<?php echo @filemtime(__DIR__.'/js/monitor_sound.js'); ?>"></script>
 	<script src="js/monitor_print.js?v=<?php echo @filemtime(__DIR__.'/js/monitor_print.js'); ?>"></script>
 	<script src="js/kitchen_screen.js?v=<?php echo @filemtime(__DIR__.'/js/kitchen_screen.js'); ?>"></script>

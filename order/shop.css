@@ -321,6 +321,9 @@
 .shop-shell .cart-stamp { margin-top: 10px; color: var(--text-muted); font-size: 13px; text-align: center; text-wrap: balance; }
 .shop-shell .cart-stamp strong { color: var(--text); font-weight: 600; }
 .shop-shell .cart-stamp-btn { background: none; border: 0; padding: 0; font: inherit; color: var(--gold-strong); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.shop-shell .cart-note-btn { grid-column: 1 / -1; justify-self: start; border: 0; background: transparent; padding: 8px 0; min-height: 44px; color: var(--gold-strong); font: inherit; font-size: 14px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.shop-shell .cart-noteform.pd-note { grid-column: 1 / -1; margin-top: 6px; }
+.shop-shell .cart-noteact { display: flex; gap: 8px; margin-top: 8px; }
 .shop-shell .cart-trust { margin-top: 12px; color: var(--text-muted); font-size: 13px; text-align: center; }
 .cart-clear { display: block; margin: 8px auto 0; min-height: 44px; border: 0; background: transparent; color: var(--text-muted); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
 .shop-inbag { margin-left: 10px; color: var(--success); font-size: 13px; font-weight: 700; }

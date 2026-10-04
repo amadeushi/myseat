@@ -7,6 +7,7 @@ $or_date = (isset($_GET['date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['d
 $or_prev = date('Y-m-d', strtotime($or_date.' -1 day'));
 $or_next = date('Y-m-d', strtotime($or_date.' +1 day'));
 $or_days = array('So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa');
+$or_pause = shop_pause_state();
 ?>
 <div class="content orders-page" id="orders-page" data-date="<?php echo htmlspecialchars($or_date); ?>" data-token="<?php echo htmlspecialchars($_SESSION['shop_admin_token']); ?>">
 	<div class="orders-bar">
@@ -37,6 +38,18 @@ $or_days = array('So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa');
 				<a class="orders-kitchen" href="kitchen_screen.php" target="_blank" rel="noopener">Küchenbildschirm öffnen</a>
 			</div>
 		</details>
+	</div>
+
+	<div class="orders-pause" id="orders-pause" role="group" aria-label="Neue Bestellungen annehmen">
+		<?php foreach (array('delivery' => 'Lieferung', 'pickup' => 'Abholung') as $or_k => $or_lab): $or_p = $or_pause[$or_k]; ?>
+		<div class="pause-item<?php echo $or_p['paused'] ? ' is-paused' : ''; ?>" data-kind="<?php echo $or_k; ?>">
+			<label class="pause-switch"><input type="checkbox" role="switch" data-pause-switch<?php echo $or_p['paused'] ? '' : ' checked'; ?>/><span class="pause-track" aria-hidden="true"></span><span class="pause-label"><?php echo $or_lab; ?> annehmen</span></label>
+			<select data-pause-for aria-label="Wie lange die <?php echo $or_lab; ?> pausiert werden soll"<?php echo $or_p['paused'] ? ' hidden' : ''; ?>>
+				<option value="15">Pause: 15 Min</option><option value="30" selected>Pause: 30 Min</option><option value="60">Pause: 1 Std</option><option value="120">Pause: 2 Std</option><option value="0">Pause: bis ich sie aufhebe</option>
+			</select>
+			<span class="pause-note" data-pause-note><?php echo $or_p['paused'] ? 'pausiert'.($or_p['until'] ? ' bis '.$or_p['until'].' Uhr' : ', bis du sie wieder einschaltest') : ''; ?></span>
+		</div>
+		<?php endforeach; ?>
 	</div>
 
 	<div class="orders-stats" id="orders-stats"></div>

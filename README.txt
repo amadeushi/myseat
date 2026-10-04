@@ -52,6 +52,28 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.10.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Küchenbildschirm blättert. Eine Seite zeigt so viele Bestellungen wie Spalten (4 oder 5); die Reihenfolge richtet sich danach,
+   wann eine Bestellung die Küche verlassen muss. Unten eine Leiste mit großen Knöpfen "Zurück" und "Weiter" (bedienbar mit einem
+   Trackball, kein Wischen, keine Tastatur nötig; Pfeiltasten und Scrollrad blättern zusätzlich), "Seite 1 von 2" und je ein Kärtchen
+   für jede Bestellung auf einer anderen Seite (Nummer, "Sofort", Zeit "raus bis"; orange bei knapper Zeit, rot mit "überfällig").
+   Ein Klick auf ein Kärtchen springt auf die Seite. Eine neue Bestellung auf einer anderen Seite löst den Ton einmal aus und ihr
+   Kärtchen blinkt, bis die Seite angesehen wurde; die gezeigte Seite springt nicht weg. Nach 45 Sekunden ohne Eingabe geht der
+   Bildschirm zurück auf Seite 1, eine leere Seite wird übersprungen. Nur Bestellungen der gezeigten Seite halten den Ton an
+   (vorher klingelte der Monitor bei "bis jemand reagiert" weiter, solange eine Bestellung im Überlauf wartete).
+ * New: Küchenbildschirm zeigt deutlich, wenn der Gast es so schnell wie möglich will (orangefarbener Streifen "Sofort"), und bei
+   Lieferungen die Zeit "Raus bis": Lieferzeit minus Fahrzeit, mit Zähler (orange ab 5 Minuten, rot und "überfällig" danach). Die
+   Fahrzeit (Vorgabe 15 Minuten) steht unter Einstellungen > Lieferservice. Die Karten sind verdichtet, damit die Gerichte auch
+   auf 768 Pixel Höhe Platz haben. Der Knopf heißt jetzt "Fertig" (vorher "Fertig, ausgegeben").
+ * New: Bestellungen pausieren. Im Dashboard Bestellungen stehen zwei Schalter "Lieferung annehmen" und "Abholung annehmen". Aus
+   heißt: Pause für 15 Minuten, 30 Minuten, 1 oder 2 Stunden oder bis zum Wiedereinschalten; eine Pause mit Dauer endet von selbst.
+   Während der Pause sind neue Bestellungen dieser Art gesperrt (auch für eine spätere Zeit); der Shop und die Kasse zeigen
+   "gerade pausiert bis etwa 19:42 Uhr", und eine schon offene Kasse bekommt beim Absenden die Meldung. Bestehende Bestellungen
+   bleiben unberührt.
+ * New: Jede Position im Warenkorb hat ein Feld "Hinweis für die Küche" (Gerichte ohne Auswahl hatten bisher keins, weil sie ohne
+   Produktfenster direkt im Warenkorb landen).
+
 2026-10-05 == mySeat v6.9.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix: Die Bestellbestätigung an den Gast und die Kopie an das Restaurant gingen nicht raus, wenn im Shop keine Absenderadresse

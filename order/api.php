@@ -31,7 +31,8 @@ if ($op === 'state') {
 		'pay' => array('online' => shop_flag('allow_online') && shop_mollie_key() !== '', 'cash' => shop_flag('allow_cash'), 'card_door' => shop_flag('allow_card_door'), 'tip' => shop_flag('tip_enabled')));
 	foreach (array('delivery', 'pickup') as $kind) {
 		$s = shop_state($kind);
-		$out[$kind] = array('open' => $s['open'], 'until' => $s['until'] ? date('H:i', $s['until']) : '', 'next' => shop_when_text($s['next']), 'lead' => $s['lead']);
+		$out[$kind] = array('open' => $s['open'], 'until' => $s['until'] ? date('H:i', $s['until']) : '', 'next' => shop_when_text($s['next']), 'lead' => $s['lead'],
+			'paused' => !empty($s['paused']), 'paused_until' => !empty($s['paused_until']) ? date('H:i', $s['paused_until']) : '');
 	}
 	api_out($out);
 }
@@ -46,7 +47,7 @@ if ($op === 'slots') {
 		if ($slots) { $out[] = array('date' => $date, 'label' => ($d === 0 ? 'Heute' : ($d === 1 ? 'Morgen' : date('d.m.', strtotime($date)))), 'slots' => $slots); }
 	}
 	$s = shop_state($kind);
-	api_out(array('ok' => true, 'asap' => $s['open'], 'asap_min' => $s['lead'], 'days' => $out));
+	api_out(array('ok' => true, 'asap' => $s['open'], 'asap_min' => $s['lead'], 'days' => $out, 'paused' => !empty($s['paused']), 'paused_until' => !empty($s['paused_until']) ? date('H:i', $s['paused_until']) : ''));
 }
 
 if ($op === 'zone') {

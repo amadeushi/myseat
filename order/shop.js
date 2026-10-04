@@ -4,7 +4,7 @@
 	'use strict';
 	var body = document.body, ACCEPT = body.dataset.accepting === '1', KEY = 'amadeusCartV2', TOKEN = body.dataset.token, ACCOUNT = body.dataset.account === '1';
 	var HEART = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 21s-7-4.35-9.33-8.9C1.07 8.9 3.2 5 6.9 5c2 0 3.6 1.1 5.1 3.1C13.5 6.1 15.1 5 17.1 5c3.7 0 5.83 3.9 4.23 7.1C19 16.65 12 21 12 21z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>';
-	var state = { mode: 'delivery', cart: [], info: null, zone: null, group: null, gv: null };
+	var state = { mode: 'delivery', cart: [], info: null, zone: null, group: null, gv: null, noteEdit: null, noteDraft: '', noteFocus: false };
 
 	function $(s, r) { return (r || document).querySelector(s); }
 	function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
@@ -24,6 +24,7 @@
 		var s = state.info[state.mode], label = state.mode === 'delivery' ? 'Lieferung' : 'Abholung';
 		el.classList.toggle('is-open', s.open); el.classList.toggle('is-closed', !s.open);
 		if (s.open) { var mo = state.mode === 'delivery' ? state.info.min_delivery : state.info.min_pickup; el.textContent = label + ' offen bis ' + s.until + ' Uhr · in etwa ' + s.lead + ' Min' + (mo > 0 ? ' · ab ' + fmt(mo) : ''); }
+		else if (s.paused) { el.textContent = label + ' gerade pausiert' + (s.paused_until ? ' bis etwa ' + s.paused_until + ' Uhr' : ''); }
 		else { el.textContent = s.next ? label + ' wieder ' + s.next : label + ' zurzeit nicht möglich'; }
 	}
 	function loadState() {
@@ -302,7 +303,16 @@
 		if (upsellCache.items.length) { return upsellCache.items.map(function (it) { return $('.shop-item[data-id="' + it.id + '"]'); }).filter(Boolean); }
 		return guessUpsell();
 	}
+	// a note for the kitchen on any cart line (dishes without choices have no product dialog, so this is their only place for it)
+	function noteControl(l, i) {
+		if (state.noteEdit === i) {
+			return '<div class="cart-noteform pd-note"><label class="pd-note-label" for="cn-' + i + '">Hinweis für die Küche</label><textarea id="cn-' + i + '" data-cn maxlength="200" placeholder="zum Beispiel ohne Zwiebeln">' + esc(state.noteDraft) + '</textarea>' +
+				'<div class="cart-noteact"><button type="button" class="gb-btn solid" data-note-save="' + i + '">Speichern</button><button type="button" class="gb-btn ghost" data-note-cancel>Abbrechen</button></div></div>';
+		}
+		return '<button type="button" class="cart-note-btn" data-note="' + i + '">' + (l.note ? 'Hinweis ändern' : 'Hinweis für die Küche hinzufügen') + '</button>';
+	}
 	function renderCart() {
+		if (state.noteEdit !== null && !state.cart[state.noteEdit]) { state.noteEdit = null; }
 		var box = $('#cart-body'); if (!box) { return; }
 		var n = count(), sub = subtotal(), min = minOrder(), below = min > 0 && sub < min;
 		var bar = $('#cartbar'); if (bar) { bar.hidden = n === 0 && !state.group; $('#cartbar-count').textContent = n; $('#cartbar-total').textContent = fmt(sub); $('.cartbar-label', bar).textContent = state.group ? 'Gemeinsamer Warenkorb' : (below ? 'Noch ' + fmt(min - sub) + ' bis zum Mindestbestellwert' : 'Warenkorb ansehen'); }
@@ -317,14 +327,14 @@
 		if (state.group) { renderGroupCart(box, sub, min, below); return; }
 		if (!n) { box.innerHTML = '<p class="cart-empty">Dein Warenkorb ist noch leer.<br/>Such dir etwas Feines aus, wir kochen es frisch für dich.</p>' + groupInvite(); return; }
 		var s0 = state.info ? state.info[state.mode] : null, h = '';
-		if (s0) { h += '<p class="cart-eta">' + (state.mode === 'delivery' ? 'Lieferung' : 'Abholung') + (s0.open ? ' in etwa ' + s0.lead + ' Minuten' : ' zurzeit nicht möglich' + (s0.next ? ', ' + s0.next : '')) + '</p>'; }
+		if (s0) { h += '<p class="cart-eta">' + (state.mode === 'delivery' ? 'Lieferung' : 'Abholung') + (s0.open ? ' in etwa ' + s0.lead + ' Minuten' : (s0.paused ? ' gerade pausiert' + (s0.paused_until ? ' bis etwa ' + s0.paused_until + ' Uhr' : '') : ' zurzeit nicht möglich' + (s0.next ? ', ' + s0.next : ''))) + '</p>'; }
 		if (min > 0) {
 			h += '<div class="cart-goal' + (below ? '' : ' is-met') + '"><div class="cart-goal-bar" role="progressbar" aria-valuemin="0" aria-valuemax="' + min + '" aria-valuenow="' + Math.min(sub, min) + '"><span style="--p:' + Math.min(1, sub / min).toFixed(3) + '"></span></div><p>' +
 				(below ? 'Noch <strong>' + fmt(min - sub) + '</strong> bis zum Mindestbestellwert von ' + fmt(min) : 'Mindestbestellwert erreicht') + '</p></div>';
 		}
 		h += state.cart.map(function (l, i) {
 			return '<div class="cart-line"><h3>' + esc(l.title) + (l.vtitle ? ' <span class="cart-opts">(' + esc(l.vtitle) + ')</span>' : '') + '</h3><span class="cart-lineprice">' + fmt(l.unit * l.qty) + '</span>' +
-				(l.optText ? '<p class="cart-opts">' + esc(l.optText) + '</p>' : '') + (l.note ? '<p class="cart-opts">Hinweis: ' + esc(l.note) + '</p>' : '') +
+				(l.optText ? '<p class="cart-opts">' + esc(l.optText) + '</p>' : '') + (l.note ? '<p class="cart-opts">Hinweis: ' + esc(l.note) + '</p>' : '') + noteControl(l, i) +
 				'<div class="cart-qty"><button type="button" class="qty-btn' + (l.qty === 1 ? ' is-trash' : '') + '" data-i="' + i + '" data-d="-1" aria-label="' + (l.qty === 1 ? 'Entfernen' : 'Weniger') + '">' + (l.qty === 1 ? ICON_TRASH : '&minus;') + '</button><span class="qty-num" aria-live="polite">' + l.qty + '</span><button type="button" class="qty-btn" data-i="' + i + '" data-d="1" aria-label="Mehr">+</button>' + (ACCOUNT ? '<button type="button" class="fav-btn" data-fav-i="' + i + '" aria-pressed="false" aria-label="' + esc(l.title) + ' als Favorit merken">' + HEART + '</button>' : '') + (l.ch ? '<button type="button" class="cart-edit" data-edit="' + i + '">Ändern</button>' : '') + '</div></div>';
 		}).join('');
 		refreshUpsell();
@@ -341,6 +351,7 @@
 			'<p class="cart-trust">Frisch für dich zubereitet. Bezahlen kannst du online, bar oder mit Karte.</p>' +
 			'<button type="button" class="cart-clear" data-clear>Warenkorb leeren</button>' + groupInvite();
 		box.innerHTML = h;
+		if (state.noteEdit !== null && state.noteFocus) { var cn = $('[data-cn]', box); if (cn) { cn.focus(); cn.setSelectionRange(cn.value.length, cn.value.length); } state.noteFocus = false; }
 		document.dispatchEvent(new CustomEvent('amadeus:cart'));
 	}
 	// ---- shared basket ("Gemeinsam bestellen"): everybody fills one basket on the server, one person (the organizer) orders and pays.
@@ -693,6 +704,11 @@
 		}
 		if (t.closest('#cartbar')) { cartOpen(true); return; }
 		if (t.closest('#cart-close')) { cartOpen(false); return; }
+		var nb = t.closest('[data-note]');
+		if (nb) { var nl = state.cart[+nb.dataset.note]; if (nl) { state.noteEdit = +nb.dataset.note; state.noteDraft = nl.note || ''; state.noteFocus = true; renderCart(); } return; }
+		if (t.closest('[data-note-cancel]')) { state.noteEdit = null; renderCart(); return; }
+		var ns = t.closest('[data-note-save]');
+		if (ns) { var ni = +ns.dataset.noteSave, nl2 = state.cart[ni]; state.noteEdit = null; if (nl2) { replaceLine(ni, Object.assign({}, nl2, { note: state.noteDraft.trim().slice(0, 200) })); } else { renderCart(); } return; }
 		var ed = t.closest('[data-edit]');
 		if (ed) { var el = state.cart[+ed.dataset.edit]; if (el) { openProduct(el.pid, { i: +ed.dataset.edit, line: el }); } return; }
 		var up = t.closest('[data-up]');
@@ -707,9 +723,11 @@
 			state.cart = []; save(); renderCart(); cartOpen(false); return;
 		}
 		var q = t.closest('.qty-btn[data-i]');
-		if (q) { var l = state.cart[+q.dataset.i]; l.qty += +q.dataset.d; if (l.qty <= 0) { state.cart.splice(+q.dataset.i, 1); } save(); renderCart(); return; }
-		var rm = t.closest('.cart-remove'); if (rm) { state.cart.splice(+rm.dataset.i, 1); save(); renderCart(); }
+		if (q) { var l = state.cart[+q.dataset.i]; l.qty += +q.dataset.d; if (l.qty <= 0) { state.cart.splice(+q.dataset.i, 1); state.noteEdit = null; } save(); renderCart(); return; }
+		var rm = t.closest('.cart-remove'); if (rm) { state.cart.splice(+rm.dataset.i, 1); state.noteEdit = null; save(); renderCart(); }
 	});
+
+	document.addEventListener('input', function (ev) { if (ev.target.matches && ev.target.matches('textarea[data-cn]')) { state.noteDraft = ev.target.value; } });
 
 	// what the guest account (konto.js) needs: put lines of an earlier order or a favorite into the cart, look at the cart
 	window.AmadeusShop = {

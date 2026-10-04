@@ -95,10 +95,31 @@
 		}
 		return h + '</div>';
 	}
+	// ---- pause of the orders: a switch per kind; off = paused for the chosen time, on = orders are taken again
+	function drawPause(p) {
+		if (!p) { return; }
+		['delivery', 'pickup'].forEach(function (k) {
+			var row = $('.pause-item[data-kind="' + k + '"]'), s = p[k]; if (!row || !s) { return; }
+			row.classList.toggle('is-paused', !!s.paused);
+			$('[data-pause-switch]', row).checked = !s.paused;
+			$('[data-pause-for]', row).hidden = !!s.paused;
+			$('[data-pause-note]', row).textContent = s.paused ? 'pausiert' + (s.until ? ' bis ' + s.until + ' Uhr' : ', bis du sie wieder einschaltest') : '';
+		});
+	}
+	page.addEventListener('change', function (ev) {
+		var sw = ev.target.closest && ev.target.closest('[data-pause-switch]'); if (!sw) { return; }
+		var row = sw.closest('.pause-item'), kind = row.dataset.kind, on = !sw.checked;
+		sw.disabled = true;
+		post('pause_set', { kind: kind, on: on ? 1 : 0, minutes: $('[data-pause-for]', row).value }).then(function (r) {
+			sw.disabled = false;
+			if (!r.ok) { sw.checked = !sw.checked; note(r.error || 'Das hat nicht geklappt.', true); return; }
+			drawPause(r.pause); note((kind === 'delivery' ? 'Lieferung' : 'Abholung') + (on ? ' pausiert.' : ' wird wieder angenommen.'));
+		}).catch(function () { sw.disabled = false; sw.checked = !sw.checked; note('Keine Verbindung.', true); });
+	});
 	function load() {
 		fetch('ajax/shop_orders.php?op=day&date=' + DATE + '&filter=' + filter, { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (r) {
 			if (!r.ok) { note(r.error || 'Das hat nicht geklappt.', true); return; }
-			stats(r.stats);
+			stats(r.stats); drawPause(r.pause);
 			var failedNote = '';
 			if (filter === 'closed') { var nFailed = r.orders.filter(function (o) { return o.status === 'failed'; }).length; if (nFailed) { failedNote = '<p class="orders-fail-chip">Fehlgeschlagen: ' + nFailed + '</p>'; } }
 			document.getElementById('orders-list').innerHTML = failedNote + (r.orders.length ? r.orders.map(row).join('') : '<p class="orders-empty">Keine Bestellungen an diesem Tag.</p>');

@@ -45,6 +45,8 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 		<div class="shop-grid">
 			<label class="offer-label" for="sh-eta">Lieferzeit für "so schnell wie möglich" (Minuten)</label>
 			<input type="number" id="sh-eta" name="eta_delivery_min" min="10" max="240" value="<?php echo $sh_e($sh['eta_delivery_min']); ?>"/>
+			<label class="offer-label" for="sh-drive">Fahrzeit der Lieferung für den Küchenbildschirm (Minuten)</label>
+			<input type="number" id="sh-drive" name="kitchen_drive_min" min="0" max="60" value="<?php echo $sh_e($sh['kitchen_drive_min']); ?>"/>
 			<label class="offer-label" for="sh-lead">Vorlauf für Abholung (Minuten)</label>
 			<input type="number" id="sh-lead" name="lead_pickup_min" min="0" max="240" value="<?php echo $sh_e($sh['lead_pickup_min']); ?>"/>
 			<label class="offer-label" for="sh-slot">Zeitfenster in Schritten von (Minuten)</label>
@@ -57,12 +59,12 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 			<input type="text" id="sh-minp" name="min_order_pickup" inputmode="decimal" value="<?php echo $sh_e($sh['min_order_pickup']); ?>"/>
 		</div>
 		<label class="offer-label" for="sh-mail">E-Mail-Adresse für Bestellungen</label>
-		<small class="offer-help">Von dieser Adresse gehen die Bestätigungen an Gäste, und hierhin kommt eine Mail bei jeder neuen Bestellung. Ohne Adresse werden keine Mails verschickt.</small>
+		<small class="offer-help">Von dieser Adresse gehen die Bestätigungen an Gäste, und hierhin kommt eine Mail bei jeder neuen Bestellung. Bleibt das Feld leer, nimmt der Shop die E-Mail-Adresse aus den Stammdaten.</small>
 		<input type="email" id="sh-mail" name="notify_email" maxlength="160" value="<?php echo $sh_e($sh['notify_email']); ?>"/>
 		<label class="offer-check"><input type="checkbox" name="sms_orders" value="1"<?php echo $sh_check('sms_orders'); ?>/> SMS an den Gast, wenn die Lieferung losfährt oder die Abholung bereit ist (nur bei Handynummer und eingerichtetem SMS-Versand)</label>
 
 		<h4 class="sms-sub">Stempelkarte</h4>
-		<small class="offer-help">Jede abgeschlossene Bestellung eines Gastes ist ein Stempel (erkannt an Telefonnummer und E-Mail der Bestellung). Ist die Karte voll, bekommt der Gast einen persönlichen Gutschein in Höhe des eingestellten Anteils der Warenwerte dieser Bestellungen. Er wird bei der nächsten passenden Bestellung automatisch und komplett abgezogen. Er gilt ab einem Warenwert in Höhe des Gutscheins, einen Rest gibt es nicht. Die Gutscheine sehen Sie unter Gutscheine (Code STEMPEL-...). Ein Gutschein bleibt gültig, auch wenn Sie die Stempelkarte ausschalten.</small>
+		<small class="offer-help">Jede abgeschlossene Bestellung eines Gastes mit Kundenkonto ist ein Stempel (ohne Kundenkonto gibt es keinen, siehe Kundenkonto unten). Ist die Karte voll, bekommt der Gast einen persönlichen Gutschein in Höhe des eingestellten Anteils der Warenwerte dieser Bestellungen. Er wird bei der nächsten passenden Bestellung automatisch und komplett abgezogen. Er gilt ab einem Warenwert in Höhe des Gutscheins, einen Rest gibt es nicht. Die Gutscheine sehen Sie unter Gutscheine (Code STEMPEL-...). Ein Gutschein bleibt gültig, auch wenn Sie die Stempelkarte ausschalten.</small>
 		<label class="offer-check"><input type="checkbox" name="stamp_on" value="1"<?php echo $sh_check('stamp_on'); ?>/> Stempelkarte anbieten</label>
 		<div class="shop-grid">
 			<label class="offer-label" for="sh-sp">Gutschein in Prozent der Warenwerte</label>

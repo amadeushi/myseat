@@ -248,6 +248,9 @@ function shop_defaults() {
 		'allow_cash' => '1', 'allow_card_door' => '1', 'allow_online' => '1',
 		'tip_enabled' => '1',
 		'notice' => '',             // one line of text on top of the shop (e.g. "Heute später")
+		'pause_delivery' => '0', 'pause_delivery_until' => '0', // pause of the orders: switched in the dashboard Bestellungen, until = end (Unix time), 0 = until it is switched off
+		'pause_pickup' => '0', 'pause_pickup_until' => '0',
+		'kitchen_drive_min' => '15', // minutes a delivery needs to the guest: the kitchen monitor shows when the food has to leave
 		'notify_email' => '',       // sender of the order mails and address that gets a mail for every new order
 		'resmio_slug' => 'amadeus-cafe-restaurant-bar',
 		'sms_orders' => '1',        // SMS to the guest when the delivery is on its way / the pickup is ready (only with SMS sending set up)
@@ -414,9 +417,31 @@ function shop_windows($kind, $ts) {
  * State of delivery or pickup right now: array(open, until (ts), next (ts or 0), eta_min). "open" also means there is time
  * left to prepare an order placed now.
  */
+// Delivery or pickup paused by the staff (rush, no driver, kitchen full): no new orders of that kind, not even for a later time.
+// A pause with an end ends by itself.
+function shop_paused($kind) {
+	$kind = ($kind === 'pickup') ? 'pickup' : 'delivery';
+	if (!shop_flag('pause_'.$kind)) { return array('paused' => false, 'until' => 0); }
+	$u = (int)shop_setting('pause_'.$kind.'_until');
+	if ($u > 0 && $u <= time()) { return array('paused' => false, 'until' => 0); }
+	return array('paused' => true, 'until' => $u);
+}
+function shop_pause_set($kind, $on, $minutes = 0) {
+	$kind = ($kind === 'pickup') ? 'pickup' : 'delivery';
+	$minutes = max(0, min(720, (int)$minutes));
+	shop_setting_set('pause_'.$kind, $on ? '1' : '0');
+	shop_setting_set('pause_'.$kind.'_until', ($on && $minutes > 0) ? (string)(time() + $minutes * 60) : '0');
+}
+function shop_pause_state() {
+	$out = array();
+	foreach (array('delivery', 'pickup') as $k) { $p = shop_paused($k); $out[$k] = array('paused' => $p['paused'], 'until' => $p['until'] ? date('H:i', $p['until']) : '', 'until_ts' => $p['until']); }
+	return $out;
+}
 function shop_state($kind, $now = null) {
 	$now = $now ?: time();
 	$lead = ($kind === 'delivery') ? (int)shop_setting('eta_delivery_min') : (int)shop_setting('lead_pickup_min');
+	$pz = shop_paused($kind);
+	if ($pz['paused']) { return array('open' => false, 'until' => 0, 'next' => 0, 'lead' => $lead, 'paused' => true, 'paused_until' => $pz['until']); }
 	foreach (shop_windows($kind, $now) as $w) {
 		if ($now >= $w[0] && $now + $lead * 60 <= $w[1]) { return array('open' => true, 'until' => $w[1], 'next' => 0, 'lead' => $lead); }
 	}
@@ -432,6 +457,8 @@ function shop_state($kind, $now = null) {
 function shop_slots($kind, $date) {
 	$ts = strtotime($date.' 12:00:00');
 	if (!$ts) { return array(); }
+	$pz = shop_paused($kind);
+	if ($pz['paused']) { return array(); }
 	$step = max(5, (int)shop_setting('slot_min')) * 60;
 	$lead = (($kind === 'delivery') ? (int)shop_setting('eta_delivery_min') : (int)shop_setting('lead_pickup_min')) * 60;
 	$earliest = ($date === date('Y-m-d')) ? time() + $lead : 0;
@@ -785,6 +812,8 @@ function shop_create_order($in) {
 	shop_ensure_schema();
 	if (!shop_flag('accepting')) { return array('ok' => false, 'error' => 'Wir nehmen gerade keine Bestellungen an.'); }
 	$type = (isset($in['type']) && $in['type'] === 'pickup') ? 'pickup' : 'delivery';
+	$pz = shop_paused($type);
+	if ($pz['paused']) { return array('ok' => false, 'error' => ($type === 'pickup' ? 'Die Abholung' : 'Die Lieferung').' ist gerade pausiert'.($pz['until'] ? ' (bis etwa '.date('H:i', $pz['until']).' Uhr)' : '').'. Bitte versuche es später noch einmal'.($type === 'pickup' ? ' oder bestelle zur Lieferung.' : ' oder bestelle zur Abholung.')); }
 	$lines = (isset($in['lines']) && is_array($in['lines'])) ? array_slice($in['lines'], 0, 60) : array();
 	if (!$lines) { return array('ok' => false, 'error' => 'Dein Warenkorb ist leer.'); }
 	$items = array(); $sub = 0;
@@ -1299,10 +1328,17 @@ function shop_kitchen_board() {
 	$accepted = array();
 	foreach ($rows as $r) { $accepted[(int)$r['id']] = $r['accepted_at'] ? strtotime($r['accepted_at']) : strtotime($r['created_at']); }
 	$out = array();
+	// the drive of a delivery is taken off the due time: out_ts is when the food has to leave the kitchen (pickup: the due time itself)
+	$drive = max(0, min(60, (int)shop_setting('kitchen_drive_min')));
 	foreach (shop_orders_with_items($rows) as $o) {
+		$dueTs = strtotime($o['due_date'].' '.$o['due']);
+		$min = ($o['type'] === 'delivery') ? $drive : 0;
 		$out[] = array('id' => $o['id'], 'day_no' => $o['day_no'], 'number' => $o['number'], 'type' => $o['type'], 'status' => $o['status'], 'test' => $o['test'], 'source' => $o['source'],
-			'due' => $o['due'], 'scheduled' => $o['scheduled'], 'accepted_ts' => $accepted[$o['id']], 'note' => $o['note'], 'items' => $o['items']);
+			'due' => $o['due'], 'scheduled' => $o['scheduled'], 'asap' => ($o['scheduled'] === ''), 'due_ts' => $dueTs, 'drive_min' => $min, 'out_ts' => $dueTs - $min * 60, 'out' => date('H:i', $dueTs - $min * 60),
+			'accepted_ts' => $accepted[$o['id']], 'note' => $o['note'], 'items' => $o['items']);
 	}
+	// what has to leave the kitchen first stands first
+	usort($out, function ($a, $b) { return $a['out_ts'] === $b['out_ts'] ? $a['id'] - $b['id'] : $a['out_ts'] - $b['out_ts']; });
 	return $out;
 }
 

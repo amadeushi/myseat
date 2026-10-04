@@ -121,6 +121,8 @@
 	function reason() {
 		if (!S.cart.length) { return 'Dein Warenkorb ist leer.'; }
 		if (S.info && !S.info.accepting) { return 'Wir nehmen gerade keine Bestellungen an.'; }
+		var pz = S.info && S.info[S.mode];
+		if (pz && pz.paused) { return (S.mode === 'delivery' ? 'Die Lieferung' : 'Die Abholung') + ' ist gerade pausiert' + (pz.paused_until ? ' bis etwa ' + pz.paused_until + ' Uhr' : '') + '.'; }
 		if (subtotal() < min()) { return 'Noch ' + fmt(min() - subtotal()) + ' bis zum Mindestbestellwert von ' + fmt(min()) + '.'; }
 		if (S.mode === 'delivery' && !S.zone) {
 			var street = form.elements.street.value.trim(), zip = form.elements.zip.value.trim(), city = form.elements.city.value.trim();
@@ -266,7 +268,7 @@
 					'<div class="co-slots"><select name="day" aria-label="Tag">' + r.days.map(function (d) { return '<option value="' + d.date + '">' + esc(d.label) + '</option>'; }).join('') + '</select>' +
 					'<select name="time" aria-label="Uhrzeit"></select></div>';
 			}
-			if (!r.asap && !r.days.length) { h = '<p class="co-zone bad">Zurzeit kannst du leider nicht bestellen. Schau später wieder vorbei.</p>'; }
+			if (!r.asap && !r.days.length) { h = '<p class="co-zone bad">' + (r.paused ? (S.mode === 'delivery' ? 'Die Lieferung' : 'Die Abholung') + ' ist gerade pausiert' + (r.paused_until ? ' bis etwa ' + r.paused_until + ' Uhr' : '') + '. Schau gleich noch einmal vorbei.' : 'Zurzeit kannst du leider nicht bestellen. Schau später wieder vorbei.') + '</p>'; }
 			$('#co-when').innerHTML = h;
 			fillTimes();
 			updateSubmit();
