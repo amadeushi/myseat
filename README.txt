@@ -52,6 +52,14 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.22.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Kasse (Erfassung): Taste "-10 % Rabatt" (F6) und Taste "+ Aufschlag" (F7) unter der Summe. Der Rabatt gilt auf Speisen und Liefergebühr (Einstellung pos_discount_pct,
+   Standard 10), der Aufschlag in Euro (+1, +2, +5 oder frei, bis 50 EUR). Grund per Tippen, keine Sperre. Summe, Ansage, Rückgeld, Bestätigung, "Zuletzt erfasst", Lieferschein
+   (Papier und ESC/POS), Bestellliste und Statusseite zeigen Rabatt und Aufschlag. Der Server rechnet allein (neue Spalten surcharge_cents und adjust_note an tp_shop_orders).
+ * New: Bestellen bis Ladenschluss: der Shop nimmt Bestellungen bis zum Ende der Bestellzeit an, auch wenn die Ware danach noch rausgeht. Einstellung "Letzte Bestellung vor
+   Ende der Bestellzeit" (last_order_min, Standard 0 = bis Ladenschluss).
+
 2026-10-05 == mySeat v6.21.3 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix: Bestellbestätigungen kamen bei Online-Zahlungen (Mollie) doppelt: der Webhook von Mollie und die Statusseite des Gastes fragen gleichzeitig nach dem Zahlungsstand und

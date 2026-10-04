@@ -73,6 +73,7 @@ $due = $o['scheduled_at'] ?: ($o['eta_at'] ?: $o['created_at']);
 	<?php if ($o['note'] !== ''): ?><span class="onote"><?php echo $h($o['note']); ?></span><?php endif; ?>
 	<?php if ($full): ?>
 		<hr/>
+		<?php if (!empty($o['adjust_note'])): foreach (explode('; ', $o['adjust_note']) as $adj): ?><div class="small"><?php echo $h($adj); ?></div><?php endforeach; endif; ?>
 		<div class="pay"><?php echo ($o['payment_method'] === 'mollie' || $o['payment_method'] === 'lieferando') ? ($o['payment_method'] === 'lieferando' ? 'bei Lieferando bezahlt' : 'online bezahlt') : ($o['payment_method'] === 'cash' ? 'BAR kassieren: ' : 'KARTE kassieren: ').shop_money($o['total_cents']); ?></div>
 		<?php if (!empty($o['pay_with_cents']) && $o['payment_method'] === 'cash'): ?><div class="small">Gast zahlt mit <?php echo shop_money((int)$o['pay_with_cents']); ?> &middot; Rückgeld <strong><?php echo shop_money((int)$o['pay_with_cents'] - (int)$o['total_cents']); ?></strong></div><?php endif; ?>
 	<?php endif; ?>

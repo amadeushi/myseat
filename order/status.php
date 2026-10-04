@@ -169,7 +169,8 @@ $delivery = $order && $order['type'] === 'delivery';
 				<div class="cart-row"><span>Zwischensumme</span><span><?php echo shop_money($order['subtotal_cents']); ?></span></div>
 				<?php if ($delivery): ?><div class="cart-row muted"><span>Liefergebühr</span><span><?php echo shop_money($order['fee_cents']); ?></span></div><?php endif; ?>
 				<?php if ($order['tip_cents'] > 0): ?><div class="cart-row muted"><span>Trinkgeld</span><span><?php echo shop_money($order['tip_cents']); ?></span></div><?php endif; ?>
-				<?php if ((int)$order['discount_cents'] > 0): ?><div class="cart-row muted"><span>Gutschein <?php echo shop_h($order['coupon_code']); ?></span><span>&minus;<?php echo shop_money($order['discount_cents']); ?></span></div><?php endif; ?>
+				<?php if ((int)$order['discount_cents'] > 0): ?><div class="cart-row muted"><span><?php echo $order['coupon_code'] !== '' ? 'Gutschein '.shop_h($order['coupon_code']) : 'Rabatt'; ?></span><span>&minus;<?php echo shop_money($order['discount_cents']); ?></span></div><?php endif; ?>
+				<?php if ((int)$order['surcharge_cents'] > 0): ?><div class="cart-row muted"><span>Aufschlag</span><span><?php echo shop_money($order['surcharge_cents']); ?></span></div><?php endif; ?>
 				<div class="cart-row total"><span>Gesamt</span><span><?php echo shop_money($order['total_cents']); ?></span></div>
 				<div class="cart-row muted"><span>Zahlung</span><span><?php
 					echo $paidOnline ? ($order['payment_status'] === 'paid' ? 'online bezahlt' : 'online, noch offen') : (($order['payment_method'] === 'cash' ? 'bar' : 'mit Karte').($delivery ? ' bei Lieferung' : ' bei Abholung')); ?></span></div>

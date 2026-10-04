@@ -6,6 +6,7 @@
 // has a confirmed order to enter; closed hours, pause and the minimum only show as hints. All work is done by web/js/orders_pos.js through web/ajax/shop_pos.php.
 require_once __DIR__.'/../classes/shop.class.php';
 shop_ensure_schema();
+$kx_pct = max(1, min(50, (int)shop_setting('pos_discount_pct')));
 if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = myseat_admin_token(); }
 ?>
 <link rel="stylesheet" href="../order/shop.css?v=<?php echo @filemtime(__DIR__.'/../../order/shop.css'); ?>"/>
@@ -13,7 +14,7 @@ if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = myse
 <div class="content pos-page kx" id="pos-page" data-token="<?php echo htmlspecialchars($_SESSION['shop_admin_token']); ?>">
 	<div class="kx-top">
 		<h3>Bestellung erfassen</h3>
-		<span class="kx-keys" aria-hidden="true"><kbd>F2</kbd> Telefon <kbd>F3</kbd> Suche <kbd>Strg</kbd>+<kbd>Enter</kbd> Anlegen</span>
+		<span class="kx-keys" aria-hidden="true"><kbd>F2</kbd> Telefon <kbd>F3</kbd> Suche <kbd>F6</kbd> Rabatt <kbd>F7</kbd> Aufschlag <kbd>Strg</kbd>+<kbd>Enter</kbd> Anlegen</span>
 		<span class="orders-spacer"></span>
 		<button type="button" class="kx-btn" id="kx-mode" aria-pressed="false">Kassenmodus</button>
 		<a class="kx-btn" href="main_page.php?p=9">Zur Bestellungen-Übersicht</a>
@@ -99,6 +100,15 @@ if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = myse
 				<footer class="kx-foot">
 					<p class="kx-foot-say" id="kx-foot-say" aria-live="polite"></p>
 					<dl class="kx-sum" id="kx-sum"></dl>
+					<div class="kx-adj" role="group" aria-label="Preis anpassen">
+						<button type="button" class="kx-adjbtn" id="kx-disc" data-pct="<?php echo (int)$kx_pct; ?>" aria-pressed="false">&minus;<?php echo (int)$kx_pct; ?> % Rabatt</button>
+						<button type="button" class="kx-adjbtn" id="kx-sur" aria-pressed="false" aria-expanded="false" aria-controls="kx-sur-box">+ Aufschlag</button>
+					</div>
+					<div class="kx-adjbox" id="kx-disc-box" hidden><div class="kx-chips" id="kx-disc-why" role="group" aria-label="Grund des Rabatts"></div></div>
+					<div class="kx-adjbox" id="kx-sur-box" hidden>
+						<div class="kx-adjrow"><div class="kx-chips" id="kx-sur-amts" role="group" aria-label="Aufschlag in Euro"></div><input type="text" id="kx-sur-in" inputmode="decimal" placeholder="anderer Betrag" aria-label="Aufschlag, Betrag in Euro, bis 50" autocomplete="off"/></div>
+						<div class="kx-adjrow"><div class="kx-chips" id="kx-sur-why" role="group" aria-label="Grund des Aufschlags"></div></div>
+					</div>
 					<button type="submit" class="kx-go" id="kx-go"><span id="kx-go-l">Bestellung anlegen</span><span id="kx-go-t"></span></button>
 					<p class="kx-msg" id="pos-msg" role="status" aria-live="polite"></p>
 				</footer>

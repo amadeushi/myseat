@@ -110,6 +110,8 @@ function shop_ensure_schema() {
 		KEY `drv` (`driver_id`, `at`)) $opts");
 	$wcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'pay_with_cents'"); // cash: "the guest pays with 50 euro" (till), for the change
 	if (!$wcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `pay_with_cents` INT NULL"); }
+	$scol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'surcharge_cents'"); // till: a surcharge in euro and the note of discount / surcharge with its reason
+	if (!$scol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `surcharge_cents` INT NOT NULL DEFAULT 0, ADD `adjust_note` VARCHAR(160) NOT NULL DEFAULT ''"); }
 	$pcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_drivers')." LIKE 'phone'");
 	if (!$pcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_drivers')." ADD `phone` VARCHAR(40) NOT NULL DEFAULT ''"); }
 	$col = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'ip_hash'");
@@ -274,6 +276,8 @@ function shop_defaults() {
 		'notice' => '',             // one line of text on top of the shop (e.g. "Heute später")
 		'pause_delivery' => '0', 'pause_delivery_until' => '0', // pause of the orders: switched in the dashboard Bestellungen, until = end (Unix time), 0 = until it is switched off
 		'pause_pickup' => '0', 'pause_pickup_until' => '0',
+		'last_order_min' => '0',    // the shop takes orders until the end of the order time minus this many minutes (0 = until closing; the food may leave after closing)
+		'pos_discount_pct' => '10', // the "-10 %" key of the till (Erfassung): percent of the goods and the delivery fee
 		'kitchen_drive_min' => '15', // minutes a delivery needs to the guest: the kitchen monitor shows when the food has to leave
 		'notify_email' => '',       // sender of the order mails and address that gets a mail for every new order
 		'resmio_slug' => 'amadeus-cafe-restaurant-bar',
@@ -636,8 +640,8 @@ function shop_hours_save($data) {
 }
 
 /*
- * State of delivery or pickup right now: array(open, until (ts), next (ts or 0), eta_min). "open" also means there is time
- * left to prepare an order placed now.
+ * State of delivery or pickup right now: array(open, until (ts), next (ts or 0), eta_min). "open" means an order can still be placed now (until the end
+ * of the order time, see last_order_min); the food of the last orders may leave after closing.
  */
 // Delivery or pickup paused by the staff (rush, no driver, kitchen full): no new orders of that kind, not even for a later time.
 // A pause with an end ends by itself.
@@ -664,8 +668,10 @@ function shop_state($kind, $now = null) {
 	$lead = ($kind === 'delivery') ? (int)shop_setting('eta_delivery_min') : (int)shop_setting('lead_pickup_min');
 	$pz = shop_paused($kind);
 	if ($pz['paused']) { return array('open' => false, 'until' => 0, 'next' => 0, 'lead' => $lead, 'paused' => true, 'paused_until' => $pz['until']); }
+	// orders are taken until the end of the order time (minus "last_order_min"); the delivery or pickup itself may then fall after closing
+	$cut = max(0, min(240, (int)shop_setting('last_order_min'))) * 60;
 	foreach (shop_windows($kind, $now) as $w) {
-		if ($now >= $w[0] && $now + $lead * 60 <= $w[1]) { return array('open' => true, 'until' => $w[1], 'next' => 0, 'lead' => $lead); }
+		if ($now >= $w[0] && $now <= $w[1] - $cut) { return array('open' => true, 'until' => $w[1] - $cut, 'next' => 0, 'lead' => $lead); }
 	}
 	$ex = shop_ex_for($kind, $now); $note = ($ex && $ex['closed']) ? (string)$ex['label'] : ''; // "Heiligabend": why it is closed today
 	$next = 0;
@@ -1199,10 +1205,10 @@ function shop_pos_popular($limit = 12) {
 }
 // the last orders taken at the till today; one that nobody has accepted yet (status new) and is at most 10 minutes old can still be taken back
 function shop_pos_recent($limit = 6) {
-	$rows = fb_rows("SELECT id, day_no, number, type, status, customer_name, total_cents, scheduled_at, eta_at, created_at FROM ".fb_t('tp_shop_orders')." WHERE source = 'phone' AND is_test = 0 AND order_date = ? ORDER BY id DESC LIMIT ".(int)$limit, 's', array(date('Y-m-d')));
+	$rows = fb_rows("SELECT id, day_no, number, type, status, customer_name, total_cents, adjust_note, scheduled_at, eta_at, created_at FROM ".fb_t('tp_shop_orders')." WHERE source = 'phone' AND is_test = 0 AND order_date = ? ORDER BY id DESC LIMIT ".(int)$limit, 's', array(date('Y-m-d')));
 	return array_map(function ($r) {
 		$due = $r['scheduled_at'] ?: $r['eta_at'];
-		return array('id' => (int)$r['id'], 'day_no' => (int)$r['day_no'], 'number' => $r['number'], 'type' => $r['type'], 'status' => $r['status'], 'name' => $r['customer_name'], 'total' => (int)$r['total_cents'],
+		return array('id' => (int)$r['id'], 'day_no' => (int)$r['day_no'], 'number' => $r['number'], 'type' => $r['type'], 'status' => $r['status'], 'name' => $r['customer_name'], 'total' => (int)$r['total_cents'], 'adjust' => (string)$r['adjust_note'],
 			'time' => substr($r['created_at'], 11, 5), 'due' => $due ? substr($due, 11, 5) : '', 'scheduled' => !empty($r['scheduled_at']), 'can_cancel' => $r['status'] === 'new' && time() - strtotime($r['created_at']) <= 600);
 	}, $rows);
 }
@@ -1229,6 +1235,27 @@ function shop_pos_zone_info($lat, $lng, $street, $zip) {
  * is no guest IP - it's the till). $in: type, lines, name, phone, email, street, zip, city, address_note,
  * payment ('cash'|'card_door'), note. Always status 'new', source 'phone', is_test 0.
  */
+// the "-10 %" and "+ Aufschlag" keys of the till: the browser only says on/off, the amount of the surcharge and a reason from a fixed list; the amounts are worked out here.
+// The discount is a percentage of the goods plus the delivery fee, rounded to the cent and never more than that; the surcharge is added on top (euro, up to 50 EUR).
+function shop_pos_reasons($kind) {
+	return $kind === 'surcharge' ? array('Verpackung', 'Sonderfahrt', 'Nachtzuschlag', 'Sonstiges') : array('Stammgast', 'Reklamation', 'Mitarbeiter', 'Sonstiges');
+}
+function shop_pos_adjust($sub, $fee, $in) {
+	$pct = max(1, min(50, (int)shop_setting('pos_discount_pct')));
+	$discount = 0; $surcharge = 0; $notes = array();
+	if (!empty($in['discount'])) {
+		$discount = min($sub + $fee, (int)round(($sub + $fee) * $pct / 100));
+		$why = isset($in['discount_reason']) ? (string)$in['discount_reason'] : '';
+		$notes[] = 'Rabatt '.$pct.' % -'.shop_money($discount).(in_array($why, shop_pos_reasons('discount'), true) ? ' ('.$why.')' : ' (ohne Angabe)');
+	}
+	if (!empty($in['surcharge'])) {
+		$surcharge = (int)$in['surcharge'];
+		if ($surcharge < 1 || $surcharge > 5000) { return array('ok' => false, 'error' => 'Der Aufschlag kann zwischen 0,01 und 50,00 Euro liegen.'); }
+		$why = isset($in['surcharge_reason']) ? (string)$in['surcharge_reason'] : '';
+		$notes[] = 'Aufschlag +'.shop_money($surcharge).(in_array($why, shop_pos_reasons('surcharge'), true) ? ' ('.$why.')' : ' (ohne Angabe)');
+	}
+	return array('ok' => true, 'discount' => $discount, 'surcharge' => $surcharge, 'note' => implode('; ', $notes));
+}
 function shop_create_manual_order($in) {
 	shop_ensure_schema();
 	$type = (isset($in['type']) && $in['type'] === 'pickup') ? 'pickup' : 'delivery';
@@ -1266,7 +1293,9 @@ function shop_create_manual_order($in) {
 	}
 	$pay = isset($in['payment']) ? (string)$in['payment'] : '';
 	if (!in_array($pay, array('cash', 'card_door'), true)) { return array('ok' => false, 'error' => 'Bitte eine Zahlart wählen.'); }
-	$total = $sub + $fee;
+	$adj = shop_pos_adjust($sub, $fee, $in);
+	if (!$adj['ok']) { return $adj; }
+	$total = $sub + $fee + $adj['surcharge'] - $adj['discount'];
 	// a wish time (Y-m-d H:i) stands as the caller chose it; "as soon as possible" is the time the till told the caller (shop_pos_quote)
 	$scheduled = null; $eta = date('Y-m-d H:i:s', time() + shop_pos_quote($type)['min'] * 60);
 	if (!empty($in['when'])) {
@@ -1283,18 +1312,18 @@ function shop_create_manual_order($in) {
 	$now = date('Y-m-d H:i:s');
 	$ok = fb_exec("INSERT INTO ".fb_t('tp_shop_orders')."
 		(token, number, day_no, order_date, type, status, scheduled_at, eta_at, customer_name, phone, email, street, zip, city, address_note, lat, lng, zone_id,
-		 ip_hash, subtotal_cents, fee_cents, tip_cents, total_cents, payment_method, payment_status, note, lang, source, is_test, created_at, updated_at, pay_with_cents)
-		VALUES (?, ?, ?, ?, ?, 'new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?, 0, ?, ?, 'open', ?, 'de', 'phone', 0, ?, ?, ?)",
-		'ssisss'.'s'.'sssssss'.'ddi'.'iii'.'ssss'.'i', array($token, $number, $dayNo, $today, $type, $scheduled, $eta, $name, $phone, $email, $street, $zip, $city, $addrNote,
+		 ip_hash, subtotal_cents, fee_cents, tip_cents, total_cents, payment_method, payment_status, note, lang, source, is_test, created_at, updated_at, pay_with_cents, discount_cents, surcharge_cents, adjust_note)
+		VALUES (?, ?, ?, ?, ?, 'new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?, 0, ?, ?, 'open', ?, 'de', 'phone', 0, ?, ?, ?, ?, ?, ?)",
+		'ssisss'.'s'.'sssssss'.'ddi'.'iii'.'ssss'.'i'.'iis', array($token, $number, $dayNo, $today, $type, $scheduled, $eta, $name, $phone, $email, $street, $zip, $city, $addrNote,
 			$lat === null ? 0 : $lat, $lng === null ? 0 : $lng, $zoneId === null ? 0 : $zoneId, $sub, $fee, $total, $pay,
-			mb_substr(trim((string)(isset($in['note']) ? $in['note'] : '')), 0, 500), $now, $now, $payWith));
-	if (!$ok) { return array('ok' => false, 'error' => 'Die Bestellung konnte nicht gespeichert werden. Bitte versuche es noch einmal.'); }
+			mb_substr(trim((string)(isset($in['note']) ? $in['note'] : '')), 0, 500), $now, $now, $payWith, $adj['discount'], $adj['surcharge'], $adj['note']));
+	if (!$ok) { shop_dayno_unlock(); return array('ok' => false, 'error' => 'Die Bestellung konnte nicht gespeichert werden. Bitte versuche es noch einmal.'); }
 	$id = (int)mysqli_insert_id(fb_db()); shop_dayno_unlock();
 	foreach ($items as $it) {
 		fb_exec("INSERT INTO ".fb_t('tp_shop_order_items')." (order_id, product_id, variation_id, title, variation, options, qty, unit_cents, line_cents, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 			'iiisssiiis', array($id, $it['product_id'], $it['vid'] > 0 ? $it['vid'] : null, $it['title'], $it['variation'], json_encode($it['options'], JSON_UNESCAPED_UNICODE), $it['qty'], $it['unit_cents'], $it['line_cents'], $it['note']));
 	}
-	shop_log($id, 'created', 'phone: '.$pay);
+	shop_log($id, 'created', 'phone: '.$pay.($adj['note'] !== '' ? ' - '.$adj['note'] : ''));
 	return array('ok' => true, 'order' => shop_order($id));
 }
 
@@ -1576,7 +1605,7 @@ function shop_orders_with_items($rows) {
 			'due' => substr($due, 11, 5), 'due_date' => substr($due, 0, 10), 'name' => $r['customer_name'], 'phone' => $r['phone'], 'email' => $r['email'],
 			'address' => $r['type'] === 'delivery' ? trim($r['street'].', '.$r['zip'].' '.$r['city']) : '', 'street' => (string)$r['street'], 'zip' => (string)$r['zip'], 'city' => (string)$r['city'], 'address_note' => $r['address_note'], 'note' => $r['note'],
 			'pay' => $r['payment_method'], 'pay_status' => $r['payment_status'], 'total' => (int)$r['total_cents'], 'fee' => (int)$r['fee_cents'], 'tip' => (int)$r['tip_cents'], 'subtotal' => (int)$r['subtotal_cents'],
-			'items' => isset($items[(int)$r['id']]) ? $items[(int)$r['id']] : array(), 'coupon' => (string)$r['coupon_code'], 'discount' => (int)$r['discount_cents'],
+			'items' => isset($items[(int)$r['id']]) ? $items[(int)$r['id']] : array(), 'coupon' => (string)$r['coupon_code'], 'discount' => (int)$r['discount_cents'], 'surcharge' => (int)$r['surcharge_cents'], 'adjust' => (string)$r['adjust_note'],
 			'token' => $r['token'],
 			'driver_name' => $r['driver_id'] && isset($driverNames[(int)$r['driver_id']]) ? $driverNames[(int)$r['driver_id']] : '',
 			'driver_age' => ($dp = shop_driver_position($r)) ? $dp['age'] : null,

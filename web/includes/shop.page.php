@@ -65,6 +65,8 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 			<input type="number" id="sh-drive" name="kitchen_drive_min" min="0" max="60" value="<?php echo $sh_e($sh['kitchen_drive_min']); ?>"/>
 			<label class="offer-label" for="sh-lead">Vorlauf für Abholung (Minuten)</label>
 			<input type="number" id="sh-lead" name="lead_pickup_min" min="0" max="240" value="<?php echo $sh_e($sh['lead_pickup_min']); ?>"/>
+			<label class="offer-label" for="sh-last">Letzte Bestellung vor Ende der Bestellzeit (Minuten, 0 = bis Ladenschluss)</label>
+			<input type="number" id="sh-last" name="last_order_min" min="0" max="240" value="<?php echo $sh_e($sh['last_order_min']); ?>"/>
 			<label class="offer-label" for="sh-slot">Zeitfenster in Schritten von (Minuten)</label>
 			<input type="number" id="sh-slot" name="slot_min" min="5" max="60" value="<?php echo $sh_e($sh['slot_min']); ?>"/>
 			<label class="offer-label" for="sh-days">Vorbestellung bis zu (Tage im Voraus, 0 = nur heute)</label>

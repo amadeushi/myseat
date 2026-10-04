@@ -90,7 +90,7 @@
 				(o.status === 'failed' && o.fail_reason ? '<p class="orders-fail">Fehlgeschlagen: ' + esc(o.fail_reason) + '</p>' : '') +
 				'<ul>' + o.items.map(function (it) { return '<li>' + it.qty + '× ' + esc(it.title) + (it.variation ? ' (' + esc(it.variation) + ')' : '') + (it.options.length ? ' – ' + esc(it.options.join(', ')) : '') + (it.note ? ' <em>„' + esc(it.note) + '“</em>' : '') + ' <span>' + money(it.line) + '</span></li>'; }).join('') + '</ul>' +
 				(o.note ? '<p><em>Anmerkung: ' + esc(o.note) + '</em></p>' : '') +
-				'<p class="orders-totals">Zwischensumme ' + money(o.subtotal) + (o.discount ? ' · Gutschein ' + esc(o.coupon) + ' −' + money(o.discount) : '') + (o.fee ? ' · Liefergebühr ' + money(o.fee) : '') + (o.tip ? ' · Trinkgeld ' + money(o.tip) : '') + ' · <strong>Gesamt ' + money(o.total) + '</strong></p>' +
+				'<p class="orders-totals">Zwischensumme ' + money(o.subtotal) + (o.discount ? ' · ' + (o.coupon ? 'Gutschein ' + esc(o.coupon) : 'Rabatt') + ' −' + money(o.discount) : '') + (o.surcharge ? ' · Aufschlag +' + money(o.surcharge) : '') + (o.adjust ? ' (' + esc(o.adjust) + ')' : '') + (o.fee ? ' · Liefergebühr ' + money(o.fee) : '') + (o.tip ? ' · Trinkgeld ' + money(o.tip) : '') + ' · <strong>Gesamt ' + money(o.total) + '</strong></p>' +
 				'<p>' + (o.status !== 'done' && o.status !== 'cancelled' ? '<button type="button" class="offer-delete" data-status="cancelled">Stornieren</button> ' : '') + (o.test ? '<button type="button" class="offer-delete" data-delete="1">Testbestellung löschen</button>' : '') + '</p></div>';
 		}
 		return h + '</div>';

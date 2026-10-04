@@ -8,7 +8,7 @@
 	var page = document.getElementById('pos-page'); if (!page) { return; }
 	var TOKEN = page.dataset.token;
 	var catalog = [], cart = [], activeCat = null, seenCalls = {};
-	var S = { quote: null, when: null, zone: null, zoneErr: '', customer: null, popular: [], payWith: 0, prefilled: false };
+	var S = { disc: false, discWhy: '', sur: 0, surWhy: '', panel: '', quote: null, when: null, zone: null, zoneErr: '', customer: null, popular: [], payWith: 0, prefilled: false };
 	var f = document.getElementById('pos-form');
 
 	function $(s, r) { return (r || document).querySelector(s); }
@@ -506,7 +506,9 @@
 	});
 
 	// ---- Zahlung: cash with "the guest pays with ...", the change is shown for the caller and goes onto the delivery slip
-	function total() { return subtotal() + (type() === 'delivery' && S.zone ? S.zone.fee : 0); }
+	function goods() { return subtotal() + (type() === 'delivery' && S.zone ? S.zone.fee : 0); }
+	function discAmt() { var b = goods(); return S.disc ? Math.min(b, Math.round(b * DISC_PCT / 100)) : 0; }
+	function total() { return goods() + S.sur - discAmt(); }
 	function renderCash() {
 		var box = $('#kx-cash'), cash = pay() === 'cash'; box.hidden = !cash;
 		if (!cash) { S.payWith = 0; return; }
@@ -523,15 +525,52 @@
 	$('#kx-cash-in').addEventListener('input', function () { var n = parseFloat(this.value.replace(',', '.')); S.payWith = isFinite(n) && n > 0 ? Math.round(n * 100) : 0; renderCash(); });
 	$$('input[name=payment]', f).forEach(function (r) { r.addEventListener('change', renderCash); });
 
+	// ---- Preis anpassen: "-10 %" and "+ Aufschlag" under the sum; the server works out the amounts again, the browser only sends on/off, the euro amount and a reason
+	var DISC_PCT = +$('#kx-disc').dataset.pct || 10, SUR_MAX = 5000, DISC_WHY = ['Stammgast', 'Reklamation', 'Mitarbeiter', 'Sonstiges'], SUR_WHY = ['Verpackung', 'Sonderfahrt', 'Nachtzuschlag', 'Sonstiges'], SUR_AMTS = [100, 200, 500];
+	function whyChips(list, cur, key) { return list.map(function (w) { return '<button type="button" class="kx-chip' + (cur === w ? ' is-on' : '') + '" data-why-' + key + '="' + esc(w) + '" aria-pressed="' + (cur === w) + '">' + esc(w) + '</button>'; }).join(''); }
+	function renderAdj() {
+		$('#kx-disc').setAttribute('aria-pressed', String(S.disc));
+		$('#kx-sur').setAttribute('aria-pressed', String(S.sur > 0 || S.panel === 's')); $('#kx-sur').setAttribute('aria-expanded', String(S.panel === 's'));
+		$('#kx-disc-box').hidden = !(S.disc && S.panel === 'd'); $('#kx-sur-box').hidden = S.panel !== 's';
+		if (S.disc && S.panel === 'd') { $('#kx-disc-why').innerHTML = whyChips(DISC_WHY, S.discWhy, 'd'); }
+		if (S.panel === 's') {
+			$('#kx-sur-amts').innerHTML = SUR_AMTS.map(function (v) { return '<button type="button" class="kx-chip' + (S.sur === v ? ' is-on' : '') + '" data-sur="' + v + '" aria-pressed="' + (S.sur === v) + '">+' + esc(money(v).replace(',00', '')) + '</button>'; }).join('');
+			$('#kx-sur-why').innerHTML = whyChips(SUR_WHY, S.surWhy, 's');
+		}
+	}
+	// one panel at a time, laid over the lower edge of the Bon so the sum stays in view; it closes with a reason, Esc, a click elsewhere or by switching the key off
+	function closePanel() { S.panel = ''; renderAdj(); }
+	function toggleDisc() { S.disc = !S.disc; S.discWhy = ''; S.panel = S.disc ? 'd' : (S.panel === 'd' ? '' : S.panel); renderSum(); }
+	function toggleSur() {
+		if (S.sur || S.panel === 's') { S.sur = 0; S.surWhy = ''; S.panel = ''; $('#kx-sur-in').value = ''; renderSum(); return; }
+		S.panel = 's'; renderSum(); $('#kx-sur-in').focus();
+	}
+	$('#kx-disc').addEventListener('click', toggleDisc);
+	$('#kx-sur').addEventListener('click', toggleSur);
+	$('#kx-sum').addEventListener('click', function (ev) { var b = ev.target.closest('[data-edit]'); if (b) { S.panel = b.dataset.edit; renderAdj(); if (S.panel === 's') { $('#kx-sur-in').focus(); } } });
+	$('#kx-disc-why').addEventListener('click', function (ev) { var b = ev.target.closest('[data-why-d]'); if (b) { S.discWhy = S.discWhy === b.dataset.whyD ? '' : b.dataset.whyD; S.panel = S.discWhy ? '' : 'd'; renderSum(); } });
+	$('#kx-sur-why').addEventListener('click', function (ev) { var b = ev.target.closest('[data-why-s]'); if (b) { S.surWhy = S.surWhy === b.dataset.whyS ? '' : b.dataset.whyS; if (S.surWhy && S.sur) { S.panel = ''; } renderSum(); } });
+	$('#kx-sur-amts').addEventListener('click', function (ev) { var b = ev.target.closest('[data-sur]'); if (b) { S.sur = S.sur === +b.dataset.sur ? 0 : +b.dataset.sur; $('#kx-sur-in').value = ''; renderSum(); } });
+	$('#kx-sur-in').addEventListener('input', function () {
+		var n = parseFloat(this.value.replace(',', '.')), c = isFinite(n) ? Math.round(n * 100) : 0;
+		S.sur = c > 0 && c <= SUR_MAX ? c : 0; this.classList.toggle('is-bad', c > SUR_MAX || (this.value.trim() !== '' && c <= 0)); renderSum();
+	});
+	$('#kx-sur-in').addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); ev.stopPropagation(); if (S.sur) { S.panel = ''; renderAdj(); } } });
+	document.addEventListener('mousedown', function (ev) { if (S.panel && !ev.target.closest('.kx-adjbox, .kx-adj, .kx-adjedit')) { closePanel(); } });
+	document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && S.panel) { ev.stopPropagation(); closePanel(); } }, true);
+
 	// ---- the sum, the line to read back to the caller and the button
 	function renderSum() {
-		var sub = subtotal(), del = type() === 'delivery', fee = del && S.zone ? S.zone.fee : 0, t = sub + fee;
+		var sub = subtotal(), del = type() === 'delivery', fee = del && S.zone ? S.zone.fee : 0, t = total(), da = discAmt();
 		$('#kx-sum').innerHTML = '<div><dt>Zwischensumme</dt><dd>' + money(sub) + '</dd></div>' + (del ? '<div><dt>Lieferung</dt><dd>' + (S.zone ? money(fee) : '<span class="kx-dash">Adresse fehlt</span>') + '</dd></div>' : '') +
+			(S.disc ? '<div class="is-adj"><dt><button type="button" class="kx-adjedit" data-edit="d" title="Grund ändern">Rabatt ' + DISC_PCT + ' %' + (S.discWhy ? ' · ' + esc(S.discWhy) : ' · Grund wählen') + '</button></dt><dd>&minus;' + money(da) + '</dd></div>' : '') +
+			(S.sur ? '<div class="is-adj"><dt><button type="button" class="kx-adjedit" data-edit="s" title="Betrag oder Grund ändern">Aufschlag' + (S.surWhy ? ' · ' + esc(S.surWhy) : ' · Grund wählen') + '</button></dt><dd>+' + money(S.sur) + '</dd></div>' : '') +
 			'<div class="is-total"><dt>Gesamt</dt><dd>' + money(t) + '</dd></div>';
+		renderAdj();
 		$('#kx-go-t').textContent = cart.length ? money(t) : '';
 		$('#kx-go').disabled = !cart.length;
 		var q = S.quote, when = S.when ? 'um ' + slotLabel(S.when) + ' Uhr' : (q ? 'in etwa ' + q.min + ' Minuten, gegen ' + q.eta + ' Uhr' : '');
-		$('#kx-read-t').textContent = cart.length ? 'Ich wiederhole: ' + cart.map(function (l) { return l.qty + ' mal ' + l.title + (l.variation ? ', ' + l.variation : '') + (l.options.length ? ' mit ' + l.options.map(function (o) { return o.title; }).join(' und ') : ''); }).join('; ') + '. Zusammen ' + money(t) + (del && S.zone ? ' mit Lieferung' : '') +
+		$('#kx-read-t').textContent = cart.length ? 'Ich wiederhole: ' + cart.map(function (l) { return l.qty + ' mal ' + l.title + (l.variation ? ', ' + l.variation : '') + (l.options.length ? ' mit ' + l.options.map(function (o) { return o.title; }).join(' und ') : ''); }).join('; ') + '. Zusammen ' + money(t) + (del && S.zone ? ' mit Lieferung' : '') + (S.disc ? ', mit ' + DISC_PCT + ' Prozent Rabatt' : '') + (S.sur ? ', einschließlich ' + money(S.sur) + ' Aufschlag' : '') +
 			(del ? ', nach ' + (f.elements.street.value.trim() || '(Adresse)') : ', zum Abholen') + ', ' + when + '. Zahlung ' + (pay() === 'cash' ? 'bar' : 'mit Karte') + '.' : 'Noch nichts im Bon.';
 		renderCash();
 	}
@@ -596,6 +635,8 @@
 	document.addEventListener('keydown', function (ev) {
 		if (ev.key === 'F2') { ev.preventDefault(); f.elements.phone.focus(); f.elements.phone.select(); return; }
 		if (ev.key === 'F3') { ev.preventDefault(); search.focus(); search.select(); return; }
+		if (ev.key === 'F6') { ev.preventDefault(); toggleDisc(); return; }
+		if (ev.key === 'F7') { ev.preventDefault(); toggleSur(); return; }
 		if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); f.requestSubmit(); return; }
 		if (dlg.open) { return; }
 		if (ev.key === 'Escape') { if (search.value) { search.value = ''; $('#pos-search-clear').hidden = true; renderProducts(); } return; }
@@ -621,6 +662,7 @@
 		var payload = {
 			type: type(), name: el.name.value, phone: el.phone.value, no_phone: !!el.no_phone.checked, street: el.street.value, zip: el.zip.value, city: el.city.value,
 			address_note: el.address_note.value, payment: pay(), note: el.note.value, when: S.when || '', pay_with: pay() === 'cash' ? S.payWith : 0,
+			discount: S.disc ? 1 : 0, discount_reason: S.disc ? S.discWhy : '', surcharge: S.sur, surcharge_reason: S.sur ? S.surWhy : '',
 			lines: cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; })
 		};
 		$('#kx-go').disabled = true; setMsg('Einen Moment ...');
@@ -636,7 +678,7 @@
 		}).catch(function () { $('#kx-go').disabled = !cart.length; fail('Keine Verbindung. Bitte versuche es noch einmal.'); });
 	});
 	function resetBon() {
-		cart = []; saveCart(); f.reset(); S.when = null; S.zone = null; S.zoneErr = ''; S.customer = null; S.payWith = 0; S.prefilled = false; lastLookup = ''; zoneSeq++;
+		cart = []; saveCart(); f.reset(); S.when = null; S.zone = null; S.zoneErr = ''; S.customer = null; S.payWith = 0; S.disc = false; S.discWhy = ''; S.sur = 0; S.surWhy = ''; S.panel = ''; $('#kx-sur-in').value = ''; S.prefilled = false; lastLookup = ''; zoneSeq++;
 		$('#pos-zone').innerHTML = ''; $('#kx-custom').hidden = true; $('#kx-cash-in').value = ''; $('#pos-search').value = ''; $('#pos-search-clear').hidden = true;
 		renderCart(); renderCust(); pickDefaultCat(); renderCats(); renderProducts(); syncType(); setMsg('');
 		f.elements.phone.focus();
@@ -644,7 +686,7 @@
 	var doneTimer = null;
 	function showDone(o, due) {
 		var box = $('#kx-done'); clearTimeout(doneTimer);
-		box.innerHTML = '<p class="kx-done-t">' + ICON_OK + 'Bestellung <b>#' + o.day_no + '</b> angelegt</p><p class="kx-done-s">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + ' ' + (o.scheduled_at ? 'um ' : 'gegen ') + '<b>' + esc(String(due).slice(11, 16)) + ' Uhr</b> · ' + money(o.total_cents) + '</p>' +
+		box.innerHTML = '<p class="kx-done-t">' + ICON_OK + 'Bestellung <b>#' + o.day_no + '</b> angelegt</p><p class="kx-done-s">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + ' ' + (o.scheduled_at ? 'um ' : 'gegen ') + '<b>' + esc(String(due).slice(11, 16)) + ' Uhr</b> · ' + money(o.total_cents) + '</p>' + (o.adjust_note ? '<p class="kx-done-s">' + esc(o.adjust_note.replace(/; /g, ' · ')) + '</p>' : '') +
 			'<div class="kx-done-a"><button type="button" class="kx-btn is-gold" data-next>Nächste Bestellung</button><button type="button" class="kx-btn" data-undo="' + o.id + '">Zurücknehmen</button></div>';
 		box.hidden = false; $('#kx-scroll').scrollTop = 0;
 		doneTimer = setTimeout(function () { box.hidden = true; }, 60000);
@@ -666,7 +708,7 @@
 			if (!r.ok) { return; }
 			$('#kx-recent > summary').textContent = 'Zuletzt erfasst' + (r.orders.length ? ' (' + r.orders.length + ')' : '');
 			$('#kx-recent-l').innerHTML = r.orders.length ? r.orders.map(function (o) {
-				return '<div class="kx-rec"><span><b>#' + o.day_no + '</b> · ' + esc(o.name) + ' · ' + money(o.total) + '</span><span class="kx-rec-s">' + esc(o.time) + ' Uhr · ' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + (o.due ? ' ' + (o.scheduled ? 'um ' : 'gegen ') + esc(o.due) : '') + ' · ' + esc(STATUS_T[o.status] || o.status) + '</span>' +
+				return '<div class="kx-rec"><span><b>#' + o.day_no + '</b> · ' + esc(o.name) + ' · ' + money(o.total) + (o.adjust ? ' <i class="kx-rec-adj">' + esc(o.adjust.replace(/ [-+][0-9,]+ €/g, '').replace(/; /g, ' · ')) + '</i>' : '') + '</span><span class="kx-rec-s">' + esc(o.time) + ' Uhr · ' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + (o.due ? ' ' + (o.scheduled ? 'um ' : 'gegen ') + esc(o.due) : '') + ' · ' + esc(STATUS_T[o.status] || o.status) + '</span>' +
 					(o.can_cancel ? '<button type="button" class="kx-mini" data-undo="' + o.id + '">Zurücknehmen</button>' : '') + '</div>';
 			}).join('') : '<p class="kx-empty">Heute noch nichts an der Kasse erfasst.</p>';
 		}).catch(function () {});
