@@ -480,3 +480,6 @@
 .gb-actions .gb-btn { min-width: 120px; }
 .shop-group-btn { min-height: 44px; padding: 0 16px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: transparent; color: var(--gold-strong); font-size: 14px; font-weight: 600; white-space: nowrap; }
 .shop-group-btn:hover { border-color: var(--gold); }
+
+/* sideways rows dragged with the mouse (dragscroll.js): the grabbing hand, no text selection, no snapping against the hand */
+.is-dragging { cursor: grabbing !important; user-select: none; -webkit-user-select: none; scroll-snap-type: none !important; scroll-behavior: auto !important; }

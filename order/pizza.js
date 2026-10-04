@@ -243,7 +243,9 @@
 		// the cheese that is already on every pizza (under the sauce swirls and the toppings); a vegan pizza (title, or a dough
 		// called vegan) gets paler Pizzaschmelz. "Doppelt Käse" and the like add a second layer on top (layerMelt)
 		function isVegan() { var v = cur(); return /vegan/i.test(p.title) || (!!v && /vegan/i.test(v.title)); }
-		function baseName() { var ch = isVegan() ? 'Pizzaschmelz (vegan)' : 'Käse'; return oval ? 'Tomatensoße, ' + ch : ch; }
+		// every pizza comes with tomato sauce under the cheese (the description of the dish says so); the Flammkuchenart always has it
+		var tomato = oval || !p.description || /tomat/i.test(p.description);
+		function baseName() { var ch = isVegan() ? 'Pizzaschmelz (vegan)' : 'Käse'; return tomato ? 'Tomatensoße, ' + ch : ch; }
 		function drawBase() {
 			while (layerBase.firstChild) { layerBase.removeChild(layerBase.firstChild); }
 			var vg = isVegan(), k, ang, rad;
@@ -255,8 +257,15 @@
 				for (k = 0; k < (vg ? 10 : 18); k++) { ang = ((k * 151.3 + 23) % 360) * Math.PI / 180; var fc = .1 + ((k * 37) % 72) / 100; el('ellipse', { cx: (DX * fc * Math.cos(ang)).toFixed(1), cy: (DY * fc * Math.sin(ang)).toFixed(1), rx: 3 + (k % 3), ry: 2 + (k % 2), fill: vg ? '#e6cf86' : '#d9a336', 'fill-opacity': vg ? '.4' : '.5' }, layerBase); }
 				return;
 			}
+			if (tomato) {
+				// tomato sauce spread over the dough up to the crust: a red rim stays visible around the cheese
+				el('path', { d: wobble(88, 2.2, 8, .3), fill: '#c8452f', 'fill-opacity': '.92', stroke: '#8f2a18', 'stroke-opacity': '.5', 'stroke-width': 1.4 }, layerBase);
+				for (k = 0; k < 26; k++) { ang = ((k * 131.3 + 17) % 360) * Math.PI / 180; rad = 6 + ((k * 31) % 76); el('ellipse', { cx: (rad * Math.cos(ang)).toFixed(1), cy: (rad * Math.sin(ang)).toFixed(1), rx: 7 + (k % 3) * 2, ry: 1.6, fill: '#e56a50', 'fill-opacity': '.4', transform: 'rotate(' + ((k * 53) % 180) + ' ' + (rad * Math.cos(ang)).toFixed(1) + ' ' + (rad * Math.sin(ang)).toFixed(1) + ')' }, layerBase); }
+			}
 			el('path', { d: wobble(83, 3.4, 9, .7), fill: vg ? '#f3e19a' : '#f2cf68', 'fill-opacity': vg ? '.72' : '.8', stroke: vg ? '#d9c070' : '#e0b13c', 'stroke-opacity': '.55', 'stroke-width': 1.6 }, layerBase);
 			for (k = 0; k < (vg ? 9 : 16); k++) { ang = ((k * 151.3 + 23) % 360) * Math.PI / 180; rad = 10 + ((k * 37) % 66); el('ellipse', { cx: (rad * Math.cos(ang)).toFixed(1), cy: (rad * Math.sin(ang)).toFixed(1), rx: 3 + (k % 3), ry: 2 + (k % 2), fill: vg ? '#e6cf86' : '#d9a336', 'fill-opacity': vg ? '.4' : '.5' }, layerBase); }
+			// where the cheese has gaps the sauce shows through
+			if (tomato) { for (k = 0; k < 10; k++) { ang = ((k * 119.7 + 41) % 360) * Math.PI / 180; rad = 14 + ((k * 43) % 62); el('ellipse', { cx: (rad * Math.cos(ang)).toFixed(1), cy: (rad * Math.sin(ang)).toFixed(1), rx: 4 + (k % 3) * 1.5, ry: 2.2 + (k % 2), fill: '#cc4a2f', 'fill-opacity': '.34', transform: 'rotate(' + ((k * 67) % 180) + ' ' + (rad * Math.cos(ang)).toFixed(1) + ' ' + (rad * Math.sin(ang)).toFixed(1) + ')' }, layerBase); } }
 		}
 		drawBase();
 
@@ -483,5 +492,6 @@
 		return true;
 	}
 
-	window.PizzaLab = { open: open };
+	// the pictures, for the manual page of the team (web/handbuch_konfigurator.php): symbol key -> its SVG content and kind (piece, sauce, melt, side)
+	window.PizzaLab = { open: open, symbol: function (k) { return ART[k] ? { g: ART[k].g, t: ART[k].t } : null; } };
 })();

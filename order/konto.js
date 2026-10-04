@@ -82,14 +82,24 @@
 	}
 
 	// ---- the dialog
+	// on a phone the window must stay inside what can be seen (address bar, on-screen keyboard) and the page behind must not scroll along:
+	// the visible height and top of the visual viewport go into two variables the style sheet uses, and the page is locked while the window is open
+	var root = document.documentElement, vv = window.visualViewport;
+	function syncViewport() { root.style.setProperty('--vvh', (vv ? vv.height : window.innerHeight) + 'px'); root.style.setProperty('--vvt', (vv ? vv.offsetTop : 0) + 'px'); }
+	function trackViewport(on) {
+		root.classList.toggle('acc-lock', on);
+		if (on) { syncViewport(); if (vv) { vv.addEventListener('resize', syncViewport); vv.addEventListener('scroll', syncViewport); } }
+		else { if (vv) { vv.removeEventListener('resize', syncViewport); vv.removeEventListener('scroll', syncViewport); } root.style.removeProperty('--vvh'); root.style.removeProperty('--vvt'); }
+	}
 	function openDlg() {
 		if (dlg.open) { return; }
 		trigger = document.activeElement;
+		trackViewport(true);
 		if (typeof dlg.showModal === 'function') { dlg.showModal(); } else { dlg.setAttribute('open', ''); }
 	}
-	dlg.addEventListener('close', function () { clearInterval(timer); pending = null; if (trigger && typeof trigger.focus === 'function') { trigger.focus(); } trigger = null; });
+	dlg.addEventListener('close', function () { clearInterval(timer); pending = null; trackViewport(false); if (trigger && typeof trigger.focus === 'function') { trigger.focus({ preventScroll: true }); } trigger = null; });
 	dlg.addEventListener('click', function (ev) { if (ev.target === dlg) { dlg.close(); } });
-	function focusFirst(sel) { var el = $(sel, dlg); if (el) { el.focus(); } }
+	function focusFirst(sel) { var el = $(sel, dlg); if (el) { el.focus({ preventScroll: true }); } }
 
 	function viewLogin(mode, value) {
 		clearInterval(timer);
@@ -229,7 +239,7 @@
 			var box = $('#acc-stamp', dlg);
 			if (me.stamp && me.stamp.on) { AmadeusStamp.render(box, me.stamp, { known: true, next: true }); } else { box.innerHTML = '<p class="acc-empty">Die Stempelkarte gibt es zurzeit nicht.</p>'; }
 		}
-		if (!keepTab) { var h = $('#acc-title', dlg); if (h) { h.focus(); } }
+		if (!keepTab) { var h = $('#acc-title', dlg); if (h) { h.focus({ preventScroll: true }); } }
 	}
 
 	function signedOut(msg) { setMe({ ok: true, signed_in: false, sms: !me || me.sms !== false }); dlg.close(); SH.toast(msg); }

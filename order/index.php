@@ -147,6 +147,7 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 	<?php if ($acc_on): ?><dialog class="gb-dialog acc-dialog" id="acc-dialog" aria-labelledby="acc-title"></dialog><?php endif; ?>
 	<div class="shop-toast" id="shop-toast" role="status" aria-live="polite"></div>
 	<?php if ($has_conf): ?><script src="pizza.js?v=<?php echo @filemtime(__DIR__.'/pizza.js'); ?>"></script><?php endif; ?>
+	<script src="dragscroll.js?v=<?php echo @filemtime(__DIR__.'/dragscroll.js'); ?>"></script>
 	<script src="shop.js?v=<?php echo @filemtime(__DIR__.'/shop.js'); ?>"></script>
 	<?php if ($acc_on): ?><script src="stempel.js?v=<?php echo @filemtime(__DIR__.'/stempel.js'); ?>"></script><script src="konto.js?v=<?php echo @filemtime(__DIR__.'/konto.js'); ?>"></script><?php endif; ?>
 <?php endif; ?>

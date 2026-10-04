@@ -331,23 +331,39 @@ function shop_product_detail($id) {
  * choice in the menu editor wins, 'none' switches the symbol off, an empty value follows from the name (the menu came from
  * Resmio, so names like "Peperoni (mild)" or "Sambal Hollandaise auf Pizza" decide; the more specific rule comes first).
  */
+// The rules of the automatic symbol, in the order they are tried (the first that matches wins, so a more specific word stands before a general
+// one). Each rule: regular expression on the lower-case name, symbol key, the words as people write them (for the manual page).
+function shop_item_icon_rules() {
+	return array(
+		array('/zum dippen/', 'dip', '"zum Dippen"'),
+		array('/korean/', 'sauce_korean', 'Korean'), array('/sambal/', 'sauce_sambal', 'Sambal'), array('/hollandaise/', 'sauce_hollandaise', 'Hollandaise'),
+		array('/creme fra|crème fra/u', 'sauce_creme', 'Creme fraiche, Crème fraîche'), array('/barbecue|bbq/', 'sauce_bbq', 'Barbecue, BBQ'),
+		array('/knoblauch\s*so/u', 'sauce_garlic', 'Knoblauchsoße'), array('/curry\s*so/u', 'sauce_curry', 'Currysoße'), array('/so(ß|ss)e/u', 'sauce_other', 'Soße, Sosse'),
+		array('/salami/', 'salami', 'Salami'), array('/sucuk/', 'sucuk', 'Sucuk'), array('/schinken/', 'ham', 'Schinken'),
+		array('/hähnchen|haehnchen|chicken/u', 'chicken', 'Hähnchen, Chicken'), array('/thunfisch/', 'tuna', 'Thunfisch'),
+		array('/gamba|garnele|shrimp/', 'shrimp', 'Gamba, Garnele, Shrimp'), array('/nugget/', 'nugget', 'Nugget'), array('/patty|beyond/', 'patty', 'Patty, Beyond'),
+		array('/mozzarella/', 'mozzarella', 'Mozzarella'), array('/parmigiano|parmesan/', 'parmesan', 'Parmigiano, Parmesan'), array('/gorgonzola/', 'gorgonzola', 'Gorgonzola'),
+		array('/schafsk|feta/u', 'feta', 'Schafskäse, Feta'), array('/k(ä|ae)se|schmelz/u', 'melt', 'Käse, Schmelz'),
+		array('/spinat/', 'spinach', 'Spinat'), array('/getr(\.|ocknet).*tomat/', 'sundried', 'getr. / getrocknete Tomaten'), array('/tomate/', 'tomato', 'Tomate'),
+		array('/zwiebel/', 'onion', 'Zwiebel'), array('/olive/', 'olive', 'Olive'), array('/peperoni/', 'pepperoni', 'Peperoni'), array('/paprika/', 'pepper', 'Paprika'),
+		array('/mais/', 'corn', 'Mais'), array('/brokkoli|broccoli/', 'broccoli', 'Brokkoli, Broccoli'), array('/artischock/', 'artichoke', 'Artischocke'),
+		array('/ananas/', 'pineapple', 'Ananas'), array('/rucola/', 'arugula', 'Rucola'), array('/kapern/', 'caper', 'Kapern'), array('/champignon|pilz/', 'mushroom', 'Champignon, Pilz'),
+	);
+}
+// the names of the symbols (the same list the menu editor offers in its drop-down, web/js/menu_editor.js ICONS)
+function shop_item_icon_labels() {
+	return array('tomato' => 'Tomate', 'spinach' => 'Spinat', 'onion' => 'Zwiebel', 'olive' => 'Olive', 'pepperoni' => 'Peperoni', 'pepper' => 'Paprika', 'corn' => 'Mais', 'broccoli' => 'Brokkoli',
+		'artichoke' => 'Artischocke', 'pineapple' => 'Ananas', 'sundried' => 'Getrocknete Tomate', 'arugula' => 'Rucola', 'caper' => 'Kapern', 'mushroom' => 'Champignon', 'melt' => 'Geschmolzener Käse',
+		'parmesan' => 'Parmesan', 'gorgonzola' => 'Gorgonzola', 'mozzarella' => 'Mozzarella', 'feta' => 'Schafskäse', 'ham' => 'Schinken', 'salami' => 'Salami', 'sucuk' => 'Sucuk', 'chicken' => 'Hähnchen',
+		'tuna' => 'Thunfisch', 'shrimp' => 'Garnele', 'nugget' => 'Nugget', 'patty' => 'Patty', 'sauce_hollandaise' => 'Soße Hollandaise', 'sauce_sambal' => 'Soße Sambal', 'sauce_creme' => 'Soße Crème fraîche',
+		'sauce_bbq' => 'Soße BBQ', 'sauce_korean' => 'Soße Korean BBQ', 'sauce_garlic' => 'Soße Knoblauch', 'sauce_curry' => 'Soße Curry', 'sauce_other' => 'Soße (andere)', 'dip' => 'Dip (Beilage)');
+}
 function shop_item_icon($title, $icon = '') {
 	$icon = (string)$icon;
 	if ($icon === 'none') { return ''; }
 	if ($icon !== '') { return preg_match('/^[a-z_]{2,20}$/', $icon) ? $icon : ''; }
 	$t = mb_strtolower((string)$title, 'UTF-8');
-	$rules = array(
-		'/zum dippen/' => 'dip',
-		'/korean/' => 'sauce_korean', '/sambal/' => 'sauce_sambal', '/hollandaise/' => 'sauce_hollandaise', '/creme fra|crème fra/u' => 'sauce_creme',
-		'/barbecue|bbq/' => 'sauce_bbq', '/knoblauch\s*so/u' => 'sauce_garlic', '/curry\s*so/u' => 'sauce_curry', '/so(ß|ss)e/u' => 'sauce_other',
-		'/salami/' => 'salami', '/sucuk/' => 'sucuk', '/schinken/' => 'ham', '/hähnchen|haehnchen|chicken/u' => 'chicken', '/thunfisch/' => 'tuna',
-		'/gamba|garnele|shrimp/' => 'shrimp', '/nugget/' => 'nugget', '/patty|beyond/' => 'patty',
-		'/mozzarella/' => 'mozzarella', '/parmigiano|parmesan/' => 'parmesan', '/gorgonzola/' => 'gorgonzola', '/schafsk|feta/u' => 'feta', '/k(ä|ae)se|schmelz/u' => 'melt',
-		'/spinat/' => 'spinach', '/getr(\.|ocknet).*tomat/' => 'sundried', '/tomate/' => 'tomato', '/zwiebel/' => 'onion', '/olive/' => 'olive', '/peperoni/' => 'pepperoni',
-		'/paprika/' => 'pepper', '/mais/' => 'corn', '/brokkoli|broccoli/' => 'broccoli', '/artischock/' => 'artichoke', '/ananas/' => 'pineapple', '/rucola/' => 'arugula',
-		'/kapern/' => 'caper', '/champignon|pilz/' => 'mushroom',
-	);
-	foreach ($rules as $re => $key) { if (preg_match($re, $t)) { return $key; } }
+	foreach (shop_item_icon_rules() as $r) { if (preg_match($r[0], $t)) { return $r[1]; } }
 	return '';
 }
 
@@ -1337,6 +1353,8 @@ function shop_kitchen_board() {
 		$min = ($o['type'] === 'delivery') ? $drive : 0;
 		$out[] = array('id' => $o['id'], 'day_no' => $o['day_no'], 'number' => $o['number'], 'type' => $o['type'], 'status' => $o['status'], 'test' => $o['test'], 'source' => $o['source'],
 			'due' => $o['due'], 'scheduled' => $o['scheduled'], 'asap' => ($o['scheduled'] === ''), 'due_ts' => $dueTs, 'drive_min' => $min, 'out_ts' => $dueTs - $min * 60, 'out' => date('H:i', $dueTs - $min * 60),
+			// of a delivery only the name and the postcode: enough to talk the tours through with the kitchen, no street, no phone
+			'name' => $o['type'] === 'delivery' ? $o['name'] : '', 'zip' => $o['type'] === 'delivery' ? $o['zip'] : '',
 			'accepted_ts' => $accepted[$o['id']], 'note' => $o['note'], 'items' => $o['items']);
 	}
 	// what has to leave the kitchen first stands first

@@ -8,7 +8,11 @@
 @media (max-width: 899px) { .shop-top-in .shop-logo { order: -2; } .shop-top-in .acc-btn { margin-left: auto; order: -1; } }
 
 /* dialog: the group dialog's card, taller content scrolls inside */
-.gb-dialog.acc-dialog { width: min(520px, calc(100% - 16px)); max-height: calc(100% - 24px); overflow: auto; overscroll-behavior: contain; }
+.gb-dialog.acc-dialog { width: min(520px, calc(100% - 16px)); max-height: calc(100% - 24px); max-height: calc(var(--vvh, 100dvh) - 16px); overflow: auto; overscroll-behavior: contain; }
+/* the page behind stands still while the window is open */
+html.acc-lock { overflow: hidden; }
+/* phones: the window sits at the top of what is visible, so the on-screen keyboard and the moving address bar never cover its buttons */
+@media (max-width: 600px) { .gb-dialog.acc-dialog { inset: calc(var(--vvt, 0px) + 8px) 0 auto 0; margin: 0 auto; } }
 .acc-form .acc-code { font-size: 28px; letter-spacing: 0.4em; text-align: center; font-variant-numeric: tabular-nums; padding-left: 0.4em; }
 .shop-shell .acc-form .acc-fine, .shop-shell .acc-fine { color: var(--text-muted); font-size: 13px; line-height: 1.5; }
 .acc-resend { justify-self: center; min-height: 44px; border: 0; background: transparent; color: var(--gold); font-size: 14px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }

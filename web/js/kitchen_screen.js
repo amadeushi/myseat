@@ -13,6 +13,8 @@
 	} catch (e) {}
 	function saveAcked() { try { sessionStorage.setItem('ksAcked', JSON.stringify(acked)); } catch (e) {} }
 
+	// the print slip is a drawn symbol next to "Fertig" (same drawing as on the dispatch screen), not a text button of its own row
+	var ICON_PRINT = '<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M7 9V4h10v5M7 17H5a1.500 1.500 0 0 1-1.500-1.500v-5A1.500 1.500 0 0 1 5 9h14a1.500 1.500 0 0 1 1.500 1.500v5A1.500 1.500 0 0 1 19 17h-2M7 14h10v6H7z" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 	function $(s) { return document.querySelector(s); }
 	function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
@@ -56,12 +58,12 @@
 		// never through the failure color alone, matching the fix already made on the dispatch board
 		return '<article class="ks-card' + (acked[o.id] ? '' : ' is-fresh') + (late ? ' is-late' : '') + '" data-id="' + o.id + '"><header class="ks-head"><span class="ks-no">#' + o.day_no + '</span><span class="k-type ' + esc(o.type) + '">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + '</span>' +
 			'<span class="k-badge">' + (o.status === 'preparing' ? 'Wird gekocht' : 'Angenommen') + '</span>' +
-			(o.test ? '<span class="k-badge">Test</span>' : '') + '</header>' + (o.asap ? '<div class="ks-asap" role="status"><b>Sofort</b><span>so schnell wie möglich</span></div>' : '') + outLine(o) + '<div class="ks-due' + (late ? ' k-late' : '') + '"><span class="ks-dl">' + dueLabel + '</span><b>' + esc(due) + '</b><small>' + since(o.accepted_ts) + (late ? ' · VERSPÄTET' : '') + '</small></div>' +
+			(o.test ? '<span class="k-badge">Test</span>' : '') + '</header>' + (o.type === 'delivery' && (o.name || o.zip) ? '<p class="ks-who" title="' + esc(o.name) + '"><span class="ks-wname">' + esc(o.name) + '</span>' + (o.zip ? '<span class="ks-zip">' + esc(o.zip) + '</span>' : '') + '</p>' : '') + (o.asap ? '<div class="ks-asap" role="status"><b>Sofort</b><span>so schnell wie möglich</span></div>' : '') + outLine(o) + '<div class="ks-due' + (late ? ' k-late' : '') + '"><span class="ks-dl">' + dueLabel + '</span><b>' + esc(due) + '</b><small>' + since(o.accepted_ts) + (late ? ' · VERSPÄTET' : '') + '</small></div>' +
 			'<ul class="ks-items">' + o.items.map(function (it) {
 				return '<li class="ks-item"><span class="ks-qty">' + it.qty + '×</span><span class="ks-title">' + esc(it.title) + '</span>' + (it.variation ? '<span class="ks-var">' + esc(it.variation) + '</span>' : '') +
 					it.options.map(function (op) { return '<span class="ks-opt">+ ' + esc(op) + '</span>'; }).join('') + (it.note ? '<span class="ks-note">' + esc(it.note) + '</span>' : '') + '</li>';
 			}).join('') + '</ul>' + (o.note ? '<p class="ks-onote">' + esc(o.note) + '</p>' : '') +
-			'<footer class="ks-foot"><button type="button" class="k-btn ks-bon" data-bon="' + o.id + '">Bon drucken</button><button type="button" class="k-go ks-done" data-done="' + o.id + '">Fertig</button></footer></article>';
+			'<footer class="ks-foot"><button type="button" class="k-go ks-done" data-done="' + o.id + '">Fertig</button><button type="button" class="k-icon ks-bon" data-bon="' + o.id + '" aria-label="Bon drucken" title="Bon drucken">' + ICON_PRINT + '</button></footer></article>';
 	}
 	// diff-rendered by order id instead of a wholesale innerHTML replace on every change: a full rebuild used to
 	// wipe out an in-progress "Wirklich fertig?" confirm (its armed state lives on the button's own DOM

@@ -52,6 +52,17 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.12.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Küchenmonitor zeigt bei Lieferungen Name und Postleitzahl des Gastes (zum Durchsprechen der Touren); der Küchenbon trägt Name
+   und bei Lieferungen die Postleitzahl, bei Abholungen den Namen.
+ * New: Das Druckersymbol ersetzt den Knopf "Bon drucken" in der Küchenkarte und spart Platz für die Gerichte.
+ * New: Handbuchseite "Handbuch Konfigurator" (Backend, Menüeditor): wie Symbole und Namen der Zutaten erkannt werden, mit Namens-Tester
+   und Symbol-Galerie.
+ * New: Tomatensoße ist auf den runden Pizzen im Konfigurator sichtbar.
+ * New: Seitliche Leisten im Webshop und Konfigurator lassen sich am Desktop mit der Maus ziehen.
+ * Fix: Kundenkonto-Fenster auf dem Handy wird nicht mehr abgeschnitten und springt beim Scrollen nicht mehr.
+
 2026-10-05 == mySeat v6.11.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Disposition im Hochformat (Monitor auf der Seite, ab etwa 1000 x 1500 Pixel; kleinere Hochformat-Bildschirme behalten die

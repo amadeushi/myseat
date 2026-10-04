@@ -1,7 +1,7 @@
 <?php
 /*
  * Paper slip of one order for a receipt printer (72 mm). Without "full" it is the kitchen slip: number, type, time, dishes, notes,
- * nothing about the guest. With full=1 it is the delivery slip: name, address, phone, what to collect. Needs a backend login
+ * only name (and the postcode of a delivery, to talk through tours) about the guest. With full=1 it is the delivery slip: name, address, phone, what to collect. Needs a backend login
  * (Reservation-Edit). The monitors load it in a hidden frame and call print(); opened on its own, ?print=1 prints at once.
  */
 session_start();
@@ -44,6 +44,7 @@ $due = $o['scheduled_at'] ?: ($o['eta_at'] ?: $o['created_at']);
 		.item .opt { display: block; margin-left: 9mm; font-size: 12.5pt; font-weight: 500; }
 		.item .note, .onote { display: block; margin: 3px 0 0 9mm; font-weight: 800; font-size: 12.5pt; border: 2px solid #000; padding: 1px 4px; }
 		.onote { margin-left: 0; }
+		.who { margin-top: 4px; font-size: 17pt; line-height: 1.15; }
 		.small { font-size: 10pt; }
 		.pay { font-size: 15pt; font-weight: 800; margin-top: 6px; }
 		@media screen { body { padding: 12px; border: 1px dashed #999; margin-top: 12px; } }
@@ -52,6 +53,9 @@ $due = $o['scheduled_at'] ?: ($o['eta_at'] ?: $o['created_at']);
 <body>
 	<div class="row"><h1>#<?php echo (int)$o['day_no']; ?></h1><span class="type"><?php echo $delivery ? 'Lieferung' : 'Abholung'; ?></span></div>
 	<div class="row"><span class="time"><?php echo $o['scheduled_at'] ? 'geplant ' : ''; ?><?php echo $h(substr($due, 11, 5)); ?></span><span class="small"><?php echo $h($o['number']); ?><?php echo $o['is_test'] ? ' TEST' : ''; ?></span></div>
+	<?php if (!$full): ?>
+		<div class="who"><strong><?php echo $h($o['customer_name']); ?></strong><?php echo ($delivery && trim((string)$o['zip']) !== '') ? ' · '.$h($o['zip']) : ''; ?></div>
+	<?php endif; ?>
 	<?php if ($full): ?>
 		<hr/>
 		<div><strong><?php echo $h($o['customer_name']); ?></strong><br/><?php echo $h($o['phone']); ?>

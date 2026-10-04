@@ -96,7 +96,7 @@
 .ks-board { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1fr); display: grid; grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr)); gap: 10px; padding: 10px; }
 .ks-empty { grid-column: 1 / -1; align-self: center; text-align: center; font-size: 44px; font-weight: 700; color: var(--muted); }
 .ks-empty span { font-size: 28px; font-weight: 500; }
-.ks-card { min-height: 0; display: flex; flex-direction: column; background: var(--surface); border: 2px solid var(--border); border-radius: 14px; padding: 14px 16px 12px; }
+.ks-card { min-height: 0; display: flex; flex-direction: column; background: var(--surface); border: 2px solid var(--border); border-radius: 14px; padding: 12px 16px 10px; }
 .ks-card.is-fresh { border-color: var(--amber); animation: ks-pulse 1.4s ease-in-out infinite; }
 /* an order sitting in the kitchen too long used to look identical to one accepted seconds ago - escalates
    through amber plus the "VERSPÄTET" text in kitchen_screen.js, same non-color-only pattern as disposition.php */
@@ -114,7 +114,10 @@
 /* "so schnell wie moeglich": a solid amber bar, readable from across the kitchen; the word carries it, not only the color */
 .ks-asap { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 6px 0 0; padding: 4px 12px; border-radius: 10px; background: var(--amber); color: #1c1305; }
 .ks-asap b { font-size: 24px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.1; }
-.ks-asap span { font-size: 16px; font-weight: 700; }
+.ks-asap span { display: none; font-size: 16px; font-weight: 700; }
+/* the word "Sofort" says it; the explanation only where the card is wide enough for it to stay on one line */
+.ks-card { container-type: inline-size; }
+@container (min-width: 290px) { .ks-asap span { display: inline; } }
 /* when a delivery has to leave the kitchen = due time minus the drive; amber when it is close, red with text once it is over */
 .ks-out { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 10px; flex-wrap: wrap; margin: 6px 0 0; padding: 2px 12px; border-radius: 10px; border: 2px solid var(--border); background: rgba(255, 255, 255, 0.03); }
 .ks-out span { font-size: 15px; font-weight: 700; color: var(--muted); flex: 0 0 auto; }
@@ -124,7 +127,7 @@
 .ks-out.is-soon b, .ks-out.is-soon small { color: var(--amber); }
 .ks-out.is-over { border-color: var(--danger); background: rgba(226, 134, 124, 0.12); }
 .ks-out.is-over b, .ks-out.is-over small { color: var(--danger); }
-.ks-items { flex: 1; min-height: 90px; overflow-y: auto; }
+.ks-items { flex: 1; min-height: 70px; overflow-y: auto; }
 .ks-item { padding: 10px 0; border-bottom: 1px solid var(--border); display: grid; grid-template-columns: auto 1fr; column-gap: 12px; }
 .ks-item:last-child { border-bottom: 0; }
 .ks-qty { grid-row: 1; font-size: 34px; font-weight: 800; color: var(--gold-strong); line-height: 1.1; }
@@ -134,9 +137,9 @@
 .ks-opt { font-size: 25px; font-weight: 600; line-height: 1.25; margin-top: 2px; }
 .ks-note, .ks-onote { margin-top: 6px; padding: 6px 12px; border-radius: 10px; background: rgba(232, 176, 74, 0.18); color: var(--amber); font-size: 25px; font-weight: 800; line-height: 1.25; }
 .ks-onote { margin-top: 10px; }
-.ks-foot { display: grid; gap: 6px; margin-top: 8px; }
-.ks-done { width: 100%; min-height: 64px; font-size: 24px; order: -1; }
-.ks-bon { width: 100%; justify-content: center; min-height: 40px; }
+.ks-foot { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 8px; }
+.ks-done { width: 100%; min-height: 64px; font-size: 24px; line-height: 1.1; padding: 0 8px; }
+.ks-bon.k-icon { width: 64px; height: 64px; border-radius: 12px; }
 
 /* Fahrer-Karte (disposition.php): a toggled panel between the top bar and the board, not a modal overlay -
    it pushes the board down rather than covering it, so the board stays glanceable while the map is open */
@@ -294,3 +297,8 @@ body:not(.is-portrait) .k-col[data-col="out"], body:not(.is-portrait) .k-col[dat
 .k-retry-f input { width: 100%; min-width: 0; min-height: 52px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); color: var(--text); font: inherit; font-size: 19px; font-weight: 600; }
 .k-retry-f input:focus { border-color: var(--gold); outline: 3px solid var(--gold-strong); outline-offset: 1px; }
 .k-retry-msg { min-height: 1.5em; margin-top: 8px; font-size: 16px; font-weight: 700; color: var(--danger); }
+
+/* name and postcode of a delivery: what the kitchen needs to talk the tours through */
+.ks-who { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 4px 0 0; font-size: 21px; font-weight: 800; line-height: 1.2; }
+.ks-wname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ks-zip { flex: none; padding: 1px 10px; border-radius: 8px; background: rgba(201, 162, 89, 0.18); color: var(--gold-strong); font-variant-numeric: tabular-nums; }
