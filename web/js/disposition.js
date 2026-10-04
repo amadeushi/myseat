@@ -372,7 +372,7 @@
 			}).catch(function () { notify('Das hat nicht geklappt. Bitte versuche es noch einmal.'); ad.disabled = false; });
 			return;
 		}
-		if (ev.target.closest('[data-mapopen]')) { var tg = $('#k-drivers-toggle'), pn = $('#k-drivers'); if (tg && pn && pn.hidden) { tg.click(); } return; }
+		var mo = ev.target.closest('[data-mapopen]'); if (mo) { var host = mo.closest('[data-id]'); location.href = 'fahrerkarte.php' + (host && host.dataset.id ? '?o=' + encodeURIComponent(host.dataset.id) : ''); return; }
 		var bonBtn = ev.target.closest('[data-bon]'); if (bonBtn) { MonitorPrint.slip(bonBtn.dataset.bon, true); return; }
 		var gl = ev.target.closest('[data-guestlink]');
 		if (gl) {
@@ -419,42 +419,4 @@
 	var onLayout = function () { applyLayout(); resetNodes(); page['new'] = page.ready = page.out = 0; render(); };
 	if (PQ.addEventListener) { PQ.addEventListener('change', onLayout); } else if (PQ.addListener) { PQ.addListener(onLayout); }
 	load(); setInterval(load, 6000);
-
-	// ---- Fahrer-Karte: every active driver's current position, plus the delivery (if any) he has.
-	// Only built and polled while the panel is actually open, to not waste a Leaflet map on a monitor
-	// where nobody ever looks at it.
-	(function () {
-		var toggle = $('#k-drivers-toggle'), panel = $('#k-drivers'), closeBtn = $('#k-drivers-close'); if (!toggle || !panel) { return; }
-		var map = null, markers = {}, poll = null;
-		function colorFor(id) { return ['#c9a259', '#62b6cb', '#8fbf7a', '#a99be8', '#e2b56b', '#c65a4f'][id % 6]; }
-		function ensureMap(origin) {
-			if (map) { return; }
-			map = L.map('k-drivers-map').setView(origin ? [origin[0], origin[1]] : [52.1508, 9.9511], 13);
-			L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 }).addTo(map);
-		}
-		function refresh() {
-			fetch('ajax/shop_orders.php?op=drivers_live', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (r) {
-				if (!r.ok) { return; }
-				ensureMap(r.origin);
-				var seenIds = {};
-				r.drivers.forEach(function (d) {
-					seenIds[d.id] = true;
-					var label = esc(d.name) + (d.order ? ' · Lieferung #' + d.order.day_no : ' · ohne Lieferung');
-					if (markers[d.id]) { markers[d.id].setLatLng([d.lat, d.lng]).setTooltipContent(label); }
-					else {
-						markers[d.id] = L.circleMarker([d.lat, d.lng], { radius: 9, color: colorFor(d.id), weight: 2, fillOpacity: 0.85 }).addTo(map).bindTooltip(label, { permanent: true, direction: 'top', className: 'k-drivers-tip' });
-					}
-				});
-				Object.keys(markers).forEach(function (id) { if (!seenIds[id]) { map.removeLayer(markers[id]); delete markers[id]; } });
-				$('#k-drivers-note').textContent = r.drivers.length ? '' : 'Gerade kein Fahrer mit aktuellem Standort.';
-			}).catch(function () {});
-		}
-		toggle.addEventListener('click', function () {
-			var open = panel.hidden;
-			panel.hidden = !open; toggle.setAttribute('aria-pressed', open ? 'true' : 'false');
-			if (open) { refresh(); if (map) { setTimeout(function () { map.invalidateSize(); }, 50); } poll = setInterval(refresh, 10000); }
-			else if (poll) { clearInterval(poll); poll = null; }
-		});
-		if (closeBtn) { closeBtn.addEventListener('click', function () { toggle.click(); }); }
-	})();
 })();

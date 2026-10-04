@@ -102,6 +102,13 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 			<input type="text" id="sh-asd" name="account_sms_daily" inputmode="numeric" value="<?php echo $sh_e($sh['account_sms_daily']); ?>"/>
 		</div>
 
+		<h4 class="sms-sub">Weg der Fahrer</h4>
+		<small class="offer-help">Die Fahrerkarte der Disposition zeigt die Spur, die ein Fahrer gefahren ist. Die Punkte werden so viele Tage aufbewahrt und danach gelöscht. 0 heißt: Es wird nichts gespeichert, die Karte zeigt dann nur die aktuelle Position. Bitte informiert die Fahrer darüber.</small>
+		<div class="shop-grid">
+			<label class="offer-label" for="sh-trk">Aufbewahrung in Tagen (0 bis 30)</label>
+			<input type="text" id="sh-trk" name="track_days" inputmode="numeric" value="<?php echo $sh_e($sh['track_days']); ?>"/>
+		</div>
+
 		<h4 class="sms-sub">Standort des Restaurants</h4>
 		<small class="offer-help">Für die Karte auf der Statusseite: Gäste sehen, wo wir sind und wohin geliefert wird. Ohne Adresse zeigt die Karte nur das Ziel, und die Fahrer sehen keine Entfernung.</small>
 		<div class="shop-grid">
@@ -203,6 +210,7 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 		<form class="shop-zone" data-id="<?php echo (int)$d['id']; ?>">
 			<input type="text" name="name" value="<?php echo $sh_e($d['name']); ?>" maxlength="80" placeholder="Name" aria-label="Name"/>
 			<input type="text" name="device_id" value="<?php echo $sh_e($d['device_id']); ?>" maxlength="64" placeholder="Geräte-ID" aria-label="Geräte-ID"/>
+			<input type="text" name="phone" value="<?php echo $sh_e($d['phone']); ?>" maxlength="40" placeholder="Telefon (für die Disposition)" aria-label="Telefon des Fahrers"/>
 			<label class="offer-check"><input type="checkbox" name="active" value="1"<?php echo $d['active'] ? ' checked' : ''; ?>/> aktiv</label>
 			<span class="offer-badge<?php echo ($d['last_seen_min'] !== null && $d['last_seen_min'] <= 10) ? ' sms-badge-on' : ''; ?>">
 				<?php if ($d['last_seen_min'] === null): ?>Noch nie gesehen - Geräte-ID in der Traccar-App prüfen
@@ -218,6 +226,7 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 		<form class="shop-zone" data-id="0">
 			<input type="text" name="name" value="" maxlength="80" placeholder="Name" aria-label="Name"/>
 			<input type="text" name="device_id" value="" maxlength="64" placeholder="Geräte-ID" aria-label="Geräte-ID"/>
+			<input type="text" name="phone" value="" maxlength="40" placeholder="Telefon (für die Disposition)" aria-label="Telefon des Fahrers"/>
 			<label class="offer-check"><input type="checkbox" name="active" value="1" checked/> aktiv</label>
 			<button type="submit" class="button_dark">Fahrer anlegen</button>
 			<span class="detail-status" role="status" aria-live="polite"></span>
@@ -335,7 +344,7 @@ window.addEventListener('load', function () {
 		var out = f.querySelector('.detail-status');
 		f.addEventListener('submit', function (ev) {
 			ev.preventDefault();
-			post('save_driver', { id: f.dataset.id, name: f.elements.name.value, device_id: f.elements.device_id.value, active: f.elements.active.checked ? '1' : '' },
+			post('save_driver', { id: f.dataset.id, name: f.elements.name.value, device_id: f.elements.device_id.value, phone: f.elements.phone.value, active: f.elements.active.checked ? '1' : '' },
 				function (r) { say(out, r.message, false); setTimeout(function () { location.reload(); }, 600); }, function (e) { say(out, e, true); });
 		});
 		var del = f.querySelector('[data-driver-delete]');

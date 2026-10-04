@@ -32,7 +32,7 @@ if ($op === 'save') {
 		shop_setting_set($flag, !empty($_POST[$flag]) ? '1' : '0');
 	}
 	foreach (array('eta_delivery_min' => array(10, 240), 'kitchen_drive_min' => array(0, 60), 'lead_pickup_min' => array(0, 240), 'slot_min' => array(5, 60), 'days_ahead' => array(0, 14),
-		'stamp_percent' => array(1, 100), 'stamp_goal' => array(2, 12), 'stamp_months' => array(1, 60), 'voucher_days' => array(7, 730), 'account_sms_daily' => array(1, 5000)) as $k => $range) {
+		'stamp_percent' => array(1, 100), 'stamp_goal' => array(2, 12), 'stamp_months' => array(1, 60), 'voucher_days' => array(7, 730), 'account_sms_daily' => array(1, 5000), 'track_days' => array(0, 30)) as $k => $range) {
 		if (isset($_POST[$k])) { shop_setting_set($k, (string)max($range[0], min($range[1], (int)$_POST[$k]))); }
 	}
 	foreach (array('min_order_delivery', 'min_order_pickup') as $k) {
@@ -98,7 +98,7 @@ if ($op === 'zone') {
 
 if ($op === 'save_driver') {
 	$id = (int)(isset($_POST['id']) ? $_POST['id'] : 0);
-	$r = shop_driver_save($id, isset($_POST['name']) ? $_POST['name'] : '', isset($_POST['device_id']) ? $_POST['device_id'] : '', !empty($_POST['active']));
+	$r = shop_driver_save($id, isset($_POST['name']) ? $_POST['name'] : '', isset($_POST['device_id']) ? $_POST['device_id'] : '', !empty($_POST['active']), isset($_POST['phone']) ? $_POST['phone'] : null);
 	sa_out($r['ok'] ? array('ok' => true, 'message' => 'Fahrer gespeichert.') : $r);
 }
 if ($op === 'save_suburb') {

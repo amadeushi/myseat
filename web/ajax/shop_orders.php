@@ -38,6 +38,15 @@ if ($op === 'day') {
 	$filter = (isset($_REQUEST['filter']) && in_array($_REQUEST['filter'], array('open', 'closed'), true)) ? $_REQUEST['filter'] : 'all';
 	so_out(array('ok' => true, 'date' => $date, 'orders' => shop_day_orders($date, $filter), 'stats' => shop_day_stats($date), 'pause' => shop_pause_state()));
 }
+// the driver map of the dispatch (web/fahrerkarte.php): drivers, deliveries, who to ask; the zones (rarely change); the track of one driver
+if ($op === 'dispatch_map') { so_out(array_merge(array('ok' => true), shop_dispatch_map())); }
+if ($op === 'zones') {
+	so_out(array('ok' => true, 'zones' => array_values(array_map(function ($z) { return array('id' => $z['id'], 'name' => $z['name'], 'polygon' => $z['polygon'], 'active' => $z['active']); },
+		array_filter(shop_zones_list(), function ($z) { return count($z['polygon']) >= 3; })))));
+}
+if ($op === 'track') {
+	so_out(array('ok' => true, 'points' => shop_driver_track((int)(isset($_REQUEST['driver']) ? $_REQUEST['driver'] : 0), (int)(isset($_REQUEST['hours']) ? $_REQUEST['hours'] : 6), 700)));
+}
 if ($op === 'drivers_live') {
 	so_out(array('ok' => true, 'origin' => shop_origin(), 'drivers' => shop_drivers_live()));
 }

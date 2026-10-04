@@ -1,0 +1,123 @@
+/* Driver map of the dispatch (web/fahrerkarte.php): an upright monitor, read from a distance. The map is the stage; the lists around it stay quiet,
+   colour only says something: gold = open, the colour of a driver = his, green = on the way, amber = late (the same amber the kitchen uses for late). */
+.fk-page { --amber: #e8b04a; }
+.fk-page .k-top { gap: 8px 12px; }
+.fk-page .k-counts { min-width: 0; }
+.fk-filter { display: flex; gap: 6px; }
+.fk-page .k-btn { cursor: pointer; }
+
+.fk { flex: 1; min-height: 0; display: grid; grid-template-rows: minmax(0, 1.15fr) minmax(0, 1fr); gap: 12px; padding: 12px; }
+@media (orientation: landscape) { .fk { grid-template-rows: none; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); } }
+
+.fk-map { position: relative; min-height: 0; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: var(--surface-2); }
+#fk-map { position: absolute; inset: 0; background: var(--bg); }
+#fk-map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9) saturate(0.55); transform: translateZ(0); will-change: filter; }
+#fk-map .leaflet-control-attribution { background: rgba(12, 11, 10, 0.75); color: var(--muted); font-size: 11px; }
+#fk-map .leaflet-control-attribution a { color: var(--gold); }
+#fk-map .leaflet-bar a { background: var(--surface-2); color: var(--text); border-color: var(--border); width: 40px; height: 40px; line-height: 40px; font-size: 20px; }
+.fk-mapbar { position: absolute; z-index: 500; top: 10px; right: 10px; display: flex; align-items: center; gap: 10px; }
+.fk-mapbar .k-btn { min-height: 44px; background: var(--surface); }
+.fk-upd { padding: 4px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); color: var(--muted); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.fk-upd.is-old { color: var(--amber); border-color: var(--amber); }
+.fk-legend { position: absolute; z-index: 500; left: 10px; bottom: 10px; right: 120px; padding: 6px 12px; border-radius: 10px; background: rgba(12, 11, 10, 0.86); border: 1px solid var(--border); color: var(--muted); font-size: 13px; line-height: 1.35; }
+
+/* pins */
+.fk-pin span { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--gold); background: var(--gold); color: #1a1408; font: 800 14px 'Raleway', sans-serif; font-variant-numeric: tabular-nums; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55); }
+.fk-pin--assigned span { background: var(--bg); color: var(--text); border-color: var(--c, var(--gold)); }
+.fk-pin--out span { background: var(--success); color: #10200a; border-color: var(--c, var(--bg)); }
+.fk-pin--kitchen span { width: 28px; height: 28px; margin: 3px; background: var(--surface-2); color: var(--muted); border: 2px solid #5b5448; font-size: 12px; }
+.fk-pin.is-late span { border-color: var(--amber); }
+.fk-pin.is-sel span { width: 42px; height: 42px; margin: -4px; font-size: 17px; border-color: var(--text); }
+.fk-pin.is-dim { opacity: 0.35; }
+.fk-shop span { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--bg); color: var(--gold-strong); border: 3px solid var(--gold-strong); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55); }
+.fk-drv { transform: translate(-50%, -100%); display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px 4px 8px; border-radius: 999px; background: var(--surface); color: var(--text); border: 2px solid var(--c); font: 700 15px 'Raleway', sans-serif; white-space: nowrap; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55); }
+.fk-drv i { width: 14px; height: 14px; border-radius: 50%; background: var(--c); flex: none; }
+.fk-drv.is-stale { border-style: dashed; color: var(--muted); }
+.fk-drv.is-stale i { background: transparent; border: 2px solid var(--c); }
+.fk-drv.is-sel { font-size: 18px; border-width: 3px; }
+.fk-drv.is-dim { opacity: 0.4; }
+.fk-ghost { width: 26px; height: 26px; border-radius: 50%; border: 3px dashed var(--text); background: rgba(12, 11, 10, 0.6); }
+.fk-tip.leaflet-tooltip { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 8px; font: 700 13px 'Raleway', sans-serif; box-shadow: none; }
+
+/* lists */
+.fk-side { position: relative; min-height: 0; }
+.fk-cols { height: 100%; display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: 12px; }
+.fk-col { min-height: 0; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
+.fk-col h2 { flex: none; display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 22px; font-weight: 700; }
+.fk-list { flex: 1; min-height: 0; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+.fk-grp { margin: 6px 4px 0; color: var(--muted); font-size: 14px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+.fk-grp:first-child { margin-top: 0; }
+.fk-empty { padding: 24px 8px; text-align: center; color: var(--muted); font-size: 18px; }
+.fk-card { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; width: 100%; padding: 12px 14px; text-align: left; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 12px; font: inherit; cursor: pointer; }
+.fk-card:hover { border-color: var(--gold); }
+.fk-card.is-sel { border: 2px solid var(--gold-strong); padding: 11px 13px; }
+.fk-card.is-offline { opacity: 0.6; }
+.fk-card.is-late { border-color: var(--amber); }
+.fk-main { min-width: 0; display: flex; flex-direction: column; }
+.fk-main b { font-size: 20px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fk-main span { color: var(--muted); font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fk-meta { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+.fk-meta b { font-size: 20px; color: var(--gold-strong); font-variant-numeric: tabular-nums; }
+.fk-meta span { color: var(--muted); font-size: 15px; font-variant-numeric: tabular-nums; }
+.fk-dot { width: 18px; height: 18px; border-radius: 50%; background: var(--c); }
+.is-offline .fk-dot { background: transparent; border: 2px solid var(--c); }
+.fk-no { display: grid; place-items: center; min-width: 38px; height: 38px; padding: 0 6px; border-radius: 50%; border: 3px solid var(--gold); background: var(--gold); color: #1a1408; font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.fk-o--assigned .fk-no { background: var(--bg); color: var(--text); border-color: var(--c, var(--gold)); }
+.fk-o--out .fk-no { background: var(--success); color: #10200a; border-color: var(--c, var(--success)); }
+.fk-o--kitchen .fk-no { background: var(--surface); color: var(--muted); border-color: #5b5448; }
+.fk-flags { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
+.fk-flag { padding: 2px 10px; border-radius: 6px; background: var(--surface); border: 1px solid var(--border); color: var(--text); font-size: 14px; font-weight: 600; }
+.fk-flag--late { color: var(--amber); border-color: var(--amber); }
+.fk-flag--drv { border-color: var(--c); }
+.fk-flag--warn { color: var(--amber); border-color: var(--amber); }
+.fk-flag--ok { color: var(--success); }
+
+/* the details of the selection slide over the lists */
+.fk-detail { position: absolute; z-index: 600; left: 0; right: 0; bottom: 0; max-height: 100%; overflow-y: auto; padding: 16px 18px 18px; background: var(--surface); border: 2px solid var(--gold); border-radius: 14px; box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.5); }
+.fk-detail[hidden] { display: none; }
+.fk-dh { display: flex; align-items: flex-start; gap: 12px; }
+.fk-dh h3 { flex: 1; min-width: 0; font-size: 28px; line-height: 1.15; font-weight: 800; }
+.fk-dh h3 small { display: block; margin-top: 2px; color: var(--muted); font-size: 18px; font-weight: 600; }
+.fk-x { flex: none; min-height: 48px; min-width: 48px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); color: var(--text); font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
+.fk-x:hover { border-color: var(--gold); }
+.fk-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 12px; }
+.fk-big { font-size: 22px; font-weight: 800; color: var(--gold-strong); font-variant-numeric: tabular-nums; }
+.fk-txt { font-size: 18px; }
+.fk-sub { margin-top: 14px; font-size: 14px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.fk-door { margin-top: 10px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); font-size: 17px; }
+.fk-items { margin-top: 6px; }
+.fk-items li { padding: 6px 0; border-top: 1px solid var(--border); font-size: 17px; }
+.fk-items small { display: block; margin-left: 28px; color: var(--muted); font-size: 15px; }
+.fk-act { display: inline-flex; align-items: center; justify-content: center; min-height: 52px; padding: 0 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); color: var(--text); font: inherit; font-size: 17px; font-weight: 700; text-decoration: none; cursor: pointer; }
+.fk-act:hover { border-color: var(--gold); }
+.fk-act--go { background: var(--gold); border-color: var(--gold); color: #1a1408; }
+.fk-act--go:hover { background: var(--gold-strong); }
+.fk-act:disabled { opacity: 0.5; cursor: wait; }
+.fk-link { display: flex; align-items: center; gap: 14px; margin-top: 14px; padding: 12px 14px; border: 2px solid var(--gold); border-radius: 12px; background: var(--surface-2); }
+.fk-link span { flex: 1; font-size: 18px; font-weight: 700; }
+.fk-cand { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
+.fk-cand.is-best { border: 2px solid var(--gold); padding: 9px 11px; }
+.fk-cand b { font-size: 20px; }
+.fk-cand .fk-main span { white-space: normal; }
+.fk-scrub { margin-top: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
+.fk-scrub input[type="range"] { width: 100%; height: 36px; accent-color: var(--gold); }
+.fk-scrub-t { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.fk-scrub-t span { color: var(--muted); font-weight: 600; font-size: 15px; }
+.fk-stops { margin-top: 6px; display: flex; flex-direction: column; gap: 8px; }
+.fk-stop { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
+.fk-stop .fk-no { min-width: 34px; height: 34px; font-size: 14px; }
+.fk-dl { margin: 6px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px; }
+.fk-dl div { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid var(--border); font-size: 17px; }
+.fk-dl dt { color: var(--muted); }
+.fk-dl dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.fk-toast { position: fixed; z-index: 900; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; min-height: 56px; max-width: 90vw; padding: 8px 10px 8px 18px; border: 1px solid var(--gold); border-radius: 12px; background: var(--surface-2); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5); font-size: 18px; font-weight: 600; }
+.fk-toast[hidden] { display: none; }
+.fk-toast button { min-height: 44px; padding: 0 16px; border: 0; border-radius: 10px; background: transparent; color: var(--gold-strong); font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .fk-detail { transition: none; } }
+.fk-page .k-count.is-late { color: var(--amber); }
+.fk-page .k-count.is-late b { color: var(--amber); }
+
+/* kitchen.css lets the page scroll below 1000 px width: this page always fills the screen (an upright monitor with a scaled display can be narrower) */
+body.kitchen.fk-page { height: 100vh; min-height: 0; overflow: hidden; }
+.fk-page .k-counts { order: 10; flex: 1 1 100%; }

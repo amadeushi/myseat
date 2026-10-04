@@ -52,6 +52,18 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.20.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Fahrerkarte für die Disposition (web/fahrerkarte.php), gebaut für einen hochkant stehenden Monitor: große Karte mit dem Restaurant, den Lieferungen
+   (offen, zugeteilt, unterwegs, in der Küche, überfällig) und den Fahrern mit ihrer Spur; darunter die Listen der Fahrer und Aufträge. Auswahl eines Fahrers,
+   eines Auftrags oder beider: Zoom, hervorgehobene Spur und Stopps, "Zuteilen an" mit Empfehlung (frei, Entfernung, nah an seinen Stopps), Zuteilen, Umteilen
+   und Zurück in den Pool mit Rückgängig. Dazu Fahrerstatus, Ankunftsschätzung, Filter (Alle, Offen, Überfällig), zuschaltbare Liefergebiete und der Regler
+   "Wo war der Fahrer?" über seine Spur. In der Disposition öffnet "Fahrerkarte" die neue Seite, der Knopf "Karte" einer Lieferung mit diesem Auftrag.
+ * New: Der Weg der Fahrer wird gespeichert (neue Tabelle tp_shop_driver_track, ein Punkt je Minute oder 25 m) und nach "Weg der Fahrer" Tagen gelöscht
+   (Einstellungen > Lieferservice, Standard 7, 0 = nichts speichern). Neue Spalte phone an tp_shop_drivers: Telefonnummer des Fahrers für "Anrufen".
+ * New: Lieferando-Import: Die Bestellzeit des Belegs ist jetzt die Eingangszeit des Auftrags (bisher die Zeit des Imports).
+ * Changed: Die kleine Fahrerkarte der Disposition ist durch die neue Seite ersetzt.
+
 2026-10-05 == mySeat v6.19.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix: Eine Bestellung zu einer Wunschzeit behält diese Zeit beim Annehmen: Im Dispositionsbildschirm und in der Bestellliste wird bei Wunschzeit keine

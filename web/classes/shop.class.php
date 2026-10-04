@@ -104,6 +104,12 @@ function shop_ensure_schema() {
 	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_suburbs')." (
 		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `kind` VARCHAR(8) NOT NULL, `pattern` VARCHAR(120) NOT NULL, `suburb` VARCHAR(80) NOT NULL,
 		KEY `kind` (`kind`)) $opts");
+	// the way of the drivers (a point every minute or 25 m), for the dispatch map; kept track_days days
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_driver_track')." (
+		`id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `driver_id` INT UNSIGNED NOT NULL, `lat` DOUBLE NOT NULL, `lng` DOUBLE NOT NULL, `at` DATETIME NOT NULL,
+		KEY `drv` (`driver_id`, `at`)) $opts");
+	$pcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_drivers')." LIKE 'phone'");
+	if (!$pcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_drivers')." ADD `phone` VARCHAR(40) NOT NULL DEFAULT ''"); }
 	$col = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'ip_hash'");
 	if (!$col) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `ip_hash` CHAR(16) NOT NULL DEFAULT ''"); }
 	// pizza configurator: a dish can offer the guest "build it yourself"; an option can carry the symbol it shows on the pizza
@@ -276,6 +282,7 @@ function shop_defaults() {
 		'account_sms' => '1',       // sign-in codes by SMS (otherwise only by e-mail); needs SMS sending set up
 		'account_sms_daily' => '100', // at most this many sign-in SMS a day (every one costs money)
 		'origin_street' => '', 'origin_zip' => '', 'origin_city' => '', // where the restaurant is (map of the order status)
+		'track_days' => '7',        // how many days the way of the drivers is kept (dispatch map), 0 = it is not stored
 		'route_url' => 'https://router.project-osrm.org', // routing service for the driving way of a delivery (OSRM API), only https
 	);
 }
@@ -1908,7 +1915,7 @@ function shop_driver_position($o) {
 // the only place a mismatched device id becomes visible at all
 function shop_drivers_list() {
 	shop_ensure_schema();
-	$rows = fb_rows("SELECT d.id, d.device_id, d.name, d.active, p.updated_at FROM ".fb_t('tp_shop_drivers')." d
+	$rows = fb_rows("SELECT d.id, d.device_id, d.name, d.active, d.phone, p.updated_at FROM ".fb_t('tp_shop_drivers')." d
 		LEFT JOIN ".fb_t('tp_shop_driver_positions')." p ON p.driver_id = d.id ORDER BY d.name");
 	foreach ($rows as &$r) { $r['last_seen_min'] = $r['updated_at'] ? max(0, (int)round((time() - strtotime($r['updated_at'])) / 60)) : null; } unset($r);
 	return $rows;
@@ -1918,16 +1925,17 @@ function shop_driver_by_device($deviceId) {
 	if ($deviceId === '') { return null; }
 	return fb_row("SELECT * FROM ".fb_t('tp_shop_drivers')." WHERE device_id = ? AND active = 1", 's', array($deviceId));
 }
-function shop_driver_save($id, $name, $deviceId, $active) {
+function shop_driver_save($id, $name, $deviceId, $active, $phone = null) {
 	$name = mb_substr(trim((string)$name), 0, 80); $deviceId = mb_substr(trim((string)$deviceId), 0, 64);
 	if ($name === '' || $deviceId === '') { return array('ok' => false, 'error' => 'Bitte Name und Geräte-ID angeben.'); }
 	$dupe = fb_row("SELECT id FROM ".fb_t('tp_shop_drivers')." WHERE device_id = ? AND id <> ?", 'si', array($deviceId, (int)$id));
 	if ($dupe) { return array('ok' => false, 'error' => 'Diese Geräte-ID ist schon einem anderen Fahrer zugeordnet.'); }
 	if ($id > 0) {
 		fb_exec("UPDATE ".fb_t('tp_shop_drivers')." SET name = ?, device_id = ?, active = ? WHERE id = ?", 'ssii', array($name, $deviceId, $active ? 1 : 0, (int)$id));
+		if ($phone !== null) { fb_exec("UPDATE ".fb_t('tp_shop_drivers')." SET phone = ? WHERE id = ?", 'si', array(mb_substr(trim((string)$phone), 0, 40), (int)$id)); }
 		return array('ok' => true, 'id' => (int)$id);
 	}
-	fb_exec("INSERT INTO ".fb_t('tp_shop_drivers')." (device_id, name, active, created_at) VALUES (?, ?, ?, NOW())", 'ssi', array($deviceId, $name, $active ? 1 : 0));
+	fb_exec("INSERT INTO ".fb_t('tp_shop_drivers')." (device_id, name, active, phone, created_at) VALUES (?, ?, ?, ?, NOW())", 'ssis', array($deviceId, $name, $active ? 1 : 0, mb_substr(trim((string)$phone), 0, 40)));
 	return array('ok' => true, 'id' => (int)mysqli_insert_id(fb_db()));
 }
 function shop_driver_delete($id) {
@@ -1948,7 +1956,86 @@ function shop_drivers_name_map() {
 function shop_driver_update_position($driverId, $lat, $lng) {
 	fb_exec("REPLACE INTO ".fb_t('tp_shop_driver_positions')." (driver_id, lat, lng, updated_at) VALUES (?, ?, ?, NOW())", 'idd', array((int)$driverId, (float)$lat, (float)$lng));
 	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET driver_lat = ?, driver_lng = ?, driver_at = NOW() WHERE driver_id = ? AND status = 'delivering'", 'ddi', array((float)$lat, (float)$lng, (int)$driverId));
+	shop_driver_track_add($driverId, $lat, $lng);
 }
+// ---- driver map for the dispatch (web/fahrerkarte.php)
+// The track of a driver: a point is stored when he has moved 25 m or a minute has passed, and kept for track_days days (setting, 0 = nothing is stored).
+function shop_driver_track_add($driverId, $lat, $lng) {
+	$days = max(0, min(30, (int)shop_setting('track_days')));
+	if ($days === 0) { return; }
+	$last = fb_row("SELECT lat, lng, at FROM ".fb_t('tp_shop_driver_track')." WHERE driver_id = ? ORDER BY id DESC LIMIT 1", 'i', array((int)$driverId));
+	if ($last && time() - strtotime($last['at']) < 60 && shop_haversine_m((float)$last['lat'], (float)$last['lng'], (float)$lat, (float)$lng) < 25) { return; }
+	fb_exec("INSERT INTO ".fb_t('tp_shop_driver_track')." (driver_id, lat, lng, at) VALUES (?, ?, ?, ?)", 'idds', array((int)$driverId, (float)$lat, (float)$lng, date('Y-m-d H:i:s')));
+	if (mt_rand(1, 150) === 1) { fb_exec("DELETE FROM ".fb_t('tp_shop_driver_track')." WHERE at < ?", 's', array(date('Y-m-d H:i:s', time() - $days * 86400))); }
+}
+// the points of one driver in the last $hours hours, oldest first: array of array(lat, lng, unix time), thinned to at most $max points
+function shop_driver_track($driverId, $hours, $max = 400) {
+	$hours = max(1, min(24, (int)$hours));
+	$rows = fb_rows("SELECT lat, lng, UNIX_TIMESTAMP(at) AS t FROM ".fb_t('tp_shop_driver_track')." WHERE driver_id = ? AND at >= ? ORDER BY at", 'is', array((int)$driverId, date('Y-m-d H:i:s', time() - $hours * 3600)));
+	$step = count($rows) > $max ? (int)ceil(count($rows) / $max) : 1; $out = array();
+	foreach ($rows as $i => $r) { if ($i % $step === 0 || $i === count($rows) - 1) { $out[] = array(round((float)$r['lat'], 6), round((float)$r['lng'], 6), (int)$r['t']); } }
+	return $out;
+}
+// everything the dispatch map shows: the active drivers (position, state, stops, track of the last 90 minutes, what they did today), the deliveries
+// that still need or have a driver (with the order of the drivers to ask for the open ones) and the restaurant
+function shop_dispatch_map() {
+	shop_ensure_schema();
+	$now = time(); $origin = shop_origin();
+	$sel = "SELECT o.*, z.name AS zone_name, (SELECT COALESCE(SUM(qty), 0) FROM ".fb_t('tp_shop_order_items')." WHERE order_id = o.id) AS n_items
+		FROM ".fb_t('tp_shop_orders')." o LEFT JOIN ".fb_t('tp_shop_zones')." z ON z.id = o.zone_id
+		WHERE o.type = 'delivery' AND o.status IN ('accepted', 'preparing', 'ready', 'delivering') ORDER BY COALESCE(o.scheduled_at, o.eta_at, o.created_at), o.id";
+	$rows = fb_rows($sel);
+	if (shop_order_geo_fill(array_map(function ($r) { return (int)$r['id']; }, $rows), 3)) { $rows = fb_rows($sel); }
+	$orders = array();
+	foreach ($rows as $r) {
+		$c = shop_driver_card($r);
+		$due = strtotime($r['scheduled_at'] ?: ($r['eta_at'] ?: $r['created_at']));
+		$c['status'] = $r['status']; $c['driver_id'] = $r['driver_id'] ? (int)$r['driver_id'] : 0; $c['phone'] = $r['phone']; $c['note'] = $r['note'];
+		$c['due_ts'] = $due; $c['due'] = date('H:i', $due); $c['scheduled'] = $r['scheduled_at'] ? date('H:i', strtotime($r['scheduled_at'])) : '';
+		$c['late_min'] = ($r['status'] !== 'delivering' && $due < $now) ? (int)floor(($now - $due) / 60) : 0;
+		$c['lines'] = shop_driver_lines(shop_order_items((int)$r['id']));
+		$orders[(int)$r['id']] = $c;
+	}
+	// drivers
+	$drivers = array();
+	foreach (shop_drivers_list() as $d) {
+		if ((int)$d['active'] !== 1) { continue; }
+		$pos = fb_row("SELECT lat, lng, UNIX_TIMESTAMP(updated_at) AS t FROM ".fb_t('tp_shop_driver_positions')." WHERE driver_id = ?", 'i', array((int)$d['id']));
+		$age = $pos ? max(0, $now - (int)$pos['t']) : null;
+		$stops = array();
+		foreach ($orders as $o) { if ($o['driver_id'] === (int)$d['id'] && in_array($o['status'], array('ready', 'delivering'), true)) { $stops[] = $o; } }
+		usort($stops, function ($a, $b) { return ($a['status'] === 'delivering' ? 0 : 1) <=> ($b['status'] === 'delivering' ? 0 : 1) ?: $a['due_ts'] <=> $b['due_ts']; });
+		$online = $pos && $age <= 900;
+		$cur = null; foreach ($stops as $s) { if ($s['status'] === 'delivering') { $cur = $s; break; } }
+		$eta = null; // a rough estimate: straight line x 1.35 at about 28 km/h
+		if ($online && $cur && $cur['lat'] !== null) { $eta = max(1, (int)round(shop_haversine_m((float)$pos['lat'], (float)$pos['lng'], $cur['lat'], $cur['lng']) * 1.35 / (28000 / 60))); }
+		$drivers[] = array('id' => (int)$d['id'], 'name' => $d['name'], 'phone' => (string)($d['phone'] ?? ''), 'color' => (int)$d['id'] % 6,
+			'lat' => $online ? (float)$pos['lat'] : null, 'lng' => $online ? (float)$pos['lng'] : null, 'age' => $age,
+			'state' => !$online ? 'offline' : (!$stops ? 'free' : ($cur ? 'delivering' : 'queued')),
+			'stops' => array_map(function ($s) { return $s['id']; }, $stops), 'eta_min' => $eta,
+			'trail' => $online || $age !== null ? shop_driver_track((int)$d['id'], 2, 150) : array(), 'shift' => shop_driver_shift((int)$d['id']));
+	}
+	// who to ask for an open delivery: free drivers first by distance, a busy one counts when the order is close to his stops
+	foreach ($orders as $id => $o) {
+		$orders[$id]['cands'] = array();
+		if ($o['status'] !== 'ready' || $o['driver_id'] || $o['lat'] === null) { continue; }
+		foreach ($drivers as $d) {
+			if ($d['state'] === 'offline') { continue; }
+			$dist = shop_haversine_m($d['lat'], $d['lng'], $o['lat'], $o['lng']); $onWay = null;
+			foreach ($d['stops'] as $sid) {
+				$s = $orders[$sid]; if ($s['lat'] === null) { continue; }
+				$m = shop_haversine_m($s['lat'], $s['lng'], $o['lat'], $o['lng']); if ($m <= 1500 && ($onWay === null || $m < $onWay)) { $onWay = $m; }
+			}
+			$orders[$id]['cands'][] = array('driver' => $d['id'], 'dist_m' => $dist, 'load' => count($d['stops']), 'on_way_m' => $onWay,
+				'score' => $dist + count($d['stops']) * 1500 - ($onWay !== null ? 1200 : 0));
+		}
+		usort($orders[$id]['cands'], function ($a, $b) { return $a['score'] <=> $b['score']; });
+		if ($orders[$id]['cands']) { $orders[$id]['cands'][0]['best'] = true; }
+	}
+	return array('now' => $now, 'origin' => $origin ? array('lat' => $origin[0], 'lng' => $origin[1]) : null, 'drivers' => $drivers, 'orders' => array_values($orders),
+		'track_days' => max(0, min(30, (int)shop_setting('track_days'))));
+}
+
 // ---- driver page: how far a delivery is from the restaurant and in which district it lies.
 // Both are looked up once per order (the first time a driver's page lists it) and stored on the order: the district as the raw name
 // OpenStreetMap gives for the address (Nominatim reverse), the way as driving distance/time (OSRM). The shown district applies our own

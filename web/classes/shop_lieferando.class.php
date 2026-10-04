@@ -170,13 +170,15 @@ function lieferando_import($pdfBytes) {
 	$today = date('Y-m-d');
 	$dayNo = (int)(fb_row("SELECT COALESCE(MAX(day_no), 0) + 1 AS n FROM ".fb_t('tp_shop_orders')." WHERE order_date = ?", 's', array($today))['n']);
 	$now = date('Y-m-d H:i:s');
+	// the time of the order is the one printed on the receipt (the import can come minutes later); only if it is from today and not in the future
+	$created = ($p['placed_at'] && substr($p['placed_at'], 0, 10) === $today && strtotime($p['placed_at']) <= time() + 300) ? $p['placed_at'] : $now;
 	$db = fb_db();
 	$ok = fb_exec("INSERT INTO ".fb_t('tp_shop_orders')."
 		(token, number, day_no, order_date, type, status, customer_name, phone, note, subtotal_cents, fee_cents, tip_cents, total_cents,
 		 payment_method, payment_status, lang, is_test, source, external_ref, created_at, updated_at, accepted_at, eta_at)
 		VALUES (?, ?, ?, ?, ?, 'accepted', ?, '', ?, ?, 0, 0, ?, 'lieferando', ?, 'de', 0, 'lieferando', ?, ?, ?, ?, ?)",
 		'ssissssiissssss', array($token, $number, $dayNo, $today, $p['type'], $p['customer_name'], $p['note'], $sub, $total,
-			$p['payment_status'] === 'paid' ? 'paid' : 'open', $p['external_id'], $now, $now, $now, $p['confirmed_at']));
+			$p['payment_status'] === 'paid' ? 'paid' : 'open', $p['external_id'], $created, $now, $now, $p['confirmed_at']));
 	if (!$ok) { return array('ok' => false, 'error' => 'Die Bestellung ('.$p['external_id'].') konnte nicht gespeichert werden.'); }
 	$id = (int)mysqli_insert_id($db);
 	foreach ($p['items'] as $it) {
