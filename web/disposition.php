@@ -17,6 +17,7 @@ if (empty($_SESSION['valid_user'])) { header('Location: ../PLC/index.php'); exit
 if (!current_user_can('Reservation-Edit')) { http_response_code(403); echo 'Keine Berechtigung.'; exit; }
 if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = bin2hex(random_bytes(16)); }
 $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
+$dp_pause = shop_pause_state();
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -36,6 +37,15 @@ $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 		<div class="k-counts" id="k-counts" aria-live="polite"></div>
 		<span class="k-clock" id="k-clock"></span>
 		<div id="k-tools" class="k-tools"></div>
+		<div class="k-pause" id="k-pause" role="group" aria-label="Neue Bestellungen annehmen">
+			<?php foreach (array('delivery' => 'Lieferung', 'pickup' => 'Abholung') as $dp_k => $dp_l): $dp_p = $dp_pause[$dp_k]; ?>
+			<div class="k-pause-item<?php echo $dp_p['paused'] ? ' is-paused' : ''; ?>" data-kind="<?php echo $dp_k; ?>">
+				<label class="k-pause-switch"><input type="checkbox" role="switch" data-pause-switch<?php echo $dp_p['paused'] ? '' : ' checked'; ?>/><span class="k-pause-track" aria-hidden="true"></span><span><?php echo $dp_l; ?><span class="k-pause-more"> annehmen</span></span></label>
+				<select data-pause-for aria-label="Wie lange die <?php echo $dp_l; ?> pausiert werden soll"<?php echo $dp_p['paused'] ? ' hidden' : ''; ?>><option value="15">15 Min</option><option value="30" selected>30 Min</option><option value="60">1 Std</option><option value="120">2 Std</option><option value="0">bis ich sie aufhebe</option></select>
+				<span class="k-pause-note" data-pause-note><?php echo $dp_p['paused'] ? 'pausiert'.($dp_p['until'] ? ' bis '.$dp_p['until'] : '') : ''; ?></span>
+			</div>
+			<?php endforeach; ?>
+		</div>
 		<button type="button" class="k-btn" id="k-drivers-toggle" aria-pressed="false">Fahrer-Karte</button>
 		<button type="button" class="k-btn" id="k-full">Vollbild</button>
 		<a class="k-btn" href="kitchen_screen.php">Küchenbildschirm</a>
@@ -48,9 +58,11 @@ $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 		<p class="k-drivers-note" id="k-drivers-note"></p>
 	</div>
 	<main class="k-board">
-		<section class="k-col" data-col="new" aria-labelledby="kc-new"><h2 id="kc-new">Neu <span class="k-n" id="n-new">0</span></h2><div class="k-list" id="col-new"></div><p class="k-overflow" id="of-new" role="status" hidden></p></section>
-		<section class="k-col" data-col="work" aria-labelledby="kc-work"><h2 id="kc-work">In der Küche <span class="k-n" id="n-work">0</span></h2><div class="k-list" id="col-work"></div><p class="k-overflow" id="of-work" role="status" hidden></p></section>
-		<section class="k-col" data-col="ready" aria-labelledby="kc-ready"><h2 id="kc-ready">Fertig <span class="k-n" id="n-ready">0</span></h2><div class="k-list" id="col-ready"></div><p class="k-overflow" id="of-ready" role="status" hidden></p></section>
+		<section class="k-col" data-col="fail" id="sec-fail" aria-labelledby="kc-fail" hidden><h2 id="kc-fail">Fehlgeschlagen <span class="k-n" id="n-fail">0</span></h2><div class="k-list" id="col-fail"></div></section>
+		<section class="k-col" data-col="new" id="sec-new" aria-labelledby="kc-new"><h2 id="kc-new">Neu <span class="k-n" id="n-new">0</span></h2><div class="k-list" id="col-new"></div><div class="k-bandnav" id="nav-new" hidden></div><p class="k-overflow" id="of-new" role="status" hidden></p></section>
+		<section class="k-col" data-col="work" id="sec-work" aria-labelledby="kc-work"><h2 id="kc-work">In der Küche <span class="k-n" id="n-work">0</span></h2><div class="k-list" id="col-work"></div><p class="k-overflow" id="of-work" role="status" hidden></p></section>
+		<section class="k-col" data-col="ready" id="sec-ready" aria-labelledby="kc-ready"><h2 id="kc-ready">Fertig <span class="k-n" id="n-ready">0</span></h2><div class="k-list" id="col-ready"></div><div class="k-bandnav" id="nav-ready" hidden></div><p class="k-overflow" id="of-ready" role="status" hidden></p></section>
+		<section class="k-col" data-col="out" id="sec-out" aria-labelledby="kc-out"><h2 id="kc-out">Unterwegs <span class="k-n" id="n-out">0</span></h2><div class="k-list" id="col-out"></div><div class="k-bandnav" id="nav-out" hidden></div></section>
 	</main>
 	<script src="js/leaflet/leaflet.js"></script>
 	<script src="js/monitor_sound.js?v=<?php echo @filemtime(__DIR__.'/js/monitor_sound.js'); ?>"></script>

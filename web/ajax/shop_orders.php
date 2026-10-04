@@ -26,7 +26,7 @@ shop_ensure_schema();
 $op = isset($_REQUEST['op']) ? (string)$_REQUEST['op'] : '';
 
 if ($op === 'board') {
-	so_out(array('ok' => true, 'now' => date('H:i'), 'orders' => shop_board()));
+	so_out(array('ok' => true, 'now' => date('H:i'), 'orders' => shop_board(), 'drivers' => shop_dispatch_drivers(), 'pause' => shop_pause_state(), 'drive_min' => max(0, min(60, (int)shop_setting('kitchen_drive_min')))));
 }
 if ($op === 'kitchen') {
 	so_out(array('ok' => true, 'now' => date('H:i'), 'orders' => shop_kitchen_board()));
@@ -70,6 +70,13 @@ if ($op === 'status') {
 	}
 	shop_set_status($id, $to, $who, (int)(isset($_POST['eta']) ? $_POST['eta'] : 0));
 	so_out(array('ok' => true));
+}
+if ($op === 'retry') {
+	so_out(shop_dispatch_retry_order($id, array('street' => isset($_POST['street']) ? $_POST['street'] : '', 'zip' => isset($_POST['zip']) ? $_POST['zip'] : '', 'city' => isset($_POST['city']) ? $_POST['city'] : '',
+		'note' => isset($_POST['note']) ? $_POST['note'] : '', 'phone' => isset($_POST['phone']) ? $_POST['phone'] : ''), $who));
+}
+if ($op === 'assign') {
+	so_out(shop_dispatch_assign_order($id, (int)(isset($_POST['driver']) ? $_POST['driver'] : 0), $who));
 }
 if ($op === 'release_to_pool') {
 	so_out(shop_dispatch_release_order($id, $who));

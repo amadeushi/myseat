@@ -1272,13 +1272,15 @@ function shop_orders_with_items($rows) {
 			'source' => $r['source'],
 			'created' => substr($r['created_at'], 11, 5), 'created_ts' => strtotime($r['created_at']), 'scheduled' => $r['scheduled_at'] ? substr($r['scheduled_at'], 11, 5) : '',
 			'due' => substr($due, 11, 5), 'due_date' => substr($due, 0, 10), 'name' => $r['customer_name'], 'phone' => $r['phone'], 'email' => $r['email'],
-			'address' => $r['type'] === 'delivery' ? trim($r['street'].', '.$r['zip'].' '.$r['city']) : '', 'address_note' => $r['address_note'], 'note' => $r['note'],
+			'address' => $r['type'] === 'delivery' ? trim($r['street'].', '.$r['zip'].' '.$r['city']) : '', 'street' => (string)$r['street'], 'zip' => (string)$r['zip'], 'city' => (string)$r['city'], 'address_note' => $r['address_note'], 'note' => $r['note'],
 			'pay' => $r['payment_method'], 'pay_status' => $r['payment_status'], 'total' => (int)$r['total_cents'], 'fee' => (int)$r['fee_cents'], 'tip' => (int)$r['tip_cents'], 'subtotal' => (int)$r['subtotal_cents'],
 			'items' => isset($items[(int)$r['id']]) ? $items[(int)$r['id']] : array(), 'coupon' => (string)$r['coupon_code'], 'discount' => (int)$r['discount_cents'],
 			'token' => $r['token'],
 			'driver_name' => $r['driver_id'] && isset($driverNames[(int)$r['driver_id']]) ? $driverNames[(int)$r['driver_id']] : '',
 			'driver_age' => ($dp = shop_driver_position($r)) ? $dp['age'] : null,
 			'fail_reason' => (string)$r['fail_reason'],
+			// for the dispatch screen: when it has to be there, since when it is ready, which driver (id) carries it
+			'due_ts' => strtotime($due), 'ready_ts' => $r['ready_at'] ? strtotime($r['ready_at']) : 0, 'updated_ts' => $r['updated_at'] ? strtotime($r['updated_at']) : 0, 'driver_id' => $r['driver_id'] ? (int)$r['driver_id'] : 0,
 		);
 	}
 	return $out;
@@ -1687,6 +1689,57 @@ function shop_driver_release_order($driverId, $orderId) {
 }
 // dispatch's own override: puts a delivery back into the open pool regardless of which driver has it
 // (or even if none does and it was just set "unterwegs" by hand) - for when a driver can't be reached
+// the drivers the dispatch can hand a delivery to: active ones, with how long ago the phone last reported its position
+function shop_dispatch_drivers() {
+	$out = array();
+	foreach (shop_drivers_list() as $d) {
+		if ((int)$d['active'] !== 1) { continue; }
+		$out[] = array('id' => (int)$d['id'], 'name' => $d['name'], 'seen_min' => $d['last_seen_min'] === null ? null : (int)$d['last_seen_min']);
+	}
+	return $out;
+}
+// A failed delivery (guest not met, address wrong) is fetched back: address details are corrected, the order goes back into the pool as
+// ready and can be delivered again. A changed street/zip/city is checked against the delivery zones again (new coordinates and zone); the
+// amount the guest paid stays as it is, a difference in the delivery fee only goes into the log.
+function shop_dispatch_retry_order($orderId, $in, $by) {
+	$o = shop_order($orderId);
+	if (!$o || $o['type'] !== 'delivery' || $o['status'] !== 'failed') { return array('ok' => false, 'error' => 'Nur eine fehlgeschlagene Lieferung lässt sich zurückholen.'); }
+	$f = function ($k, $max) use ($in) { return trim(mb_substr((string)(isset($in[$k]) ? $in[$k] : ''), 0, $max)); };
+	$street = $f('street', 160); $zip = $f('zip', 10); $city = $f('city', 80); $note = $f('note', 200); $phone = $f('phone', 40);
+	if ($street === '' || $city === '' || !preg_match('/\d/', $street)) { return array('ok' => false, 'error' => 'Bitte gib Straße mit Hausnummer und den Ort an.'); }
+	if ($phone !== '' && (!preg_match('/^[+0-9 ()\/.\-]{6,40}$/', $phone) || strlen(preg_replace('/\D/', '', $phone)) < 6)) { return array('ok' => false, 'error' => 'Die Telefonnummer sieht nicht richtig aus.'); }
+	$changed = ($street !== (string)$o['street'] || $zip !== (string)$o['zip'] || $city !== (string)$o['city']);
+	$lat = $o['lat']; $lng = $o['lng']; $zone = $o['zone_id']; $feeNote = '';
+	if ($changed) {
+		$r = shop_find_zone($street, $zip, $city);
+		if (!$r['ok']) { return array('ok' => false, 'error' => isset($r['reason']) && $r['reason'] === 'ambiguous' ? 'Es passen mehrere Adressen. Bitte ergänze die Postleitzahl.' : $r['error']); }
+		$lat = $r['lat']; $lng = $r['lng']; $zone = $r['zone']['id'];
+		if ($zip === '' && !empty($r['postcode'])) { $zip = (string)$r['postcode']; }
+		if ((int)$r['zone']['fee_cents'] !== (int)$o['fee_cents']) { $feeNote = 'Liefergebühr der neuen Zone '.shop_money((int)$r['zone']['fee_cents']).' statt '.shop_money((int)$o['fee_cents']).', Betrag unverändert'; }
+	}
+	$diff = array();
+	foreach (array('street' => $street, 'zip' => $zip, 'city' => $city, 'address_note' => $note, 'phone' => $phone) as $k => $v) { if ($v !== (string)$o[$k] && !($k === 'phone' && $phone === '')) { $diff[] = $k.': "'.$o[$k].'" -> "'.$v.'"'; } }
+	if ($phone === '') { $phone = (string)$o['phone']; }
+	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET street = ?, zip = ?, city = ?, address_note = ?, phone = ?, lat = ?, lng = ?, zone_id = ?, fail_reason = '', driver_id = NULL,
+		driver_lat = NULL, driver_lng = NULL, driver_at = NULL, done_at = NULL WHERE id = ?", 'sssssddii', array($street, $zip, $city, $note, $phone, $lat, $lng, $zone, (int)$orderId));
+	shop_coupon_reclaim($orderId);
+	if (!shop_set_status((int)$orderId, 'ready', $by.': Zustellung wiederholt')) { return array('ok' => false, 'error' => 'Die Lieferung konnte nicht zurückgeholt werden.'); }
+	shop_log((int)$orderId, 'Zurückgeholt', mb_substr(($diff ? implode('; ', $diff) : 'Adresse unverändert').($feeNote !== '' ? ' | '.$feeNote : '').' | Grund vorher: '.$o['fail_reason'], 0, 200));
+	return array('ok' => true, 'fee_note' => $feeNote);
+}
+// the dispatch hands a ready delivery to a driver: it lands in his own queue, exactly as if he had taken it himself. A delivery another
+// driver holds (not yet underway) first goes back into the pool.
+function shop_dispatch_assign_order($orderId, $driverId, $by) {
+	$o = fb_row("SELECT id, type, status, driver_id FROM ".fb_t('tp_shop_orders')." WHERE id = ?", 'i', array((int)$orderId));
+	if (!$o || $o['type'] !== 'delivery' || $o['status'] !== 'ready') { return array('ok' => false, 'error' => 'Nur eine fertige Lieferung lässt sich einem Fahrer zuteilen.'); }
+	$d = fb_row("SELECT id, name, active FROM ".fb_t('tp_shop_drivers')." WHERE id = ?", 'i', array((int)$driverId));
+	if (!$d || (int)$d['active'] !== 1) { return array('ok' => false, 'error' => 'Diesen Fahrer gibt es nicht oder er ist nicht aktiv.'); }
+	if ($o['driver_id'] !== null && (int)$o['driver_id'] === (int)$driverId) { return array('ok' => true); }
+	if ($o['driver_id'] !== null) { $r = shop_order_release_to_pool($orderId, $by.': umgeteilt'); if (!$r['ok']) { return $r; } }
+	$r = shop_driver_claim_order($driverId, $orderId);
+	if ($r['ok']) { shop_log((int)$orderId, 'Zugeteilt', $by.': '.$d['name']); }
+	return $r;
+}
 function shop_dispatch_release_order($orderId, $by) {
 	$o = fb_row("SELECT id, type, status, driver_id FROM ".fb_t('tp_shop_orders')." WHERE id = ?", 'i', array((int)$orderId));
 	if (!$o || $o['type'] !== 'delivery' || $o['driver_id'] === null || !in_array($o['status'], array('ready', 'delivering'), true)) {
@@ -1818,6 +1871,16 @@ function shop_coupon_reserve($id) {
 	return $n === 1; // the check and the count are one statement: the last redemption goes to exactly one guest
 }
 function shop_coupon_unreserve($id) { fb_exec("UPDATE ".fb_t('tp_shop_coupons')." SET used = GREATEST(used - 1, 0) WHERE id = ?", 'i', array((int)$id)); }
+// a failed order gave its coupon back (shop_coupon_release); when the delivery is tried again the redemption counts again
+function shop_coupon_reclaim($orderId) {
+	$o = shop_order($orderId);
+	if (!$o || (int)$o['is_test'] || (string)$o['coupon_code'] === '') { return; }
+	$c = shop_coupon_by_code($o['coupon_code']);
+	if (!$c || fb_row("SELECT id FROM ".fb_t('tp_shop_coupon_uses')." WHERE order_id = ?", 'i', array((int)$orderId))) { return; }
+	fb_exec("INSERT INTO ".fb_t('tp_shop_coupon_uses')." (coupon_id, order_id, guest_key, guest_key2, discount_cents, created_at) VALUES (?, ?, ?, ?, ?, NOW())", 'iissi',
+		array((int)$c['id'], (int)$orderId, (string)$o['guest_key'], (string)$o['guest_key2'], (int)$o['discount_cents']));
+	fb_exec("UPDATE ".fb_t('tp_shop_coupons')." SET used = used + 1 WHERE id = ?", 'i', array((int)$c['id']));
+}
 function shop_coupon_release($orderId) {
 	foreach (fb_rows("SELECT id, coupon_id FROM ".fb_t('tp_shop_coupon_uses')." WHERE order_id = ?", 'i', array((int)$orderId)) as $u) {
 		fb_exec("DELETE FROM ".fb_t('tp_shop_coupon_uses')." WHERE id = ?", 'i', array((int)$u['id']));

@@ -52,7 +52,28 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
-2026-10-05 == mySeat v6.10.0 == amadeushi - http://github.com/amadeushi/myseat
+2026-10-05 == mySeat v6.11.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Disposition im Hochformat (Monitor auf der Seite, ab etwa 1000 x 1500 Pixel; kleinere Hochformat-Bildschirme behalten die
+   scrollende Spalte, das Querformat bleibt bei drei Spalten). Bänder von oben nach unten nach Dringlichkeit: fehlgeschlagene Lieferungen
+   als rote Zeile, "Neu" mit breiten Karten (Gerichte links, Annehmen-Knöpfe 20/30/45/60 Minuten rechts), die Küche als eine Zeile
+   ("3 in der Küche, dringendste: #47 10 Min überfällig", ein Klick klappt die Liste auf), "Fertig, wartet auf Fahrer" (orange ab 5, rot ab
+   10 Minuten Wartezeit, mit Text) und "Unterwegs" (Lieferzeit, "5 Min zu spät", unterwegs seit). Jedes Band blättert mit großen Knöpfen
+   (Trackball); die Seitengröße richtet sich nach der Höhe des Monitors. Eine neue Bestellung bringt die Seite "Neu" von selbst dorthin,
+   solange niemand am Bildschirm arbeitet, sonst blinkt die Leiste; nach 45 Sekunden Ruhe geht jedes Band zurück auf Seite 1. Nur die
+   gezeigten neuen Bestellungen halten den Ton an. Die Pausenschalter für Lieferung und Abholung stehen in der Kopfzeile.
+ * New: Fahrer zuteilen. Eine fertige Lieferung lässt sich in der Disposition einem Fahrer zuteilen (Fahrer mit aktuellem Standort, mit
+   "fährt gerade"/"frei"/"vorgemerkt"; auf Wunsch auch Fahrer ohne Standort) oder umteilen. Sie landet wie bei der Fahrer-App in dessen
+   Warteschlange und steht im Protokoll (Funktion shop_dispatch_assign_order). Das Board liefert dafür due_ts, ready_ts, updated_ts,
+   driver_id, die Fahrerliste, den Pausenstand und die Fahrzeit.
+ * New: Fehlgeschlagene Lieferung zurückholen. "Nochmal zustellen" zeigt den Grund des Fahrers und lässt Straße, PLZ, Ort, Hinweis für den
+   Fahrer und Telefon korrigieren; eine geänderte Adresse wird gegen die Liefergebiete neu geprüft (neue Koordinaten und Zone). Danach
+   ist die Bestellung wieder fertig und ohne Fahrer im Pool. Der Gutschein der Bestellung wird wieder gebucht (er war beim Fehlschlag
+   freigegeben worden), der bezahlte Betrag bleibt, ein Unterschied der Liefergebühr steht nur im Protokoll (shop_dispatch_retry_order).
+   Der bisherige Knopf "Zurück in den Pool" an fehlgeschlagenen Lieferungen hat nie funktioniert und ist ersetzt.
+ * New: "Lieferschein drucken" und "Gast-Link kopieren" sind zwei gezeichnete Symbole (Drucker, Kettenglied) statt zwei Textknöpfen auf
+   jeder Karte.
+ * Fix: Die Kopfzeile der Bildschirme bricht um, wenn der Platz fehlt, statt die Zähler zusammenzudrücken.
 
  * New: Küchenbildschirm blättert. Eine Seite zeigt so viele Bestellungen wie Spalten (4 oder 5); die Reihenfolge richtet sich danach,
    wann eine Bestellung die Küche verlassen muss. Unten eine Leiste mit großen Knöpfen "Zurück" und "Weiter" (bedienbar mit einem
