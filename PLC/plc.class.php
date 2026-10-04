@@ -150,7 +150,7 @@ var $tbTrans = array(
   */
 // var $remTime = 3600; // 1 hours
 // var $remTime = 10800; // 3 hours
- var $remTime = 86400; // 24 hours
+ var $remTime = 2592000; // 30 days (the kitchen monitor stays logged in; was 24 hours)
  /**
   * The name of the cookie which we will use if user wants to be remembered by the system
   * var string

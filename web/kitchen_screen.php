@@ -14,9 +14,10 @@ include('classes/business.class.php');
 require_once('classes/shop.class.php');
 date_default_timezone_set('Europe/Berlin');
 
+require_once('classes/session_restore.php'); myseat_restore_session(); // a restarted browser or an expired session: back in from the "stay logged in" cookie
 if (empty($_SESSION['valid_user'])) { header('Location: ../PLC/index.php'); exit; }
 if (!current_user_can('Reservation-Edit')) { http_response_code(403); echo 'Keine Berechtigung.'; exit; }
-if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = bin2hex(random_bytes(16)); }
+if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = myseat_admin_token(); }
 $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 ?>
 <!DOCTYPE html>

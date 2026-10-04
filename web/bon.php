@@ -14,6 +14,7 @@ include('classes/business.class.php');
 require_once('classes/shop.class.php');
 date_default_timezone_set('Europe/Berlin');
 
+require_once('classes/session_restore.php'); myseat_restore_session();
 if (empty($_SESSION['valid_user']) || !current_user_can('Reservation-Edit')) { http_response_code(403); echo 'Keine Berechtigung.'; exit; }
 $id = (int)(isset($_GET['id']) ? $_GET['id'] : 0);
 $o = $id ? shop_order($id) : null;

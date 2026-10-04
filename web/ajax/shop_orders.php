@@ -18,10 +18,12 @@ header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 function so_out($data) { echo json_encode($data); exit; }
 
+require_once('../classes/session_restore.php'); myseat_restore_session(); // a restarted browser or an expired session: back in from the "stay logged in" cookie
 if (empty($_SESSION['valid_user']) || !current_user_can('Reservation-Edit')) {
 	http_response_code(403);
 	so_out(array('ok' => false, 'error' => 'Keine Berechtigung. Bitte melde dich neu an.'));
 }
+if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = myseat_admin_token(); } // after a restored session: the same token the page was opened with
 shop_ensure_schema();
 $op = isset($_REQUEST['op']) ? (string)$_REQUEST['op'] : '';
 

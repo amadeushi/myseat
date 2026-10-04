@@ -52,6 +52,14 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.18.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Der Küchenmonitor bleibt lange angemeldet: Küchenmonitor, Disposition, deren Abfragen und der Bondruck holen die Sitzung aus dem
+   "Angemeldet bleiben"-Cookie zurück (web/classes/session_restore.php), wenn der Browser neu gestartet wurde oder die Sitzung auf dem Server
+   abgelaufen ist. Der Cookie gilt jetzt 30 Tage statt 24 Stunden (PLC/plc.class.php, remTime) und wird bei jeder Anmeldung neu gesetzt.
+ * Fix: Das Token der Backend-Seiten ist für denselben Benutzer in jeder Sitzung gleich: eine Seite, die offen war, als die Sitzung verloren ging,
+   kann danach weiter "Fertig" und Drucken senden, statt "Sitzung abgelaufen" zu melden.
+
 2026-10-05 == mySeat v6.17.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Bondrucker in der Küche über einen Raspberry Pi: Der Küchenmonitor legt Bons in eine Warteschlange, ein kleiner Druckdienst auf dem Pi

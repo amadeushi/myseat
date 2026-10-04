@@ -3,7 +3,7 @@
 // through web/ajax/shop_menu_admin.php.
 require_once __DIR__.'/../classes/shop.class.php';
 shop_ensure_schema();
-if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = bin2hex(random_bytes(16)); }
+if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = myseat_admin_token(); }
 ?>
 <div class="content menu-page" id="menu-page" data-token="<?php echo htmlspecialchars($_SESSION['shop_admin_token']); ?>">
 	<div class="orders-bar">

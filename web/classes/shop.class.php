@@ -310,6 +310,13 @@ function shop_print_claim() {
 }
 function shop_print_done($id) { fb_exec("UPDATE ".fb_t('tp_shop_print_jobs')." SET printed_at = ? WHERE id = ?", 'si', array(date('Y-m-d H:i:s'), (int)$id)); }
 
+// the page token of the logged-in user: the same in every session of that user (secret: shop_preview_key())
+function myseat_admin_token() {
+	$who = isset($_SESSION['u_id']) ? (string)$_SESSION['u_id'] : (isset($_SESSION['u_name']) ? (string)$_SESSION['u_name'] : 'staff');
+	if (!function_exists('shop_preview_key')) { return bin2hex(random_bytes(16)); }
+	return substr(hash_hmac('sha256', 'shop_admin_token|'.$who, shop_preview_key()), 0, 32);
+}
+
 // ---- staff preview of the order page on the guest domain: the backend login only exists on the main domain, so a logged-in member of staff
 // gets a link with a short-lived signed token (web/preview_link.php); order/preview.php checks it and opens the preview for that browser.
 function shop_preview_key() {

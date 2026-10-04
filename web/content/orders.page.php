@@ -2,7 +2,7 @@
 // Bestellungen (p=9): the dashboard of the delivery service: numbers of the day and all orders with the next step as a button
 require_once __DIR__.'/../classes/shop.class.php';
 shop_ensure_schema();
-if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = bin2hex(random_bytes(16)); }
+if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = myseat_admin_token(); }
 $or_date = (isset($_GET['date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['date'])) ? $_GET['date'] : date('Y-m-d');
 $or_prev = date('Y-m-d', strtotime($or_date.' -1 day'));
 $or_next = date('Y-m-d', strtotime($or_date.' +1 day'));

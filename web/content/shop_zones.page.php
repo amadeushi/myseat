@@ -3,7 +3,7 @@
 // by web/js/shop_zones_editor.js through web/ajax/shop_zones_admin.php.
 require_once __DIR__.'/../classes/shop.class.php';
 shop_ensure_schema();
-if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = bin2hex(random_bytes(16)); }
+if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = myseat_admin_token(); }
 ?>
 <link rel="stylesheet" href="js/leaflet/leaflet.css"/>
 <link rel="stylesheet" href="js/leaflet/leaflet.draw.css"/>

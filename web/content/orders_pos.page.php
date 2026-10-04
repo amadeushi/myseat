@@ -6,7 +6,7 @@
 // confirmed order to enter. All work is done by web/js/orders_pos.js through web/ajax/shop_pos.php.
 require_once __DIR__.'/../classes/shop.class.php';
 shop_ensure_schema();
-if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = bin2hex(random_bytes(16)); }
+if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = myseat_admin_token(); }
 ?>
 <link rel="stylesheet" href="../order/shop.css?v=<?php echo @filemtime(__DIR__.'/../../order/shop.css'); ?>"/>
 <div class="content pos-page" id="pos-page" data-token="<?php echo htmlspecialchars($_SESSION['shop_admin_token']); ?>">
