@@ -120,7 +120,7 @@
 				'<details class="dv-more"><summary>Mehr</summary><button type="button" class="cart-go dv-alt dv-unq" data-unqueue="' + o.id + '">Zurück in den Pool</button></details>';
 		}
 		return '<article class="dv-card dv-card--' + kind + '" data-card="' + o.id + '">' + head + dist(o) +
-			'<p class="dv-street">' + esc(o.street) + '</p>' + (o.door ? '<p class="dv-door"><span>Hinweis</span> ' + esc(o.door) + '</p>' : '') + tags + near + act + '</article>';
+			(o.customer_name ? '<p class="dv-name">' + esc(o.customer_name) + '</p>' : '') + '<p class="dv-street">' + esc(o.street) + '</p>' + (o.door ? '<p class="dv-door"><span>Hinweis</span> ' + esc(o.door) + '</p>' : '') + tags + near + act + '</article>';
 	}
 
 	function itemsHtml(items) {

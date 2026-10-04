@@ -55,9 +55,13 @@
 		var s = outState(o);
 		return '<div class="ks-out' + s.cls + '" data-out="' + o.out_ts + '" title="Lieferzeit minus ' + o.drive_min + ' Min Fahrt"><span>Raus bis</span><b>' + esc(o.out) + '</b><small>' + s.text + '</small></div>';
 	}
+	// an order with a promised time (wish time of the guest, or the time Lieferando confirmed) is late only when the food has to leave the kitchen and does not;
+	// for the others (as soon as possible) it is late when it has been waiting in the kitchen for 20 minutes
+	function promised(o) { return o.scheduled !== '' || o.source === 'lieferando'; }
+	function isLate(o) { return promised(o) ? (Date.now() / 1000 > o.out_ts) : (Date.now() / 1000 - o.accepted_ts) / 60 >= LATE_AFTER_MIN; }
 	function card(o) {
-		var due = o.scheduled ? o.scheduled : o.due, dueLabel = (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + (o.scheduled ? ' · Wunschzeit' : '');
-		var ageMin = Math.max(0, Math.round((Date.now() / 1000 - o.accepted_ts) / 60)), late = ageMin >= LATE_AFTER_MIN;
+		var due = o.scheduled ? o.scheduled : o.due, dueLabel = (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + (o.scheduled ? ' · Wunschzeit' : (o.source === 'lieferando' ? ' · Lieferando-Zeit' : ''));
+		var ageMin = Math.max(0, Math.round((Date.now() / 1000 - o.accepted_ts) / 60)), late = isLate(o);
 		// "angenommen" vs. "wird gekocht" used to be invisible here - a cook couldn't tell whether dispatch had
 		// already started an order without opening disposition.php; lateness escalates through amber + text,
 		// never through the failure color alone, matching the fix already made on the dispatch board
@@ -65,7 +69,8 @@
 		var actions = '<div class="ks-actions"><button type="button" class="k-go ks-done" data-done="' + o.id + '">Fertig</button><button type="button" class="k-icon ks-bon" data-bon="' + o.id + '" aria-label="Bon drucken" title="Bon drucken">' + ICON_PRINT + '</button><button type="button" class="k-icon ks-zoom" data-zoom="' + o.id + '" aria-pressed="' + (fit[o.id] ? 'true' : 'false') + '" aria-label="Ganze Bestellung zeigen" title="Ganze Bestellung zeigen">' + ICON_ZOOM + '</button></div>';
 		return '<article class="ks-card' + (acked[o.id] ? '' : ' is-fresh') + (late ? ' is-late' : '') + (fit[o.id] ? ' is-fit' : '') + '" data-id="' + o.id + '"><header class="ks-head"><span class="ks-no">#' + o.day_no + '</span><span class="k-type ' + esc(o.type) + '">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + '</span>' +
 			'<span class="k-badge">' + (o.status === 'preparing' ? 'Wird gekocht' : 'Angenommen') + '</span>' +
-			(o.test ? '<span class="k-badge">Test</span>' : '') + '</header>' + actions + ((o.name || o.zip) ? '<p class="ks-who" title="' + esc(o.name) + '"><span class="ks-wname">' + esc(o.name) + '</span>' + (o.zip ? '<span class="ks-zip">' + esc(o.zip) + '</span>' : '') + '</p>' : '') + (o.asap ? '<div class="ks-asap" role="status"><b>Sofort</b><span>so schnell wie möglich</span></div>' : '') + outLine(o) + '<div class="ks-due' + (late ? ' k-late' : '') + '"><span class="ks-dl">' + dueLabel + '</span><b>' + esc(due) + '</b><small>' + since(o.accepted_ts) + (late ? ' · VERSPÄTET' : '') + '</small></div>' +
+			(o.source === 'lieferando' ? '<span class="k-badge lief">Lieferando</span>' : '') +
+			(o.test ? '<span class="k-badge">Test</span>' : '') + '</header>' + actions + ((o.name || o.zip) ? '<p class="ks-who" title="' + esc(o.name) + '"><span class="ks-wname">' + esc(o.name) + '</span>' + (o.zip ? '<span class="ks-zip">' + esc(o.zip) + '</span>' : '') + '</p>' : '') + (o.asap && o.source !== 'lieferando' ? '<div class="ks-asap" role="status"><b>Sofort</b><span>so schnell wie möglich</span></div>' : '') + outLine(o) + '<div class="ks-due' + (late ? ' k-late' : '') + '"><span class="ks-dl">' + dueLabel + '</span><b>' + esc(due) + '</b><small>' + since(o.accepted_ts) + (late ? ' · VERSPÄTET' : '') + '</small></div>' +
 			'<div class="ks-items"><ul class="ks-list">' + o.items.map(function (it) {
 				return '<li class="ks-item"><span class="ks-qty">' + it.qty + '×</span><span class="ks-title">' + esc(it.title) + '</span>' + (it.variation ? '<span class="ks-var">' + esc(it.variation) + '</span>' : '') +
 					it.options.map(function (op) { return '<span class="ks-opt">+ ' + esc(op) + '</span>'; }).join('') + (it.note ? '<span class="ks-note">' + esc(it.note) + '</span>' : '') + '</li>';
@@ -112,7 +117,9 @@
 				} else {
 					var ol = cardNodes[o.id].querySelector('.ks-out');
 					if (ol) { var st = outState(o); ol.className = 'ks-out' + st.cls; ol.querySelector('small').textContent = st.text; }
-					var small = cardNodes[o.id].querySelector('.ks-due small'); if (small) { small.textContent = since(o.accepted_ts) + (cardNodes[o.id].classList.contains('is-late') ? ' · VERSPÄTET' : ''); }
+					var lt = isLate(o), small = cardNodes[o.id].querySelector('.ks-due small');
+					cardNodes[o.id].classList.toggle('is-late', lt); var dd = cardNodes[o.id].querySelector('.ks-due'); if (dd) { dd.classList.toggle('k-late', lt); }
+					if (small) { small.textContent = since(o.accepted_ts) + (lt ? ' · VERSPÄTET' : ''); }
 				}
 				if (cardNodes[o.id].parentNode !== board) { board.appendChild(cardNodes[o.id]); }
 				if (fit[o.id] || cardNodes[o.id].classList.contains('is-fit')) { fitCard(cardNodes[o.id]); }

@@ -77,7 +77,7 @@ function shop_slip_escpos($o, $items, $full) {
 	if ($o['note'] !== '') { $put('>> '.$o['note'].' <<', 1, true); }
 	if ($full) {
 		$rule();
-		$put($o['payment_method'] === 'mollie' ? 'online bezahlt' : ($o['payment_method'] === 'cash' ? 'BAR kassieren: ' : 'KARTE kassieren: ').shop_money($o['total_cents']), 1, true);
+		$put(($o['payment_method'] === 'mollie' || $o['payment_method'] === 'lieferando') ? ($o['payment_method'] === 'lieferando' ? 'bei Lieferando bezahlt' : 'online bezahlt') : ($o['payment_method'] === 'cash' ? 'BAR kassieren: ' : 'KARTE kassieren: ').shop_money($o['total_cents']), 1, true);
 		if (!empty($o['pay_with_cents']) && $o['payment_method'] === 'cash') { $put('Gast zahlt mit '.shop_money((int)$o['pay_with_cents']).', Rueckgeld '.shop_money((int)$o['pay_with_cents'] - (int)$o['total_cents']), 0, true); }
 	}
 	$rule();

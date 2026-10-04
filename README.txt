@@ -52,6 +52,17 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.21.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: Lieferando-Import liest den Zahlungsstand richtig: nur der Block "Wichtig:" zählt. Barbestellungen ("nicht bezahlt worden", "Zahlung Bar") werden als bar und
+   offen gespeichert, "Bezahlt mit" als Betrag des Gastes (Rückgeld); unklare Zahlung gilt als offen. Bezahlte Lieferando-Bestellungen drucken "bei Lieferando bezahlt".
+ * Fix: Lieferando-Import verliert keinen Text mehr: umgebrochene Titel ("Folienkartoffel mit Hähnchenbrust", "fritz-limo honigmelone 0,33l (Mehrweg)"), Notizen
+   zum Artikel ("Bitte schneiden"), mitten im Wort umgebrochene Optionen. Optionspreise, Lieferkosten und Servicegebühr werden mitgelesen. Stimmt die Summe nicht oder
+   bleibt eine Zeile übrig, steht "[Beleg prüfen: ...]" vorn in der Bestellnotiz.
+ * Fix: Küchenbildschirm: Bestellungen mit zugesagter Zeit (Lieferando, Wunschzeit) sind erst verspätet, wenn die Ware die Küche verlassen müsste; kein "Sofort" bei
+   Lieferando. Neu: Lieferando-Badge auf den Karten.
+ * New: Fahrerseite: der Name des Gastes steht groß auf den Karten der offenen Aufträge und der Warteschlange.
+
 2026-10-05 == mySeat v6.21.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Erfassungsseite (Kasse, main_page.php?p=12) neu gebaut nach POS-Logik: links die Karte mit Suche (Tastatur) und den Reitern Beliebt und
