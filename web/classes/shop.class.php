@@ -51,6 +51,10 @@ function shop_ensure_schema() {
 		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `date_from` DATE NOT NULL, `date_to` DATE NOT NULL, `kind` VARCHAR(10) NOT NULL DEFAULT 'all',
 		`closed` TINYINT NOT NULL DEFAULT 1, `yearly` TINYINT NOT NULL DEFAULT 0, `label` VARCHAR(80) NOT NULL DEFAULT '', `windows` VARCHAR(300) NOT NULL DEFAULT '',
 		KEY `dates` (`date_from`, `date_to`)) $opts");
+	// slips for the receipt printer in the kitchen (print agent on the Raspberry Pi picks them up, see shop_print_claim)
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_print_jobs')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `order_id` INT UNSIGNED NOT NULL, `is_full` TINYINT NOT NULL DEFAULT 0, `created_at` DATETIME NOT NULL,
+		`claimed_at` DATETIME NULL, `printed_at` DATETIME NULL, `tries` TINYINT NOT NULL DEFAULT 0, KEY `todo` (`printed_at`, `created_at`)) $opts");
 	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_geocache')." (
 		`h` CHAR(40) NOT NULL PRIMARY KEY, `lat` DOUBLE NULL, `lng` DOUBLE NULL, `postcode` VARCHAR(10) NULL, `road` VARCHAR(160) NULL,
 		`created_at` DATETIME NOT NULL) $opts");
@@ -280,6 +284,32 @@ function shop_setting_set($k, $v) {
 	fb_exec("REPLACE INTO ".fb_t('tp_shop_settings')." (k, v, updated_at) VALUES (?, ?, NOW())", 'ss', array($k, (string)$v));
 }
 function shop_flag($k) { return shop_setting($k) === '1'; }
+// ---- print agent: a Raspberry Pi in the kitchen with the receipt printer asks for slips and prints them as ESC/POS (web/ajax/print_agent.php).
+// The kitchen monitor queues a slip here when the agent was seen in the last 20 seconds; otherwise it prints through the browser as before.
+function shop_print_agent_key() {
+	$k = (string)shop_setting('print_agent_key');
+	if (strlen($k) < 32) { $k = bin2hex(random_bytes(24)); shop_setting_set('print_agent_key', $k); }
+	return $k;
+}
+function shop_print_agent_alive() { return time() - (int)shop_setting('print_agent_seen') <= 20; }
+function shop_print_enqueue($orderId, $full) {
+	fb_exec("INSERT INTO ".fb_t('tp_shop_print_jobs')." (order_id, is_full, created_at) VALUES (?, ?, ?)", 'iis', array((int)$orderId, $full ? 1 : 0, date('Y-m-d H:i:s')));
+	return (int)mysqli_insert_id(fb_db());
+}
+// the oldest slip nobody has printed (not older than 15 minutes, a claim is given up after 30 seconds, at most 5 tries); array(id, order_id, data (base64 ESC/POS)) or null
+function shop_print_claim() {
+	require_once __DIR__.'/escpos.class.php';
+	$stale = date('Y-m-d H:i:s', time() - 30);
+	$j = fb_row("SELECT id, order_id, is_full FROM ".fb_t('tp_shop_print_jobs')." WHERE printed_at IS NULL AND tries < 5 AND created_at > ? AND (claimed_at IS NULL OR claimed_at < ?) ORDER BY id LIMIT 1", 'ss', array(date('Y-m-d H:i:s', time() - 900), $stale));
+	if (!$j) { return null; }
+	$st = fb_exec("UPDATE ".fb_t('tp_shop_print_jobs')." SET claimed_at = ?, tries = tries + 1 WHERE id = ? AND printed_at IS NULL AND (claimed_at IS NULL OR claimed_at < ?)", 'sis', array(date('Y-m-d H:i:s'), (int)$j['id'], $stale));
+	if (!$st || mysqli_stmt_affected_rows($st) !== 1) { return null; }
+	$o = shop_order((int)$j['order_id']);
+	if (!$o) { shop_print_done((int)$j['id']); return null; }
+	return array('id' => (int)$j['id'], 'order_id' => (int)$j['order_id'], 'data' => base64_encode(shop_slip_escpos($o, shop_order_items((int)$o['id']), (bool)$j['is_full'])));
+}
+function shop_print_done($id) { fb_exec("UPDATE ".fb_t('tp_shop_print_jobs')." SET printed_at = ? WHERE id = ?", 'si', array(date('Y-m-d H:i:s'), (int)$id)); }
+
 // ---- staff preview of the order page on the guest domain: the backend login only exists on the main domain, so a logged-in member of staff
 // gets a link with a short-lived signed token (web/preview_link.php); order/preview.php checks it and opens the preview for that browser.
 function shop_preview_key() {

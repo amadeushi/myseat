@@ -52,6 +52,16 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.17.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Bondrucker in der Küche über einen Raspberry Pi: Der Küchenmonitor legt Bons in eine Warteschlange, ein kleiner Druckdienst auf dem Pi
+   (tools/kitchen-pi/) holt sie über web/ajax/print_agent.php ab und druckt sie als ESC/POS (große Schrift, Umlaute, Schnitt) auf den NCR 7197.
+   Läuft der Dienst nicht, druckt der Monitor wie bisher über den Browser. Die Disposition druckt weiter über den Browser.
+ * New: Der Schalter im Küchenmonitor heißt "Bon bei Fertig": nach "Fertig" wird bei Lieferungen der Lieferschein, bei Abholungen der Küchenbon
+   automatisch gedruckt (vorher beim Eingang der Bestellung).
+ * New: Küchenmonitor: "Fertig", Drucken und Lupe stehen oben in der Karte unter der Kopfzeile, die unteren 1,5 cm des Bildschirms bleiben frei
+   (Wert --bottom-safe in kitchen.css), für Monitore, deren Rand verdeckt ist.
+
 2026-10-05 == mySeat v6.16.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Mitarbeiter-Vorschau der Bestellseite auf der App-Domain: "Bestellseite ansehen" im Bestell-Dashboard, in der Speisekarte und in den

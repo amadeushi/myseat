@@ -59,6 +59,12 @@ $order = $id ? shop_order($id) : null;
 if (!$order) { so_out(array('ok' => false, 'error' => 'Diese Bestellung gibt es nicht.')); }
 $who = isset($_SESSION['valid_user']) && is_string($_SESSION['valid_user']) ? $_SESSION['valid_user'] : 'Personal';
 
+if ($op === 'print_job') {
+	// the kitchen printer on the Raspberry Pi takes the slip when its agent is alive; otherwise the monitor prints through the browser as before
+	if (!shop_print_agent_alive()) { so_out(array('ok' => true, 'queued' => false)); }
+	shop_print_enqueue($id, !empty($_POST['full']));
+	so_out(array('ok' => true, 'queued' => true));
+}
 if ($op === 'status') {
 	$to = isset($_POST['status']) ? (string)$_POST['status'] : '';
 	$allowed = array('new', 'accepted', 'preparing', 'ready', 'delivering', 'done', 'cancelled');

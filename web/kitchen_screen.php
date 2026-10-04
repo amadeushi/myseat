@@ -37,7 +37,7 @@ $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 		<span class="k-clock" id="k-clock"></span>
 		<div id="k-tools" class="k-tools"></div>
 		<button type="button" class="k-btn" id="k-cols" aria-label="Anzahl der Spalten">5 Spalten</button>
-		<button type="button" class="k-btn" id="k-auto" aria-pressed="false">Bon automatisch: aus</button>
+		<button type="button" class="k-btn" id="k-auto" aria-pressed="false" title="Druckt nach Fertig den Bon: bei Lieferungen den Lieferschein, bei Abholungen den Küchenbon">Bon bei Fertig: aus</button>
 		<button type="button" class="k-btn" id="k-full">Vollbild</button>
 		<a class="k-btn" href="disposition.php">Disposition</a>
 	</header>

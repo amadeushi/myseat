@@ -34,7 +34,7 @@
 	tick(); setInterval(tick, 10000);
 	function syncBar() {
 		$('#k-cols').textContent = cols + ' Spalten';
-		var a = $('#k-auto'); a.setAttribute('aria-pressed', autoPrint ? 'true' : 'false'); a.textContent = 'Bon automatisch: ' + (autoPrint ? 'an' : 'aus');
+		var a = $('#k-auto'); a.setAttribute('aria-pressed', autoPrint ? 'true' : 'false'); a.textContent = 'Bon bei Fertig: ' + (autoPrint ? 'an' : 'aus');
 		board.style.setProperty('--cols', cols);
 	}
 	$('#k-cols').addEventListener('click', function () { cols = cols === 5 ? 4 : 5; try { localStorage.setItem('ksCols', cols); } catch (e) {} syncBar(); render(); });
@@ -61,14 +61,16 @@
 		// "angenommen" vs. "wird gekocht" used to be invisible here - a cook couldn't tell whether dispatch had
 		// already started an order without opening disposition.php; lateness escalates through amber + text,
 		// never through the failure color alone, matching the fix already made on the dispatch board
+		// the buttons sit at the top of the column, directly under its head: the lower edge of a kitchen monitor is often hidden or hard to read
+		var actions = '<div class="ks-actions"><button type="button" class="k-go ks-done" data-done="' + o.id + '">Fertig</button><button type="button" class="k-icon ks-bon" data-bon="' + o.id + '" aria-label="Bon drucken" title="Bon drucken">' + ICON_PRINT + '</button><button type="button" class="k-icon ks-zoom" data-zoom="' + o.id + '" aria-pressed="' + (fit[o.id] ? 'true' : 'false') + '" aria-label="Ganze Bestellung zeigen" title="Ganze Bestellung zeigen">' + ICON_ZOOM + '</button></div>';
 		return '<article class="ks-card' + (acked[o.id] ? '' : ' is-fresh') + (late ? ' is-late' : '') + (fit[o.id] ? ' is-fit' : '') + '" data-id="' + o.id + '"><header class="ks-head"><span class="ks-no">#' + o.day_no + '</span><span class="k-type ' + esc(o.type) + '">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + '</span>' +
 			'<span class="k-badge">' + (o.status === 'preparing' ? 'Wird gekocht' : 'Angenommen') + '</span>' +
-			(o.test ? '<span class="k-badge">Test</span>' : '') + '</header>' + ((o.name || o.zip) ? '<p class="ks-who" title="' + esc(o.name) + '"><span class="ks-wname">' + esc(o.name) + '</span>' + (o.zip ? '<span class="ks-zip">' + esc(o.zip) + '</span>' : '') + '</p>' : '') + (o.asap ? '<div class="ks-asap" role="status"><b>Sofort</b><span>so schnell wie möglich</span></div>' : '') + outLine(o) + '<div class="ks-due' + (late ? ' k-late' : '') + '"><span class="ks-dl">' + dueLabel + '</span><b>' + esc(due) + '</b><small>' + since(o.accepted_ts) + (late ? ' · VERSPÄTET' : '') + '</small></div>' +
+			(o.test ? '<span class="k-badge">Test</span>' : '') + '</header>' + actions + ((o.name || o.zip) ? '<p class="ks-who" title="' + esc(o.name) + '"><span class="ks-wname">' + esc(o.name) + '</span>' + (o.zip ? '<span class="ks-zip">' + esc(o.zip) + '</span>' : '') + '</p>' : '') + (o.asap ? '<div class="ks-asap" role="status"><b>Sofort</b><span>so schnell wie möglich</span></div>' : '') + outLine(o) + '<div class="ks-due' + (late ? ' k-late' : '') + '"><span class="ks-dl">' + dueLabel + '</span><b>' + esc(due) + '</b><small>' + since(o.accepted_ts) + (late ? ' · VERSPÄTET' : '') + '</small></div>' +
 			'<div class="ks-items"><ul class="ks-list">' + o.items.map(function (it) {
 				return '<li class="ks-item"><span class="ks-qty">' + it.qty + '×</span><span class="ks-title">' + esc(it.title) + '</span>' + (it.variation ? '<span class="ks-var">' + esc(it.variation) + '</span>' : '') +
 					it.options.map(function (op) { return '<span class="ks-opt">+ ' + esc(op) + '</span>'; }).join('') + (it.note ? '<span class="ks-note">' + esc(it.note) + '</span>' : '') + '</li>';
 			}).join('') + '</ul></div>' + (o.note ? '<p class="ks-onote">' + esc(o.note) + '</p>' : '') +
-			'<footer class="ks-foot"><button type="button" class="k-go ks-done" data-done="' + o.id + '">Fertig</button><button type="button" class="k-icon ks-bon" data-bon="' + o.id + '" aria-label="Bon drucken" title="Bon drucken">' + ICON_PRINT + '</button><button type="button" class="k-icon ks-zoom" data-zoom="' + o.id + '" aria-pressed="' + (fit[o.id] ? 'true' : 'false') + '" aria-label="Ganze Bestellung zeigen" title="Ganze Bestellung zeigen">' + ICON_ZOOM + '</button></footer></article>';
+			'</article>';
 	}
 	// diff-rendered by order id instead of a wholesale innerHTML replace on every change: a full rebuild used to
 	// wipe out an in-progress "Wirklich fertig?" confirm (its armed state lives on the button's own DOM
@@ -181,7 +183,6 @@
 			Object.keys(fit).forEach(function (k) { if (ids.indexOf(+k) < 0) { delete fit[k]; } }); saveFit();
 			if (fresh.length) {
 				sound.notify();
-				if (autoPrint) { fresh.forEach(function (o, i) { if (!printed[o.id]) { printed[o.id] = 1; try { sessionStorage.setItem('ksPrinted', JSON.stringify(printed)); } catch (e) {} setTimeout(function () { MonitorPrint.slip(o.id, false); }, i * 1500); } }); }
 			}
 			render(); sound.ack();
 		}).catch(function (e) { if (e.message !== 'login' && Date.now() - lastOk > 20000) { $('#k-offline').hidden = false; } });
@@ -194,14 +195,18 @@
 		if (!acked[id]) { acked[id] = true; saveAcked(); c.classList.remove('is-fresh'); sound.ack(); }
 		var zm = ev.target.closest('[data-zoom]');
 		if (zm) { if (fit[id]) { delete fit[id]; } else { fit[id] = 1; } saveFit(); c.classList.toggle('is-fit', !!fit[id]); fitCard(c); return; }
-		var bon = ev.target.closest('[data-bon]'); if (bon) { MonitorPrint.slip(id, false); return; }
+		var bon = ev.target.closest('[data-bon]'); if (bon) { MonitorPrint.slip(id, false, TOKEN); return; }
 		var done = ev.target.closest('[data-done]');
 		if (done) {
 			// a second tap within 4 seconds finishes: no dialog, works in full screen
 			if (!done.dataset.armed) { done.dataset.armed = '1'; done.textContent = 'Wirklich fertig?'; setTimeout(function () { done.dataset.armed = ''; done.textContent = 'Fertig'; }, 4000); return; }
 			done.disabled = true;
 			var fd = new FormData(); fd.append('op', 'status'); fd.append('token', TOKEN); fd.append('id', id); fd.append('status', 'ready');
-			fetch('ajax/shop_orders.php', { method: 'POST', body: fd, credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) { if (!r.ok) { notify(r.error || 'Das hat nicht geklappt.'); } load(); }).catch(function () { notify('Das hat nicht geklappt.'); done.disabled = false; });
+			fetch('ajax/shop_orders.php', { method: 'POST', body: fd, credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) {
+				if (!r.ok) { notify(r.error || 'Das hat nicht geklappt.'); }
+				else if (autoPrint) { var po = orders.filter(function (x) { return x.id === id; })[0]; MonitorPrint.slip(id, !!po && po.type === 'delivery', TOKEN); } // finished: the delivery slip for a delivery, the slip for a pickup
+				load();
+			}).catch(function () { notify('Das hat nicht geklappt.'); done.disabled = false; });
 		}
 	});
 	load(); setInterval(load, 5000); setInterval(function () { if (orders.length) { render(); } }, 30000);

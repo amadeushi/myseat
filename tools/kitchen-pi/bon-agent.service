@@ -1,0 +1,14 @@
+[Unit]
+Description=Bon-Druckdienst Kueche (mySeat)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=hamun
+EnvironmentFile=/etc/bon-agent.env
+ExecStart=/usr/bin/python3 /home/hamun/print-agent.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
