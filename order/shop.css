@@ -381,39 +381,153 @@
 .shop-shell .st-mapnote:empty { display: none; }
 @media (prefers-reduced-motion: reduce) { .st-pin-driver span { animation: none; } }
 
-/* driver page */
-/* the shared .st-title hero (40px, Display-Hero) is right for checkout/status/ETA moments elsewhere on /order,
-   but here it only ever greets the driver by name or shows "Link ungültig" - neither is a hero moment worth
-   outranking the address/cash-to-collect below it, so this page gets its own, smaller Display-tier size */
-.dv .st-title { font-size: 24px; }
-.dv-big { font-size: 18px; font-weight: 700; line-height: 1.35; }
-.dv-links { display: grid; gap: 10px; margin-top: 14px; }
+/* driver page (order/driver.php): a phone in one hand, in a car or on the street, in sun or at night. Big touch targets, the district and the
+   distance first, and nothing that a tap in a pocket could trigger: finishing and starting need a swipe, the risky buttons sit behind "Mehr". */
+.dv { touch-action: manipulation; -webkit-tap-highlight-color: transparent; font-size: 16px; }
+.dv [hidden] { display: none !important; }
+.dv input, .dv textarea { caret-color: var(--gold); }
+.dv .st-wrap { padding: 12px 16px calc(56px + env(safe-area-inset-bottom)); }
+.dv .dv-bar { position: sticky; top: 0; z-index: 40; display: flex; align-items: center; gap: 10px; padding: calc(8px + env(safe-area-inset-top)) 16px 8px; background: var(--bg); border-bottom: 1px solid var(--border-soft); }
+.dv .dv-who { flex: none; max-width: 36%; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dv .dv-gps { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 1px solid var(--border-soft); border-radius: var(--radius-pill); background: var(--surface); font-size: 13px; font-weight: 600; color: var(--text-muted); }
+.dv .dv-gps span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dv .dv-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--text-muted); }
+.dv .dv-gps.is-ok { color: var(--text); }
+.dv .dv-gps.is-ok .dv-dot { background: var(--success); }
+.dv .dv-gps.is-warn .dv-dot { background: var(--gold); }
+.dv .dv-gps.is-bad { border-color: var(--danger); color: var(--danger); }
+.dv .dv-gps.is-bad .dv-dot { background: var(--danger); }
+.dv .dv-icon-btn { flex: none; width: 44px; height: 44px; padding: 0; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 50%; background: var(--surface-2); color: var(--gold); }
+.dv .dv-icon-btn[aria-pressed="true"] { background: var(--gold); color: #1a1408; }
+.dv .dv-state { margin: 0 0 4px; color: var(--text-muted); font-size: 14px; }
+.dv .dv-banner { margin: 8px 0 4px; padding: 12px 14px; border: 1px solid var(--danger); border-radius: var(--radius-md); background: rgba(226, 134, 124, 0.1); font-size: 14px; line-height: 1.45; }
+.dv .dv-section { font-family: var(--font-display); font-weight: 500; font-size: 24px; line-height: 1.15; margin: 28px 0 4px; }
+.dv .dv-hint { margin: 0; color: var(--text-muted); font-size: 14px; }
+.dv .dv-list { display: grid; gap: 12px; margin-top: 12px; }
+
+/* one delivery: district first, then the way, then the street */
+.dv .dv-card, .dv .dv-active { padding: 16px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface); }
+.dv .dv-card--queue, .dv .dv-active { border-color: var(--border); }
+.dv .dv-active { margin-top: 12px; }
+.dv .dv-card.is-new, .dv .dv-card.is-flash, .dv .dv-active.is-flash { outline: 2px solid var(--gold); outline-offset: 2px; }
+.dv .dv-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.dv .dv-sub { min-width: 0; font-size: 24px; font-weight: 800; line-height: 1.15; text-wrap: balance; }
+.dv .dv-no { flex: none; font-size: 14px; font-weight: 700; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.dv .dv-dist { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; margin: 10px 0 12px; }
+.dv .dv-dist strong { font-size: 22px; font-weight: 800; color: var(--gold-strong); font-variant-numeric: tabular-nums; }
+.dv .dv-dist > span:not(.dv-meter) { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.dv .dv-dist small { flex-basis: 100%; font-size: 13px; color: var(--text-muted); }
+.dv .dv-dist--none { color: var(--text-muted); font-size: 14px; }
+.dv .dv-meter { display: inline-flex; align-items: flex-end; gap: 3px; height: 20px; }
+.dv .dv-meter i { width: 6px; border-radius: var(--radius-sm); background: var(--surface-3); }
+.dv .dv-meter i:nth-child(1) { height: 9px; }
+.dv .dv-meter i:nth-child(2) { height: 14px; }
+.dv .dv-meter i:nth-child(3) { height: 20px; }
+.dv .dv-meter[data-far="1"] i:nth-child(1), .dv .dv-meter[data-far="2"] i:nth-child(-n+2), .dv .dv-meter[data-far="3"] i { background: var(--gold); }
+.dv .dv-street { font-size: 18px; font-weight: 700; line-height: 1.3; }
+.dv .dv-street--big { font-size: 24px; margin-top: 4px; }
+.dv .dv-city { margin-top: 2px; color: var(--text-muted); font-size: 15px; }
+.dv .dv-door, .dv .dv-onote { margin-top: 10px; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); font-size: 15px; line-height: 1.4; }
+.dv .dv-door span, .dv .dv-onote span { margin-right: 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); }
+.dv .dv-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.dv .dv-tag { padding: 4px 10px; border: 1px solid var(--border-soft); border-radius: var(--radius-sm); background: var(--surface-2); font-size: 13px; font-weight: 600; }
+.dv .dv-tag--pay { color: var(--gold-strong); border-color: var(--border); }
+.dv .dv-tag.is-late { color: var(--danger); border-color: var(--danger); }
+.dv .dv-near { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 14px; color: var(--text-muted); }
+.dv .dv-near .dv-ic { flex: none; color: var(--gold); }
+.dv .cart-go { gap: 10px; }
+.dv .dv-take { min-height: 60px; margin-top: 16px; font-size: 18px; }
+.dv .dv-take:disabled { background: var(--surface-3); color: var(--text-muted); cursor: wait; }
+.dv .dv-locked-note { margin: 8px 0 0; font-size: 13px; color: var(--text-muted); }
 .shop-shell .cart-go.dv-alt { background: transparent; color: var(--gold-strong); border: 1px solid var(--border); text-decoration: none; margin-top: 10px; }
-.dv-actions { margin-top: 24px; }
-.dv-actions .cart-go[hidden] { display: none; }
-.dv-actions .cart-go { margin-top: 10px; min-height: 60px; font-size: 18px; }
-.dv-done { background: var(--success); }
-.dv-fail { background: var(--danger); }
-/* the "Fehlgeschlagen" trigger button only opens the reason form below it - giving it the same filled weight as
-   "Zugestellt" made a negative outcome compete with the primary success action; outlined like the other
-   secondary actions (Pausieren/Zurück), it still reads as danger via color alone. The form's own "Meldung
-   senden" stays filled: once a driver is already in that flow, it's the one correct next action again. */
-.shop-shell .cart-go.dv-alt.dv-fail { background: transparent; color: var(--danger); border-color: var(--danger); }
-.dv-fail-form { margin-top: 14px; }
-.dv-fail-form label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
-.dv-fail-form textarea { width: 100%; box-sizing: border-box; min-height: 80px; padding: 12px 14px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface-2); color: var(--text); font: inherit; resize: vertical; }
-/* section headers stacking "active delivery" / "own queue" / "open pool" - all three can show at once now */
-.dv-section { font-family: var(--font-display); font-weight: 400; font-size: 18px; margin: 32px 0 4px; }
-.dv-section:first-child { margin-top: 0; }
-/* the open-delivery queue a driver picks from, and his own accepted-but-not-started queue (order/driver.php) */
-.dv-list { display: grid; gap: 14px; margin-top: 14px; }
-.dv-card .st-lead { margin: 4px 0 14px; max-width: none; }
-.dv-card .cart-go { min-height: 52px; }
-/* a flat opacity drop on the same gold fill read as "still tappable, just slightly dim" rather than "locked" -
-   a neutral surface with no fill reads as disabled even in bright outdoor light; the blocking reason moved from
-   a hover-only title attribute to visible text (see queueCardHtml() in driver.js) */
-.dv-card .cart-go:disabled { background: var(--surface-3); color: var(--text-muted); border: 1px solid var(--border-soft); opacity: 1; cursor: not-allowed; }
-.dv-locked-note { margin: 8px 0 0; font-size: 13px; color: var(--text-muted); }
+.shop-shell .cart-go.dv-alt.dv-fail { color: var(--danger); border-color: var(--danger); }
+.dv .dv-fail { background: var(--danger); }
+.dv .dv-links { display: grid; gap: 10px; margin-top: 16px; }
+.dv .dv-links .cart-go { margin-top: 0; }
+.dv .dv-route { min-height: 64px; font-size: 20px; }
+.dv .dv-links .dv-alt { min-height: 56px; }
+
+/* what to collect */
+.dv .dv-collect { margin-top: 16px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-2); }
+.dv .dv-collect-l { font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); }
+.dv .dv-collect-v { font-size: 34px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.dv .dv-collect.is-paid { border-color: var(--success); }
+.dv .dv-collect.is-paid .dv-collect-v { font-size: 20px; color: var(--success); }
+.dv .dv-change { margin-top: 8px; }
+.dv .dv-change > summary { color: var(--gold-strong); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.dv .dv-change-in { padding-bottom: 4px; }
+.dv .dv-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.dv .dv-chips button { min-height: 48px; padding: 0 16px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); color: var(--text); font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dv .dv-change label { display: block; margin: 12px 0 6px; font-size: 13px; color: var(--text-muted); }
+.dv .dv-change input { width: 100%; min-height: 48px; padding: 0 14px; border: 1px solid var(--border-soft); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font: inherit; font-size: 16px; }
+.dv .dv-change-out { min-height: 30px; margin-top: 10px; font-size: 22px; font-weight: 800; color: var(--success); font-variant-numeric: tabular-nums; }
+.dv .dv-change-out.is-short { color: var(--danger); }
+.dv .dv-h4 { margin: 22px 0 4px; font-family: var(--font-display); font-weight: 500; font-size: 22px; }
+.dv .dv-items li { padding: 10px 0; border-top: 1px solid var(--border-soft); font-size: 16px; line-height: 1.4; }
+.dv .dv-var { color: var(--text-muted); }
+.dv .dv-opts, .dv .dv-inote { display: block; margin-left: 28px; font-size: 14px; color: var(--text-muted); }
+.dv .dv-inote { color: var(--text); font-weight: 700; }
+
+/* swipe: the control that cannot be triggered by a tap */
+.dv .dv-swipe-slot { margin-top: 16px; }
+.dv .dv-swipe { position: relative; height: 64px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--surface-3); overflow: hidden; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.dv .dv-swipe-fill { position: absolute; top: 0; bottom: 0; left: 0; width: 0; background: rgba(201, 162, 89, 0.22); }
+.dv .dv-swipe--go .dv-swipe-fill { background: rgba(143, 191, 122, 0.3); }
+.dv .dv-swipe-label { position: absolute; inset: 0; display: grid; place-items: center; padding: 0 20px 0 66px; font-size: 16px; font-weight: 700; text-align: center; pointer-events: none; }
+.dv .dv-swipe-thumb { position: absolute; top: 3px; left: 3px; width: 56px; height: 56px; display: grid; place-items: center; border-radius: 50%; background: var(--gold); color: #1a1408; cursor: grab; touch-action: none; }
+.dv .dv-swipe--go .dv-swipe-thumb { background: var(--success); }
+.dv .dv-swipe.is-drag .dv-swipe-thumb { cursor: grabbing; }
+.dv .dv-swipe.is-done .dv-swipe-thumb { opacity: 0.85; }
+.dv .dv-swipe[aria-disabled="true"] { background: var(--surface-2); border-color: var(--border-soft); }
+.dv .dv-swipe[aria-disabled="true"] .dv-swipe-thumb { background: var(--surface-3); color: var(--text-muted); cursor: not-allowed; }
+.dv .dv-swipe[aria-disabled="true"] .dv-swipe-label { color: var(--text-muted); }
+
+/* disclosures: "Mehr" with the risky buttons is far from the main action, the checklist before the start stays optional */
+.dv .dv-more { margin-top: 24px; }
+.dv .dv-more > summary, .dv .dv-check > summary, .dv .dv-change > summary, .dv .dv-mapbox > summary { display: flex; align-items: center; gap: 8px; min-height: 48px; cursor: pointer; list-style: none; }
+.dv .dv-more > summary::-webkit-details-marker, .dv .dv-check > summary::-webkit-details-marker, .dv .dv-change > summary::-webkit-details-marker, .dv .dv-mapbox > summary::-webkit-details-marker { display: none; }
+.dv .dv-more > summary, .dv .dv-check > summary { justify-content: center; }
+.dv .dv-more > summary { border: 1px solid var(--border-soft); border-radius: var(--radius-pill); color: var(--text-muted); font-weight: 600; }
+.dv .dv-more > summary::after, .dv .dv-check > summary::after { content: ""; width: 7px; height: 7px; margin-top: -3px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); }
+.dv .dv-more[open] > summary, .dv .dv-check[open] > summary { margin-bottom: 8px; }
+.dv .dv-more[open] > summary::after, .dv .dv-check[open] > summary::after { margin-top: 3px; transform: rotate(-135deg); }
+.dv .dv-check { margin-top: 12px; border-top: 1px solid var(--border-soft); }
+.dv .dv-check > summary { justify-content: space-between; font-size: 15px; font-weight: 600; }
+.dv .dv-check > summary::after { display: none; }
+.dv .dv-check-n { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.dv .dv-check.is-complete .dv-check-n { color: var(--success); }
+.dv .dv-checklist li label { display: flex; align-items: center; gap: 12px; min-height: 44px; font-size: 15px; line-height: 1.35; }
+.dv .dv-checklist input { flex: none; width: 22px; height: 22px; accent-color: var(--gold); }
+.dv .dv-checklist small { display: block; color: var(--text-muted); font-size: 13px; }
+.dv .dv-fail-form { margin-top: 14px; }
+.dv .dv-fail-form label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
+.dv .dv-fail-form textarea { width: 100%; min-height: 80px; padding: 12px 14px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface-2); color: var(--text); font: inherit; font-size: 16px; resize: vertical; }
+.dv .dv-more .cart-go { min-height: 56px; }
+
+/* map of everything that is open */
+.dv .dv-mapbox { margin-top: 16px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface); }
+.dv .dv-mapbox > summary { padding: 0 16px; font-weight: 700; }
+.dv .dv-mapin { padding: 0 12px 12px; }
+.dv .dv-map { height: 260px; }
+.dv .dv-legend { margin-top: 8px; font-size: 13px; color: var(--text-muted); line-height: 1.45; }
+.dv .dv-textbtn { min-height: 44px; padding: 0; border: 0; background: none; color: var(--gold-strong); font: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.dv .dv-pin span { display: grid; place-items: center; width: 32px; height: 32px; margin: 1px; border: 2px solid var(--gold); border-radius: 50%; font: 800 13px var(--font-body); font-variant-numeric: tabular-nums; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); }
+.dv .dv-pin--open span { background: var(--gold); color: #1a1408; border-color: var(--bg); }
+.dv .dv-pin--queue span { background: var(--bg); color: var(--gold-strong); }
+.dv .dv-pin--cur span { background: var(--success); color: #1a1408; border-color: var(--bg); }
+.dv .dv-sort { display: flex; margin-top: 10px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface); overflow: hidden; }
+.dv .dv-sort button { flex: 1; min-height: 44px; border: 0; background: transparent; color: var(--text-muted); font-size: 14px; font-weight: 600; }
+.dv .dv-sort button[aria-pressed="true"] { background: var(--gold); color: #1a1408; }
+.dv .dv-dl { display: grid; margin: 8px 0 0; }
+.dv .dv-dl div { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border-soft); }
+.dv .dv-dl dt { color: var(--text-muted); }
+.dv .dv-dl dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+.dv .dv-dl small { color: var(--text-muted); font-weight: 600; }
+.dv .dv-toast { position: fixed; z-index: 60; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); max-width: 608px; min-height: 56px; margin: 0 auto; padding: 8px 8px 8px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-3); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5); font-size: 15px; }
+.dv .dv-toast button { min-height: 44px; padding: 0 16px; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--gold-strong); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .dv-swipe-thumb, .dv-swipe-fill { transition: none !important; } }
+.dv .dv-pin--shop span { background: var(--bg); color: var(--gold-strong); border-color: var(--gold-strong); }
+.dv .dv-pin--shop svg { display: block; }
 
 /* coupon */
 .co-coupon { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-soft); }

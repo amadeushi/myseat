@@ -32,8 +32,7 @@ if ($since <= 0 || empty($_SESSION['outletID']) || empty($_SESSION['selectedDate
 $q = 1;
 $resHighlightToday = true;
 $maitre = array('maitre_timestamp' => '', 'maitre_comment_day' => '');
-$general = array();
-$availability = array();
+$availability = array(); // $general (time format, old_days) comes from config.inc.php above; do not reset it here
 $tbl_availability = array();
 $_SESSION['wait'] = 0;
 

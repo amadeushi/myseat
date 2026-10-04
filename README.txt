@@ -52,6 +52,19 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.19.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Fahrerseite für Fahrer, die die Stadt nicht kennen: Jede Lieferung zeigt den Stadtteil (von OpenStreetMap, einmal je Bestellung gespeichert) und die
+   Fahrstrecke vom Restaurant (OSRM, Auto), bei Ausfall des Dienstes die Luftlinie als "ca.". Dazu: Karte der offenen Lieferungen, Hinweis "liegt nah bei #12",
+   Warteliste nach kürzestem Weg, Sortierung nach Zeit oder Nähe, GPS-Anzeige mit Warnung, Wechselgeld-Rechner, Prüfliste vor dem Start, Ton und Vibration
+   bei neuen Lieferungen, Schichtbilanz.
+ * New: Schutz vor versehentlicher Bedienung: Starten und Zustellen nur per Wisch-Regler, Annehmen mit 7 Sekunden Rückgängig, Pausieren, Zurückgeben und
+   Fehlgeschlagen hinter "Mehr", der Bildschirm bleibt während einer aktiven Lieferung an.
+ * New: Einstellungen > Lieferservice > "Stadtteile für die Fahrer": Namen von OpenStreetMap umbenennen oder eine Straße oder PLZ fest einem Stadtteil
+   zuordnen. Neue Tabelle tp_shop_suburbs, neue Spalten suburb, route_m, route_s, geo_at an tp_shop_orders (werden von selbst angelegt).
+ * Fix: Eine live in die Reservierungstabelle eingefügte neue Reservierung zeigte die Uhrzeit im englischen 12-Stunden-Format, bis die Seite neu geladen
+   wurde (ajax/reservations_new_rows.php überschrieb die Einstellungen).
+
 2026-10-05 == mySeat v6.18.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Der Küchenmonitor bleibt lange angemeldet: Küchenmonitor, Disposition, deren Abfragen und der Bondruck holen die Sitzung aus dem

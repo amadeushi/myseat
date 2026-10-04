@@ -9,6 +9,7 @@ $sh_count = function ($t) { $r = fb_row("SELECT COUNT(*) AS n FROM ".fb_t($t)); 
 $sh_cats = $sh_count('tp_shop_categories'); $sh_prods = $sh_count('tp_shop_products');
 $sh_zones = fb_rows("SELECT id, name, fee_cents, min_order_cents, active FROM ".fb_t('tp_shop_zones')." ORDER BY id");
 $sh_drivers = shop_drivers_list();
+$sh_suburbs = shop_suburbs_list(); $sh_seen = shop_suburbs_seen();
 $sh_hours = fb_rows("SELECT kind, weekday, begins, ends FROM ".fb_t('tp_shop_hours')." ORDER BY kind, weekday, begins");
 $sh_days = array('Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So');
 $sh_by = array('delivery' => array(), 'pickup' => array());
@@ -102,7 +103,7 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 		</div>
 
 		<h4 class="sms-sub">Standort des Restaurants</h4>
-		<small class="offer-help">Für die Karte auf der Statusseite: Gäste sehen, wo wir sind und wohin geliefert wird. Ohne Adresse zeigt die Karte nur das Ziel.</small>
+		<small class="offer-help">Für die Karte auf der Statusseite: Gäste sehen, wo wir sind und wohin geliefert wird. Ohne Adresse zeigt die Karte nur das Ziel, und die Fahrer sehen keine Entfernung.</small>
 		<div class="shop-grid">
 			<label class="offer-label" for="sh-ost">Straße und Hausnummer</label>
 			<input type="text" id="sh-ost" name="origin_street" maxlength="120" value="<?php echo $sh_e($sh['origin_street']); ?>"/>
@@ -223,6 +224,29 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 		</form>
 	</div>
 
+	<h4 class="sms-sub">Stadtteile für die Fahrer</h4>
+	<p class="offer-help">Auf der Fahrerseite steht bei jeder Lieferung der Stadtteil und die Strecke vom Restaurant. Den Stadtteil liefert OpenStreetMap zur Adresse. Wenn er dort anders heißt, als ihr ihn nennt (zum Beispiel „Altstadt“ statt „Stadtmitte“), oder falsch ist, könnt ihr es hier korrigieren. Die Reihenfolge der Regeln: erst die Straße, dann die PLZ, dann der Name von OpenStreetMap. Eine Änderung gilt sofort, auch für bestehende Bestellungen. Die Strecke wird nach dem Standort des Restaurants berechnet (Straße, PLZ und Ort oben unter „Standort des Restaurants“).</p>
+	<?php if ($sh_seen): ?>
+	<p class="offer-help">Bei den Lieferungen der letzten 90 Tage kennt OpenStreetMap diese Stadtteile (Klick legt eine Umbenennung an):
+		<?php foreach ($sh_seen as $x): ?><button type="button" class="offer-badge" data-suburb-seen="<?php echo $sh_e($x['name']); ?>"><?php echo $sh_e($x['name']); ?> (<?php echo (int)$x['n']; ?>)</button> <?php endforeach; ?></p>
+	<?php endif; ?>
+	<div class="shop-zones" id="shop-suburbs">
+		<?php foreach (array_merge($sh_suburbs, array(array('id' => 0, 'kind' => 'name', 'pattern' => '', 'suburb' => ''))) as $r): ?>
+		<form class="shop-zone" data-id="<?php echo (int)$r['id']; ?>">
+			<select name="kind" aria-label="Art der Regel">
+				<option value="name"<?php echo $r['kind'] === 'name' ? ' selected' : ''; ?>>OpenStreetMap-Name</option>
+				<option value="zip"<?php echo $r['kind'] === 'zip' ? ' selected' : ''; ?>>PLZ</option>
+				<option value="street"<?php echo $r['kind'] === 'street' ? ' selected' : ''; ?>>Straße</option>
+			</select>
+			<input type="text" name="pattern" value="<?php echo $sh_e($r['pattern']); ?>" maxlength="120" placeholder="zum Beispiel Altstadt, 31141 oder Goschenstraße" aria-label="Wenn die Adresse so heißt"/>
+			<input type="text" name="suburb" value="<?php echo $sh_e($r['suburb']); ?>" maxlength="80" placeholder="anzeigen als, zum Beispiel Stadtmitte" aria-label="Stadtteil anzeigen als"/>
+			<button type="submit" class="button_dark"><?php echo $r['id'] ? 'Speichern' : 'Regel anlegen'; ?></button>
+			<?php if ($r['id']): ?><button type="button" class="offer-delete" data-suburb-delete="<?php echo (int)$r['id']; ?>">Löschen</button><?php endif; ?>
+			<span class="detail-status" role="status" aria-live="polite"></span>
+		</form>
+		<?php endforeach; ?>
+	</div>
+
 	<h4 class="sms-sub">Bestellzeiten</h4>
 	<p class="offer-help">Wann Gäste Lieferung und Abholung bestellen können. Jeder Tag kann mehrere Zeitfenster haben (zum Beispiel Mittag und Abend), ein Tag ohne Zeitfenster ist zu. Über Mitternacht bitte in zwei Zeilen eintragen: bis 23:59 und am nächsten Tag ab 00:00. Die Zeiten gelten sofort nach dem Speichern.</p>
 	<?php if (!$sh_hours): ?>
@@ -321,6 +345,28 @@ window.addEventListener('load', function () {
 				else { del.dataset.armed = '1'; del.textContent = 'Wirklich löschen?'; setTimeout(function () { del.dataset.armed = ''; del.textContent = 'Löschen'; }, 4000); }
 			});
 		}
+	});
+	// Stadtteil-Regeln für die Fahrerseite: id 0 legt eine neue an
+	Array.prototype.forEach.call(document.querySelectorAll('#shop-suburbs .shop-zone'), function (f) {
+		var out = f.querySelector('.detail-status');
+		f.addEventListener('submit', function (ev) {
+			ev.preventDefault();
+			post('save_suburb', { id: f.dataset.id, kind: f.elements.kind.value, pattern: f.elements.pattern.value, suburb: f.elements.suburb.value },
+				function (r) { say(out, r.message, false); setTimeout(function () { location.reload(); }, 600); }, function (e) { say(out, e, true); });
+		});
+		var del = f.querySelector('[data-suburb-delete]');
+		if (del) {
+			del.addEventListener('click', function () {
+				if (del.dataset.armed) { post('delete_suburb', { id: del.dataset.suburbDelete }, function () { location.reload(); }, function (e) { say(out, e, true); }); }
+				else { del.dataset.armed = '1'; del.textContent = 'Wirklich löschen?'; setTimeout(function () { del.dataset.armed = ''; del.textContent = 'Löschen'; }, 4000); }
+			});
+		}
+	});
+	Array.prototype.forEach.call(document.querySelectorAll('[data-suburb-seen]'), function (b) {
+		b.addEventListener('click', function () {
+			var f = document.querySelector('#shop-suburbs .shop-zone[data-id="0"]');
+			f.elements.kind.value = 'name'; f.elements.pattern.value = b.dataset.suburbSeen; f.elements.suburb.value = b.dataset.suburbSeen; f.elements.suburb.focus(); f.elements.suburb.select();
+		});
 	});
 	// opening times: windows are added/removed in the page, nothing is stored until "Bestellzeiten speichern"
 	var hform = document.getElementById('hours-form'), hmsg = document.getElementById('hours-msg');

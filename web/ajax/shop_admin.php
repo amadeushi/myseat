@@ -101,6 +101,11 @@ if ($op === 'save_driver') {
 	$r = shop_driver_save($id, isset($_POST['name']) ? $_POST['name'] : '', isset($_POST['device_id']) ? $_POST['device_id'] : '', !empty($_POST['active']));
 	sa_out($r['ok'] ? array('ok' => true, 'message' => 'Fahrer gespeichert.') : $r);
 }
+if ($op === 'save_suburb') {
+	$r = shop_suburb_save((int)(isset($_POST['id']) ? $_POST['id'] : 0), isset($_POST['kind']) ? $_POST['kind'] : '', isset($_POST['pattern']) ? $_POST['pattern'] : '', isset($_POST['suburb']) ? $_POST['suburb'] : '');
+	sa_out($r['ok'] ? array('ok' => true, 'message' => 'Die Regel ist gespeichert.') : $r);
+}
+if ($op === 'delete_suburb') { sa_out(shop_suburb_delete((int)(isset($_POST['id']) ? $_POST['id'] : 0))); }
 if ($op === 'save_hours') {
 	$data = json_decode(isset($_POST['hours']) ? (string)$_POST['hours'] : '', true);
 	if (!is_array($data)) { sa_out(array('ok' => false, 'error' => 'Die Zeiten sind nicht lesbar. Bitte lade die Seite neu.')); }
