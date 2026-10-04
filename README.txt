@@ -52,6 +52,14 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.14.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Feiertage, Ruhetage und abweichende Zeiten (Einstellungen > Lieferservice): ein Tag oder Zeitraum, geschlossen oder mit eigenen
+   Zeiten, für Lieferung und Abholung oder nur eine von beiden, auf Wunsch jedes Jahr. Ein Eintrag ersetzt an dem Tag die Wochenzeiten,
+   der nur für Lieferung oder Abholung geht vor, dann der kürzere Zeitraum. Gäste sehen "heute nicht möglich (Bezeichnung)", Bestellungen
+   für diese Tage sind auch im Voraus nicht möglich. Ein Knopf trägt die gesetzlichen Feiertage Niedersachsens als "geschlossen" ein.
+ * Fix: Der Warenkorb der Bestellseite läuft am Desktop beim Scrollen mit (eine Abstandsangabe wurde von "inset: auto" überschrieben).
+
 2026-10-05 == mySeat v6.13.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Bestellzeiten für Lieferung und Abholung werden im Backend eingestellt (Einstellungen > Lieferservice): mehrere Zeitfenster pro Tag,

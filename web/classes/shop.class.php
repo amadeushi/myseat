@@ -46,6 +46,11 @@ function shop_ensure_schema() {
 	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_hours')." (
 		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `kind` VARCHAR(10) NOT NULL, `weekday` TINYINT NOT NULL, `begins` TIME NOT NULL, `ends` TIME NOT NULL,
 		KEY `kind` (`kind`, `weekday`)) $opts");
+	// exceptions to the weekly opening times: holidays, closed days, other times for a day or a period
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_hours_ex')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `date_from` DATE NOT NULL, `date_to` DATE NOT NULL, `kind` VARCHAR(10) NOT NULL DEFAULT 'all',
+		`closed` TINYINT NOT NULL DEFAULT 1, `yearly` TINYINT NOT NULL DEFAULT 0, `label` VARCHAR(80) NOT NULL DEFAULT '', `windows` VARCHAR(300) NOT NULL DEFAULT '',
+		KEY `dates` (`date_from`, `date_to`)) $opts");
 	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_geocache')." (
 		`h` CHAR(40) NOT NULL PRIMARY KEY, `lat` DOUBLE NULL, `lng` DOUBLE NULL, `postcode` VARCHAR(10) NULL, `road` VARCHAR(160) NULL,
 		`created_at` DATETIME NOT NULL) $opts");
@@ -423,10 +428,111 @@ function shop_price_line($l) {
 // ---- opening times (weekday 0 = Monday like Resmio). kind: 'delivery' | 'pickup'
 function shop_windows($kind, $ts) {
 	$wd = (int)date('N', $ts) - 1; $day = date('Y-m-d', $ts); $out = array();
+	$ex = shop_ex_for($kind, $ts); // an exception for this day replaces the weekly times
+	if ($ex) {
+		if ($ex['closed']) { return array(); }
+		foreach ((array)json_decode($ex['windows'], true) as $w) { if (isset($w[0], $w[1])) { $out[] = array(strtotime($day.' '.$w[0]), strtotime($day.' '.$w[1])); } }
+		return $out;
+	}
 	foreach (fb_rows("SELECT begins, ends FROM ".fb_t('tp_shop_hours')." WHERE kind = ? AND weekday = ? ORDER BY begins", 'si', array($kind, $wd)) as $h) {
 		$out[] = array(strtotime($day.' '.$h['begins']), strtotime($day.' '.$h['ends']));
 	}
 	return $out;
+}
+
+// ---- exceptions: array(id, date_from, date_to, kind all|delivery|pickup, closed, yearly, label, windows (JSON list of ["H:i","H:i"]))
+function shop_ex_rows($reset = false) {
+	static $rows = null;
+	if ($reset) { $rows = null; return array(); }
+	if ($rows === null) { $rows = fb_rows("SELECT id, date_from, date_to, kind, closed, yearly, label, windows FROM ".fb_t('tp_shop_hours_ex')." ORDER BY id"); }
+	return $rows;
+}
+// the exception that applies to this kind on the day of $ts: one for exactly this kind beats one for both, then the shorter period, then the newer entry
+function shop_ex_for($kind, $ts) {
+	$day = date('Y-m-d', $ts); $md = date('m-d', $ts); $best = null; $bs = null;
+	foreach (shop_ex_rows() as $e) {
+		if ($e['kind'] !== 'all' && $e['kind'] !== $kind) { continue; }
+		$hit = $e['yearly'] ? ($md >= substr($e['date_from'], 5) && $md <= substr($e['date_to'], 5)) : ($day >= $e['date_from'] && $day <= $e['date_to']);
+		if (!$hit) { continue; }
+		$score = array($e['kind'] === 'all' ? 0 : 1, -(int)round((strtotime($e['date_to']) - strtotime($e['date_from'])) / 86400), (int)$e['id']);
+		if ($bs === null || $score > $bs) { $best = $e; $bs = $score; }
+	}
+	return $best;
+}
+// a list of array(begins, ends) from a form: array(ok, windows | error)
+function shop_hours_clean($list, $where) {
+	$time = '/^([01]\d|2[0-3]):[0-5]\d$/'; $win = array();
+	if (!is_array($list)) { $list = array(); }
+	if (count($list) > 6) { return array('ok' => false, 'error' => $where.'Es sind höchstens 6 Zeitfenster möglich.'); }
+	foreach ($list as $pair) {
+		$b = isset($pair[0]) ? trim((string)$pair[0]) : ''; $e = isset($pair[1]) ? trim((string)$pair[1]) : '';
+		if ($b === '' && $e === '') { continue; }
+		if (!preg_match($time, $b) || !preg_match($time, $e)) { return array('ok' => false, 'error' => $where.'Bitte Beginn und Ende als Uhrzeit angeben.'); }
+		if ($e <= $b) { return array('ok' => false, 'error' => $where.'Das Ende ('.$e.') muss nach dem Beginn ('.$b.') liegen. Über Mitternacht bitte in zwei Zeilen: bis 23:59 und am Folgetag ab 00:00.'); }
+		$win[] = array($b, $e);
+	}
+	sort($win);
+	for ($i = 1; $i < count($win); $i++) {
+		if ($win[$i][0] < $win[$i - 1][1]) { return array('ok' => false, 'error' => $where.'Die Zeiten '.$win[$i - 1][0].' bis '.$win[$i - 1][1].' und '.$win[$i][0].' bis '.$win[$i][1].' überschneiden sich.'); }
+	}
+	return array('ok' => true, 'windows' => $win);
+}
+function shop_ex_save($d) {
+	shop_ensure_schema();
+	$id = (int)(isset($d['id']) ? $d['id'] : 0);
+	$ok = function ($v) { $t = DateTime::createFromFormat('Y-m-d', (string)$v); return ($t && $t->format('Y-m-d') === $v) ? $v : ''; };
+	$from = $ok(isset($d['date_from']) ? trim((string)$d['date_from']) : '');
+	$to = $ok(isset($d['date_to']) ? trim((string)$d['date_to']) : '');
+	if ($from === '') { return array('ok' => false, 'error' => 'Bitte gib das Datum an (Von).'); }
+	if ($to === '') { $to = $from; }
+	if ($to < $from) { return array('ok' => false, 'error' => 'Das Ende des Zeitraums liegt vor dem Beginn.'); }
+	if ((strtotime($to) - strtotime($from)) / 86400 > 366) { return array('ok' => false, 'error' => 'Ein Zeitraum darf höchstens ein Jahr lang sein.'); }
+	$yearly = empty($d['yearly']) ? 0 : 1;
+	if ($yearly && substr($from, 0, 4) !== substr($to, 0, 4)) { return array('ok' => false, 'error' => 'Bei "jedes Jahr" muss der Zeitraum innerhalb eines Jahres liegen.'); }
+	$kind = (isset($d['kind']) && in_array($d['kind'], array('delivery', 'pickup'), true)) ? $d['kind'] : 'all';
+	$closed = empty($d['closed']) ? 0 : 1;
+	$label = mb_substr(trim((string)(isset($d['label']) ? $d['label'] : '')), 0, 80);
+	$json = '';
+	if (!$closed) {
+		$c = shop_hours_clean(isset($d['windows']) ? $d['windows'] : array(), '');
+		if (!$c['ok']) { return $c; }
+		if (!$c['windows']) { return array('ok' => false, 'error' => 'Bitte trage mindestens ein Zeitfenster ein oder wähle "Geschlossen".'); }
+		$json = json_encode($c['windows']);
+	}
+	if ($id) {
+		if (!fb_row("SELECT id FROM ".fb_t('tp_shop_hours_ex')." WHERE id = ?", 'i', array($id))) { return array('ok' => false, 'error' => 'Diese Ausnahme gibt es nicht mehr.'); }
+		$r = fb_exec("UPDATE ".fb_t('tp_shop_hours_ex')." SET date_from = ?, date_to = ?, kind = ?, closed = ?, yearly = ?, label = ?, windows = ? WHERE id = ?", 'sssiissi', array($from, $to, $kind, $closed, $yearly, $label, $json, $id));
+	} else {
+		$r = fb_exec("INSERT INTO ".fb_t('tp_shop_hours_ex')." (date_from, date_to, kind, closed, yearly, label, windows) VALUES (?, ?, ?, ?, ?, ?, ?)", 'sssiiss', array($from, $to, $kind, $closed, $yearly, $label, $json));
+	}
+	shop_ex_rows(true);
+	return $r === false ? array('ok' => false, 'error' => 'Die Ausnahme konnte nicht gespeichert werden.') : array('ok' => true);
+}
+function shop_ex_delete($id) {
+	fb_exec("DELETE FROM ".fb_t('tp_shop_hours_ex')." WHERE id = ?", 'i', array((int)$id));
+	shop_ex_rows(true);
+	return array('ok' => true);
+}
+// the public holidays of Lower Saxony (Easter by the Gauss formula); array(array(Y-m-d, name))
+function shop_ex_holidays($y) {
+	$a = $y % 19; $b = intdiv($y, 100); $c = $y % 100; $d = intdiv($b, 4); $e = $b % 4; $f = intdiv($b + 8, 25); $g = intdiv($b - $f + 1, 3);
+	$h = (19 * $a + $b - $d - $g + 15) % 30; $i = intdiv($c, 4); $k = $c % 4; $l = (32 + 2 * $e + 2 * $i - $h - $k) % 7; $m = intdiv($a + 11 * $h + 22 * $l, 451);
+	$easter = mktime(12, 0, 0, intdiv($h + $l - 7 * $m + 114, 31), (($h + $l - 7 * $m + 114) % 31) + 1, $y);
+	$off = function ($n) use ($easter) { return date('Y-m-d', $easter + $n * 86400); };
+	return array(array($y.'-01-01', 'Neujahr'), array($off(-2), 'Karfreitag'), array($off(1), 'Ostermontag'), array($y.'-05-01', 'Tag der Arbeit'), array($off(39), 'Christi Himmelfahrt'),
+		array($off(50), 'Pfingstmontag'), array($y.'-10-03', 'Tag der Deutschen Einheit'), array($y.'-10-31', 'Reformationstag'), array($y.'-12-25', '1. Weihnachtstag'), array($y.'-12-26', '2. Weihnachtstag'));
+}
+// enter them as "closed" (every one can be changed or deleted afterwards); what is there already (same day and name) is skipped. Returns how many were added.
+function shop_ex_add_holidays($y) {
+	shop_ensure_schema();
+	$y = (int)$y; if ($y < 2020 || $y > 2100) { return -1; }
+	$n = 0;
+	foreach (shop_ex_holidays($y) as $h) {
+		if (fb_row("SELECT id FROM ".fb_t('tp_shop_hours_ex')." WHERE date_from = ? AND label = ?", 'ss', array($h[0], $h[1]))) { continue; }
+		fb_exec("INSERT INTO ".fb_t('tp_shop_hours_ex')." (date_from, date_to, kind, closed, yearly, label, windows) VALUES (?, ?, 'all', 1, 0, ?, '')", 'sss', array($h[0], $h[0], $h[1])); $n++;
+	}
+	shop_ex_rows(true);
+	return $n;
 }
 
 /*
@@ -438,26 +544,12 @@ function shop_hours_save($data) {
 	shop_ensure_schema();
 	$names = array('Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag');
 	$labels = array('delivery' => 'Lieferung', 'pickup' => 'Abholung');
-	$time = '/^([01]\d|2[0-3]):[0-5]\d$/';
 	$rows = array();
 	foreach ($labels as $kind => $label) {
 		for ($d = 0; $d < 7; $d++) {
-			$where = $label.', '.$names[$d].': ';
-			$list = (isset($data[$kind][$d]) && is_array($data[$kind][$d])) ? $data[$kind][$d] : array();
-			if (count($list) > 6) { return array('ok' => false, 'error' => $where.'Es sind höchstens 6 Zeitfenster möglich.'); }
-			$win = array();
-			foreach ($list as $pair) {
-				$b = isset($pair[0]) ? trim((string)$pair[0]) : ''; $e = isset($pair[1]) ? trim((string)$pair[1]) : '';
-				if ($b === '' && $e === '') { continue; }
-				if (!preg_match($time, $b) || !preg_match($time, $e)) { return array('ok' => false, 'error' => $where.'Bitte Beginn und Ende als Uhrzeit angeben.'); }
-				if ($e <= $b) { return array('ok' => false, 'error' => $where.'Das Ende ('.$e.') muss nach dem Beginn ('.$b.') liegen. Über Mitternacht bitte in zwei Zeilen: bis 23:59 und am Folgetag ab 00:00.'); }
-				$win[] = array($b, $e);
-			}
-			sort($win);
-			for ($i = 1; $i < count($win); $i++) {
-				if ($win[$i][0] < $win[$i - 1][1]) { return array('ok' => false, 'error' => $where.'Die Zeiten '.$win[$i - 1][0].' bis '.$win[$i - 1][1].' und '.$win[$i][0].' bis '.$win[$i][1].' überschneiden sich.'); }
-			}
-			foreach ($win as $w) { $rows[] = array($kind, $d, $w[0].':00', $w[1].':00'); }
+			$c = shop_hours_clean(isset($data[$kind][$d]) ? $data[$kind][$d] : array(), $label.', '.$names[$d].': ');
+			if (!$c['ok']) { return $c; }
+			foreach ($c['windows'] as $w) { $rows[] = array($kind, $d, $w[0].':00', $w[1].':00'); }
 		}
 	}
 	$db = fb_db();
@@ -504,12 +596,13 @@ function shop_state($kind, $now = null) {
 	foreach (shop_windows($kind, $now) as $w) {
 		if ($now >= $w[0] && $now + $lead * 60 <= $w[1]) { return array('open' => true, 'until' => $w[1], 'next' => 0, 'lead' => $lead); }
 	}
+	$ex = shop_ex_for($kind, $now); $note = ($ex && $ex['closed']) ? (string)$ex['label'] : ''; // "Heiligabend": why it is closed today
 	$next = 0;
 	for ($d = 0; $d <= 7 && !$next; $d++) {
 		$t = $now + $d * 86400;
 		foreach (shop_windows($kind, $t) as $w) { if ($w[0] > $now) { $next = $w[0]; break; } }
 	}
-	return array('open' => false, 'until' => 0, 'next' => $next, 'lead' => $lead);
+	return array('open' => false, 'until' => 0, 'next' => $next, 'lead' => $lead, 'note' => $note);
 }
 
 // selectable times for a day (Y-m-d): array of 'H:i'. Today starts after the lead time.

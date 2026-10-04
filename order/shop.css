@@ -224,7 +224,7 @@
 	.shop-cats a { border: 0; border-radius: var(--radius-md); min-height: 44px; white-space: normal; }
 	.shop-cats a.is-active { background: rgba(201, 162, 89, 0.16); color: var(--gold-strong); }
 	.shop-cat { scroll-margin-top: 156px; }
-	.shop-cart { position: sticky; top: 152px; align-self: start; inset: auto; z-index: 1; transform: none; visibility: visible; margin-top: 28px; padding: 0 20px 20px; max-height: calc(100vh - 176px); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); }
+	.shop-cart { inset: auto; position: sticky; top: 152px; align-self: start; z-index: 1; transform: none; visibility: visible; margin-top: 28px; padding: 0 20px 20px; max-height: calc(100vh - 176px); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); }
 	.cart-head { background: var(--surface); }
 	.cart-close { display: none; }
 	.shop-cartbar { display: none !important; }

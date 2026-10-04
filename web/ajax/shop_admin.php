@@ -107,6 +107,18 @@ if ($op === 'save_hours') {
 	$r = shop_hours_save($data);
 	sa_out($r['ok'] ? array('ok' => true, 'message' => $r['count'] ? 'Die Bestellzeiten sind gespeichert.' : 'Gespeichert. Es sind keine Zeiten eingetragen, die Bestellseite ist damit immer geschlossen.') : $r);
 }
+if ($op === 'save_exception') {
+	$data = json_decode(isset($_POST['data']) ? (string)$_POST['data'] : '', true);
+	if (!is_array($data)) { sa_out(array('ok' => false, 'error' => 'Die Angaben sind nicht lesbar. Bitte lade die Seite neu.')); }
+	$r = shop_ex_save($data);
+	sa_out($r['ok'] ? array('ok' => true, 'message' => 'Die Ausnahme ist gespeichert.') : $r);
+}
+if ($op === 'delete_exception') { sa_out(shop_ex_delete((int)(isset($_POST['id']) ? $_POST['id'] : 0))); }
+if ($op === 'add_holidays') {
+	$n = shop_ex_add_holidays((int)(isset($_POST['year']) ? $_POST['year'] : 0));
+	if ($n < 0) { sa_out(array('ok' => false, 'error' => 'Dieses Jahr ist nicht möglich.')); }
+	sa_out(array('ok' => true, 'message' => $n ? $n.' Feiertage eingetragen (geschlossen). Prüf die Liste und ändere, was bei euch offen ist.' : 'Diese Feiertage sind schon eingetragen.'));
+}
 if ($op === 'delete_driver') {
 	$id = (int)(isset($_POST['id']) ? $_POST['id'] : 0);
 	if ($id <= 0) { sa_out(array('ok' => false, 'error' => 'Unbekannter Fahrer.')); }

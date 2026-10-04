@@ -1817,6 +1817,19 @@ select.status_dbox:not([multiple]) option::checkmark { display: inline-block; or
 .hr-win input[type=time] { width: 96px; }
 .hr-closed[hidden] { display: none; }
 .hr-tools { display: inline-flex; gap: 8px; margin-left: auto; }
+.shop-ex { width: 100%; max-width: 900px; }
+.shop-ex .ex-act { white-space: nowrap; text-align: right; }
+.shop-ex-past { margin: 8px 0; }
+.shop-ex-past summary { cursor: pointer; color: var(--text-muted); font-size: 13px; }
+.shop-ex-form { margin: 14px 0; padding: 12px 14px; border: 1px solid var(--border-soft, rgba(245,240,230,.08)); border-radius: 8px; }
+.ex-title { margin: 0 0 10px; font-size: 15px; }
+.ex-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px 14px; }
+.ex-grid label { display: grid; gap: 4px; font-size: 13px; color: var(--text-muted); }
+.ex-grid input, .ex-grid select { width: 100%; box-sizing: border-box; }
+.ex-mode { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 12px 0 4px; }
+.ex-wins { border-top: 0; padding-left: 0; }
+.ex-wins[hidden] { display: none !important; }
+.shop-ex-holidays { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 8px 0; }
 
 
 /* ---- Bestellungen (dashboard) ---- */

@@ -16,6 +16,18 @@ foreach ($sh_hours as $h) { $sh_by[$h['kind']][(int)$h['weekday']][] = array(sub
 $sh_win = function ($b, $e) use ($sh_e) {
 	return '<span class="hr-win"><input type="time" step="300" value="'.$sh_e($b).'" aria-label="Von"/> <span>bis</span> <input type="time" step="300" value="'.$sh_e($e).'" aria-label="Bis"/> <button type="button" class="offer-delete hr-x" aria-label="Zeitfenster entfernen" title="Zeitfenster entfernen">&times;</button></span>';
 };
+$sh_ex = fb_rows("SELECT id, date_from, date_to, kind, closed, yearly, label, windows FROM ".fb_t('tp_shop_hours_ex')." ORDER BY date_from, id");
+$sh_ex_now = array(); $sh_ex_past = array();
+foreach ($sh_ex as $x) { if (!$x['yearly'] && $x['date_to'] < date('Y-m-d')) { $sh_ex_past[] = $x; } else { $sh_ex_now[] = $x; } }
+$sh_ex_row = function ($x) use ($sh_e) {
+	$d = function ($v) { return date('d.m.Y', strtotime($v)); };
+	$when = $x['date_from'] === $x['date_to'] ? $d($x['date_from']) : $d($x['date_from']).' bis '.$d($x['date_to']);
+	if ($x['yearly']) { $when = date('d.m.', strtotime($x['date_from'])).($x['date_from'] === $x['date_to'] ? '' : ' bis '.date('d.m.', strtotime($x['date_to']))).' jedes Jahr'; }
+	$what = $x['closed'] ? 'geschlossen' : implode(', ', array_map(function ($w) { return $w[0].' bis '.$w[1]; }, (array)json_decode($x['windows'], true)));
+	$kind = $x['kind'] === 'delivery' ? 'nur Lieferung' : ($x['kind'] === 'pickup' ? 'nur Abholung' : 'Lieferung und Abholung');
+	$js = $sh_e(json_encode(array('id' => (int)$x['id'], 'date_from' => $x['date_from'], 'date_to' => $x['date_to'], 'kind' => $x['kind'], 'closed' => (int)$x['closed'], 'yearly' => (int)$x['yearly'], 'label' => $x['label'], 'windows' => (array)json_decode($x['windows'], true))));
+	return '<tr><td>'.$sh_e($when).'</td><td>'.$sh_e($x['label']).'</td><td>'.$sh_e($kind).'</td><td class="'.($x['closed'] ? 'shop-closed' : '').'">'.$sh_e($what).'</td><td class="ex-act"><button type="button" class="me-mini" data-ex-edit="'.$js.'">Ändern</button> <button type="button" class="offer-delete" data-ex-del="'.(int)$x['id'].'">Löschen</button></td></tr>';
+};
 $sh_mollie = shop_mollie_info();
 $sh_google = shop_google_key_info();
 $sh_w3w = shop_w3w_key_info();
@@ -233,6 +245,39 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 		<template id="hours-win"><?php echo $sh_win('11:00', '14:00'); ?></template>
 		<p class="offer-actions"><button type="submit" class="button_dark">Bestellzeiten speichern</button> <span class="detail-status" id="hours-msg" role="status" aria-live="polite"></span></p>
 	</form>
+
+	<h4 class="sms-sub">Feiertage, Ruhetage und abweichende Zeiten</h4>
+	<p class="offer-help">Ein Eintrag gilt an diesem Tag oder in diesem Zeitraum anstelle der Wochenzeiten oben: entweder ganz geschlossen (Ruhetag, Betriebsferien, Feiertag) oder mit eigenen Zeiten (zum Beispiel Heiligabend nur bis 14:00). Gilt für einen Eintrag nur Lieferung oder nur Abholung, geht er dem für beide vor, bei mehreren Einträgen der kürzere Zeitraum. Gäste können für diese Tage nicht bestellen, auch nicht im Voraus.</p>
+	<?php if ($sh_ex_now): ?>
+	<table class="shop-hours shop-ex"><thead><tr><th>Wann</th><th>Bezeichnung</th><th>Betrifft</th><th>Dann</th><th></th></tr></thead><tbody><?php foreach ($sh_ex_now as $x) { echo $sh_ex_row($x); } ?></tbody></table>
+	<?php else: ?><p class="offer-help">Noch keine Ausnahmen eingetragen.</p><?php endif; ?>
+	<?php if ($sh_ex_past): ?>
+	<details class="shop-ex-past"><summary>Vergangene Ausnahmen (<?php echo count($sh_ex_past); ?>)</summary>
+	<table class="shop-hours shop-ex"><tbody><?php foreach (array_reverse($sh_ex_past) as $x) { echo $sh_ex_row($x); } ?></tbody></table></details>
+	<?php endif; ?>
+	<form id="ex-form" class="shop-ex-form" autocomplete="off">
+		<input type="hidden" name="id" value="0"/>
+		<h5 class="ex-title" id="ex-title">Neue Ausnahme</h5>
+		<div class="ex-grid">
+			<label>Von <input type="date" name="date_from" required/></label>
+			<label>Bis (leer = nur dieser Tag) <input type="date" name="date_to"/></label>
+			<label>Betrifft <select name="kind"><option value="all">Lieferung und Abholung</option><option value="delivery">nur Lieferung</option><option value="pickup">nur Abholung</option></select></label>
+			<label>Bezeichnung (sieht der Gast) <input type="text" name="label" maxlength="80" placeholder="z. B. Heiligabend, Betriebsferien"/></label>
+		</div>
+		<div class="ex-mode" role="radiogroup" aria-label="Dann">
+			<label class="offer-check"><input type="radio" name="closed" value="1" checked/> Geschlossen</label>
+			<label class="offer-check"><input type="radio" name="closed" value="0"/> Andere Zeiten</label>
+			<label class="offer-check"><input type="checkbox" name="yearly" value="1"/> jedes Jahr wiederholen</label>
+		</div>
+		<div class="hr-row ex-wins" id="ex-wins" hidden><span class="hr-wins"></span><span class="shop-closed hr-closed">kein Zeitfenster</span><span class="hr-tools"><button type="button" class="hr-add">+ Zeitfenster</button></span></div>
+		<p class="offer-actions"><button type="submit" class="button_dark">Ausnahme speichern</button> <button type="button" class="me-mini" id="ex-cancel" hidden>Abbrechen</button> <span class="detail-status" id="ex-msg" role="status" aria-live="polite"></span></p>
+	</form>
+	<div class="shop-ex-holidays">
+		<span>Gesetzliche Feiertage Niedersachsen eintragen für</span>
+		<select id="ex-year" aria-label="Jahr"><?php for ($yy = (int)date('Y'); $yy <= (int)date('Y') + 2; $yy++) { echo '<option value="'.$yy.'">'.$yy.'</option>'; } ?></select>
+		<button type="button" class="me-mini" id="ex-holidays">Eintragen</button>
+		<small class="offer-help">Sie werden als "geschlossen" angelegt. Wo ihr geöffnet habt, ändere oder lösche den Eintrag.</small>
+	</div>
 </div>
 <script>
 window.addEventListener('load', function () {
@@ -310,6 +355,43 @@ window.addEventListener('load', function () {
 		say(hmsg, 'Einen Moment ...', false);
 		post('save_hours', { hours: JSON.stringify(data) }, function (r) { say(hmsg, r.message, false); setTimeout(function () { location.reload(); }, 900); }, function (e) { say(hmsg, e, true); });
 	});
+	// exceptions: one form for new and for changing; the windows reuse the helpers of the weekly form above
+	var xform = document.getElementById('ex-form'), xmsg = document.getElementById('ex-msg'), xrow = document.getElementById('ex-wins');
+	function xMode() { xrow.hidden = xform.elements.closed.value === '1'; }
+	function xReset() { xform.reset(); xform.elements.id.value = '0'; xrow.querySelectorAll('.hr-win').forEach(function (w) { w.remove(); }); hoursSync(xrow); xMode(); document.getElementById('ex-title').textContent = 'Neue Ausnahme'; document.getElementById('ex-cancel').hidden = true; }
+	xform.addEventListener('change', function (ev) { if (ev.target.name === 'closed') { xMode(); if (xform.elements.closed.value === '0' && !xrow.querySelector('.hr-win')) { hoursAdd(xrow); } } });
+	xrow.addEventListener('click', function (ev) {
+		if (ev.target.closest('.hr-x')) { ev.target.closest('.hr-win').remove(); hoursSync(xrow); return; }
+		if (ev.target.closest('.hr-add')) { hoursAdd(xrow).querySelector('input').focus(); }
+	});
+	document.getElementById('ex-cancel').addEventListener('click', xReset);
+	document.querySelectorAll('[data-ex-edit]').forEach(function (b) {
+		b.addEventListener('click', function () {
+			var x = JSON.parse(b.dataset.exEdit); xReset();
+			xform.elements.id.value = x.id; xform.elements.date_from.value = x.date_from; xform.elements.date_to.value = x.date_to === x.date_from ? '' : x.date_to;
+			xform.elements.kind.value = x.kind; xform.elements.label.value = x.label; xform.elements.yearly.checked = !!x.yearly;
+			xform.elements.closed.value = x.closed ? '1' : '0'; (x.windows || []).forEach(function (w) { hoursAdd(xrow, w[0], w[1]); }); xMode();
+			document.getElementById('ex-title').textContent = 'Ausnahme ändern'; document.getElementById('ex-cancel').hidden = false;
+			xform.scrollIntoView({ block: 'center' }); xform.elements.label.focus();
+		});
+	});
+	document.querySelectorAll('[data-ex-del]').forEach(function (b) {
+		b.addEventListener('click', function () {
+			if (b.dataset.armed) { post('delete_exception', { id: b.dataset.exDel }, function () { location.reload(); }, function (e) { say(xmsg, e, true); }); }
+			else { b.dataset.armed = '1'; b.textContent = 'Wirklich löschen?'; setTimeout(function () { b.dataset.armed = ''; b.textContent = 'Löschen'; }, 4000); }
+		});
+	});
+	xform.addEventListener('submit', function (ev) {
+		ev.preventDefault();
+		var e = xform.elements, d = { id: +e.id.value || 0, date_from: e.date_from.value, date_to: e.date_to.value, kind: e.kind.value, label: e.label.value, closed: e.closed.value === '1' ? 1 : 0, yearly: e.yearly.checked ? 1 : 0,
+			windows: [].map.call(xrow.querySelectorAll('.hr-win'), function (w) { var i = w.querySelectorAll('input'); return [i[0].value, i[1].value]; }) };
+		say(xmsg, 'Einen Moment ...', false);
+		post('save_exception', { data: JSON.stringify(d) }, function (r) { say(xmsg, r.message, false); setTimeout(function () { location.reload(); }, 700); }, function (er) { say(xmsg, er, true); });
+	});
+	document.getElementById('ex-holidays').addEventListener('click', function () {
+		post('add_holidays', { year: document.getElementById('ex-year').value }, function (r) { say(xmsg, r.message, false); setTimeout(function () { location.reload(); }, 1400); }, function (er) { say(xmsg, er, true); });
+	});
+	xMode();
 	var mform = document.getElementById('mollie-form'), mmsg = document.getElementById('mollie-msg');
 	mform.addEventListener('submit', function (ev) { ev.preventDefault(); say(mmsg, 'Einen Moment ...', false); post('save_mollie', { mollie_key: mform.elements.mollie_key.value }, function (r) { say(mmsg, r.message, false); setTimeout(function () { location.reload(); }, 700); }, function (e) { say(mmsg, e, true); }); });
 	var mt = document.getElementById('mollie-test');

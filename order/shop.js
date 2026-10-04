@@ -25,6 +25,7 @@
 		el.classList.toggle('is-open', s.open); el.classList.toggle('is-closed', !s.open);
 		if (s.open) { var mo = state.mode === 'delivery' ? state.info.min_delivery : state.info.min_pickup; el.textContent = label + ' offen bis ' + s.until + ' Uhr · in etwa ' + s.lead + ' Min' + (mo > 0 ? ' · ab ' + fmt(mo) : ''); }
 		else if (s.paused) { el.textContent = label + ' gerade pausiert' + (s.paused_until ? ' bis etwa ' + s.paused_until + ' Uhr' : ''); }
+		else if (s.note) { el.textContent = label + ' heute nicht möglich (' + s.note + ')' + (s.next ? ', wieder ' + s.next : ''); }
 		else { el.textContent = s.next ? label + ' wieder ' + s.next : label + ' zurzeit nicht möglich'; }
 	}
 	function loadState() {

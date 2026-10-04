@@ -32,7 +32,7 @@ if ($op === 'state') {
 	foreach (array('delivery', 'pickup') as $kind) {
 		$s = shop_state($kind);
 		$out[$kind] = array('open' => $s['open'], 'until' => $s['until'] ? date('H:i', $s['until']) : '', 'next' => shop_when_text($s['next']), 'lead' => $s['lead'],
-			'paused' => !empty($s['paused']), 'paused_until' => !empty($s['paused_until']) ? date('H:i', $s['paused_until']) : '');
+			'paused' => !empty($s['paused']), 'paused_until' => !empty($s['paused_until']) ? date('H:i', $s['paused_until']) : '', 'note' => isset($s['note']) ? $s['note'] : '');
 	}
 	api_out($out);
 }
