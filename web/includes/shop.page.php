@@ -12,7 +12,10 @@ $sh_drivers = shop_drivers_list();
 $sh_hours = fb_rows("SELECT kind, weekday, begins, ends FROM ".fb_t('tp_shop_hours')." ORDER BY kind, weekday, begins");
 $sh_days = array('Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So');
 $sh_by = array('delivery' => array(), 'pickup' => array());
-foreach ($sh_hours as $h) { $sh_by[$h['kind']][(int)$h['weekday']][] = substr($h['begins'], 0, 5).' bis '.substr($h['ends'], 0, 5); }
+foreach ($sh_hours as $h) { $sh_by[$h['kind']][(int)$h['weekday']][] = array(substr($h['begins'], 0, 5), substr($h['ends'], 0, 5)); }
+$sh_win = function ($b, $e) use ($sh_e) {
+	return '<span class="hr-win"><input type="time" step="300" value="'.$sh_e($b).'" aria-label="Von"/> <span>bis</span> <input type="time" step="300" value="'.$sh_e($e).'" aria-label="Bis"/> <button type="button" class="offer-delete hr-x" aria-label="Zeitfenster entfernen" title="Zeitfenster entfernen">&times;</button></span>';
+};
 $sh_mollie = shop_mollie_info();
 $sh_google = shop_google_key_info();
 $sh_w3w = shop_w3w_key_info();
@@ -209,21 +212,27 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 	</div>
 
 	<h4 class="sms-sub">Bestellzeiten</h4>
+	<p class="offer-help">Wann Gäste Lieferung und Abholung bestellen können. Jeder Tag kann mehrere Zeitfenster haben (zum Beispiel Mittag und Abend), ein Tag ohne Zeitfenster ist zu. Über Mitternacht bitte in zwei Zeilen eintragen: bis 23:59 und am nächsten Tag ab 00:00. Die Zeiten gelten sofort nach dem Speichern.</p>
 	<?php if (!$sh_hours): ?>
-		<p class="offer-help">Noch keine Zeiten. Sie kommen mit der Übernahme aus Resmio.</p>
-	<?php else: ?>
-	<table class="shop-hours">
-		<thead><tr><th></th><?php foreach ($sh_days as $d): ?><th><?php echo $d; ?></th><?php endforeach; ?></tr></thead>
-		<tbody>
-		<?php foreach (array('delivery' => 'Lieferung', 'pickup' => 'Abholung') as $kind => $label): ?>
-			<tr><th><?php echo $label; ?></th>
-			<?php for ($d = 0; $d < 7; $d++): ?><td><?php echo isset($sh_by[$kind][$d]) ? $sh_e(implode(', ', $sh_by[$kind][$d])) : '<span class="shop-closed">zu</span>'; ?></td><?php endfor; ?>
-			</tr>
-		<?php endforeach; ?>
-		</tbody>
-	</table>
-	<p class="offer-help">Aus Resmio übernommen. Prüf die Wochentage einmal gegen deine echten Zeiten.</p>
+		<p class="offer-help"><strong>Noch keine Zeiten eingetragen.</strong> Solange nichts eingetragen ist, ist die Bestellseite für Lieferung und Abholung geschlossen.</p>
 	<?php endif; ?>
+	<form id="hours-form" class="shop-hours-form">
+		<?php foreach (array('delivery' => 'Lieferung', 'pickup' => 'Abholung') as $kind => $label): ?>
+		<fieldset class="hr-kind" data-kind="<?php echo $kind; ?>">
+			<legend><?php echo $label; ?></legend>
+			<?php for ($d = 0; $d < 7; $d++): ?>
+			<div class="hr-row" data-day="<?php echo $d; ?>">
+				<span class="hr-day"><?php echo $sh_days[$d]; ?></span>
+				<span class="hr-wins"><?php foreach (isset($sh_by[$kind][$d]) ? $sh_by[$kind][$d] : array() as $w) { echo $sh_win($w[0], $w[1]); } ?></span>
+				<span class="shop-closed hr-closed">zu</span>
+				<span class="hr-tools"><button type="button" class="hr-add">+ Zeitfenster</button><button type="button" class="hr-copy" title="Die Zeiten dieses Tages für alle anderen Tage übernehmen (gespeichert wird erst mit dem Knopf unten)">Auf alle Tage</button></span>
+			</div>
+			<?php endfor; ?>
+		</fieldset>
+		<?php endforeach; ?>
+		<template id="hours-win"><?php echo $sh_win('11:00', '14:00'); ?></template>
+		<p class="offer-actions"><button type="submit" class="button_dark">Bestellzeiten speichern</button> <span class="detail-status" id="hours-msg" role="status" aria-live="polite"></span></p>
+	</form>
 </div>
 <script>
 window.addEventListener('load', function () {
@@ -267,6 +276,39 @@ window.addEventListener('load', function () {
 				else { del.dataset.armed = '1'; del.textContent = 'Wirklich löschen?'; setTimeout(function () { del.dataset.armed = ''; del.textContent = 'Löschen'; }, 4000); }
 			});
 		}
+	});
+	// opening times: windows are added/removed in the page, nothing is stored until "Bestellzeiten speichern"
+	var hform = document.getElementById('hours-form'), hmsg = document.getElementById('hours-msg');
+	function hoursSync(row) { row.querySelector('.hr-closed').hidden = row.querySelectorAll('.hr-win').length > 0; }
+	function hoursAdd(row, b, e) {
+		var t = document.getElementById('hours-win').content.firstElementChild.cloneNode(true), ins = t.querySelectorAll('input');
+		if (b) { ins[0].value = b; ins[1].value = e; }
+		row.querySelector('.hr-wins').appendChild(t); hoursSync(row); return t;
+	}
+	hform.querySelectorAll('.hr-row').forEach(hoursSync);
+	hform.addEventListener('click', function (ev) {
+		var row = ev.target.closest('.hr-row'); if (!row) { return; }
+		if (ev.target.closest('.hr-x')) { ev.target.closest('.hr-win').remove(); hoursSync(row); return; }
+		if (ev.target.closest('.hr-add')) { hoursAdd(row).querySelector('input').focus(); return; }
+		if (ev.target.closest('.hr-copy')) {
+			var src = [].map.call(row.querySelectorAll('.hr-win'), function (w) { var i = w.querySelectorAll('input'); return [i[0].value, i[1].value]; });
+			row.closest('.hr-kind').querySelectorAll('.hr-row').forEach(function (r) {
+				if (r === row) { return; }
+				r.querySelectorAll('.hr-win').forEach(function (w) { w.remove(); });
+				src.forEach(function (w) { hoursAdd(r, w[0], w[1]); }); hoursSync(r);
+			});
+			say(hmsg, 'Übernommen, noch nicht gespeichert.', false);
+		}
+	});
+	hform.addEventListener('submit', function (ev) {
+		ev.preventDefault();
+		var data = {};
+		hform.querySelectorAll('.hr-kind').forEach(function (k) {
+			data[k.dataset.kind] = {};
+			k.querySelectorAll('.hr-row').forEach(function (r) { data[k.dataset.kind][r.dataset.day] = [].map.call(r.querySelectorAll('.hr-win'), function (w) { var i = w.querySelectorAll('input'); return [i[0].value, i[1].value]; }); });
+		});
+		say(hmsg, 'Einen Moment ...', false);
+		post('save_hours', { hours: JSON.stringify(data) }, function (r) { say(hmsg, r.message, false); setTimeout(function () { location.reload(); }, 900); }, function (e) { say(hmsg, e, true); });
 	});
 	var mform = document.getElementById('mollie-form'), mmsg = document.getElementById('mollie-msg');
 	mform.addEventListener('submit', function (ev) { ev.preventDefault(); say(mmsg, 'Einen Moment ...', false); post('save_mollie', { mollie_key: mform.elements.mollie_key.value }, function (r) { say(mmsg, r.message, false); setTimeout(function () { location.reload(); }, 700); }, function (e) { say(mmsg, e, true); }); });

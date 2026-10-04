@@ -53,7 +53,48 @@
 	function discardOk() { return !dirty ? Promise.resolve(true) : confirmDialog('Ungespeicherte Änderungen', 'Ungespeicherte Änderungen verwerfen?', 'Verwerfen'); }
 
 	// ---- loading
-	function apply(r) { ['categories', 'products', 'groups', 'coupons'].forEach(function (k) { if (r[k]) { D[k] = r[k]; } }); }
+	function apply(r) { ['categories', 'products', 'groups', 'coupons'].forEach(function (k) { if (r[k]) { D[k] = r[k]; } }); if (r.img_prefix) { D.prefix = r.img_prefix; } }
+
+	// ---- dish pictures: kept on this server (uploaded here, or fetched from the foreign address once)
+	var imgReport = '';
+	function isLocal(u) { return !!u && !!D.prefix && u.indexOf(D.prefix) === 0; }
+	function externalDishes() { return D.products.filter(function (p) { return p.image_url && !isLocal(p.image_url); }); }
+	function imgBlock(u) {
+		var ext = u && !isLocal(u);
+		return '<div class="me-img">' + (u ? '<img class="me-thumb" src="' + esc(u) + '" alt="Bild des Gerichts"/>' : '<span class="me-thumb me-thumb-none">kein Bild</span>') + '<div class="me-img-side">' +
+			'<div class="me-img-btns"><button type="button" class="button_dark" data-imgpick>' + (u ? 'Bild ersetzen' : 'Bild hochladen') + '</button>' + (u ? '<button type="button" class="me-mini" data-imgrm>Entfernen</button>' : '') + (ext ? '<button type="button" class="me-mini" data-imgfetch>Auf den Server holen</button>' : '') + '</div>' +
+			'<small class="me-help">' + (!u ? 'JPG, PNG oder WebP. Das Bild wird verkleinert auf dem Server gespeichert.' : ext ? 'Fremd verlinkt: fehlt, sobald die andere Seite das Bild ändert oder löscht.' : 'Auf dem Server gespeichert.') + '</small></div></div>' +
+			'<input type="file" id="me-file" accept="image/jpeg,image/png,image/webp" hidden/>' +
+			'<details class="me-img-url"' + (ext ? ' open' : '') + '><summary>Bildadresse</summary><input id="me-img" maxlength="300" value="' + esc(u) + '" aria-label="Bildadresse"/></details>';
+	}
+	function refreshImg(u) { $('#me-imgwrap').innerHTML = imgBlock(u); sel.draft.image_url = u; }
+	function imgBar() {
+		var n = externalDishes().length;
+		if (!n && !imgReport) { return ''; }
+		return '<div class="me-imgbar" id="me-imgbar" role="status">' + (n ? '<span><strong>' + n + '</strong> Bild' + (n === 1 ? ' ist' : 'er sind') + ' fremd verlinkt.</span><button type="button" class="me-mini" data-imgall>Alle auf den Server holen</button>' : '<span>Alle Bilder liegen auf dem Server.</span>') +
+			(imgReport ? '<span class="me-imgrep">' + imgReport + '</span>' : '') + '</div>';
+	}
+	// one dish after the other, so one broken address does not stop the rest; the answer of each is read without the red message
+	function quiet(op, payload) {
+		var fd = new FormData(); fd.append('op', op); fd.append('token', TOKEN);
+		Object.keys(payload || {}).forEach(function (k) { fd.append(k, payload[k]); });
+		return fetch('ajax/shop_menu_admin.php', { method: 'POST', body: fd, credentials: 'same-origin' }).then(function (r) { return r.json(); });
+	}
+	function localizeAll() {
+		var list = externalDishes(), done = 0, fails = [], bar = $('#me-imgbar');
+		function prog() { if (bar) { bar.innerHTML = '<span>Bilder werden geholt: ' + done + ' von ' + list.length + ' ...</span>'; } }
+		prog();
+		(function next(i) {
+			if (i >= list.length) {
+				imgReport = esc((list.length - fails.length) + ' geholt') + (fails.length ? ', ' + fails.length + ' fehlgeschlagen: ' + esc(fails.join('; ')) : '.');
+				render(); say(fails.length ? 'Nicht alle Bilder konnten geholt werden.' : 'Alle Bilder liegen jetzt auf dem Server.', !!fails.length); return;
+			}
+			var p = list[i];
+			quiet('img_localize', { id: p.id }).then(function (r) {
+				if (r.ok) { p.image_url = r.url; if (sel && sel.t === 'p' && sel.id === p.id) { sel.draft.image_url = r.url; } } else { fails.push(p.title + ' (' + (r.error || 'Fehler') + ')'); }
+			}, function () { fails.push(p.title + ' (keine Verbindung)'); }).then(function () { done++; prog(); next(i + 1); });
+		})(0);
+	}
 	function load() {
 		fetch('ajax/shop_menu_admin.php?op=load', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) {
 			if (r.status === 403) { throw new Error('perm'); } return r.json();
@@ -73,7 +114,7 @@
 		return money(p.price);
 	}
 	function dishList() {
-		var h = '<div class="me-tools"><input type="search" id="me-q" placeholder="Suchen ..." aria-label="Gerichte suchen" value="' + esc(query) + '"/><button type="button" class="button_dark" data-newcat>Neue Kategorie</button></div>';
+		var h = '<div class="me-tools"><input type="search" id="me-q" placeholder="Suchen ..." aria-label="Gerichte suchen" value="' + esc(query) + '"/><button type="button" class="button_dark" data-newcat>Neue Kategorie</button></div>' + imgBar();
 		if (!D.categories.length) { h += '<p class="orders-empty">Noch keine Kategorien. Lege die erste an.</p>'; }
 		D.categories.forEach(function (c, ci) {
 			var ps = D.products.filter(function (p) { return p.category_id === c.id; });
@@ -121,7 +162,7 @@
 			'<div><label class="me-l" for="me-price">Preis (€)</label><input id="me-price" inputmode="decimal" value="' + eur(d.price) + '"/><small class="me-help">Bei Varianten gelten deren Preise.</small></div></div>' +
 			'<label class="me-l" for="me-desc">Beschreibung</label><textarea id="me-desc" maxlength="800" rows="3">' + esc(d.description) + '</textarea>' +
 			'<label class="me-l" for="me-all">Allergene und Zusatzstoffe</label><input id="me-all" maxlength="400" value="' + esc(d.allergens) + '" placeholder="z. B. Weizen, Milch, Eier"/>' +
-			'<label class="me-l" for="me-img">Bild (Adresse, https://...)</label><input id="me-img" maxlength="300" value="' + esc(d.image_url) + '"/>' +
+			'<span class="me-l">Bild</span><div id="me-imgwrap">' + imgBlock(d.image_url) + '</div>' +
 			'<label class="offer-check"><input type="checkbox" id="me-active"' + (d.active ? ' checked' : '') + '/> Im Shop sichtbar</label>' +
 			'<label class="me-l" for="me-conf">Wunschpizza-Konfigurator</label><select id="me-conf"><option value="0"' + (!d.configurator ? ' selected' : '') + '>Aus (normale Auswahl)</option><option value="1"' + (d.configurator === 1 ? ' selected' : '') + '>Pizza (rund)</option><option value="2"' + (d.configurator === 2 ? ' selected' : '') + '>Flammkuchen (oval, extra dünn, Holzbrett)</option></select>' +
 			'<p class="me-help">Der Gast belegt einen rohen Teigling selbst: er tippt Zutaten an, sie verteilen sich gleichmäßig auf der Pizza. Die Zutaten sind die Optionen der Zubehörgruppen unten, ihre Preise gelten wie sonst auch. Beim Flammkuchen sind Tomatensoße und Käse inklusive.</p>' +
@@ -283,6 +324,14 @@
 			if (view !== el.dataset.view) { var nextView = el.dataset.view; discardOk().then(function (ok) { if (!ok) { return; } view = nextView; sel = null; query = ''; render(); }); }
 			return;
 		}
+		if (t.closest('[data-imgpick]')) { var fi = $('#me-file'); fi.value = ''; fi.click(); return; }
+		if (t.closest('[data-imgrm]')) { refreshImg(''); dirty = true; return; }
+		if ((el = t.closest('[data-imgfetch]'))) {
+			el.disabled = true; say('Das Bild wird geholt ...', false);
+			api('img_fetch', { url: $('#me-img').value }).then(function (r) { dirty = true; refreshImg(r.url); say('Das Bild liegt jetzt auf dem Server. Mit "Speichern" übernehmen.', false); }).catch(function () { el.disabled = false; });
+			return;
+		}
+		if (t.closest('[data-imgall]')) { discardOk().then(function (ok) { if (ok) { localizeAll(); } }); return; }
 		if ((el = t.closest('[data-prod]'))) { var p = byId(D.products, +el.dataset.prod); select('p', p.id, copy(p)); return; }
 		if ((el = t.closest('[data-cat]'))) { var c = byId(D.categories, +el.dataset.cat); select('c', c.id, copy(c)); return; }
 		if ((el = t.closest('[data-group]'))) { var g = byId(D.groups, +el.dataset.group); select('g', g.id, copy(g)); return; }
@@ -384,6 +433,14 @@
 		} else {
 			api('group_save', { data: readGroup() }).then(function (r) { apply({ groups: r.groups }); afterSave('g', r.group.id, 'Gespeichert.'); }).catch(done);
 		}
+	});
+	page.addEventListener('change', function (ev) {
+		if (ev.target.id === 'me-img') { dirty = true; refreshImg(ev.target.value.trim()); return; }
+		if (ev.target.id !== 'me-file' || !ev.target.files.length) { return; }
+		var f = ev.target.files[0];
+		if (f.size > 20 * 1024 * 1024) { say('Das Bild ist zu groß (höchstens 20 MB).', true); return; }
+		say('Das Bild wird hochgeladen ...', false);
+		api('img_upload', { file: f }).then(function (r) { dirty = true; refreshImg(r.url); say('Bild hochgeladen. Mit "Speichern" übernehmen.', false); }).catch(function () {});
 	});
 	page.addEventListener('input', function (ev) {
 		if (ev.target.id === 'me-q') { query = ev.target.value; filter(); return; }

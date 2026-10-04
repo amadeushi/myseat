@@ -101,6 +101,12 @@ if ($op === 'save_driver') {
 	$r = shop_driver_save($id, isset($_POST['name']) ? $_POST['name'] : '', isset($_POST['device_id']) ? $_POST['device_id'] : '', !empty($_POST['active']));
 	sa_out($r['ok'] ? array('ok' => true, 'message' => 'Fahrer gespeichert.') : $r);
 }
+if ($op === 'save_hours') {
+	$data = json_decode(isset($_POST['hours']) ? (string)$_POST['hours'] : '', true);
+	if (!is_array($data)) { sa_out(array('ok' => false, 'error' => 'Die Zeiten sind nicht lesbar. Bitte lade die Seite neu.')); }
+	$r = shop_hours_save($data);
+	sa_out($r['ok'] ? array('ok' => true, 'message' => $r['count'] ? 'Die Bestellzeiten sind gespeichert.' : 'Gespeichert. Es sind keine Zeiten eingetragen, die Bestellseite ist damit immer geschlossen.') : $r);
+}
 if ($op === 'delete_driver') {
 	$id = (int)(isset($_POST['id']) ? $_POST['id'] : 0);
 	if ($id <= 0) { sa_out(array('ok' => false, 'error' => 'Unbekannter Fahrer.')); }

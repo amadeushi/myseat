@@ -52,6 +52,15 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.13.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Bestellzeiten für Lieferung und Abholung werden im Backend eingestellt (Einstellungen > Lieferservice): mehrere Zeitfenster pro Tag,
+   "Auf alle Tage" kopiert einen Tag, geprüft auf Ende nach Beginn und Überschneidungen. Die Zeiten sind nicht mehr nur eine Anzeige der
+   einmaligen Übernahme aus Resmio.
+ * New: Bilder der Speisekarte liegen auf dem eigenen Server (uploads/menu): hochladen, ersetzen und entfernen im Gericht-Formular, die
+   Bilder werden verkleinert und als WebP gespeichert, nicht mehr benutzte Dateien werden gelöscht.
+ * New: "Alle auf den Server holen" übernimmt die bisher fremd verlinkten Bilder in einem Durchgang; fehlgeschlagene werden aufgelistet.
+
 2026-10-05 == mySeat v6.12.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Lupe in jeder Spalte des Küchenmonitors: zeigt die ganze Bestellung ohne Scrollen, indem Kopf und Gerichte verkleinert werden

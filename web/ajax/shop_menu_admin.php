@@ -39,6 +39,10 @@ $id = (int)(isset($_POST['id']) ? $_POST['id'] : 0);
 $dir = (isset($_POST['dir']) && $_POST['dir'] === 'up') ? -1 : 1;
 
 switch ($op) {
+	case 'img_upload':      $r = shop_img_from_upload(isset($_FILES['file']) ? $_FILES['file'] : null); shop_img_gc(); sm_out($r);
+	case 'img_fetch':       $r = shop_img_fetch(isset($_POST['url']) ? $_POST['url'] : ''); shop_img_gc(); sm_out($r);
+	case 'img_list':        sm_out(array('ok' => true, 'items' => shop_img_external()));
+	case 'img_localize':    sm_out(shop_img_localize($id));
 	case 'category_save':   sm_out(shop_me_save_category($data));
 	case 'category_delete': sm_out(shop_me_delete_category($id));
 	case 'category_move':   sm_out(array('ok' => shop_me_move('tp_shop_categories', $id, $dir)) + shop_me_load());

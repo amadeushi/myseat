@@ -430,6 +430,49 @@ function shop_windows($kind, $ts) {
 }
 
 /*
+ * Opening times from the backend: $data[kind][weekday 0..6] = list of array('H:i' begins, 'H:i' ends); replaces every row of
+ * tp_shop_hours. A window lies within one day (over midnight: two windows, "bis 23:59" and the next day "ab 00:00"), windows of a
+ * day must not overlap. Returns array(ok, error | count).
+ */
+function shop_hours_save($data) {
+	shop_ensure_schema();
+	$names = array('Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag');
+	$labels = array('delivery' => 'Lieferung', 'pickup' => 'Abholung');
+	$time = '/^([01]\d|2[0-3]):[0-5]\d$/';
+	$rows = array();
+	foreach ($labels as $kind => $label) {
+		for ($d = 0; $d < 7; $d++) {
+			$where = $label.', '.$names[$d].': ';
+			$list = (isset($data[$kind][$d]) && is_array($data[$kind][$d])) ? $data[$kind][$d] : array();
+			if (count($list) > 6) { return array('ok' => false, 'error' => $where.'Es sind höchstens 6 Zeitfenster möglich.'); }
+			$win = array();
+			foreach ($list as $pair) {
+				$b = isset($pair[0]) ? trim((string)$pair[0]) : ''; $e = isset($pair[1]) ? trim((string)$pair[1]) : '';
+				if ($b === '' && $e === '') { continue; }
+				if (!preg_match($time, $b) || !preg_match($time, $e)) { return array('ok' => false, 'error' => $where.'Bitte Beginn und Ende als Uhrzeit angeben.'); }
+				if ($e <= $b) { return array('ok' => false, 'error' => $where.'Das Ende ('.$e.') muss nach dem Beginn ('.$b.') liegen. Über Mitternacht bitte in zwei Zeilen: bis 23:59 und am Folgetag ab 00:00.'); }
+				$win[] = array($b, $e);
+			}
+			sort($win);
+			for ($i = 1; $i < count($win); $i++) {
+				if ($win[$i][0] < $win[$i - 1][1]) { return array('ok' => false, 'error' => $where.'Die Zeiten '.$win[$i - 1][0].' bis '.$win[$i - 1][1].' und '.$win[$i][0].' bis '.$win[$i][1].' überschneiden sich.'); }
+			}
+			foreach ($win as $w) { $rows[] = array($kind, $d, $w[0].':00', $w[1].':00'); }
+		}
+	}
+	$db = fb_db();
+	mysqli_begin_transaction($db);
+	$ok = fb_exec("DELETE FROM ".fb_t('tp_shop_hours')) !== false;
+	foreach ($rows as $r) {
+		if (!$ok) { break; }
+		$ok = fb_exec("INSERT INTO ".fb_t('tp_shop_hours')." (kind, weekday, begins, ends) VALUES (?, ?, ?, ?)", 'siss', $r) !== false;
+	}
+	if (!$ok) { mysqli_rollback($db); return array('ok' => false, 'error' => 'Die Zeiten konnten nicht gespeichert werden.'); }
+	mysqli_commit($db);
+	return array('ok' => true, 'count' => count($rows));
+}
+
+/*
  * State of delivery or pickup right now: array(open, until (ts), next (ts or 0), eta_min). "open" also means there is time
  * left to prepare an order placed now.
  */
@@ -1399,7 +1442,7 @@ function shop_me_load() {
 	foreach (fb_rows("SELECT id, name, description, active FROM ".fb_t('tp_shop_categories')." ORDER BY sort, id") as $c) {
 		$cats[] = array('id' => (int)$c['id'], 'name' => $c['name'], 'description' => $c['description'], 'active' => (int)$c['active']);
 	}
-	return array('categories' => $cats, 'products' => array_values(shop_me_products()), 'groups' => array_values(shop_me_group_rows()), 'coupons' => shop_me_coupons());
+	return array('categories' => $cats, 'products' => array_values(shop_me_products()), 'groups' => array_values(shop_me_group_rows()), 'coupons' => shop_me_coupons(), 'img_prefix' => shop_img_prefix());
 }
 
 function shop_me_renumber($table, $scopeCol, $scopeVal) {
@@ -1453,7 +1496,9 @@ function shop_me_save_product($d) {
 	$price = shop_cents(isset($d['price']) ? $d['price'] : 0);
 	if ($price < 0 || $price > 100000) { return array('ok' => false, 'error' => 'Der Preis ist nicht sinnvoll.'); }
 	$image = trim((string)(isset($d['image_url']) ? $d['image_url'] : ''));
-	if ($image !== '' && !preg_match('#^https://[^\s"<>]+$#i', $image)) { return array('ok' => false, 'error' => 'Die Bildadresse muss mit https:// beginnen.'); }
+	if ($image !== '' && !shop_img_is_local($image) && !preg_match('#^https://[^\s"<>]+$#i', $image)) { return array('ok' => false, 'error' => 'Die Bildadresse muss mit https:// beginnen.'); }
+	if (mb_strlen($image) > 300) { return array('ok' => false, 'error' => 'Die Bildadresse ist zu lang.'); }
+	$oldImg = $id ? fb_row("SELECT image_url FROM ".fb_t('tp_shop_products')." WHERE id = ?", 'i', array($id)) : null;
 	$desc = mb_substr(trim((string)(isset($d['description']) ? $d['description'] : '')), 0, 800);
 	$all = mb_substr(trim((string)(isset($d['allergens']) ? $d['allergens'] : '')), 0, 400);
 	$active = empty($d['active']) ? 0 : 1;
@@ -1479,6 +1524,7 @@ function shop_me_save_product($d) {
 		fb_exec("INSERT INTO ".fb_t('tp_shop_products')." (category_id, title, description, image_url, price_cents, allergens, active, configurator, sort) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", 'isssisiid', array($cat, $title, $desc, $image, $price, $all, $active, $conf, (float)$max['m'] + 1));
 		$id = (int)mysqli_insert_id(fb_db());
 	}
+	if ($oldImg && $oldImg['image_url'] !== '' && $oldImg['image_url'] !== $image) { shop_img_release($oldImg['image_url']); }
 	// variations: keep the ids that stay, add new ones, drop the rest
 	$keep = array(); $n = 0;
 	foreach ($vars as $v) {
@@ -1495,11 +1541,125 @@ function shop_me_save_product($d) {
 	$rows = shop_me_products($id);
 	return array('ok' => true, 'product' => $rows[$id], 'groups' => array_values(shop_me_group_rows()));
 }
+// ---- dish pictures: kept on this server (uploads/menu). Every picture is decoded and written again (max 1200 px, WebP or JPEG), so
+// nothing but a clean image is ever stored, whatever the file was called or contained. The file name is a hash of the result.
+function shop_img_dir() { return dirname(__DIR__, 2).'/uploads/menu'; }
+function shop_img_prefix() { return rtrim(shop_site_url(), '/').'/uploads/menu/'; }
+function shop_img_is_local($url) { return strpos((string)$url, shop_img_prefix()) === 0; }
+function shop_img_file($url) {
+	if (!shop_img_is_local($url)) { return ''; }
+	$n = substr((string)$url, strlen(shop_img_prefix()));
+	return preg_match('/^[a-f0-9]{20}\.(webp|jpg)$/', $n) ? shop_img_dir().'/'.$n : '';
+}
+// $bin = the bytes of an image file; array(ok, url | error)
+function shop_img_store($bin) {
+	if (strlen($bin) < 100) { return array('ok' => false, 'error' => 'Das ist kein Bild.'); }
+	if (strlen($bin) > 20 * 1024 * 1024) { return array('ok' => false, 'error' => 'Das Bild ist zu groß (höchstens 20 MB).'); }
+	if (!function_exists('imagecreatefromstring')) { return array('ok' => false, 'error' => 'Auf dem Server fehlt die Bildbearbeitung (GD).'); }
+	$info = @getimagesizefromstring($bin);
+	if (!$info || !in_array($info[2], array(IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP, IMAGETYPE_GIF), true)) { return array('ok' => false, 'error' => 'Bitte ein Bild als JPG, PNG oder WebP wählen.'); }
+	if ($info[0] * $info[1] > 40000000) { return array('ok' => false, 'error' => 'Das Bild hat zu viele Pixel. Bitte verkleinern.'); }
+	$im = @imagecreatefromstring($bin);
+	if (!$im) { return array('ok' => false, 'error' => 'Das Bild konnte nicht gelesen werden.'); }
+	if (!imageistruecolor($im)) { imagepalettetotruecolor($im); }
+	if ($info[2] === IMAGETYPE_JPEG && function_exists('exif_read_data')) { // phone photos: turn them the way they were taken
+		$ex = @exif_read_data('data://image/jpeg;base64,'.base64_encode($bin)); $ang = array(3 => 180, 6 => -90, 8 => 90);
+		$o = isset($ex['Orientation']) ? (int)$ex['Orientation'] : 1;
+		if (isset($ang[$o])) { $r = imagerotate($im, $ang[$o], 0); if ($r) { imagedestroy($im); $im = $r; } }
+	}
+	$w = imagesx($im); $h = imagesy($im);
+	if (max($w, $h) > 1200) {
+		$s = 1200 / max($w, $h); $nw = max(1, (int)round($w * $s)); $nh = max(1, (int)round($h * $s));
+		$dst = imagecreatetruecolor($nw, $nh); imagealphablending($dst, false); imagesavealpha($dst, true);
+		imagefill($dst, 0, 0, imagecolorallocatealpha($dst, 255, 255, 255, 127));
+		imagecopyresampled($dst, $im, 0, 0, 0, 0, $nw, $nh, $w, $h); imagedestroy($im); $im = $dst;
+	}
+	if (function_exists('imagewebp')) { imagesavealpha($im, true); ob_start(); imagewebp($im, null, 82); $out = ob_get_clean(); $ext = 'webp'; }
+	else {
+		$flat = imagecreatetruecolor(imagesx($im), imagesy($im)); imagefill($flat, 0, 0, imagecolorallocate($flat, 255, 255, 255)); imagecopy($flat, $im, 0, 0, 0, 0, imagesx($im), imagesy($im));
+		ob_start(); imagejpeg($flat, null, 85); $out = ob_get_clean(); $ext = 'jpg'; imagedestroy($flat);
+	}
+	imagedestroy($im);
+	if (!$out) { return array('ok' => false, 'error' => 'Das Bild konnte nicht umgewandelt werden.'); }
+	$dir = shop_img_dir();
+	if (!is_dir($dir)) { @mkdir($dir, 0755, true); }
+	$name = substr(sha1($out), 0, 20).'.'.$ext;
+	if (!is_writable($dir) || @file_put_contents($dir.'/'.$name, $out, LOCK_EX) === false) { return array('ok' => false, 'error' => 'Das Bild konnte nicht auf dem Server gespeichert werden (Ordner uploads/menu nicht beschreibbar).'); }
+	@chmod($dir.'/'.$name, 0644);
+	return array('ok' => true, 'url' => shop_img_prefix().$name);
+}
+function shop_img_from_upload($f) {
+	if (!is_array($f) || !isset($f['error']) || $f['error'] !== UPLOAD_ERR_OK) {
+		$big = is_array($f) && isset($f['error']) && in_array($f['error'], array(UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE), true);
+		return array('ok' => false, 'error' => $big ? 'Das Bild ist größer, als der Server erlaubt.' : 'Der Upload hat nicht geklappt. Bitte versuche es noch einmal.');
+	}
+	if (!is_uploaded_file($f['tmp_name'])) { return array('ok' => false, 'error' => 'Der Upload hat nicht geklappt.'); }
+	return shop_img_store((string)file_get_contents($f['tmp_name']));
+}
+// fetch a picture from a foreign https address (checked: no internal addresses, at most 3 redirects, at most 20 MB) and keep it here
+function shop_img_fetch($url) {
+	$url = trim((string)$url);
+	for ($hop = 0; $hop < 4; $hop++) {
+		$p = parse_url($url);
+		if (!$p || empty($p['host']) || strtolower((string)$p['scheme']) !== 'https') { return array('ok' => false, 'error' => 'Nur https-Adressen können geholt werden.'); }
+		$ip = gethostbyname($p['host']);
+		if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) { return array('ok' => false, 'error' => 'Die Adresse ist nicht erreichbar.'); }
+		$port = isset($p['port']) ? (int)$p['port'] : 443; $loc = '';
+		$ch = curl_init($url);
+		curl_setopt_array($ch, array(CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => false, CURLOPT_CONNECTTIMEOUT => 6, CURLOPT_TIMEOUT => 25,
+			CURLOPT_PROTOCOLS => CURLPROTO_HTTPS, CURLOPT_RESOLVE => array($p['host'].':'.$port.':'.$ip), CURLOPT_USERAGENT => 'mySeat-Lieferservice/1.0 (Bilder)',
+			CURLOPT_NOPROGRESS => false, CURLOPT_PROGRESSFUNCTION => function ($c, $dt, $dn) { return $dn > 20 * 1024 * 1024 ? 1 : 0; },
+			CURLOPT_HEADERFUNCTION => function ($c, $line) use (&$loc) { if (stripos($line, 'location:') === 0) { $loc = trim(substr($line, 9)); } return strlen($line); }));
+		$body = curl_exec($ch); $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE); curl_close($ch);
+		if (in_array($code, array(301, 302, 303, 307, 308), true) && $loc !== '') {
+			if (strpos($loc, '//') === 0) { $loc = 'https:'.$loc; } elseif ($loc[0] === '/') { $loc = 'https://'.$p['host'].($port !== 443 ? ':'.$port : '').$loc; }
+			$url = $loc; continue;
+		}
+		if ($body === false || $code !== 200) { return array('ok' => false, 'error' => 'Das Bild konnte nicht geladen werden'.($code ? ' (Fehler '.$code.')' : '').'.'); }
+		return shop_img_store((string)$body);
+	}
+	return array('ok' => false, 'error' => 'Zu viele Weiterleitungen.');
+}
+// delete the file of a local picture that no dish uses any more
+function shop_img_release($url) {
+	$f = shop_img_file($url);
+	if ($f === '' || !is_file($f)) { return; }
+	$n = fb_row("SELECT COUNT(*) AS n FROM ".fb_t('tp_shop_products')." WHERE image_url = ?", 's', array((string)$url));
+	if ($n && (int)$n['n'] === 0) { @unlink($f); }
+}
+// pictures uploaded but never saved with a dish: gone after a day
+function shop_img_gc() {
+	$used = array();
+	foreach (fb_rows("SELECT image_url FROM ".fb_t('tp_shop_products')." WHERE image_url <> ''") as $r) { $used[$r['image_url']] = 1; }
+	foreach ((array)glob(shop_img_dir().'/*') as $f) {
+		if (is_file($f) && filemtime($f) < time() - 86400 && empty($used[shop_img_prefix().basename($f)])) { @unlink($f); }
+	}
+}
+// dishes whose picture is still linked from another site
+function shop_img_external() {
+	$out = array();
+	foreach (fb_rows("SELECT id, title, image_url FROM ".fb_t('tp_shop_products')." WHERE image_url <> '' ORDER BY id") as $r) {
+		if (!shop_img_is_local($r['image_url'])) { $out[] = array('id' => (int)$r['id'], 'title' => $r['title'], 'url' => $r['image_url']); }
+	}
+	return $out;
+}
+function shop_img_localize($id) {
+	$p = fb_row("SELECT id, image_url FROM ".fb_t('tp_shop_products')." WHERE id = ?", 'i', array((int)$id));
+	if (!$p) { return array('ok' => false, 'error' => 'Dieses Gericht gibt es nicht mehr.'); }
+	if ($p['image_url'] === '' || shop_img_is_local($p['image_url'])) { return array('ok' => true, 'url' => $p['image_url']); }
+	$r = shop_img_fetch($p['image_url']);
+	if (!$r['ok']) { return $r; }
+	fb_exec("UPDATE ".fb_t('tp_shop_products')." SET image_url = ? WHERE id = ?", 'si', array($r['url'], (int)$id));
+	return $r;
+}
+
 function shop_me_delete_product($id) {
 	$id = (int)$id;
+	$old = fb_row("SELECT image_url FROM ".fb_t('tp_shop_products')." WHERE id = ?", 'i', array($id));
 	fb_exec("DELETE FROM ".fb_t('tp_shop_variations')." WHERE product_id = ?", 'i', array($id));
 	fb_exec("DELETE FROM ".fb_t('tp_shop_product_groups')." WHERE product_id = ?", 'i', array($id));
 	fb_exec("DELETE FROM ".fb_t('tp_shop_products')." WHERE id = ?", 'i', array($id)); // placed orders keep name and price in their own rows
+	if ($old && $old['image_url'] !== '') { shop_img_release($old['image_url']); }
 	return array('ok' => true, 'groups' => array_values(shop_me_group_rows()));
 }
 
