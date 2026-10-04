@@ -65,7 +65,7 @@ $delivery = $order && $order['type'] === 'delivery';
 		$stepRank = $delivery ? array('new' => 1, 'accepted' => 2, 'preparing' => 3, 'ready' => 4, 'delivering' => 5, 'done' => 6) : array('new' => 1, 'accepted' => 2, 'preparing' => 3, 'ready' => 4, 'done' => 5);
 		$cur = isset($rank[$st]) ? $rank[$st] : 0;
 		$items = shop_order_items((int)$order['id']);
-		$eta = $order['eta_at'] ? strtotime($order['eta_at']) : 0;
+		$eta = $order['scheduled_at'] ? strtotime($order['scheduled_at']) : ($order['eta_at'] ? strtotime($order['eta_at']) : 0); // a wish time always stands as the guest chose it
 	?>
 		<h1 class="st-title<?php echo in_array($st, array('failed', 'cancelled'), true) ? ' is-danger' : ($st === 'done' ? ' is-success' : ''); ?>"><?php echo shop_h($titles[$st]); ?></h1>
 		<p class="st-lead">

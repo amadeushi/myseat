@@ -3,7 +3,7 @@
  * The slip of an order as ESC/POS bytes for the receipt printer in the kitchen (80 mm paper, 42 columns, code page 858). The same slip as
  * web/bon.php, but as text with large and bold characters: it is printed by the print agent on the Raspberry Pi (see shop_print_*), so no
  * browser, no print dialog and no driver are involved. Without "full" it is the kitchen slip (name and postcode of the guest only), with
- * full the delivery slip (address, phone, what to collect).
+ * full the delivery slip (address, what to collect; no phone number).
  */
 
 // UTF-8 text -> code page 858 (850 plus the euro sign); what the printer cannot print becomes "?"
@@ -58,7 +58,6 @@ function shop_slip_escpos($o, $items, $full) {
 		if ($who !== '') { $put($who, 1, true); $rule(); }
 	} else {
 		$put(trim((string)$o['customer_name']), 1, true);
-		if (trim((string)$o['phone']) !== '') { $put($o['phone'], 0); }
 		if ($delivery) {
 			$put(trim((string)$o['street']), 1);
 			$put(trim($o['zip'].' '.$o['city']), 1);

@@ -52,6 +52,15 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.19.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: Eine Bestellung zu einer Wunschzeit behält diese Zeit beim Annehmen: Im Dispositionsbildschirm und in der Bestellliste wird bei Wunschzeit keine
+   Minutenzahl mehr abgefragt (ein Knopf "Annehmen"), und der Server überschreibt die Zielzeit nicht mehr. Die Statusseite des Gastes zeigt bei Wunschzeit
+   immer die gewählte Zeit, auch bei Bestellungen, bei denen sie vorher überschrieben wurde.
+ * Fix: Lieferando-Import: Die "Bestätigte Uhrzeit" des Belegs wird als Zielzeit übernommen (bisher blieb sie leer, Disposition und Küche rechneten mit der
+   Zeit des Imports). Liegt sie deutlich vor der Bestellzeit, zählt der Folgetag.
+ * Fix: Auf dem Lieferschein (Browser-Bon und Bon am Pi-Drucker) wird die Telefonnummer nicht mehr gedruckt.
+
 2026-10-05 == mySeat v6.19.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Fahrerseite für Fahrer, die die Stadt nicht kennen: Jede Lieferung zeigt den Stadtteil (von OpenStreetMap, einmal je Bestellung gespeichert) und die

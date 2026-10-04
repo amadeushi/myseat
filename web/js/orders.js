@@ -83,7 +83,7 @@
 			'<span class="orders-who">' + esc(o.name) + (o.source === 'phone' ? ' <em class="orders-test">Telefon</em>' : '') + (o.test ? ' <em class="orders-test">Test</em>' : '') + '</span>' +
 			'<span class="orders-sum">' + money(o.total) + '</span><span class="orders-pay">' + pay + '</span>' +
 			'<span class="orders-status">' + LABEL[o.status] + '</span><span class="orders-act">' +
-			(n ? '<button type="button" class="button_dark" data-status="' + n[0] + '">' + n[1] + '</button>' : '') + '</span></div>';
+			(n ? '<button type="button" class="button_dark" data-status="' + n[0] + '"' + (o.scheduled ? ' data-sched="1"' : '') + '>' + n[1] + '</button>' : '') + '</span></div>';
 		if (open[o.id]) {
 			h += '<div class="orders-detail"><p><strong>' + esc(o.name) + '</strong>' + (o.phone ? ' · <a href="tel:' + esc(o.phone.replace(/\s+/g, '')) + '">' + esc(o.phone) + '</a>' : '') + (o.email ? ' · ' + esc(o.email) : '') + ' · Nr. ' + esc(o.number) + '</p>' +
 				(o.address ? '<p>' + esc(o.address) + (o.address_note ? ' (' + esc(o.address_note) + ')' : '') + '</p>' : '') +
@@ -155,6 +155,12 @@
 					if (!ok) { return; }
 					post('status', { id: id, status: 'cancelled' }).then(function (r) { if (!r.ok) { note(r.error || 'Das hat nicht geklappt.', true); } load(); });
 				});
+				return;
+			}
+			if (st.dataset.status === 'accepted' && st.dataset.sched) {
+				// a wish time stands as the guest chose it: nothing to ask
+				st.disabled = true;
+				post('status', { id: id, status: 'accepted' }).then(function (r) { st.disabled = false; if (!r.ok) { note(r.error || 'Das hat nicht geklappt.', true); } load(); });
 				return;
 			}
 			if (st.dataset.status === 'accepted') {

@@ -87,17 +87,25 @@ function lieferando_parse_items($rawLines) {
 
 /*
  * Reads the receipt's plain text (from Smalot\PdfParser) into what mySeat needs. Returns:
- * external_id, placed_at ('Y-m-d H:i:s' or null), type ('delivery'|'pickup'), customer_name, items (see
+ * external_id, placed_at ('Y-m-d H:i:s' or null), confirmed_at (the "Bestätigte Uhrzeit", same format or null), type ('delivery'|'pickup'), customer_name, items (see
  * lieferando_parse_items), note (the guest's "Anmerkungen", '' if none), payment_status ('paid'|'cod'), total_cents.
  */
 function lieferando_parse_text($text) {
-	$out = array('external_id' => '', 'placed_at' => null, 'type' => 'delivery', 'customer_name' => '', 'items' => array(), 'note' => '', 'payment_status' => 'cod', 'total_cents' => null);
+	$out = array('external_id' => '', 'placed_at' => null, 'confirmed_at' => null, 'type' => 'delivery', 'customer_name' => '', 'items' => array(), 'note' => '', 'payment_status' => 'cod', 'total_cents' => null);
 
 	if (preg_match('/([A-Z0-9]{5,8})\s*\n\s*(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})/u', $text, $m)) {
 		$out['external_id'] = $m[1];
 		$out['placed_at'] = $m[2].'-'.$m[3].'-'.$m[4].' '.$m[5].':'.$m[6].':00';
 	}
 	if (preg_match('/^\s*(Lieferung|Abholung)\s*$/mu', $text, $m)) { $out['type'] = (stripos($m[1], 'Abhol') === 0) ? 'pickup' : 'delivery'; }
+	// "Bestätigte Uhrzeit" is the time Lieferando promised the guest: that is when the order has to be there (or ready for pickup). The date is the day of
+	// the receipt; a time that lies clearly before the order time is after midnight.
+	if (preg_match('/Bestätigte\s+Uhrzeit\s*(\d{1,2}):(\d{2})/u', $text, $m)) {
+		$base = $out['placed_at'] ? substr($out['placed_at'], 0, 10) : date('Y-m-d');
+		$ts = strtotime($base.' '.sprintf('%02d:%02d:00', (int)$m[1], (int)$m[2]));
+		if ($ts !== false && $out['placed_at'] && $ts < strtotime($out['placed_at']) - 1800) { $ts += 86400; }
+		if ($ts !== false) { $out['confirmed_at'] = date('Y-m-d H:i:s', $ts); }
+	}
 	if (preg_match('/Gesamt\s+(\d+[.,]\d{2})/u', $text, $m)) { $out['total_cents'] = (int)round((float)str_replace(',', '.', $m[1]) * 100); }
 	if (stripos($text, 'bezahlt') !== false) { $out['payment_status'] = 'paid'; }
 
@@ -165,10 +173,10 @@ function lieferando_import($pdfBytes) {
 	$db = fb_db();
 	$ok = fb_exec("INSERT INTO ".fb_t('tp_shop_orders')."
 		(token, number, day_no, order_date, type, status, customer_name, phone, note, subtotal_cents, fee_cents, tip_cents, total_cents,
-		 payment_method, payment_status, lang, is_test, source, external_ref, created_at, updated_at, accepted_at)
-		VALUES (?, ?, ?, ?, ?, 'accepted', ?, '', ?, ?, 0, 0, ?, 'lieferando', ?, 'de', 0, 'lieferando', ?, ?, ?, ?)",
-		'ssissssiisssss', array($token, $number, $dayNo, $today, $p['type'], $p['customer_name'], $p['note'], $sub, $total,
-			$p['payment_status'] === 'paid' ? 'paid' : 'open', $p['external_id'], $now, $now, $now));
+		 payment_method, payment_status, lang, is_test, source, external_ref, created_at, updated_at, accepted_at, eta_at)
+		VALUES (?, ?, ?, ?, ?, 'accepted', ?, '', ?, ?, 0, 0, ?, 'lieferando', ?, 'de', 0, 'lieferando', ?, ?, ?, ?, ?)",
+		'ssissssiissssss', array($token, $number, $dayNo, $today, $p['type'], $p['customer_name'], $p['note'], $sub, $total,
+			$p['payment_status'] === 'paid' ? 'paid' : 'open', $p['external_id'], $now, $now, $now, $p['confirmed_at']));
 	if (!$ok) { return array('ok' => false, 'error' => 'Die Bestellung ('.$p['external_id'].') konnte nicht gespeichert werden.'); }
 	$id = (int)mysqli_insert_id($db);
 	foreach ($p['items'] as $it) {

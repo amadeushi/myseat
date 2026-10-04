@@ -92,7 +92,10 @@
 		var side = P && o.status === 'new'; // on its side the decision stands to the right of the order: payment and the buttons in one column
 		h += (side ? '<div class="k-side">' : pay) + '<div class="k-actions">';
 		if (o.status === 'new') {
-			h += '<span class="k-eta-l">Annehmen, fertig in:</span>' + [20, 30, 45, 60].map(function (m) { return '<button type="button" class="k-go eta" data-act="accept" data-eta="' + m + '">' + m + ' Min</button>'; }).join('') + '<button type="button" class="k-go secondary" data-act="cancelled">Ablehnen</button>';
+			// a wish time stands as the guest chose it: no minutes to give, one button accepts for that time
+			h += o.scheduled
+				? '<span class="k-eta-l">Wunschzeit ' + esc(o.scheduled) + ' Uhr:</span><button type="button" class="k-go eta" data-act="accept">Annehmen</button><button type="button" class="k-go secondary" data-act="cancelled">Ablehnen</button>'
+				: '<span class="k-eta-l">Annehmen, fertig in:</span>' + [20, 30, 45, 60].map(function (m) { return '<button type="button" class="k-go eta" data-act="accept" data-eta="' + m + '">' + m + ' Min</button>'; }).join('') + '<button type="button" class="k-go secondary" data-act="cancelled">Ablehnen</button>';
 		} else if (o.status === 'accepted') { h += '<button type="button" class="k-go" data-act="preparing">Wird gekocht</button>'; }
 		else if (o.status === 'preparing') { h += '<button type="button" class="k-go" data-act="ready">Fertig</button>'; }
 		else if (o.status === 'ready') {

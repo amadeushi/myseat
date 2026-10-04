@@ -1,7 +1,7 @@
 <?php
 /*
  * Paper slip of one order for a receipt printer (72 mm). Without "full" it is the kitchen slip: number, type, time, dishes, notes,
- * only name (and the postcode of a delivery, to talk through tours) about the guest. With full=1 it is the delivery slip: name, address, phone, what to collect. Needs a backend login
+ * only name (and the postcode of a delivery, to talk through tours) about the guest. With full=1 it is the delivery slip: name, address, what to collect (no phone number). Needs a backend login
  * (Reservation-Edit). The monitors load it in a hidden frame and call print(); opened on its own, ?print=1 prints at once.
  */
 session_start();
@@ -59,7 +59,7 @@ $due = $o['scheduled_at'] ?: ($o['eta_at'] ?: $o['created_at']);
 	<?php endif; ?>
 	<?php if ($full): ?>
 		<hr/>
-		<div><strong><?php echo $h($o['customer_name']); ?></strong><br/><?php echo $h($o['phone']); ?>
+		<div><strong><?php echo $h($o['customer_name']); ?></strong>
 		<?php if ($delivery): ?><br/><?php echo $h($o['street']); ?><br/><?php echo $h($o['zip'].' '.$o['city']); ?><?php echo $o['address_note'] !== '' ? '<br/>'.$h($o['address_note']) : ''; ?><?php endif; ?></div>
 	<?php endif; ?>
 	<hr/>

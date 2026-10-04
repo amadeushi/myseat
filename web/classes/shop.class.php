@@ -1304,6 +1304,9 @@ function shop_set_status($id, $status, $by = '', $etaMinutes = 0) {
 	if (!isset(SHOP_STATUS_LABEL[$status])) { return false; }
 	$now = date('Y-m-d H:i:s');
 	$set = "status = ?, updated_at = ?"; $types = 'ss'; $params = array($status, $now);
+	// an order for a wish time keeps that time: the minutes staff give when accepting only make sense for "as soon as possible"
+	$sched = ($status === 'accepted' && $etaMinutes > 0) ? fb_row("SELECT scheduled_at FROM ".fb_t('tp_shop_orders')." WHERE id = ?", 'i', array((int)$id)) : null;
+	if ($sched && $sched['scheduled_at']) { $etaMinutes = 0; }
 	if ($status === 'accepted') { $set .= ", accepted_at = ?"; $types .= 's'; $params[] = $now; if ($etaMinutes > 0) { $set .= ", eta_at = ?"; $types .= 's'; $params[] = date('Y-m-d H:i:s', time() + $etaMinutes * 60); } }
 	if ($status === 'ready') { $set .= ", ready_at = ?"; $types .= 's'; $params[] = $now; }
 	if ($status === 'done' || $status === 'cancelled' || $status === 'failed') { $set .= ", done_at = ?"; $types .= 's'; $params[] = $now; }
