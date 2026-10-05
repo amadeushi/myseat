@@ -52,6 +52,14 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.25.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: Reservierungsformular für Gäste (api/reserve.php): Die Personenzahl sprang beim Wechsel des Tages (und bei "Heute" oder beim Wechsel des Lokals) auf 2 zurück, weil ein
+   Session-Eintrag (selected_pax) geprüft wurde, den nie jemand setzt. Jetzt beginnt nur der erste Besuch mit 2, danach bleibt die gewählte Zahl.
+ * Fix: Lieferando-Import erkennt Abholungen: der Beleg einer Abholung trägt die Zeile "Pickup ETA" statt "Abholung" und wurde als Lieferung gespeichert. Erkannt werden jetzt auch
+   "Pickup" und "Delivery ETA"; wird gar keine Art gefunden, steht "[Beleg prüfen: Art der Bestellung ... nicht erkannt]" in der Notiz der Bestellung. Die Abholzeit ("Bestätigte Uhrzeit")
+   gilt auf dem Küchenbildschirm als Ausgabezeit.
+
 2026-10-05 == mySeat v6.25.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Feedback-Mail nach Bestellungen (web/classes/shop_feedback.class.php, web/cron/send_order_feedback.php): zwei Stunden nach Abschluss bekommt der Gast eine freundliche Mail mit

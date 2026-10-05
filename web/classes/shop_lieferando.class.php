@@ -138,7 +138,9 @@ function lieferando_parse_text($text) {
 		$out['external_id'] = $m[1];
 		$out['placed_at'] = $m[2].'-'.$m[3].'-'.$m[4].' '.$m[5].':'.$m[6].':00';
 	}
-	if (preg_match('/^\s*(Lieferung|Abholung)\s*$/mu', $text, $m)) { $out['type'] = (stripos($m[1], 'Abhol') === 0) ? 'pickup' : 'delivery'; }
+	// the kind of the order is the line under the first rule: "Lieferung" / "Abholung"; the receipt of a pickup reads "Pickup ETA" (and a delivery maybe "Delivery ETA")
+	if (preg_match('/^\s*(Lieferung|Abholung|Delivery(?:\s+ETA)?|Pickup(?:\s+ETA)?)\s*$/imu', $text, $m)) { $out['type'] = (stripos($m[1], 'Abhol') === 0 || stripos($m[1], 'Pickup') === 0) ? 'pickup' : 'delivery'; }
+	else { $out['warnings'][] = 'Art der Bestellung (Lieferung/Abholung) nicht erkannt, als Lieferung gespeichert'; }
 	// "Bestätigte Uhrzeit" is the time Lieferando promised the guest: that is when the order has to be there (or ready for pickup). The date is the day of
 	// the receipt; a time that lies clearly before the order time is after midnight.
 	if (preg_match('/Bestätigte\s+Uhrzeit\s*(\d{1,2}):(\d{2})/u', $text, $m)) {

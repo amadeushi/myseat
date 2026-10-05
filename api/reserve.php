@@ -111,10 +111,11 @@ $_SESSION['resID'] = 0;
 	}
 
 // selected pax	
-	if ($_GET['pax']) {
-		// set selected time
+	if (!empty($_GET['pax'])) {
+		// set selected party size
 		$_SESSION['pax'] = max(1, min(500, (int)$_GET['pax']));
-	}elseif($_SESSION['selected_pax']<1){
+	}elseif(empty($_SESSION['pax']) || (int)$_SESSION['pax'] < 1){
+		// only the first visit starts with 2; a reload (another day, today, another outlet) keeps what the guest has chosen
 		$_SESSION['pax'] = 2;
 	}
 
