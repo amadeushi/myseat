@@ -52,6 +52,25 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-05 == mySeat v6.26.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: Bondrucker der Küche (tools/kitchen-pi/print-agent.py): Der Druckdienst löste für jeden Bon den Kernel-Treiber (io_edgeport) und sprach den NCR 7197 direkt per USB an. Danach startete sich der
+   Drucker nach 5 bis 25 Sekunden selbst neu und schnitt ab, was bis dahin nicht angekommen war (Testbon mit 25 Positionen brach bei Pos 18 ab), und ohne Treiber fehlte die Flusskontrolle (Lieferung #10:
+   ein Stück mitten im Bon fehlte). Jetzt schreibt der Dienst über den Treiber (/dev/ttyUSB0), der Treiber bleibt an, der Drucker startet nicht mehr neu; python3-usb und die udev-Regel werden nicht mehr gebraucht.
+   Das Protokoll nennt zu jedem Bon Größe und Dauer.
+ * New: Alle Zettel (Küchenbon und Lieferbon, auf dem Pi-Drucker und im Browser: escpos.class.php, bon.php): über jedem Gericht "Pos n von N", unten "Kontrolle: N Positionen / M Stück" und als letzte Zeile
+   "--- ENDE ---". Positionen und Stück werden aus derselben Liste gezählt, die gedruckt wird (shop_slip_counts); eine Lücke zeigt sich als Sprung in den Nummern, ein abgeschnittener Bon am fehlenden ENDE.
+ * New: Küchenbildschirm: Spalte "Erledigt" (letzte 2 Stunden, was die Küche auf Fertig gesetzt hat, neueste oben; shop_kitchen_done, op=kitchen liefert "done"). Ein Tipp klappt die Bestellung auf: Positionen
+   mit denselben "Pos n" wie auf dem Zettel, Notizen, Zutaten, dazu Küchenbon und Lieferzettel noch einmal drucken. Die Taste "Erledigt (n)" blendet die Spalte ein und aus. Die offenen Karten zeigen "Pos n" unter der Menge.
+ * New: Kasse: Gleiche Gerichte mit Auswahl (Gericht, Variante, Zutaten und Hinweis gleich) werden zu einer Position mit größerer Menge zusammengelegt, wie im Online-Shop; bisher ergab jedes Hinzufügen eine neue Zeile.
+ * New: Kasse: Straßenvorschläge beim Tippen der Lieferadresse (Google Places API (New), über den Server: shop_places_suggest/shop_places_pick, ajax/shop_pos.php address_suggest/address_pick). Ab 4 Zeichen, nach 0,4 s
+   ohne Tippen, gleiche Frage nicht zweimal, höchstens 8 Abfragen je Eingabe, 90 je Minute und Anmeldung; Vorschläge aus dem Ort des Restaurants zuerst. Die Auswahl füllt Straße, PLZ und Ort, die Zonenprüfung läuft darauf.
+   Einstellung places_suggest (Haken im Lieferservice, Standard an); "Verbindung prüfen" beim Google-Schlüssel meldet auch die Places-Schnittstelle. Neue Tabelle tp_shop_places_use zählt die Abfragen je Tag, die
+   Einstellungen zeigen heute, Monat und letzten Monat.
+ * Fix: Lieferando-Import liest die Belege, die Lieferando seit dem 5. Oktober auf Englisch druckt (Delivery, Pickup ETA, Confirmed time, Total, Delivery costs, Stamp card, Important, Order is paid online, Payment Online):
+   Zeit, Gesamtbetrag, Gebühr, Zahlung und Name stimmen wieder. Abzüge (Stempelkarte) werden als Rabatt gespeichert (discount_cents) und in die Summenprüfung einbezogen; eine unbekannte Art steht als Hinweis in der Notiz.
+   Abholungen ("Pickup ETA") werden als Abholung gespeichert. Der Name wurde bei englischen Belegen als "Confirmed time" gespeichert, das ist behoben.
+
 2026-10-05 == mySeat v6.25.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix: Reservierungsformular für Gäste (api/reserve.php): Die Personenzahl sprang beim Wechsel des Tages (und bei "Heute" oder beim Wechsel des Lokals) auf 2 zurück, weil ein

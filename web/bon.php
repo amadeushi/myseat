@@ -21,6 +21,7 @@ $o = $id ? shop_order($id) : null;
 if (!$o) { http_response_code(404); echo 'Bestellung nicht gefunden.'; exit; }
 $full = !empty($_GET['full']);
 $items = shop_order_items($id);
+$cnt = shop_slip_counts($items); $posNo = 0; // control figures and "Pos n von N": the same as on the slip of the kitchen printer (escpos.class.php)
 $h = function ($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); };
 $delivery = ($o['type'] === 'delivery');
 $due = $o['scheduled_at'] ?: ($o['eta_at'] ?: $o['created_at']);
@@ -41,6 +42,9 @@ $due = $o['scheduled_at'] ?: ($o['eta_at'] ?: $o['created_at']);
 		.time { font-size: 20pt; font-weight: 800; }
 		hr { border: 0; border-top: 2px dashed #000; margin: 8px 0; }
 		.item { margin: 7px 0; font-size: 15pt; font-weight: 800; }
+		.item .pos { display: block; font-size: 10.5pt; font-weight: 600; line-height: 1.1; margin-bottom: 1px; }
+		.ctl { font-size: 12pt; font-weight: 800; }
+		.end { margin-top: 4px; text-align: center; font-size: 11pt; font-weight: 800; letter-spacing: 0.04em; }
 		.item .var { font-weight: 600; font-size: 12pt; }
 		.item .opt { display: block; margin-left: 9mm; font-size: 12.5pt; font-weight: 500; }
 		.item .note, .onote { display: block; margin: 3px 0 0 9mm; font-weight: 800; font-size: 12.5pt; border: 2px solid #000; padding: 1px 4px; }
@@ -66,11 +70,13 @@ $due = $o['scheduled_at'] ?: ($o['eta_at'] ?: $o['created_at']);
 	<?php endif; ?>
 	<hr/>
 	<?php foreach ($items as $it): ?>
-		<div class="item"><?php echo (int)$it['qty']; ?>× <?php echo $h($it['title']); ?><?php echo $it['variation'] !== '' ? ' <span class="var">'.$h($it['variation']).'</span>' : ''; ?>
+		<div class="item"><span class="pos">Pos <?php echo ++$posNo; ?> von <?php echo (int)$cnt['pos']; ?></span><?php echo (int)$it['qty']; ?>× <?php echo $h($it['title']); ?><?php echo $it['variation'] !== '' ? ' <span class="var">'.$h($it['variation']).'</span>' : ''; ?>
 			<?php foreach ($it['options'] as $op): ?><span class="opt">+ <?php echo ($op['qty'] > 1 ? (int)$op['qty'].'× ' : '').$h($op['title']); ?></span><?php endforeach; ?>
 			<?php if ($it['note'] !== ''): ?><span class="note"><?php echo $h($it['note']); ?></span><?php endif; ?></div>
 	<?php endforeach; ?>
 	<?php if ($o['note'] !== ''): ?><span class="onote"><?php echo $h($o['note']); ?></span><?php endif; ?>
+	<hr/>
+	<div class="ctl"><?php echo $h(shop_slip_control_text($cnt)); ?></div>
 	<?php if ($full): ?>
 		<hr/>
 		<?php if (!empty($o['adjust_note'])): foreach (explode('; ', $o['adjust_note']) as $adj): ?><div class="small"><?php echo $h($adj); ?></div><?php endforeach; endif; ?>
@@ -79,6 +85,7 @@ $due = $o['scheduled_at'] ?: ($o['eta_at'] ?: $o['created_at']);
 	<?php endif; ?>
 	<hr/>
 	<div class="small">gedruckt <?php echo date('H:i'); ?> Uhr</div>
+	<div class="end">--- ENDE ---</div>
 	<?php if (!empty($_GET['print'])): ?><script>window.onload = function () { window.print(); };</script><?php endif; ?>
 </body>
 </html>

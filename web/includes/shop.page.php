@@ -84,6 +84,7 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 		<h4 class="sms-sub">Stempelkarte</h4>
 		<small class="offer-help">Jede abgeschlossene Bestellung eines Gastes mit Kundenkonto ist ein Stempel (ohne Kundenkonto gibt es keinen, siehe Kundenkonto unten). Ist die Karte voll, bekommt der Gast einen persönlichen Gutschein in Höhe des eingestellten Anteils der Warenwerte dieser Bestellungen. Er wird bei der nächsten passenden Bestellung automatisch und komplett abgezogen. Er gilt ab einem Warenwert in Höhe des Gutscheins, einen Rest gibt es nicht. Die Gutscheine sehen Sie unter Gutscheine (Code STEMPEL-...). Ein Gutschein bleibt gültig, auch wenn Sie die Stempelkarte ausschalten.</small>
 		<label class="offer-check"><input type="checkbox" name="feedback_on" value="1"<?php echo $sh_check('feedback_on'); ?>/> Feedback-Mail nach Bestellungen (zwei Stunden nach Abschluss, nur mit E-Mail-Adresse)</label>
+		<label class="offer-check"><input type="checkbox" name="places_suggest" value="1"<?php echo $sh_check('places_suggest'); ?>/> Straßenvorschläge in der Kasse beim Tippen (Google Places, braucht den Google-Schlüssel unten; jede Eingabe geht an Google)</label>
 		<label class="offer-check"><input type="checkbox" name="stamp_on" value="1"<?php echo $sh_check('stamp_on'); ?>/> Stempelkarte anbieten</label>
 		<div class="shop-grid">
 			<label class="offer-label" for="sh-sp">Gutschein in Prozent der Warenwerte</label>
@@ -154,6 +155,8 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 		<?php if ($sh_google['set']): ?><span class="offer-badge sms-badge-on">Schlüssel hinterlegt</span><span class="sms-keyinfo"><?php echo $sh_e($sh_google['masked']); ?></span>
 		<?php else: ?><span class="offer-badge">Kein Schlüssel hinterlegt</span><?php endif; ?>
 	</div>
+	<?php $sh_pu = shop_places_usage(); $sh_pn = function ($n) { return number_format($n, 0, ',', '.'); }; ?>
+	<p class="offer-help" id="places-usage">Straßenvorschläge der Kasse (Google Places): heute <strong><?php echo $sh_pn($sh_pu['today']['suggest']); ?></strong> Abfragen, <strong><?php echo $sh_pn($sh_pu['today']['pick']); ?></strong> gewählt &middot; dieser Monat <strong><?php echo $sh_pn($sh_pu['month']['suggest']); ?></strong> Abfragen, <strong><?php echo $sh_pn($sh_pu['month']['pick']); ?></strong> gewählt &middot; letzter Monat <?php echo $sh_pn($sh_pu['last']['suggest']); ?> / <?php echo $sh_pn($sh_pu['last']['pick']); ?>. Gezählt werden die Anfragen, die tatsächlich an Google gingen; ein Tageslimit setzt du in der Google-Cloud-Konsole bei der Places API.</p>
 	<form class="sms-form" id="google-key-form" autocomplete="off">
 		<input type="password" name="google_key" autocomplete="new-password" spellcheck="false" placeholder="<?php echo $sh_google['set'] ? 'Neuen Schlüssel einfügen (optional)' : 'API-Schlüssel einfügen'; ?>"/>
 		<p class="offer-actions">

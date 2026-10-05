@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
-"""Bon-Druckdienst fuer die Kueche: fragt mySeat alle 2 Sekunden nach dem naechsten Bon und druckt ihn per USB (ESC/POS) auf dem NCR 7197."""
-import base64, json, os, sys, time, urllib.parse, urllib.request
-import usb.core, usb.util
+"""Bon-Druckdienst fuer die Kueche: fragt mySeat alle 2 Sekunden nach dem naechsten Bon und druckt ihn (ESC/POS) auf dem NCR 7197.
+
+Der Bon geht ueber den Treiber des Rechners (io_edgeport, /dev/ttyUSB0) zum Drucker. Der Treiber bleibt dabei an: frueher wurde er fuer jeden Bon geloest, um den Drucker
+direkt per USB anzusprechen (pyusb). Danach startete sich der Drucker nach 5 bis 25 Sekunden selbst neu (neue USB-Nummer im Kernelprotokoll) und schnitt ab, was bis dahin nicht
+angekommen war (Test 2026-10-05: Bon mit 25 Positionen brach bei Pos 18 ab), und ohne Treiber fehlte die Flusskontrolle (Lieferung #10: ein Stueck mitten im Bon fehlte).
+Ueber den Treiber kam derselbe lange Bon vollstaendig an, und der Drucker blieb am Bus.
+"""
+import base64, fcntl, json, os, sys, termios, time, urllib.parse, urllib.request
 
 URL, KEY = os.environ['AGENT_URL'], os.environ['AGENT_KEY']
-VID, PID = 0x0404, 0x0312
+TTY = os.environ.get('PRINT_TTY', '/dev/ttyUSB0')
 
 def log(*a): print(time.strftime('%H:%M:%S'), *a, flush=True)
 
@@ -15,22 +20,25 @@ def call(op, **fields):
         return json.loads(r.read().decode())
 
 def write_once(data):
-    # the printer is looked up for every slip: it may have registered again on the USB bus since the last one
-    d = usb.core.find(idVendor=VID, idProduct=PID)
-    if d is None:
-        raise RuntimeError('Drucker nicht gefunden (USB)')
+    # after the printer has registered on the USB bus again the device node can take a moment to appear
+    for _ in range(40):
+        if os.path.exists(TTY): break
+        time.sleep(0.25)
+    else:
+        raise RuntimeError('Drucker nicht gefunden (%s)' % TTY)
+    fd = os.open(TTY, os.O_WRONLY | os.O_NOCTTY | os.O_NONBLOCK)
     try:
-        if d.is_kernel_driver_active(0): d.detach_kernel_driver(0)
-    except Exception: pass
-    try: d.get_active_configuration()
-    except Exception: d.set_configuration()
-    intf = d.get_active_configuration()[(0, 0)]
-    ep = usb.util.find_descriptor(intf, custom_match=lambda e: usb.util.endpoint_direction(e.bEndpointAddress) == usb.util.ENDPOINT_OUT)
-    try:
-        for i in range(0, len(data), 4096):
-            ep.write(data[i:i + 4096], timeout=10000)
+        fcntl.fcntl(fd, fcntl.F_SETFL, fcntl.fcntl(fd, fcntl.F_GETFL) & ~os.O_NONBLOCK)
+        # raw, no handshake of our own, and no hang-up when the port is closed (the baud rate is not used by this printer)
+        a = termios.tcgetattr(fd)
+        a[0] = 0; a[1] = 0; a[2] = termios.CS8 | termios.CREAD | termios.CLOCAL; a[3] = 0; a[4] = a[5] = termios.B9600
+        termios.tcsetattr(fd, termios.TCSANOW, a)
+        n = 0
+        while n < len(data):
+            n += os.write(fd, data[n:])
+        termios.tcdrain(fd)  # returns when the driver has sent everything
     finally:
-        usb.util.dispose_resources(d)
+        os.close(fd)
 
 def send(data):
     last = None
@@ -51,9 +59,10 @@ def main():
             r = call('next')
             job = r.get('job') if r.get('ok') else None
             if job:
-                send(base64.b64decode(job['data']))
+                data = base64.b64decode(job['data']); t0 = time.time()
+                send(data)
                 call('done', id=job['id'])
-                log('Bon gedruckt, Bestellung', job['order_id'], 'Auftrag', job['id'])
+                log('Bon gedruckt, Bestellung', job['order_id'], 'Auftrag', job['id'], '(%d Byte in %.1f s)' % (len(data), time.time() - t0))
                 continue
         except Exception as e:
             log('Fehler:', e)

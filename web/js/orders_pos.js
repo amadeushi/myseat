@@ -118,6 +118,13 @@
 		if (same) { same.qty = Math.min(50, same.qty + 1); } else { cart.push({ pid: p.id, vid: 0, opts: {}, qty: 1, note: '', title: p.title, variation: '', options: [], unit: p.price }); }
 		renderCart(); backToSearch();
 	}
+	// the same dish with the same choices and the same note is one line with a bigger quantity, as in the guest shop (order/shop.js lineKey), not another line:
+	// the kitchen then sees "2x" on one position instead of two positions
+	function lineKey(l) { return [l.pid, l.vid, Object.keys(l.opts || {}).sort().map(function (k) { return k + ':' + l.opts[k]; }).join(','), l.note || ''].join('|'); }
+	function collapseSame() {
+		var seen = {};
+		cart = cart.filter(function (l) { var k = lineKey(l); if (seen[k]) { seen[k].qty = Math.min(50, seen[k].qty + l.qty); return false; } seen[k] = l; return true; });
+	}
 	function backToSearch() { var s = $('#pos-search'); s.value = ''; $('#pos-search-clear').hidden = true; renderProducts(); s.focus(); }
 
 	// ---- search over the product tiles (ported from order/shop.js, same typo-tolerant matching so staff get the
@@ -310,6 +317,7 @@
 			var priced = priceLine(p, sel.vid, sel.opts);
 			var line = { pid: p.id, vid: sel.vid, opts: JSON.parse(JSON.stringify(sel.opts)), qty: sel.qty, note: ($('#pd-note', dlg) || { value: '' }).value.trim(), title: p.title, variation: priced.variation, options: priced.options, unit: priced.unit };
 			if (editing) { cart[editIndex] = line; } else { cart.push(line); }
+			collapseSame();
 			dlg.close(); renderCart();
 		}
 		refresh();
@@ -441,6 +449,72 @@
 		}).catch(function () {});
 	}
 	$$('#pos-address input').forEach(function (i) { i.addEventListener('input', function () { clearTimeout(zoneTimer); zoneTimer = setTimeout(checkZone, 600); }); });
+
+	// ---- street suggestions (Google Places, through the server): the caller says the street, the staff pick it instead of spelling it. Without a key, with the switch
+	// off or when Google does not answer, nothing shows and the field works as before. A suggestion fills street, PLZ and town; the zone check runs on it as usual.
+	var SUG_MIN = 4, SUG_PAUSE = 400, SUG_MAX = 8; // asks from 4 letters on, after 0.4 s without typing, at most 8 times per entry (the cost is per question)
+	var sug = { items: [], idx: -1, token: '', timer: 0, seq: 0, asked: 0, memo: {} }, streetEl = f.elements.street, sugList = document.createElement('ul');
+	sugList.id = 'pos-sug'; sugList.className = 'kx-sug'; sugList.setAttribute('role', 'listbox'); sugList.setAttribute('aria-label', 'Straßenvorschläge'); sugList.hidden = true;
+	streetEl.parentNode.appendChild(sugList);
+	streetEl.setAttribute('role', 'combobox'); streetEl.setAttribute('aria-autocomplete', 'list'); streetEl.setAttribute('aria-controls', 'pos-sug'); streetEl.setAttribute('aria-expanded', 'false');
+	function sugToken() { return (window.crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 36); }
+	function sugClose() { sug.items = []; sug.idx = -1; sugList.hidden = true; sugList.innerHTML = ''; streetEl.setAttribute('aria-expanded', 'false'); streetEl.removeAttribute('aria-activedescendant'); }
+	function sugMark() {
+		$$('li', sugList).forEach(function (li, i) { li.setAttribute('aria-selected', i === sug.idx ? 'true' : 'false'); li.classList.toggle('is-on', i === sug.idx); });
+		if (sug.idx >= 0) { streetEl.setAttribute('aria-activedescendant', 'pos-sug-' + sug.idx); } else { streetEl.removeAttribute('aria-activedescendant'); }
+	}
+	// the list is fixed to the screen, not to the scrolling Bon (which would cut it off): below the field, or above it when there is not enough room below
+	function sugPlace() {
+		if (sugList.hidden) { return; }
+		var r = streetEl.getBoundingClientRect(), vh = window.innerHeight, below = vh - r.bottom - 12, above = r.top - 12, want = Math.min(sugList.scrollHeight + 10, 340);
+		var up = below < want && above > below, room = Math.max(120, Math.min(340, up ? above : below));
+		sugList.style.left = r.left + 'px'; sugList.style.width = r.width + 'px'; sugList.style.maxHeight = room + 'px';
+		if (up) { sugList.style.top = 'auto'; sugList.style.bottom = (vh - r.top + 4) + 'px'; } else { sugList.style.bottom = 'auto'; sugList.style.top = (r.bottom + 4) + 'px'; }
+	}
+	// the field can move while the list is open (a hint appears above it), so the list follows it for as long as it is open
+	function sugTrack() { if (sugList.hidden) { sug.tracking = false; return; } sugPlace(); requestAnimationFrame(sugTrack); }
+	function sugShow(items) {
+		sug.items = items; sug.idx = -1;
+		if (!items.length) { sugClose(); return; }
+		sugList.innerHTML = items.map(function (it, i) { return '<li role="option" id="pos-sug-' + i + '" data-i="' + i + '"><b>' + esc(it.main) + '</b><small>' + esc(it.sec) + '</small></li>'; }).join('');
+		sugList.hidden = false; streetEl.setAttribute('aria-expanded', 'true'); sugPlace(); sugMark();
+		if (!sug.tracking) { sug.tracking = true; requestAnimationFrame(sugTrack); }
+	}
+	function sugAsk() {
+		var q = streetEl.value.trim();
+		if (type() !== 'delivery' || q.length < SUG_MIN) { sugClose(); if (!q) { sug.asked = 0; sug.token = ''; } return; }
+		var key = q.toLowerCase(), seq = ++sug.seq;
+		if (sug.memo[key]) { sugShow(sug.memo[key]); return; } // the same question is not asked twice (typing, deleting, typing again)
+		if (sug.asked >= SUG_MAX) { sugClose(); return; }
+		if (!sug.token) { sug.token = sugToken(); }
+		sug.asked++;
+		get('address_suggest', { q: q, st: sug.token }).then(function (r) { if (seq !== sug.seq) { return; } if (!r || !r.ok) { sugClose(); return; } sug.memo[key] = r.items || []; sugShow(sug.memo[key]); }).catch(function () { sugClose(); });
+	}
+	function sugPick(i) {
+		var it = sug.items[i]; if (!it) { return; }
+		++sug.seq; sugClose();
+		get('address_pick', { id: it.id, st: sug.token }).then(function (r) {
+			sug.token = ''; sug.asked = 0; sug.memo = {};
+			if (!r || !r.ok) { return; }
+			// a street without a house number: the cursor waits behind it for the number
+			streetEl.value = r.street + ' ' + (r.number || '');
+			f.elements.zip.value = r.zip || ''; f.elements.city.value = r.city || '';
+			streetEl.focus(); streetEl.setSelectionRange(streetEl.value.length, streetEl.value.length);
+			clearTimeout(zoneTimer); zoneTimer = setTimeout(checkZone, 100);
+		}).catch(function () {});
+	}
+	streetEl.addEventListener('input', function () { clearTimeout(sug.timer); sug.timer = setTimeout(sugAsk, SUG_PAUSE); });
+	streetEl.addEventListener('keydown', function (ev) {
+		if (sugList.hidden) { return; }
+		if (ev.key === 'ArrowDown') { ev.preventDefault(); sug.idx = (sug.idx + 1) % sug.items.length; sugMark(); }
+		else if (ev.key === 'ArrowUp') { ev.preventDefault(); sug.idx = sug.idx <= 0 ? sug.items.length - 1 : sug.idx - 1; sugMark(); }
+		else if (ev.key === 'Enter' && sug.idx >= 0) { ev.preventDefault(); ev.stopPropagation(); sugPick(sug.idx); }
+		else if (ev.key === 'Escape') { ev.stopPropagation(); sugClose(); }
+		else if (ev.key === 'Tab') { sugClose(); }
+	});
+	streetEl.addEventListener('blur', function () { setTimeout(sugClose, 150); });
+	// pointerdown, not click: the field must not lose its focus before the pick (and a finger or a trackball behaves the same)
+	sugList.addEventListener('pointerdown', function (ev) { var li = ev.target.closest('li'); if (!li) { return; } ev.preventDefault(); sugPick(+li.dataset.i); });
 	function syncType() {
 		var pickup = type() === 'pickup';
 		$('#pos-address').hidden = pickup; $('#pos-no-phone-label').hidden = !pickup;

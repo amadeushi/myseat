@@ -4,6 +4,9 @@
 	'use strict';
 	var TOKEN = document.body.dataset.token, board = document.getElementById('ks-board'), lastOk = Date.now(), orders = [], acked = {}, seen = null, printed = {};
 	var cols = 5, autoPrint = false;
+	// the "Erledigt" column: what the kitchen has finished in the last two hours (so a printed slip can be traced after the order has left the board)
+	var done = [], doneOpen = 0, doneSig = '', showDone = true;
+	try { showDone = localStorage.getItem('ksDone') !== '0'; } catch (e) {}
 	// acked used to live only in memory: any reload (crash, nightly restart) wiped it, so every still-active
 	// order would pulse as "fresh" again even though none of them were new - persisted the same way `printed` is
 	try {
@@ -36,9 +39,12 @@
 		$('#k-cols').textContent = cols + ' Spalten';
 		var a = $('#k-auto'); a.setAttribute('aria-pressed', autoPrint ? 'true' : 'false'); a.textContent = 'Bon bei Fertig: ' + (autoPrint ? 'an' : 'aus');
 		board.style.setProperty('--cols', cols);
+		var db = $('#k-done'); db.setAttribute('aria-pressed', showDone ? 'true' : 'false'); db.textContent = 'Erledigt' + (done.length ? ' (' + done.length + ')' : '');
+		$('#ks-done').hidden = !showDone;
 	}
 	$('#k-cols').addEventListener('click', function () { cols = cols === 5 ? 4 : 5; try { localStorage.setItem('ksCols', cols); } catch (e) {} syncBar(); render(); });
 	$('#k-auto').addEventListener('click', function () { autoPrint = !autoPrint; try { localStorage.setItem('ksAutoPrint', autoPrint ? '1' : '0'); } catch (e) {} syncBar(); });
+	$('#k-done').addEventListener('click', function () { showDone = !showDone; try { localStorage.setItem('ksDone', showDone ? '1' : '0'); } catch (e) {} doneSig = ''; syncBar(); renderDone(); });
 	$('#k-full').addEventListener('click', function () { var d = document.documentElement; if (document.fullscreenElement) { document.exitFullscreen(); } else if (d.requestFullscreen) { d.requestFullscreen(); } });
 	syncBar();
 
@@ -71,8 +77,8 @@
 			'<span class="k-badge">' + (o.status === 'preparing' ? 'Wird gekocht' : 'Angenommen') + '</span>' +
 			(o.source === 'lieferando' ? '<span class="k-badge lief">Lieferando</span>' : '') +
 			(o.test ? '<span class="k-badge">Test</span>' : '') + '</header>' + actions + ((o.name || o.zip) ? '<p class="ks-who" title="' + esc(o.name) + '"><span class="ks-wname">' + esc(o.name) + '</span>' + (o.zip ? '<span class="ks-zip">' + esc(o.zip) + '</span>' : '') + '</p>' : '') + (o.asap && o.source !== 'lieferando' ? '<div class="ks-asap" role="status"><b>Sofort</b><span>so schnell wie möglich</span></div>' : '') + outLine(o) + '<div class="ks-due' + (late ? ' k-late' : '') + '"><span class="ks-dl">' + dueLabel + '</span><b>' + esc(due) + '</b><small>' + since(o.accepted_ts) + (late ? ' · VERSPÄTET' : '') + '</small></div>' +
-			'<div class="ks-items"><ul class="ks-list">' + o.items.map(function (it) {
-				return '<li class="ks-item"><span class="ks-qty">' + it.qty + '×</span><span class="ks-title">' + esc(it.title) + '</span>' + (it.variation ? '<span class="ks-var">' + esc(it.variation) + '</span>' : '') +
+			'<div class="ks-items"><ul class="ks-list">' + o.items.map(function (it, i) {
+				return '<li class="ks-item"><span class="ks-qty">' + it.qty + '×</span><span class="ks-pos">Pos ' + (i + 1) + '</span><span class="ks-title">' + esc(it.title) + '</span>' + (it.variation ? '<span class="ks-var">' + esc(it.variation) + '</span>' : '') +
 					it.options.map(function (op) { return '<span class="ks-opt">+ ' + esc(op) + '</span>'; }).join('') + (it.note ? '<span class="ks-note">' + esc(it.note) + '</span>' : '') + '</li>';
 			}).join('') + '</ul></div>' + (o.note ? '<p class="ks-onote">' + esc(o.note) + '</p>' : '') +
 			'</article>';
@@ -133,6 +139,37 @@
 		document.title = (orders.length ? '(' + orders.length + ') ' : '') + 'Küchenbildschirm';
 	}
 
+	// ---- Erledigt: the finished orders of the last two hours, newest first. A tap opens one: its dishes with the same "Pos n" as on the slips, and the slips again.
+	function renderDone() {
+		var el = $('#ks-done'); if (!el || !showDone) { return; }
+		var sig = JSON.stringify([done, doneOpen]); if (sig === doneSig) { return; }
+		var top = el.scrollTop; doneSig = sig;
+		var h = '<h2 class="ksd-h">Erledigt<small>letzte 2 Std</small></h2>';
+		if (!done.length) { h += '<p class="ksd-empty">Noch nichts fertig gemeldet.</p>'; }
+		else {
+			h += '<ul class="ksd-list">' + done.map(function (o) {
+				var open = doneOpen === o.id;
+				var row = '<li class="ksd-row' + (open ? ' is-open' : '') + '"><button type="button" class="ksd-head" data-dopen="' + o.id + '" aria-expanded="' + (open ? 'true' : 'false') + '"><span class="ksd-no">#' + o.day_no + '</span>' +
+					'<span class="ksd-main"><b>' + esc(o.name || 'ohne Namen') + '</b><small>' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + ' · fertig ' + esc(o.finished) + ' · ' + o.items.length + ' Pos</small></span></button>';
+				if (open) {
+					row += '<div class="ksd-body">' + o.items.map(function (it, i) {
+						return '<div class="ksd-item"><span class="ksd-pos">Pos ' + (i + 1) + '</span><span class="ksd-t"><b>' + it.qty + '×</b> ' + esc(it.title) + (it.variation ? '<span class="ksd-sub">' + esc(it.variation) + '</span>' : '') +
+							it.options.map(function (op) { return '<span class="ksd-sub">+ ' + esc(op) + '</span>'; }).join('') + (it.note ? '<span class="ksd-note">' + esc(it.note) + '</span>' : '') + '</span></div>';
+					}).join('') + (o.note ? '<p class="ksd-note">' + esc(o.note) + '</p>' : '') +
+						'<div class="ksd-acts"><button type="button" class="k-btn" data-dbon="' + o.id + '">Küchenbon</button>' + (o.type === 'delivery' ? '<button type="button" class="k-btn" data-dfull="' + o.id + '">Lieferzettel</button>' : '') + '</div></div>';
+				}
+				return row + '</li>';
+			}).join('') + '</ul>';
+		}
+		el.innerHTML = h; el.scrollTop = top;
+	}
+	$('#ks-done').addEventListener('click', function (ev) {
+		var op = ev.target.closest('[data-dopen]'); if (op) { var id = +op.dataset.dopen; doneOpen = doneOpen === id ? 0 : id; doneSig = ''; renderDone(); return; }
+		var b = ev.target.closest('[data-dbon],[data-dfull]'); if (!b) { return; }
+		var full = !!b.dataset.dfull; MonitorPrint.slip(+(full ? b.dataset.dfull : b.dataset.dbon), full, TOKEN);
+		var t = b.textContent; b.textContent = 'Gesendet'; setTimeout(function () { b.textContent = t; }, 2500);
+	});
+
 	// ---- the bar at the bottom: back, one chip for every order on another page (number, "Sofort", when it has to leave), forward.
 	// Every target is big (a trackball is the only input) and nothing needs a swipe, a hover or the keyboard.
 	var CHEV_L = '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -184,6 +221,7 @@
 			var ids = r.orders.map(function (o) { return o.id; });
 			var fresh = seen === null ? [] : r.orders.filter(function (o) { return seen.indexOf(o.id) < 0; });
 			orders = r.orders; seen = ids;
+			done = r.done || []; if (doneOpen && !done.some(function (d) { return d.id === doneOpen; })) { doneOpen = 0; } syncBar(); renderDone();
 			fresh.forEach(function (o) { var idx = orders.findIndex(function (x) { return x.id === o.id; }); if (idx >= 0 && Math.floor(idx / cols) !== page) { unseen[o.id] = 1; } });
 			Object.keys(unseen).forEach(function (k) { if (ids.indexOf(+k) < 0) { delete unseen[k]; } });
 			Object.keys(acked).forEach(function (k) { if (ids.indexOf(+k) < 0) { delete acked[k]; } }); saveAcked();

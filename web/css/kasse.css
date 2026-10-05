@@ -195,3 +195,13 @@ body.kx-mode #topbar, body.kx-mode #footer { display: none; }
 body.kx-mode #wrapper { margin: 10px 14px 0; }
 @media (max-width: 1100px) { .kx .kx-grid { grid-template-columns: minmax(0, 1fr) 420px; } .kx .kx-grid-p { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); } }
 @media (prefers-reduced-motion: reduce) { .kx * { transition: none !important; } }
+
+/* Street suggestions at the street field (Google Places through the server): a list fixed to the screen, so the scrolling Bon cannot cut it off; orders_pos.js places it */
+.kx .kx-sug { position: fixed; z-index: 60; margin: 0; padding: 4px; list-style: none; max-height: 340px; overflow-y: auto; background: var(--surface-2); border: 1px solid var(--gold); border-radius: var(--radius-md); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45); }
+.kx .kx-sug[hidden] { display: none; }
+.kx .kx-sug li { display: grid; gap: 1px; min-height: 52px; padding: 7px 12px; border-radius: var(--radius-sm); cursor: pointer; color: var(--text); }
+.kx .kx-sug li b { font-size: 17px; font-weight: 700; }
+.kx .kx-sug li small { font-size: 14px; font-weight: 600; color: var(--text-muted); }
+.kx .kx-sug li:hover, .kx .kx-sug li.is-on { background: var(--gold); color: var(--ink-strong); }
+.kx .kx-sug li:hover small, .kx .kx-sug li.is-on small { color: var(--ink-strong); }
+

@@ -303,3 +303,32 @@ body:not(.is-portrait) .k-col[data-col="out"], body:not(.is-portrait) .k-col[dat
 .ks-who { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 4px 0 0; font-size: 21px; font-weight: 800; line-height: 1.2; }
 .ks-wname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ks-zip { flex: none; padding: 1px 10px; border-radius: 8px; background: rgba(201, 162, 89, 0.18); color: var(--gold-strong); font-variant-numeric: tabular-nums; }
+
+/* Erledigt: what the kitchen finished in the last two hours, next to the board. Same "Pos n" as on the slips, so a printed slip can be traced after the order has left the board. */
+.ks-main { flex: 1; min-height: 0; display: flex; }
+.ks-main .ks-board { flex: 1; min-width: 0; }
+.ks-done { flex: none; width: clamp(250px, 19vw, 340px); margin: 10px 10px 10px 0; padding: 12px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
+.ks-done[hidden] { display: none; }
+.ksd-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; font-size: 22px; font-weight: 700; }
+.ksd-h small { font-size: 14px; font-weight: 600; color: var(--muted); }
+.ksd-empty { padding: 14px 2px; font-size: 18px; color: var(--muted); }
+.ksd-list { display: flex; flex-direction: column; gap: 8px; }
+.ksd-row { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; }
+.ksd-row.is-open { border-color: var(--gold); }
+.ksd-head { width: 100%; min-height: 64px; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 0; border-radius: 12px; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.ksd-head:hover { background: rgba(255, 255, 255, 0.04); }
+.ksd-no { font-size: 30px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.ksd-main { min-width: 0; display: flex; flex-direction: column; }
+.ksd-main b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 20px; font-weight: 700; }
+.ksd-main small { font-size: 15px; font-weight: 600; color: var(--muted); }
+.ksd-body { padding: 4px 12px 12px; border-top: 1px solid var(--border); }
+.ksd-item { display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 4px 8px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 19px; line-height: 1.25; }
+.ksd-pos { padding-top: 2px; font-size: 16px; font-weight: 800; color: var(--gold-strong); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ksd-t b { color: var(--gold-strong); }
+.ksd-sub { display: block; font-size: 16px; color: var(--muted); }
+.ksd-note { display: block; margin-top: 4px; padding: 3px 8px; border-radius: 8px; background: rgba(232, 176, 74, 0.18); color: var(--amber); font-weight: 800; }
+p.ksd-note { margin-top: 8px; }
+.ksd-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.ksd-acts .k-btn { flex: 1 1 120px; }
+.ks-pos { grid-column: 1; grid-row: 2; font-size: 15px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+@media (max-width: 1000px) { .ks-main { flex-direction: column; } .ks-done { width: auto; margin: 0 10px 10px; max-height: 34vh; } }

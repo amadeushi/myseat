@@ -31,7 +31,7 @@ if ($op === 'board') {
 	so_out(array('ok' => true, 'now' => date('H:i'), 'orders' => shop_board(), 'drivers' => shop_dispatch_drivers(), 'pause' => shop_pause_state(), 'drive_min' => max(0, min(60, (int)shop_setting('kitchen_drive_min')))));
 }
 if ($op === 'kitchen') {
-	so_out(array('ok' => true, 'now' => date('H:i'), 'orders' => shop_kitchen_board()));
+	so_out(array('ok' => true, 'now' => date('H:i'), 'orders' => shop_kitchen_board(), 'done' => shop_kitchen_done()));
 }
 if ($op === 'day') {
 	$date = (isset($_REQUEST['date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_REQUEST['date'])) ? $_REQUEST['date'] : date('Y-m-d');

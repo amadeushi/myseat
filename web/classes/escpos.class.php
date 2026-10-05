@@ -67,7 +67,9 @@ function shop_slip_escpos($o, $items, $full) {
 		}
 		$rule();
 	}
+	$cnt = shop_slip_counts($items); $pos = 0;
 	foreach ($items as $it) {
+		$pos++; $put('Pos '.$pos.' von '.$cnt['pos'], 0); // small line above the dish: a position that is missing shows as a jump in the numbers
 		$put((int)$it['qty'].'x '.$it['title'], 1, true);
 		if ($it['variation'] !== '') { $put('   '.$it['variation'], 0); }
 		foreach ($it['options'] as $op) { $put('   + '.($op['qty'] > 1 ? (int)$op['qty'].'x ' : '').$op['title'], 1); }
@@ -75,13 +77,17 @@ function shop_slip_escpos($o, $items, $full) {
 		$b .= "\n";
 	}
 	if ($o['note'] !== '') { $put('>> '.$o['note'].' <<', 1, true); }
+	if ($pos !== $cnt['pos']) { error_log('slip: '.$pos.' positions printed, '.$cnt['pos'].' counted'); } // cannot happen: both come from the same list
+	$rule();
+	$put(shop_slip_control_text($cnt), 0, true);
+	$rule();
 	if ($full) {
-		$rule();
 		if (!empty($o['adjust_note'])) { foreach (explode('; ', $o['adjust_note']) as $adj) { $put($adj, 0, true); } }
 		$put(($o['payment_method'] === 'mollie' || $o['payment_method'] === 'lieferando') ? ($o['payment_method'] === 'lieferando' ? 'bei Lieferando bezahlt' : 'online bezahlt') : ($o['payment_method'] === 'cash' ? 'BAR kassieren: ' : 'KARTE kassieren: ').shop_money($o['total_cents']), 1, true);
 		if (!empty($o['pay_with_cents']) && $o['payment_method'] === 'cash') { $put('Gast zahlt mit '.shop_money((int)$o['pay_with_cents']).', Rueckgeld '.shop_money((int)$o['pay_with_cents'] - (int)$o['total_cents']), 0, true); }
+		$rule();
 	}
-	$rule();
 	$put('gedruckt '.date('H:i').' Uhr', 0);
+	$put('--- ENDE ---', 0, true, 1); // the last thing on the slip: if it is missing, the slip did not arrive completely
 	return $b."\n\n\n\x1dV\x42\x00";
 }

@@ -44,6 +44,17 @@ if ($op === 'zone') {
 	pos_out(array('ok' => true, 'zone' => array('id' => $r['zone']['id'], 'name' => $r['zone']['name'], 'fee' => $r['zone']['fee_cents'], 'min' => $r['zone']['min_order_cents']),
 		'postcode' => isset($r['postcode']) ? $r['postcode'] : '', 'lat' => $r['lat'], 'lng' => $r['lng']));
 }
+// street suggestions while the staff types (Google Places through the server, see shop_places_suggest); a login is the limit, plus a cap per minute against runaway scripts
+if ($op === 'address_suggest' || $op === 'address_pick') {
+	if (!shop_places_on()) { pos_out(array('ok' => true, 'items' => array(), 'off' => true)); }
+	$w = isset($_SESSION['pos_places']) && is_array($_SESSION['pos_places']) ? $_SESSION['pos_places'] : array('t' => 0, 'n' => 0);
+	if (time() - $w['t'] > 60) { $w = array('t' => time(), 'n' => 0); }
+	$w['n']++; $_SESSION['pos_places'] = $w;
+	if ($w['n'] > 90) { pos_out(array('ok' => true, 'items' => array(), 'throttled' => true)); }
+	$st = isset($_GET['st']) ? (string)$_GET['st'] : '';
+	if ($op === 'address_suggest') { pos_out(shop_places_suggest(isset($_GET['q']) ? (string)$_GET['q'] : '', $st)); }
+	pos_out(shop_places_pick(isset($_GET['id']) ? (string)$_GET['id'] : '', $st));
+}
 // district and driving way of a confirmed address: slower (two outside services), so asked for after the zone answered
 if ($op === 'zone_info') {
 	pos_out(array_merge(array('ok' => true), shop_pos_zone_info((float)(isset($_GET['lat']) ? $_GET['lat'] : 0), (float)(isset($_GET['lng']) ? $_GET['lng'] : 0),

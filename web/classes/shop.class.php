@@ -88,6 +88,8 @@ function shop_ensure_schema() {
 		`value` INT NOT NULL DEFAULT 0, `max_discount_cents` INT NOT NULL DEFAULT 0, `min_order_cents` INT NOT NULL DEFAULT 0, `applies` ENUM('all','delivery','pickup') NOT NULL DEFAULT 'all',
 		`valid_from` DATETIME NULL, `valid_until` DATETIME NULL, `max_uses` INT NOT NULL DEFAULT 0, `per_guest` TINYINT NOT NULL DEFAULT 0, `used` INT NOT NULL DEFAULT 0,
 		`active` TINYINT NOT NULL DEFAULT 1, `created_at` DATETIME NOT NULL, UNIQUE KEY `code` (`code`)) $opts");
+	// how often the till asked Google for street suggestions (and how many were picked), per day: the figure for the price list of Google (see shop_places_usage())
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_places_use')." (`day` DATE NOT NULL PRIMARY KEY, `suggest` INT UNSIGNED NOT NULL DEFAULT 0, `pick` INT UNSIGNED NOT NULL DEFAULT 0) $opts");
 	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_coupon_uses')." (
 		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `coupon_id` INT UNSIGNED NOT NULL, `order_id` INT UNSIGNED NOT NULL, `guest_key` CHAR(40) NOT NULL DEFAULT '', `guest_key2` CHAR(40) NOT NULL DEFAULT '',
 		`discount_cents` INT NOT NULL DEFAULT 0, `created_at` DATETIME NOT NULL, KEY `coupon` (`coupon_id`), KEY `ord` (`order_id`)) $opts");
@@ -295,6 +297,7 @@ function shop_defaults() {
 		'cust_regular_n' => '3', 'cust_regular_days' => '90', // customer backend: "Stammgast" = this many orders within this many days
 		'cust_sleep_days' => '60', 'cust_new_days' => '30',   // "Schlafend" = no order for this many days (with at least 2 orders), "Neu" = first order not older than this
 		'feedback_on' => '1', 'feedback_since' => '', 'feedback_last_run' => '0', 'feedback_outlet_id' => '0', // feedback mail after an order (web/classes/shop_feedback.class.php); feedback_since = switch-on time, only later orders count
+		'places_suggest' => '1',    // street suggestions in the till while the staff types (Google Places, through the server); see shop_places_suggest()
 		'last_order_min' => '0',    // the shop takes orders until the end of the order time minus this many minutes (0 = until closing; the food may leave after closing)
 		'pos_discount_pct' => '10', // the "-10 %" key of the till (Erfassung): percent of the goods and the delivery fee
 		'kitchen_drive_min' => '15', // minutes a delivery needs to the guest: the kitchen monitor shows when the food has to leave
@@ -333,6 +336,14 @@ function shop_print_agent_key() {
 	return $k;
 }
 function shop_print_agent_alive() { return time() - (int)shop_setting('print_agent_seen') <= 20; }
+// The control figures every slip prints: positions (the lines of the order) and pieces (the sum of their quantities; options belong to their position and do not
+// count). The slips number their positions "Pos n von N" and print these figures from the very list they print, so a slip can be held against the delivery slip.
+function shop_slip_counts($items) {
+	$pos = 0; $pcs = 0;
+	foreach ($items as $it) { $pos++; $pcs += max(0, (int)$it['qty']); }
+	return array('pos' => $pos, 'pcs' => $pcs);
+}
+function shop_slip_control_text($cnt) { return 'Kontrolle: '.$cnt['pos'].($cnt['pos'] === 1 ? ' Position' : ' Positionen').' / '.$cnt['pcs'].' Stück'; }
 function shop_print_enqueue_report($kind, $date) {
 	fb_exec("INSERT INTO ".fb_t('tp_shop_print_jobs')." (order_id, is_full, created_at, kind, report_date) VALUES (0, 0, ?, ?, ?)", 'sss', array(date('Y-m-d H:i:s'), $kind === 'online' ? 'report_online' : 'report_cash', $date));
 	return (int)mysqli_insert_id(fb_db());
@@ -849,11 +860,98 @@ function shop_google_test() {
 	if ($errno) { return array('ok' => false, 'error' => 'Google nicht erreichbar ('.$err.').'); }
 	$j = json_decode((string)$raw, true);
 	if (is_array($j) && isset($j['status']) && $j['status'] === 'OK' && !empty($j['results'][0]['geometry']['location'])) {
-		return array('ok' => true, 'message' => 'Verbindung in Ordnung.');
+		return array('ok' => true, 'message' => 'Verbindung in Ordnung. '.shop_places_test_text());
 	}
 	$status = (is_array($j) && isset($j['status'])) ? $j['status'] : 'unbekannter Fehler';
 	$msg = (is_array($j) && !empty($j['error_message'])) ? $j['error_message'] : '';
 	return array('ok' => false, 'error' => 'Google meldet: '.$status.($msg !== '' ? ' ('.$msg.')' : '').'.');
+}
+
+// ---- Street suggestions while the staff types an address in the till (Google Places API (New): Autocomplete, then Place Details for the one that is picked).
+// The key stays on the server: the till asks ajax/shop_pos.php, which asks Google. A session token ties the typing and the pick together, so Google counts them as one
+// use. The setting places_suggest switches it off; without a key or when Google says no, the till simply shows no suggestions and the fields work as before.
+function shop_places_count($kind) {
+	$col = $kind === 'pick' ? 'pick' : 'suggest';
+	fb_exec("INSERT INTO ".fb_t('tp_shop_places_use')." (`day`, `suggest`, `pick`) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE `$col` = `$col` + 1", 'sii', array(date('Y-m-d'), $col === 'suggest' ? 1 : 0, $col === 'pick' ? 1 : 0));
+}
+// requests to Google so far: today, this month, last month (suggestions asked, suggestions picked)
+function shop_places_usage() {
+	shop_ensure_schema();
+	$sum = function ($from, $to) { $r = fb_row("SELECT COALESCE(SUM(suggest), 0) AS s, COALESCE(SUM(pick), 0) AS p FROM ".fb_t('tp_shop_places_use')." WHERE `day` BETWEEN ? AND ?", 'ss', array($from, $to)); return array('suggest' => (int)$r['s'], 'pick' => (int)$r['p']); };
+	$m0 = date('Y-m-01'); $l0 = date('Y-m-01', strtotime($m0.' -1 month')); $l1 = date('Y-m-t', strtotime($l0));
+	return array('today' => $sum(date('Y-m-d'), date('Y-m-d')), 'month' => $sum($m0, date('Y-m-d')), 'last' => $sum($l0, $l1));
+}
+function shop_places_on() { return shop_setting('places_suggest') !== '0' && shop_google_key() !== ''; }
+function shop_places_call($method, $url, $payload, $mask) {
+	$h = array('X-Goog-Api-Key: '.shop_google_key(), 'Content-Type: application/json');
+	if ($mask !== '') { $h[] = 'X-Goog-FieldMask: '.$mask; }
+	$opt = array(CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => false, CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_TIMEOUT => 6, CURLOPT_HTTPHEADER => $h);
+	if ($method === 'POST') { $opt[CURLOPT_POST] = true; $opt[CURLOPT_POSTFIELDS] = json_encode($payload); }
+	$ch = curl_init($url); curl_setopt_array($ch, $opt);
+	$raw = curl_exec($ch); $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE); $errno = curl_errno($ch); curl_close($ch);
+	if ($errno) { return array('ok' => false, 'error' => 'Google nicht erreichbar.'); }
+	$j = json_decode((string)$raw, true);
+	if ($code !== 200 || !is_array($j)) {
+		$st = (is_array($j) && !empty($j['error']['status'])) ? $j['error']['status'].': ' : '';
+		return array('ok' => false, 'error' => $st.((is_array($j) && !empty($j['error']['message'])) ? $j['error']['message'] : 'HTTP '.$code));
+	}
+	return array('ok' => true, 'json' => $j);
+}
+// up to six suggestions for what has been typed so far: array('ok', 'items' => [id, text, main, sec])
+function shop_places_suggest($q, $session) {
+	$q = trim(mb_substr((string)$q, 0, 100));
+	if (mb_strlen($q) < 3) { return array('ok' => true, 'items' => array()); }
+	$body = array('input' => $q, 'languageCode' => 'de', 'includedRegionCodes' => array('de'), 'includedPrimaryTypes' => array('street_address', 'route', 'premise', 'subpremise'));
+	if (preg_match('/^[A-Za-z0-9_-]{8,36}$/', (string)$session)) { $body['sessionToken'] = (string)$session; }
+	static $o = false; if ($o === false) { $o = shop_origin(); }
+	if ($o) { $body['locationBias'] = array('circle' => array('center' => array('latitude' => (float)$o[0], 'longitude' => (float)$o[1]), 'radius' => 30000.0)); } // prefers the surroundings of the restaurant, does not exclude the rest
+	$r = shop_places_call('POST', 'https://places.googleapis.com/v1/places:autocomplete', $body, '');
+	if (!$r['ok']) { error_log('places autocomplete: '.$r['error']); return $r; }
+	shop_places_count('suggest');
+	$items = array();
+	foreach ((isset($r['json']['suggestions']) && is_array($r['json']['suggestions'])) ? $r['json']['suggestions'] : array() as $s) {
+		if (empty($s['placePrediction']['placeId'])) { continue; }
+		$p = $s['placePrediction'];
+		$items[] = array('id' => (string)$p['placeId'], 'text' => isset($p['text']['text']) ? (string)$p['text']['text'] : '',
+			'main' => isset($p['structuredFormat']['mainText']['text']) ? (string)$p['structuredFormat']['mainText']['text'] : (isset($p['text']['text']) ? (string)$p['text']['text'] : ''),
+			'sec' => isset($p['structuredFormat']['secondaryText']['text']) ? (string)$p['structuredFormat']['secondaryText']['text'] : '');
+		if (count($items) >= 6) { break; }
+	}
+	// the restaurant's own town first (the bias above only prefers it), the order Google gave stays within each group
+	$home = mb_strtolower(trim((string)shop_setting('origin_city')));
+	if ($home !== '') {
+		$near = array(); $rest = array();
+		foreach ($items as $it) { if (mb_strpos(mb_strtolower($it['sec']), $home) === 0) { $near[] = $it; } else { $rest[] = $it; } }
+		$items = array_merge($near, $rest);
+	}
+	return array('ok' => true, 'items' => $items);
+}
+// the picked suggestion as the three fields of the till (+ the point, so the zone can be found without another lookup)
+function shop_places_pick($placeId, $session) {
+	if (!preg_match('/^[A-Za-z0-9_-]{10,300}$/', (string)$placeId)) { return array('ok' => false, 'error' => 'Unbekannter Vorschlag.'); }
+	$url = 'https://places.googleapis.com/v1/places/'.rawurlencode((string)$placeId).'?languageCode=de&regionCode=DE'.(preg_match('/^[A-Za-z0-9_-]{8,36}$/', (string)$session) ? '&sessionToken='.rawurlencode((string)$session) : '');
+	$r = shop_places_call('GET', $url, null, 'addressComponents,location');
+	if (!$r['ok']) { error_log('places details: '.$r['error']); return $r; }
+	shop_places_count('pick');
+	$route = ''; $no = ''; $zip = ''; $city = '';
+	foreach ((isset($r['json']['addressComponents']) && is_array($r['json']['addressComponents'])) ? $r['json']['addressComponents'] : array() as $c) {
+		$t = isset($c['types']) && is_array($c['types']) ? $c['types'] : array(); $n = isset($c['longText']) ? (string)$c['longText'] : '';
+		if (in_array('route', $t, true)) { $route = $n; }
+		elseif (in_array('street_number', $t, true)) { $no = $n; }
+		elseif (in_array('postal_code', $t, true)) { $zip = $n; }
+		elseif (in_array('locality', $t, true)) { $city = $n; }
+		elseif ($city === '' && in_array('postal_town', $t, true)) { $city = $n; }
+	}
+	if ($route === '') { return array('ok' => false, 'error' => 'Der Vorschlag enthält keine Straße.'); }
+	$loc = isset($r['json']['location']) ? $r['json']['location'] : array();
+	return array('ok' => true, 'street' => $route, 'number' => $no, 'zip' => $zip, 'city' => $city, 'lat' => isset($loc['latitude']) ? (float)$loc['latitude'] : null, 'lng' => isset($loc['longitude']) ? (float)$loc['longitude'] : null);
+}
+// what the backend button "Verbindung prüfen" adds to its answer
+function shop_places_test_text() {
+	$r = shop_places_suggest('Goslarsche Landstr', '');
+	if ($r['ok'] && $r['items']) { return 'Adressvorschläge für die Kasse: in Ordnung ('.count($r['items']).' Vorschläge für "Goslarsche Landstr").'; }
+	if ($r['ok']) { return 'Adressvorschläge für die Kasse: Google antwortet, fand aber nichts für "Goslarsche Landstr".'; }
+	return 'Adressvorschläge für die Kasse: nicht verfügbar ('.$r['error'].'). In der Google-Cloud-Konsole die "Places API (New)" für diesen Schlüssel freigeben.';
 }
 
 // diagnostic for the backend "Verbindung prüfen" button: resolves a known-good address
@@ -1711,6 +1809,24 @@ function shop_kitchen_board() {
 	}
 	// what has to leave the kitchen first stands first
 	usort($out, function ($a, $b) { return $a['out_ts'] === $b['out_ts'] ? $a['id'] - $b['id'] : $a['out_ts'] - $b['out_ts']; });
+	return $out;
+}
+
+// What the kitchen has finished (status ready, delivering or done) in the last $minutes minutes, newest first, with the dishes: the kitchen screen shows them in its
+// "Erledigt" column so that a slip that has been printed can be traced after the order has left the board. Same fields as the board, plus the time it was finished.
+function shop_kitchen_done($minutes = 120) {
+	$since = date('Y-m-d H:i:s', time() - max(10, min(720, (int)$minutes)) * 60);
+	$rows = fb_rows("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE status IN ('ready', 'delivering', 'done') AND COALESCE(ready_at, done_at, updated_at) >= ?
+		ORDER BY COALESCE(ready_at, done_at, updated_at) DESC, id DESC LIMIT 40", 's', array($since));
+	if (!$rows) { return array(); }
+	$when = array();
+	foreach ($rows as $r) { $when[(int)$r['id']] = strtotime($r['ready_at'] ?: ($r['done_at'] ?: $r['updated_at'])); }
+	$out = array();
+	foreach (shop_orders_with_items($rows) as $o) {
+		$out[] = array('id' => $o['id'], 'day_no' => $o['day_no'], 'number' => $o['number'], 'type' => $o['type'], 'status' => $o['status'], 'test' => $o['test'], 'source' => $o['source'],
+			'name' => $o['name'], 'zip' => $o['type'] === 'delivery' ? $o['zip'] : '', 'note' => $o['note'], 'items' => $o['items'],
+			'finished_ts' => $when[$o['id']], 'finished' => date('H:i', $when[$o['id']]));
+	}
 	return $out;
 }
 

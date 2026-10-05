@@ -39,11 +39,15 @@ $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 		<div id="k-tools" class="k-tools"></div>
 		<button type="button" class="k-btn" id="k-cols" aria-label="Anzahl der Spalten">5 Spalten</button>
 		<button type="button" class="k-btn" id="k-auto" aria-pressed="false" title="Druckt nach Fertig den Bon: bei Lieferungen den Lieferschein, bei Abholungen den Küchenbon">Bon bei Fertig: aus</button>
+		<button type="button" class="k-btn" id="k-done" aria-pressed="true" title="Zeigt die Bestellungen, die die Küche in den letzten 2 Stunden fertig gemeldet hat">Erledigt</button>
 		<button type="button" class="k-btn" id="k-full">Vollbild</button>
 		<a class="k-btn" href="disposition.php">Disposition</a>
 	</header>
 	<p class="k-offline" id="k-offline" role="alert" hidden>Keine Verbindung. Ich versuche es weiter ...</p>
-	<main class="ks-board" id="ks-board" aria-live="polite"></main>
+	<div class="ks-main">
+		<main class="ks-board" id="ks-board" aria-live="polite"></main>
+		<aside class="ks-done" id="ks-done" aria-label="Erledigte Bestellungen"></aside>
+	</div>
 	<nav class="ks-nav" id="ks-nav" aria-label="Seiten der Bestellungen" hidden></nav>
 	<script src="js/monitor_sound.js?v=<?php echo @filemtime(__DIR__.'/js/monitor_sound.js'); ?>"></script>
 	<script src="js/monitor_print.js?v=<?php echo @filemtime(__DIR__.'/js/monitor_print.js'); ?>"></script>

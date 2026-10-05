@@ -104,21 +104,22 @@ function lieferando_parse_items($rawLines, &$unplaced = null) {
 	return $out;
 }
 
-// "Wichtig:" block at the end of the order data: who has to pay what. Only this block counts, because the words "bezahlt" and "Bezahlt mit" also stand
+// "Wichtig:" ("Important:" on the receipts printed in English) block at the end of the order data: who has to pay what. Only this block counts, because the words "bezahlt" and "Bezahlt mit" also stand
 // in "nicht bezahlt worden" and "Bezahlt mit : 40.00 EUR" (a cash order). Anything unclear counts as open, so the driver collects rather than forgets to.
 function lieferando_parse_payment($text, $total) {
 	$r = array('payment_status' => 'cod', 'payment_method' => 'cash', 'pay_with_cents' => 0, 'warning' => '');
-	if (!preg_match('/Wichtig\s*:(.*?)(?:_{5,}|$)/su', $text, $m)) { $r['warning'] = 'Zahlung nicht gefunden'; return $r; }
+	if (!preg_match('/(?:Wichtig|Important)\s*:(.*?)(?:_{5,}|$)/su', $text, $m)) { $r['warning'] = 'Zahlung nicht gefunden'; return $r; }
 	$w = $m[1];
-	if (preg_match('/nicht\s+bezahlt/iu', $w)) {
-		if (preg_match('/Zahlung\s+Bar/iu', $w)) {
-			if (preg_match('/Bezahlt\s+mit\s*:?\s*(\d+[.,]\d{2})/iu', $w, $pm)) {
+	// not paid: German "nicht bezahlt worden", English (wording assumed, no receipt seen yet) "not been paid" / "unpaid"; unclear stays open and is flagged
+	if (preg_match('/nicht\s+bezahlt|not\s+(?:yet\s+)?(?:been\s+)?paid|unpaid/iu', $w)) {
+		if (preg_match('/Zahlung\s+Bar|Payment\s+Cash/iu', $w)) {
+			if (preg_match('/(?:Bezahlt|Paid)\s+(?:mit|with)\s*:?\s*(\d+[.,]\d{2})/iu', $w, $pm)) {
 				$given = (int)round((float)str_replace(',', '.', $pm[1]) * 100);
 				if ($total !== null && $given > $total) { $r['pay_with_cents'] = $given; }
 			}
-		} elseif (preg_match('/Zahlung\s+(?:Karte|EC|Kreditkarte)/iu', $w)) { $r['payment_method'] = 'card_door'; }
+		} elseif (preg_match('/Zahlung\s+(?:Karte|EC|Kreditkarte)|Payment\s+(?:Card|Credit)/iu', $w)) { $r['payment_method'] = 'card_door'; }
 		else { $r['warning'] = 'Zahlungsart unklar'; }
-	} elseif (preg_match('/online\s+bezahlt/iu', $w) || preg_match('/Zahlung\s+Online/iu', $w)) {
+	} elseif (preg_match('/online\s+bezahlt|paid\s+online/iu', $w) || preg_match('/Zahlung\s+Online|Payment\s+Online/iu', $w)) {
 		$r['payment_status'] = 'paid'; $r['payment_method'] = 'lieferando';
 	} else { $r['warning'] = 'Zahlung unklar'; }
 	return $r;
@@ -128,11 +129,11 @@ function lieferando_parse_payment($text, $total) {
  * Reads the receipt's plain text (from Smalot\PdfParser) into what mySeat needs. Returns:
  * external_id, placed_at ('Y-m-d H:i:s' or null), confirmed_at (the "Bestätigte Uhrzeit", same format or null), type ('delivery'|'pickup'), customer_name, items (see
  * lieferando_parse_items), note (the guest's "Anmerkungen", '' if none), payment_status ('paid'|'cod'), payment_method ('lieferando'|'cash'|'card_door'), pay_with_cents,
- * fee_cents (delivery and service fee), tip_cents, total_cents, warnings (what has to be looked at by a person).
+ * fee_cents (delivery and service fee), tip_cents, discount_cents (stamp card, voucher: what is taken off the dishes), total_cents, warnings (what has to be looked at by a person).
  */
 function lieferando_parse_text($text) {
 	$out = array('external_id' => '', 'placed_at' => null, 'confirmed_at' => null, 'type' => 'delivery', 'customer_name' => '', 'items' => array(), 'note' => '', 'payment_status' => 'cod',
-		'payment_method' => 'cash', 'pay_with_cents' => 0, 'fee_cents' => 0, 'tip_cents' => 0, 'total_cents' => null, 'warnings' => array());
+		'payment_method' => 'cash', 'pay_with_cents' => 0, 'fee_cents' => 0, 'tip_cents' => 0, 'discount_cents' => 0, 'total_cents' => null, 'warnings' => array());
 
 	if (preg_match('/([A-Z0-9]{5,8})\s*\n\s*(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})/u', $text, $m)) {
 		$out['external_id'] = $m[1];
@@ -141,15 +142,15 @@ function lieferando_parse_text($text) {
 	// the kind of the order is the line under the first rule: "Lieferung" / "Abholung"; the receipt of a pickup reads "Pickup ETA" (and a delivery maybe "Delivery ETA")
 	if (preg_match('/^\s*(Lieferung|Abholung|Delivery(?:\s+ETA)?|Pickup(?:\s+ETA)?)\s*$/imu', $text, $m)) { $out['type'] = (stripos($m[1], 'Abhol') === 0 || stripos($m[1], 'Pickup') === 0) ? 'pickup' : 'delivery'; }
 	else { $out['warnings'][] = 'Art der Bestellung (Lieferung/Abholung) nicht erkannt, als Lieferung gespeichert'; }
-	// "Bestätigte Uhrzeit" is the time Lieferando promised the guest: that is when the order has to be there (or ready for pickup). The date is the day of
+	// "Bestätigte Uhrzeit" ("Confirmed time" in English) is the time Lieferando promised the guest: that is when the order has to be there (or ready for pickup). The date is the day of
 	// the receipt; a time that lies clearly before the order time is after midnight.
-	if (preg_match('/Bestätigte\s+Uhrzeit\s*(\d{1,2}):(\d{2})/u', $text, $m)) {
+	if (preg_match('/(?:Bestätigte\s+Uhrzeit|Confirmed\s+time)\s*(\d{1,2}):(\d{2})/iu', $text, $m)) {
 		$base = $out['placed_at'] ? substr($out['placed_at'], 0, 10) : date('Y-m-d');
 		$ts = strtotime($base.' '.sprintf('%02d:%02d:00', (int)$m[1], (int)$m[2]));
 		if ($ts !== false && $out['placed_at'] && $ts < strtotime($out['placed_at']) - 1800) { $ts += 86400; }
 		if ($ts !== false) { $out['confirmed_at'] = date('Y-m-d H:i:s', $ts); }
 	}
-	if (preg_match('/Gesamt\s+(\d+[.,]\d{2})/u', $text, $m)) { $out['total_cents'] = (int)round((float)str_replace(',', '.', $m[1]) * 100); }
+	if (preg_match('/(?:^|\s)(?:Gesamt|Total)\s+(\d+[.,]\d{2})/mu', $text, $m)) { $out['total_cents'] = (int)round((float)str_replace(',', '.', $m[1]) * 100); }
 	$pay = lieferando_parse_payment($text, $out['total_cents']);
 	$out['payment_status'] = $pay['payment_status']; $out['payment_method'] = $pay['payment_method']; $out['pay_with_cents'] = $pay['pay_with_cents'];
 	if ($pay['warning'] !== '') { $out['warnings'][] = $pay['warning']; }
@@ -159,7 +160,7 @@ function lieferando_parse_text($text) {
 		$lines = lieferando_nonempty($blocks[1]);
 		foreach ($lines as $i => $l) {
 			if ($i === 0) { continue; } // the type, already read above
-			if (stripos($l, 'Bestätigte') !== false || preg_match('/^\d{2}:\d{2}$/', $l)) { continue; }
+			if (stripos($l, 'Bestätigte') !== false || stripos($l, 'Confirmed') !== false || preg_match('/^\d{2}:\d{2}$/', $l)) { continue; }
 			$out['customer_name'] = mb_substr($l, 0, 120);
 			break;
 		}
@@ -174,12 +175,13 @@ function lieferando_parse_text($text) {
 		$buf = '';
 		foreach (preg_split('/\r\n|\r|\n/', implode("\n", $b)) as $l) {
 			$l = trim(preg_replace('/\s*EUR\s*$/u', '', rtrim($l)));
-			if ($l === '' || !preg_match('/^([^\d].*\S)\s+(-?\d+[.,]\d{2})$/u', $l, $pm) || preg_match('/Bezahlt\s+mit|^Anmerkungen/iu', $l)) { continue; }
+			if ($l === '' || !preg_match('/^([^\d].*\S)\s+(-?\d+[.,]\d{2})$/u', $l, $pm) || preg_match('/(?:Bezahlt|Paid)\s+(?:mit|with)|^(?:Anmerkungen|Notes?|Comments?|Remarks?)/iu', $l)) { continue; }
 			$cents = (int)round((float)str_replace(',', '.', $pm[2]) * 100);
-			if (preg_match('/^Gesamt/iu', $pm[1])) { continue; }
+			if (preg_match('/^(?:Gesamt|Total)/iu', $pm[1])) { continue; }
 			if ($i === 2) { continue; } // the dishes (prices of items and options)
-			if (preg_match('/Lieferkosten|Liefergeb|Servicegeb|Servicekosten|Bearbeitungsgeb/iu', $pm[1])) { $out['fee_cents'] += $cents; }
-			elseif (preg_match('/Trinkgeld/iu', $pm[1])) { $out['tip_cents'] += $cents; }
+			if (preg_match('/Lieferkosten|Liefergeb|Servicegeb|Servicekosten|Bearbeitungsgeb|Delivery\s+(?:costs?|fee)|Service\s+(?:fee|charge)|Handling\s+fee/iu', $pm[1])) { $out['fee_cents'] += $cents; }
+			elseif (preg_match('/Trinkgeld|^Tip\b/iu', $pm[1])) { $out['tip_cents'] += $cents; }
+			elseif ($cents < 0) { $out['discount_cents'] += -$cents; } // a deduction (stamp card, voucher, promotion): what Lieferando takes off the dishes
 			else { $other += $cents; $out['warnings'][] = 'Posten "'.trim($pm[1]).'" '.number_format($cents / 100, 2, ',', '').' €'; }
 		}
 	}
@@ -187,7 +189,7 @@ function lieferando_parse_text($text) {
 	if ($out['total_cents'] !== null && $out['items']) {
 		$perPiece = 0; $perLine = 0;
 		foreach ($out['items'] as $it) { $perPiece += $it['unit_cents'] * $it['qty']; $perLine += $it['unit_cents']; }
-		$want = $out['total_cents'] - $out['fee_cents'] - $out['tip_cents'] - $other;
+		$want = $out['total_cents'] - $out['fee_cents'] - $out['tip_cents'] - $other + $out['discount_cents'];
 		if ($perPiece !== $want) {
 			if ($perLine === $want) { foreach ($out['items'] as &$it) { $it['unit_cents'] = (int)round($it['unit_cents'] / max(1, $it['qty'])); } unset($it); }
 			else { $out['warnings'][] = 'Summe stimmt nicht (Artikel '.number_format($perPiece / 100, 2, ',', '').' €, Beleg '.number_format($want / 100, 2, ',', '').' €)'; }
@@ -197,7 +199,7 @@ function lieferando_parse_text($text) {
 		if ($i < 3) { continue; }
 		$lines = lieferando_nonempty($b);
 		if (!$lines) { continue; }
-		if (preg_match('/^Anmerkungen\s*:?\s*(.*)$/iu', $lines[0], $m)) {
+		if (preg_match('/^(?:Anmerkungen|Notes?|Comments?|Remarks?)\s*:?\s*(.*)$/iu', $lines[0], $m)) {
 			$parts = array($m[1]);
 			for ($j = 1; $j < count($lines); $j++) { $parts[] = $lines[$j]; }
 			$out['note'] = mb_substr(trim(implode(' ', array_filter($parts, function ($p) { return $p !== ''; }))), 0, 500);
@@ -236,7 +238,7 @@ function lieferando_import($pdfBytes) {
 
 	$sub = 0;
 	foreach ($p['items'] as $it) { $sub += ($it['unit_cents'] ?: 0) * $it['qty']; }
-	$total = $p['total_cents'] !== null ? $p['total_cents'] : $sub + $p['fee_cents'] + $p['tip_cents'];
+	$total = $p['total_cents'] !== null ? $p['total_cents'] : $sub - $p['discount_cents'] + $p['fee_cents'] + $p['tip_cents'];
 	// what a person has to look at is written in front of the note of the order, so it is seen on the kitchen monitor and on the slip
 	$note = $p['note'];
 	if ($p['warnings']) { $note = trim('[Beleg prüfen: '.implode('; ', $p['warnings']).'] '.$note); }
@@ -251,10 +253,10 @@ function lieferando_import($pdfBytes) {
 	$created = ($p['placed_at'] && substr($p['placed_at'], 0, 10) === $today && strtotime($p['placed_at']) <= time() + 300) ? $p['placed_at'] : $now;
 	$db = fb_db();
 	$ok = fb_exec("INSERT INTO ".fb_t('tp_shop_orders')."
-		(token, number, day_no, order_date, type, status, customer_name, phone, note, subtotal_cents, fee_cents, tip_cents, total_cents,
+		(token, number, day_no, order_date, type, status, customer_name, phone, note, subtotal_cents, fee_cents, tip_cents, total_cents, discount_cents,
 		 payment_method, payment_status, lang, is_test, source, external_ref, created_at, updated_at, accepted_at, eta_at, pay_with_cents)
-		VALUES (?, ?, ?, ?, ?, 'accepted', ?, '', ?, ?, ?, ?, ?, ?, ?, 'de', 0, 'lieferando', ?, ?, ?, ?, ?, ?)",
-		'ssissssiiiisssssssi', array($token, $number, $dayNo, $today, $p['type'], $p['customer_name'], $note, $sub, $p['fee_cents'], $p['tip_cents'], $total,
+		VALUES (?, ?, ?, ?, ?, 'accepted', ?, '', ?, ?, ?, ?, ?, ?, ?, ?, 'de', 0, 'lieferando', ?, ?, ?, ?, ?, ?)",
+		'ssissssiiiiisssssssi', array($token, $number, $dayNo, $today, $p['type'], $p['customer_name'], $note, $sub, $p['fee_cents'], $p['tip_cents'], $total, $p['discount_cents'],
 			$p['payment_method'], $p['payment_status'] === 'paid' ? 'paid' : 'open', $p['external_id'], $created, $now, $now, $p['confirmed_at'], $p['pay_with_cents'] ?: null));
 	if (!$ok) { shop_dayno_unlock(); return array('ok' => false, 'error' => 'Die Bestellung ('.$p['external_id'].') konnte nicht gespeichert werden.'); }
 	$id = (int)mysqli_insert_id($db); shop_dayno_unlock();
