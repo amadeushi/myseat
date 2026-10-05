@@ -132,7 +132,7 @@ function lieferando_parse_payment($text, $total) {
  * fee_cents (delivery and service fee), tip_cents, discount_cents (stamp card, voucher: what is taken off the dishes), total_cents, warnings (what has to be looked at by a person).
  */
 function lieferando_parse_text($text) {
-	$out = array('external_id' => '', 'placed_at' => null, 'confirmed_at' => null, 'type' => 'delivery', 'customer_name' => '', 'items' => array(), 'note' => '', 'payment_status' => 'cod',
+	$out = array('external_id' => '', 'placed_at' => null, 'confirmed_at' => null, 'type' => 'delivery', 'customer_name' => '', 'street' => '', 'zip' => '', 'city' => '', 'items' => array(), 'note' => '', 'payment_status' => 'cod',
 		'payment_method' => 'cash', 'pay_with_cents' => 0, 'fee_cents' => 0, 'tip_cents' => 0, 'discount_cents' => 0, 'total_cents' => null, 'warnings' => array());
 
 	if (preg_match('/([A-Z0-9]{5,8})\s*\n\s*(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})/u', $text, $m)) {
@@ -158,11 +158,18 @@ function lieferando_parse_text($text) {
 	$blocks = lieferando_split_blocks($text);
 	if (isset($blocks[1])) {
 		$lines = lieferando_nonempty($blocks[1]);
+		$gotName = false; $addr = array();
 		foreach ($lines as $i => $l) {
 			if ($i === 0) { continue; } // the type, already read above
 			if (stripos($l, 'Bestätigte') !== false || stripos($l, 'Confirmed') !== false || preg_match('/^\d{2}:\d{2}$/', $l)) { continue; }
-			$out['customer_name'] = mb_substr($l, 0, 120);
-			break;
+			if (!$gotName) { $out['customer_name'] = mb_substr($l, 0, 120); $gotName = true; continue; }
+			if (preg_match('/^(Tel\b|Telefon|Phone|Bestätigungscode|Verification code|Confirmation code)/iu', $l)) { continue; }
+			$addr[] = $l;
+		}
+		// a delivery carries the street (without the house number: that is in the QR code of the receipt) and "PLZ Ort" under the name; a pickup has no address
+		if ($out['type'] === 'delivery' && $addr && preg_match('/^(\d{5})\s+(.+)$/u', end($addr), $zm)) {
+			$out['zip'] = $zm[1]; $out['city'] = mb_substr(trim($zm[2]), 0, 80);
+			array_pop($addr); $out['street'] = mb_substr(trim(implode(' ', $addr)), 0, 120);
 		}
 	}
 	$unplaced = array();
@@ -253,13 +260,18 @@ function lieferando_import($pdfBytes) {
 	$created = ($p['placed_at'] && substr($p['placed_at'], 0, 10) === $today && strtotime($p['placed_at']) <= time() + 300) ? $p['placed_at'] : $now;
 	$db = fb_db();
 	$ok = fb_exec("INSERT INTO ".fb_t('tp_shop_orders')."
-		(token, number, day_no, order_date, type, status, customer_name, phone, note, subtotal_cents, fee_cents, tip_cents, total_cents, discount_cents,
+		(token, number, day_no, order_date, type, status, customer_name, street, zip, city, phone, note, subtotal_cents, fee_cents, tip_cents, total_cents, discount_cents,
 		 payment_method, payment_status, lang, is_test, source, external_ref, created_at, updated_at, accepted_at, eta_at, pay_with_cents)
-		VALUES (?, ?, ?, ?, ?, 'accepted', ?, '', ?, ?, ?, ?, ?, ?, ?, ?, 'de', 0, 'lieferando', ?, ?, ?, ?, ?, ?)",
-		'ssissssiiiiisssssssi', array($token, $number, $dayNo, $today, $p['type'], $p['customer_name'], $note, $sub, $p['fee_cents'], $p['tip_cents'], $total, $p['discount_cents'],
+		VALUES (?, ?, ?, ?, ?, 'accepted', ?, ?, ?, ?, '', ?, ?, ?, ?, ?, ?, ?, ?, 'de', 0, 'lieferando', ?, ?, ?, ?, ?, ?)",
+		'ssisssssssiiiiisssssssi', array($token, $number, $dayNo, $today, $p['type'], $p['customer_name'], $p['street'], $p['zip'], $p['city'], $note, $sub, $p['fee_cents'], $p['tip_cents'], $total, $p['discount_cents'],
 			$p['payment_method'], $p['payment_status'] === 'paid' ? 'paid' : 'open', $p['external_id'], $created, $now, $now, $p['confirmed_at'], $p['pay_with_cents'] ?: null));
 	if (!$ok) { shop_dayno_unlock(); return array('ok' => false, 'error' => 'Die Bestellung ('.$p['external_id'].') konnte nicht gespeichert werden.'); }
 	$id = (int)mysqli_insert_id($db); shop_dayno_unlock();
+	// the address of a delivery (the street without its house number, PLZ, town) becomes a point, so that the driver page and the map can show district and distance as for every
+	// other order (they look up only orders that have one); a miss is no reason to fail the import
+	if ($p['street'] !== '') {
+		try { $g = shop_geocode($p['street'], $p['zip'], $p['city']); if ($g && $g[0] !== null && $g[1] !== null) { fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET lat = ?, lng = ? WHERE id = ?", 'ddi', array((float)$g[0], (float)$g[1], $id)); } } catch (Throwable $e) {}
+	}
 	foreach ($p['items'] as $it) {
 		$productId = lieferando_find_product($it['title']);
 		$unit = $it['unit_cents'] ?: 0;

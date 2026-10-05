@@ -19,3 +19,19 @@ lieferando-drucker/   Der Pi als Drucker "Lieferando" im WLAN (Stand 2026-10-05,
   myseat-pdf          CUPS-Backend: schickt das PDF an den Import. Server nicht erreichbar oder Fehler 5xx: CUPS versucht es später erneut; Ablehnung 4xx: Auftrag
                       verworfen. Jedes PDF bleibt in /var/spool/myseat-pdf (die letzten 200). Protokoll: journalctl -t myseat-pdf -f
   Prüfen: avahi-browse -rt _ipp._tcp zeigt den Pi; am Tablet erscheint "Lieferando Bestellungen (mySeat)" in der Druckerliste.
+
+uber-eats-bridge/     Der Pi als Netzwerkdrucker für das Uber-Eats-Tablet (Stand 2026-10-06). Das Tablet sucht Epson-Drucker im WLAN (UDP-Broadcast "EPSONQ" an Port 3289), ruft die Geräteliste der
+                      Netzwerkkarte ab (POST /epson_eposdevice/getDeviceList.cgi an Port 80) und druckt auf TCP 9100 (ESC/POS). Der Bon ist ein Bild (GS 8 L, zlib, 512 Punkte breit).
+  bridge.py           Der Dienst: gibt sich wie der echte Drucker aus (die Suchanfragen gehen an den Drucker, die Antwort geht mit MAC und IP des Pi zurück), reicht alle Druckaufträge an den
+                      echten Drucker durch (der Zettel in der Küche kommt wie vorher), setzt aus jedem Auftrag den Bon als PNG zusammen und schickt ihn an order/uber_import.php (mySeat speichert ihn
+                      14 Tage, das Auslesen zur Bestellung folgt). Das Protokoll enthält nur Größen und Zeiten, nie den Inhalt eines Bons.
+                      Wichtig, aus den Tests: auf die Abfrage 0x0017 ("wer ist verbunden?") muss die IP des Verbundenen kommen, und der Eintrag muss beim Trennen wieder verschwinden. Bleibt er
+                      stehen, hält die App den Drucker für besetzt und versucht gar nicht erst zu verbinden. Port 80 muss beantwortet werden (404 reicht), sonst meldet die App "Fehler beim Verbinden".
+  uber-bridge.service systemd-Dienst dazu (Benutzer hamun; nur dieser Dienst darf Port 80 öffnen, CAP_NET_BIND_SERVICE).
+  setup.sh            Einrichtung:  sudo ./setup.sh  (fragt Drucker-IP, Import-Adresse und Schlüssel; der Schlüssel steht in mySeat unter Einstellungen > Lieferservice > "Uber Eats Bons" und wird nur in
+                      /etc/uber-bridge.conf gespeichert, Rechte 640 root:hamun). Danach: journalctl -u uber-bridge -f; Bilder in /var/spool/uber-bridge/pending (noch nicht gesendet) und sent.
+  Hinweis: Der echte Drucker (TM-m30II, 192.168.178.108) muss angeschaltet und im Netz sein, sonst kann der Pi weder in der Liste erscheinen noch durchreichen. Ohne ihn zu antworten (alle
+  Antworten des Druckers nachzubilden) ist der nächste Ausbau.
+
+uber-eats-lauscher/   Das Prüfwerkzeug, aus dem die Bridge entstand: lauscht an den Ports, protokolliert alles (auch die Inhalte der Bons, deshalb nur zum Testen, danach das Log löschen),
+                      mit PROXY_TO=<IP> reicht es durch. Start: PROXY_TO=192.168.178.108 python3 lauscher.py (Port 80 braucht dafür Rechte, siehe Bridge).

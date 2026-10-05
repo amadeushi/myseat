@@ -52,6 +52,23 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-06 == mySeat v6.27.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Uber Eats-Bons kommen über den Pi in der Küche zu mySeat (tools/kitchen-pi/uber-eats-bridge). Der Pi meldet sich im WLAN wie der Epson-Bondrucker (TM-m30II), den das Uber-Eats-Tablet sucht: Suchanfragen
+   (UDP 3289) gehen an den echten Drucker und kommen mit MAC und IP des Pi zurück, Port 80 antwortet wie die Netzwerkkarte des Druckers, auf Port 9100 nimmt er die Druckaufträge an und reicht sie an den echten
+   Drucker durch (der Zettel in der Küche kommt wie vorher). Aus jedem Auftrag setzt er den Bon, der ein Bild ist (GS 8 L, zlib, 512 Punkte breit), als PNG zusammen und schickt ihn an order/uber_import.php (Kopf
+   X-Api-Key). Was Uber Eats vor dem Drucken abfragt, ist in bridge.py beschrieben: ohne Antwort auf die Befehle 0x0015/0x0016, auf Port 80 und auf 0x0017 ("wer ist verbunden", mit der IP des Verbundenen, beim Trennen
+   wieder leer) meldet die App "Fehler beim Verbinden". Der Dienst läuft als systemd-Dienst (uber-bridge.service, nur er darf Port 80 öffnen), Bilder warten in /var/spool/uber-bridge/pending, bis mySeat sie nimmt.
+   Das Protokoll enthält nur Größen und Zeiten, nie Inhalte. tools/kitchen-pi/uber-eats-lauscher ist das Prüfwerkzeug dazu (protokolliert auch Inhalte, nur zum Testen).
+ * New: mySeat speichert die Uber-Eats-Bons (neue Tabelle tp_shop_uber_slips: Bild, Hash, Zeit, Status; dasselbe Bild nur einmal; 14 Tage, SHOP_UBER_KEEP_DAYS, dann gelöscht, weil Namen, Adressen und Telefonnummern
+   darauf stehen). Der Schlüssel (shop_uber_key, Einstellung uber_import_key) wird beim ersten Aufruf erzeugt und steht in Einstellungen > Lieferservice unter "Uber Eats Bons" mit der Zahl der empfangenen Bons. Das
+   Auslesen zur Bestellung folgt, sobald Bons mit Adresse und Telefon vorliegen (Texterkennung mit Tesseract war für Preise nicht brauchbar, vorgesehen ist ein Bildmodell mit Summenprüfung).
+ * New: Lieferando-Import übernimmt Straße, PLZ und Ort aus dem Beleg und bestimmt die Koordinaten (shop_geocode); damit erscheinen Lieferando-Lieferungen mit Namen, Ortsteil und Entfernung auf der Fahrerseite
+   (order/driver.js: der Name steht in der Kopfzeile der Karte, der Ortsteil darunter) statt als "Unbekannte Strecke".
+ * New: Fahrerkarte (fahrerkarte.js): Lieferando-Bestellungen tragen das orange Abzeichen "Lieferando" in der Liste und im Kopf der Detailansicht (die Disposition liefert dazu source, shop_dispatch_map).
+ * Fix: Pi als Lieferando-Drucker (tools/kitchen-pi/lieferando-drucker): CUPS stellt den PDFs PJL-Befehle voran, das Backend schneidet jetzt das PDF heraus (pdf_part); es läuft als Benutzer lp, setup.sh legt die
+   Zugriffsrechte für Schlüsseldatei und Ablage an; Standardadresse des Imports ist app.amds.at.
+
 2026-10-05 == mySeat v6.26.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix: Bondrucker der Küche (tools/kitchen-pi/print-agent.py): Der Druckdienst löste für jeden Bon den Kernel-Treiber (io_edgeport) und sprach den NCR 7197 direkt per USB an. Danach startete sich der

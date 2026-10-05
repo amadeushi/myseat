@@ -18,7 +18,9 @@ if [ ! -f /etc/myseat-printer.conf ]; then
 	umask 077
 	printf 'IMPORT_URL=%s\nIMPORT_KEY=%s\n' "$url" "$key" > /etc/myseat-printer.conf
 fi
-chmod 600 /etc/myseat-printer.conf; chown root:root /etc/myseat-printer.conf
+# CUPS runs the backend as the user lp (not as root): lp may read the key (group lp, mode 640) and write the PDFs it keeps
+chown root:lp /etc/myseat-printer.conf; chmod 640 /etc/myseat-printer.conf
+install -d -m 0750 -o lp -g lp /var/spool/myseat-pdf
 
 # share the printers in the WLAN (CUPS announces them by DNS-SD/IPP, which is what the Android print service looks for)
 systemctl enable --now cups avahi-daemon

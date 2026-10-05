@@ -86,7 +86,7 @@
 	}
 	function orderCard(o) {
 		const k = kindOf(o), d = o.driver_id ? findD(o.driver_id) : null;
-		const flags = (o.late_min > 0 ? '<span class="fk-flag fk-flag--late">' + esc(lateText(o)) + '</span>' : '') +
+		const flags = (o.source === 'lieferando' ? '<span class="fk-flag fk-flag--lief">Lieferando</span>' : '') + (o.late_min > 0 ? '<span class="fk-flag fk-flag--late">' + esc(lateText(o)) + '</span>' : '') +
 			(d ? '<span class="fk-flag fk-flag--drv" style="--c:' + colorOf(d) + '">' + esc(d.name) + '</span>' : '') +
 			'<span class="fk-flag">' + esc(payText(o)) + '</span>' + (o.lat == null ? '<span class="fk-flag fk-flag--warn">ohne Standort</span>' : '');
 		return '<button type="button" class="fk-card fk-o fk-o--' + k + (sel.o === o.id ? ' is-sel' : '') + (o.late_min > 0 ? ' is-late' : '') + '" data-o="' + o.id + '"' + (d ? ' style="--c:' + colorOf(d) + '"' : '') + '>' +
@@ -115,7 +115,7 @@
 	}
 	function orderBody(o, withCands) {
 		const d = o.driver_id ? findD(o.driver_id) : null, k = kindOf(o);
-		let h = '<div class="fk-dh"><h3>#' + o.day_no + ' · ' + esc(o.customer_name || place(o)) + '<small>' + (o.customer_name ? esc(place(o)) + ' · ' : '') + esc(o.street) + ', ' + esc(o.zip) + '</small></h3><button type="button" class="fk-x" data-close aria-label="Schließen">Schließen</button></div>' +
+		let h = '<div class="fk-dh"><h3>#' + o.day_no + ' · ' + esc(o.customer_name || place(o)) + (o.source === 'lieferando' ? ' <span class="fk-flag fk-flag--lief">Lieferando</span>' : '') + '<small>' + (o.customer_name ? esc(place(o)) + ' · ' : '') + esc(o.street) + ', ' + esc(o.zip) + '</small></h3><button type="button" class="fk-x" data-close aria-label="Schließen">Schließen</button></div>' +
 			'<div class="fk-row"><span class="fk-big">' + esc(way(o)) + '</span><span class="fk-txt">' + (o.scheduled ? 'Wunschzeit ' : 'Ziel ') + esc(o.due) + ' Uhr</span>' + (o.late_min > 0 ? '<span class="fk-flag fk-flag--late">' + esc(lateText(o)) + '</span>' : '') + '</div>' +
 			(o.door ? '<p class="fk-door">Hinweis: ' + esc(o.door) + '</p>' : '') +
 			'<div class="fk-row"><span class="fk-txt">' + esc(o.customer_name) + ' · ' + esc(payText(o)) + '</span>' + (o.phone ? '<a class="fk-act" href="tel:' + esc(String(o.phone).replace(/[^0-9+]/g, '')) + '">Gast anrufen</a>' : '') + '</div>' +

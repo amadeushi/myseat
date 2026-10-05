@@ -107,7 +107,8 @@
 	function place(o) { return o.suburb || o.zone || (o.zip ? 'PLZ ' + o.zip : 'Stadtteil unbekannt'); }
 
 	function cardHtml(o, kind, locked, step) {
-		const head = '<header class="dv-head"><h3 class="dv-sub">' + esc(place(o)) + '</h3><span class="dv-no">' + (kind === 'queue' ? 'Stopp ' + step + ' · ' : '') + '#' + o.day_no + '</span></header>';
+		// the name of the guest is the head (the driver has to know whom the trip is for before he takes it); the district stands under it, without a name it is the head itself
+		const head = '<header class="dv-head"><div class="dv-ttl"><h3 class="dv-sub">' + esc(o.customer_name || place(o)) + '</h3>' + (o.customer_name ? '<p class="dv-place">' + esc(place(o)) + '</p>' : '') + '</div><span class="dv-no">' + (kind === 'queue' ? 'Stopp ' + step + ' · ' : '') + '#' + o.day_no + '</span></header>';
 		const tags = '<ul class="dv-tags"><li class="dv-tag dv-tag--pay">' + esc(payTag(o)) + '</li><li class="dv-tag">' + o.items + ' Pos.</li>' +
 			(o.when !== 'so schnell wie möglich' ? '<li class="dv-tag">Wunschzeit ' + esc(o.when) + '</li>' : '') +
 			(kind === 'open' ? '<li class="dv-tag dv-wait" data-dyn="wait"' + (waitText(o) ? '' : ' hidden') + '>' + esc(waitText(o)) + '</li>' : '') + '</ul>';
@@ -120,7 +121,7 @@
 				'<details class="dv-more"><summary>Mehr</summary><button type="button" class="cart-go dv-alt dv-unq" data-unqueue="' + o.id + '">Zurück in den Pool</button></details>';
 		}
 		return '<article class="dv-card dv-card--' + kind + '" data-card="' + o.id + '">' + head + dist(o) +
-			(o.customer_name ? '<p class="dv-name">' + esc(o.customer_name) + '</p>' : '') + '<p class="dv-street">' + esc(o.street) + '</p>' + (o.door ? '<p class="dv-door"><span>Hinweis</span> ' + esc(o.door) + '</p>' : '') + tags + near + act + '</article>';
+			'<p class="dv-street">' + esc(o.street) + '</p>' + (o.door ? '<p class="dv-door"><span>Hinweis</span> ' + esc(o.door) + '</p>' : '') + tags + near + act + '</article>';
 	}
 
 	function itemsHtml(items) {

@@ -90,6 +90,11 @@ function shop_ensure_schema() {
 		`active` TINYINT NOT NULL DEFAULT 1, `created_at` DATETIME NOT NULL, UNIQUE KEY `code` (`code`)) $opts");
 	// how often the till asked Google for street suggestions (and how many were picked), per day: the figure for the price list of Google (see shop_places_usage())
 	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_places_use')." (`day` DATE NOT NULL PRIMARY KEY, `suggest` INT UNSIGNED NOT NULL DEFAULT 0, `pick` INT UNSIGNED NOT NULL DEFAULT 0) $opts");
+	// the order receipts of Uber Eats as the images the tablet prints (the Pi in the kitchen catches them, see tools/kitchen-pi/uber-eats-bridge): the image itself, a
+	// hash of it (the same receipt printed twice is stored once), and room for what is read from it later (status, data, order_id)
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_uber_slips')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `received` DATETIME NOT NULL, `sha1` CHAR(40) NOT NULL, `w` SMALLINT UNSIGNED NOT NULL, `h` SMALLINT UNSIGNED NOT NULL,
+		`png` MEDIUMBLOB NOT NULL, `status` VARCHAR(12) NOT NULL DEFAULT 'new', `data` MEDIUMTEXT NULL, `order_id` INT UNSIGNED NULL, UNIQUE KEY `sha1` (`sha1`), KEY `received` (`received`)) $opts");
 	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_coupon_uses')." (
 		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `coupon_id` INT UNSIGNED NOT NULL, `order_id` INT UNSIGNED NOT NULL, `guest_key` CHAR(40) NOT NULL DEFAULT '', `guest_key2` CHAR(40) NOT NULL DEFAULT '',
 		`discount_cents` INT NOT NULL DEFAULT 0, `created_at` DATETIME NOT NULL, KEY `coupon` (`coupon_id`), KEY `ord` (`order_id`)) $opts");
@@ -334,6 +339,34 @@ function shop_print_agent_key() {
 	$k = (string)shop_setting('print_agent_key');
 	if (strlen($k) < 32) { $k = bin2hex(random_bytes(24)); shop_setting_set('print_agent_key', $k); }
 	return $k;
+}
+// Uber Eats receipts: the key the Pi in the kitchen sends with every image (header X-Api-Key of order/uber_import.php). Made on first use, shown in the backend
+// (Einstellungen > Lieferservice) so it can be entered on the Pi; it is not in config.general.php.
+function shop_uber_key() {
+	$k = (string)shop_setting('uber_import_key');
+	if (strlen($k) < 32) { $k = bin2hex(random_bytes(24)); shop_setting_set('uber_import_key', $k); }
+	return $k;
+}
+define('SHOP_UBER_KEEP_DAYS', 14);
+// stores one receipt image (PNG, as the Pi builds it from the print job); the same image twice is not stored again. Receipts older than SHOP_UBER_KEEP_DAYS are deleted:
+// they carry the name, address and phone number of guests.
+function shop_uber_store($png) {
+	$info = @getimagesizefromstring($png);
+	if (!$info || $info[2] !== IMAGETYPE_PNG) { return array('ok' => false, 'error' => 'Kein PNG-Bild.'); }
+	if ($info[0] < 200 || $info[0] > 1200 || $info[1] < 20 || $info[1] > 8000) { return array('ok' => false, 'error' => 'Unerwartete Bildgröße ('.$info[0].' x '.$info[1].').'); }
+	$sha = sha1($png);
+	$old = fb_row("SELECT id FROM ".fb_t('tp_shop_uber_slips')." WHERE sha1 = ?", 's', array($sha));
+	if ($old) { return array('ok' => true, 'id' => (int)$old['id'], 'duplicate' => true); }
+	$st = fb_exec("INSERT INTO ".fb_t('tp_shop_uber_slips')." (received, sha1, w, h, png) VALUES (?, ?, ?, ?, ?)", 'ssiis', array(date('Y-m-d H:i:s'), $sha, (int)$info[0], (int)$info[1], $png));
+	if (!$st) { return array('ok' => false, 'error' => 'Speichern fehlgeschlagen.'); }
+	$id = (int)mysqli_insert_id(fb_db());
+	fb_exec("DELETE FROM ".fb_t('tp_shop_uber_slips')." WHERE received < ?", 's', array(date('Y-m-d H:i:s', time() - SHOP_UBER_KEEP_DAYS * 86400)));
+	return array('ok' => true, 'id' => $id, 'duplicate' => false);
+}
+// count and time of the last received receipt, for the backend page
+function shop_uber_stats() {
+	$r = fb_row("SELECT COUNT(*) AS n, MAX(received) AS last FROM ".fb_t('tp_shop_uber_slips'));
+	return array('count' => $r ? (int)$r['n'] : 0, 'last' => $r && $r['last'] ? $r['last'] : '');
 }
 function shop_print_agent_alive() { return time() - (int)shop_setting('print_agent_seen') <= 20; }
 // The control figures every slip prints: positions (the lines of the order) and pieces (the sum of their quantities; options belong to their position and do not
@@ -2251,7 +2284,7 @@ function shop_dispatch_map() {
 	foreach ($rows as $r) {
 		$c = shop_driver_card($r);
 		$due = strtotime($r['scheduled_at'] ?: ($r['eta_at'] ?: $r['created_at']));
-		$c['status'] = $r['status']; $c['driver_id'] = $r['driver_id'] ? (int)$r['driver_id'] : 0; $c['phone'] = $r['phone']; $c['note'] = $r['note'];
+		$c['status'] = $r['status']; $c['driver_id'] = $r['driver_id'] ? (int)$r['driver_id'] : 0; $c['phone'] = $r['phone']; $c['note'] = $r['note']; $c['source'] = $r['source'];
 		$c['due_ts'] = $due; $c['due'] = date('H:i', $due); $c['scheduled'] = $r['scheduled_at'] ? date('H:i', strtotime($r['scheduled_at'])) : '';
 		$c['late_min'] = ($r['status'] !== 'delivering' && $due < $now) ? (int)floor(($now - $due) / 60) : 0;
 		$c['lines'] = shop_driver_lines(shop_order_items((int)$r['id']));

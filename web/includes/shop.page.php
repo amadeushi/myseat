@@ -166,6 +166,15 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 		</p>
 	</form>
 
+	<h4 class="sms-sub">Uber Eats Bons (Empfang vom Küchen-Pi)</h4>
+	<?php $sh_ub = shop_uber_stats(); ?>
+	<p class="offer-help">Der Raspberry Pi in der Küche nimmt die Druckaufträge des Uber-Eats-Tablets an und schickt jeden Bon als Bild hierher. Die Bilder werden vorerst nur gespeichert (<?php echo (int)SHOP_UBER_KEEP_DAYS; ?> Tage, sie enthalten Namen, Adressen und Telefonnummern), das Auslesen zu Bestellungen folgt. Den Schlüssel trägst du auf dem Pi ein (Datei <code>/etc/uber-bridge.conf</code>), sonst nirgends.</p>
+	<div class="sms-status">
+		<span class="offer-badge<?php echo $sh_ub['count'] ? ' sms-badge-on' : ''; ?>"><?php echo $sh_ub['count'] ? (int)$sh_ub['count'].' Bons empfangen' : 'Noch kein Bon empfangen'; ?></span>
+		<?php if ($sh_ub['last'] !== ''): ?><span class="sms-keyinfo">zuletzt <?php echo $sh_e(date('d.m.Y H:i', strtotime($sh_ub['last']))); ?></span><?php endif; ?>
+	</div>
+	<p class="offer-help">Schlüssel für den Pi: <code><?php echo $sh_e(shop_uber_key()); ?></code></p>
+
 	<h4 class="sms-sub">what3words (Adressen ohne Straße)</h4>
 	<p class="offer-help">Lässt Gäste ohne richtige Adresse (Feld, Veranstaltungsort) einen what3words-Code statt Straße/PLZ/Ort eingeben - erscheint nur, wenn eine eingegebene Adresse gar nicht gefunden wird. Schlüssel unter <a href="https://what3words.com/select-plan" target="_blank" rel="noopener">what3words.com/select-plan</a>. Wird verschlüsselt gespeichert, nie wieder angezeigt, nur die letzten 4 Zeichen.</p>
 	<div class="sms-status">

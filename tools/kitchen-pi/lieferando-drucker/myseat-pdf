@@ -31,14 +31,22 @@ def conf():
         pass
     return c
 
-def keep(data, job):
+def pdf_part(data):
+    # CUPS (pdftopdf, with the generic PDF printer of cups-filters) puts PJL job commands in front of the PDF ("\x1b%-12345X@PJL JOB ...") and after it; the import wants the PDF itself
+    i = data.find(b'%PDF-', 0, 4096)
+    if i < 0:
+        return None
+    j = data.rfind(b'%%EOF')
+    return data[i:j + 5] + b'\n' if j > i else data[i:]
+
+def keep(data, job, ext='.pdf'):
     try:
         os.makedirs(KEEP_DIR, mode=0o750, exist_ok=True)
-        name = os.path.join(KEEP_DIR, time.strftime('%Y%m%d-%H%M%S') + '-job' + str(job) + '.pdf')
+        name = os.path.join(KEEP_DIR, time.strftime('%Y%m%d-%H%M%S') + '-job' + str(job) + ext)
         with open(name, 'wb') as f:
             f.write(data)
         os.chmod(name, 0o640)
-        for old in sorted(glob.glob(os.path.join(KEEP_DIR, '*.pdf')))[:-KEEP_N]:
+        for old in sorted(glob.glob(os.path.join(KEEP_DIR, '*.*')))[:-KEEP_N]:
             os.remove(old)
     except OSError as e:
         log('could not keep the pdf: %s' % e)
@@ -50,8 +58,11 @@ def main():
         return 0
     job = sys.argv[1]
     data = open(sys.argv[6], 'rb').read() if len(sys.argv) >= 7 else sys.stdin.buffer.read()
-    if data[:4] != b'%PDF':
-        log('job %s is not a PDF (%d bytes), cancelled' % (job, len(data)))
+    raw = data
+    data = pdf_part(raw)
+    if data is None:
+        keep(raw, job, '.bin')  # what arrived is kept, to see what it was
+        log('job %s is not a PDF (%d bytes, starts with %r), cancelled' % (job, len(raw), raw[:16]))
         return 5
     keep(data, job)
 

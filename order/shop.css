@@ -411,7 +411,9 @@
 .dv .dv-active { margin-top: 12px; }
 .dv .dv-card.is-new, .dv .dv-card.is-flash, .dv .dv-active.is-flash { outline: 2px solid var(--gold); outline-offset: 2px; }
 .dv .dv-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.dv .dv-sub { min-width: 0; font-size: 24px; font-weight: 800; line-height: 1.15; text-wrap: balance; }
+.dv .dv-sub { min-width: 0; font-size: 24px; font-weight: 800; line-height: 1.15; text-wrap: balance; overflow-wrap: anywhere; }
+.dv .dv-ttl { min-width: 0; }
+.dv .dv-place { margin-top: 2px; font-size: 17px; font-weight: 700; line-height: 1.25; color: var(--text-muted); }
 .dv .dv-no { flex: none; font-size: 14px; font-weight: 700; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .dv .dv-dist { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; margin: 10px 0 12px; }
 .dv .dv-dist strong { font-size: 22px; font-weight: 800; color: var(--gold-strong); font-variant-numeric: tabular-nums; }
@@ -424,7 +426,6 @@
 .dv .dv-meter i:nth-child(2) { height: 14px; }
 .dv .dv-meter i:nth-child(3) { height: 20px; }
 .dv .dv-meter[data-far="1"] i:nth-child(1), .dv .dv-meter[data-far="2"] i:nth-child(-n+2), .dv .dv-meter[data-far="3"] i { background: var(--gold); }
-.dv .dv-name { margin-bottom: 2px; font-size: 22px; font-weight: 800; line-height: 1.25; overflow-wrap: anywhere; }
 .dv .dv-street { font-size: 18px; font-weight: 700; line-height: 1.3; }
 .dv .dv-street--big { font-size: 24px; margin-top: 4px; }
 .dv .dv-city { margin-top: 2px; color: var(--text-muted); font-size: 15px; }
