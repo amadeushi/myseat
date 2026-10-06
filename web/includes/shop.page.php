@@ -1,6 +1,7 @@
 <?php
 // Settings > Lieferservice: switches, values, Mollie, delivery zones, opening hours (the menu is edited on page p=10)
 require_once __DIR__.'/../classes/shop.class.php';
+require_once __DIR__.'/../classes/shop_uber.class.php';
 shop_ensure_schema();
 $sh_e = function ($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); };
 $sh = array();
@@ -174,6 +175,23 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 		<?php if ($sh_ub['last'] !== ''): ?><span class="sms-keyinfo">zuletzt <?php echo $sh_e(date('d.m.Y H:i', strtotime($sh_ub['last']))); ?></span><?php endif; ?>
 	</div>
 	<p class="offer-help">Schlüssel für den Pi: <code><?php echo $sh_e(shop_uber_key()); ?></code></p>
+	<p class="offer-help">Bons lesen: Die Bilder gehen an einen Webhook in n8n, dort liest ein Bildmodell (OpenAI) sie, mySeat prüft, ob die Summen stimmen. Gelesen: <strong><?php echo (int)$sh_ub['by']['read']; ?></strong> &middot; zu prüfen: <strong><?php echo (int)$sh_ub['by']['check']; ?></strong> &middot; Fehler: <strong><?php echo (int)$sh_ub['by']['error']; ?></strong> &middot; neu: <strong><?php echo (int)$sh_ub['by']['new'] + (int)$sh_ub['by']['reading']; ?></strong></p>
+	<?php $sh_rec = shop_uber_recent(12); $sh_stl = array('read' => 'gelesen', 'check' => 'zu prüfen', 'error' => 'Fehler', 'new' => 'neu', 'reading' => 'wird gelesen', 'imported' => 'übernommen'); ?>
+	<?php if ($sh_ub['by']['check'] + $sh_ub['by']['error'] + $sh_ub['by']['new'] + $sh_ub['by']['reading'] > 0): ?><p class="offer-actions"><button type="button" class="button_dark" id="uber-reread">Zu prüfende Bons neu lesen</button></p><?php endif; ?>
+	<?php if ($sh_ub['count']): ?><p class="offer-actions"><button type="button" class="button_dark" id="uber-reread-last">Die letzten 4 Bons neu lesen</button></p><?php endif; ?>
+	<?php if ($sh_rec): ?><ul class="offer-help" id="uber-recent">
+		<?php foreach ($sh_rec as $sh_r): ?><li>Bon <?php echo (int)$sh_r['id']; ?> &middot; <?php echo $sh_e(date('d.m. H:i', strtotime($sh_r['received']))); ?> &middot; <strong><?php echo $sh_e(isset($sh_stl[$sh_r['status']]) ? $sh_stl[$sh_r['status']] : $sh_r['status']); ?></strong><?php echo $sh_r['tier'] !== '' ? ' ('.$sh_e($sh_r['tier']).')' : ''; ?><?php if ($sh_r['items'] !== null): ?> &middot; <?php echo (int)$sh_r['items']; ?> Positionen<?php endif; ?><?php if ($sh_r['total'] !== null): ?> &middot; <?php echo $sh_e(number_format($sh_r['total'] / 100, 2, ',', '.')); ?> &euro;<?php endif; ?><?php if ($sh_r['why'] !== '' && $sh_r['status'] !== 'read'): ?> &ndash; <?php echo $sh_e($sh_r['why']); ?><?php endif; ?><?php if ($sh_r['order_id']): ?> &middot; Bestellung #<?php echo (int)$sh_r['day_no']; ?><?php echo $sh_r['is_test'] ? ' (Test)' : ''; ?><?php endif; ?><?php if ($sh_r['lines']): ?><br/><small><?php echo $sh_e(implode(' | ', $sh_r['lines'])); ?></small><?php endif; ?><?php if (in_array($sh_r['status'], array('read', 'imported'), true) && !$sh_r['order_id'] && !$sh_r['stale']): ?> <button type="button" class="button_dark uber-import" data-id="<?php echo (int)$sh_r['id']; ?>">Als Bestellung übernehmen</button><?php endif; ?><?php if ($sh_r['stale'] && !$sh_r['order_id']): ?> <button type="button" class="button_dark uber-reread-one" data-id="<?php echo (int)$sh_r['id']; ?>">Neu lesen (Zahlart fehlt)</button><?php endif; ?></li>
+		<?php endforeach; ?></ul><?php endif; ?>
+	<form class="sms-form" id="uber-read-form" autocomplete="off">
+		<input type="url" name="uber_read_url" value="<?php echo $sh_e(shop_uber_read_url()); ?>" spellcheck="false" placeholder="Adresse des n8n-Webhooks (https://...)"/>
+		<label class="offer-check"><input type="checkbox" name="uber_read_large" value="1"<?php echo shop_setting('uber_read_large') === '1' ? ' checked' : ''; ?>/> Stimmt die Summe nicht, mit dem stärkeren Modell noch einmal lesen</label>
+		<small class="offer-help">Geheimnis für den n8n-Webhook (Zugang &bdquo;Header Auth&ldquo;, Name <code>X-Uber-Secret</code>): <code><?php echo $sh_e(shop_uber_read_secret()); ?></code></small>
+		<p class="offer-actions">
+			<button type="submit" class="button_dark">Speichern</button>
+			<?php if (shop_uber_read_url() !== '' && $sh_ub['count']): ?><button type="button" class="button_dark" id="uber-read-test">Letzten Bon testweise lesen</button><?php endif; ?>
+			<span class="detail-status" id="uber-read-msg" role="status" aria-live="polite"></span>
+		</p>
+	</form>
 
 	<h4 class="sms-sub">what3words (Adressen ohne Straße)</h4>
 	<p class="offer-help">Lässt Gäste ohne richtige Adresse (Feld, Veranstaltungsort) einen what3words-Code statt Straße/PLZ/Ort eingeben - erscheint nur, wenn eine eingegebene Adresse gar nicht gefunden wird. Schlüssel unter <a href="https://what3words.com/select-plan" target="_blank" rel="noopener">what3words.com/select-plan</a>. Wird verschlüsselt gespeichert, nie wieder angezeigt, nur die letzten 4 Zeichen.</p>
@@ -478,6 +496,18 @@ window.addEventListener('load', function () {
 	}
 	wireKeyForm('google-key-form', 'google-key-msg', 'google-key-clear', 'save_google_key', 'clear_google_key', 'google_key', 'Schlüssel löschen');
 	wireKeyForm('w3w-key-form', 'w3w-key-msg', 'w3w-key-clear', 'save_w3w_key', 'clear_w3w_key', 'w3w_key', 'Schlüssel löschen');
+	var uf = document.getElementById('uber-read-form'), um = document.getElementById('uber-read-msg');
+	if (uf) {
+		uf.addEventListener('submit', function (ev) { ev.preventDefault(); say(um, 'Einen Moment ...', false); post('save_uber_read', { uber_read_url: uf.elements.uber_read_url.value, uber_read_large: uf.elements.uber_read_large.checked ? '1' : '' }, function (r) { say(um, r.message, false); setTimeout(function () { location.reload(); }, 900); }, function (e) { say(um, e, true); }); });
+		var ur = document.getElementById('uber-reread');
+		if (ur) { ur.addEventListener('click', function () { ur.disabled = true; say(um, 'Einen Moment, bis zu 4 Bons werden gelesen (je 5 bis 20 Sekunden) ...', false); post('uber_reread', { id: 0 }, function (r) { say(um, r.message, false); setTimeout(function () { location.reload(); }, 1500); }, function (e) { ur.disabled = false; say(um, e, true); }); }); }
+		var ul = document.getElementById('uber-reread-last');
+		if (ul) { ul.addEventListener('click', function () { ul.disabled = true; say(um, 'Einen Moment, die letzten 4 Bons werden gelesen (je 5 bis 20 Sekunden) ...', false); post('uber_reread', { id: 0, all: 1 }, function (r) { say(um, r.message, false); setTimeout(function () { location.reload(); }, 1500); }, function (e) { ul.disabled = false; say(um, e, true); }); }); }
+		var urec = document.getElementById('uber-recent');
+		if (urec) { urec.addEventListener('click', function (ev) { var rb = ev.target.closest ? ev.target.closest('.uber-reread-one') : null; if (rb) { rb.disabled = true; say(um, 'Einen Moment, der Bon wird gelesen (5 bis 20 Sekunden) ...', false); post('uber_reread', { id: rb.dataset.id }, function (r) { say(um, r.message, false); setTimeout(function () { location.reload(); }, 1200); }, function (e) { rb.disabled = false; say(um, e, true); }); return; } var b = ev.target.closest ? ev.target.closest('.uber-import') : null; if (!b) { return; } b.disabled = true; say(um, 'Einen Moment ...', false); post('uber_import', { id: b.dataset.id }, function (r) { say(um, r.message, false); setTimeout(function () { location.reload(); }, 1500); }, function (e) { b.disabled = false; say(um, e, true); }); }); }
+		var ut = document.getElementById('uber-read-test');
+		if (ut) { ut.addEventListener('click', function () { say(um, 'Einen Moment, das Bildmodell liest ...', false); post('uber_read_test', {}, function (r) { say(um, r.message, false); }, function (e) { say(um, e, true); }); }); }
+	}
 	var gt = document.getElementById('google-key-test'), gtmsg = document.getElementById('google-key-msg');
 	if (gt) { gt.addEventListener('click', function () { say(gtmsg, 'Einen Moment ...', false); post('test_google_key', {}, function (r) { say(gtmsg, r.message, false); }, function (e) { say(gtmsg, e, true); }); }); }
 	var wt = document.getElementById('w3w-key-test'), wtmsg = document.getElementById('w3w-key-msg');

@@ -58,6 +58,7 @@ $due = $o['scheduled_at'] ?: ($o['eta_at'] ?: $o['created_at']);
 </head>
 <body>
 	<?php if (isset($o['source']) && $o['source'] === 'lieferando'): ?><div class="src">LIEFERANDO</div><?php endif; ?>
+	<?php if (isset($o['source']) && $o['source'] === 'uber_eats'): ?><div class="src">UBER EATS</div><?php endif; ?>
 	<div class="row"><h1>#<?php echo (int)$o['day_no']; ?></h1><span class="type"><?php echo $delivery ? 'Lieferung' : 'Abholung'; ?></span></div>
 	<div class="row"><span class="time"><?php echo $o['scheduled_at'] ? 'geplant ' : ''; ?><?php echo $h(substr($due, 11, 5)); ?></span><span class="small"><?php echo $h($o['number']); ?><?php echo $o['is_test'] ? ' TEST' : ''; ?></span></div>
 	<?php if (!$full): ?>
@@ -80,7 +81,7 @@ $due = $o['scheduled_at'] ?: ($o['eta_at'] ?: $o['created_at']);
 	<?php if ($full): ?>
 		<hr/>
 		<?php if (!empty($o['adjust_note'])): foreach (explode('; ', $o['adjust_note']) as $adj): ?><div class="small"><?php echo $h($adj); ?></div><?php endforeach; endif; ?>
-		<div class="pay"><?php echo ($o['payment_method'] === 'mollie' || $o['payment_method'] === 'lieferando') ? ($o['payment_method'] === 'lieferando' ? 'bei Lieferando bezahlt' : 'online bezahlt') : ($o['payment_method'] === 'cash' ? 'BAR kassieren: ' : 'KARTE kassieren: ').shop_money($o['total_cents']); ?></div>
+		<div class="pay"><?php echo in_array($o['payment_method'], array('mollie', 'lieferando', 'uber_eats'), true) ? ($o['payment_method'] === 'lieferando' ? 'bei Lieferando bezahlt' : ($o['payment_method'] === 'uber_eats' ? 'bei Uber Eats bezahlt' : 'online bezahlt')) : ($o['payment_method'] === 'cash' ? 'BAR kassieren: ' : 'KARTE kassieren: ').shop_money($o['total_cents']); ?></div>
 		<?php if (!empty($o['pay_with_cents']) && $o['payment_method'] === 'cash'): ?><div class="small">Gast zahlt mit <?php echo shop_money((int)$o['pay_with_cents']); ?> &middot; Rückgeld <strong><?php echo shop_money((int)$o['pay_with_cents'] - (int)$o['total_cents']); ?></strong></div><?php endif; ?>
 	<?php endif; ?>
 	<hr/>

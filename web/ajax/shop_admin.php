@@ -12,6 +12,7 @@ include('../classes/database.class.php');
 include('../classes/db_queries.db.php');
 include('../classes/business.class.php');
 require_once('../classes/shop.class.php');
+require_once('../classes/shop_uber.class.php');
 
 header('Content-Type: application/json; charset=utf-8');
 function sa_out($data) { echo json_encode($data); exit; }
@@ -56,6 +57,41 @@ if ($op === 'save_mollie') {
 }
 if ($op === 'clear_mollie') { shop_setting_set('mollie_key', null); sa_out(array('ok' => true, 'message' => 'Der Mollie-Schlüssel wurde gelöscht.')); }
 
+// Uber Eats receipts: the address of the n8n webhook that reads the images, and whether a receipt that does not add up is read again with the stronger model
+if ($op === 'save_uber_read') {
+	$url = isset($_POST['uber_read_url']) ? trim((string)$_POST['uber_read_url']) : '';
+	if ($url !== '' && !preg_match('#^https://[^\s]+$#i', $url)) { sa_out(array('ok' => false, 'error' => 'Die Adresse muss mit https:// beginnen.')); }
+	shop_setting_set('uber_read_url', $url);
+	shop_setting_set('uber_read_large', !empty($_POST['uber_read_large']) ? '1' : '0');
+	sa_out(array('ok' => true, 'message' => 'Gespeichert.'));
+}
+// reads receipts once more: one by id, or (id 0) the ones that are "check", "error" or still new (at most 4 at a time, every reading takes 5 to 20 seconds, up to twice that when the stronger model is needed)
+if ($op === 'uber_reread') {
+	$id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+	$all = !empty($_POST['all']);   // the last four, whatever their state (after the reading has been changed, to see the same receipts read the new way)
+	$ids = $id > 0 ? array($id) : array_map(function ($r) { return (int)$r['id']; }, fb_rows("SELECT id FROM ".fb_t('tp_shop_uber_slips')." ".($all ? "" : "WHERE status IN ('check', 'error', 'new', 'reading') ").($all ? "ORDER BY id DESC" : "ORDER BY id")." LIMIT 4"));
+	if (!$ids) { sa_out(array('ok' => true, 'message' => 'Es gibt nichts neu zu lesen.')); }
+	set_time_limit(280);
+	$n = array('read' => 0, 'check' => 0, 'error' => 0);
+	foreach ($ids as $i) { $r = shop_uber_process($i, true); $n[empty($r['ok']) ? 'error' : $r['status']]++; }
+	sa_out(array('ok' => true, 'message' => $n['read'].' gelesen, '.$n['check'].' zu prüfen, '.$n['error'].' Fehler.'));
+}
+// makes an order out of a read receipt (shop_uber_import): only a receipt that adds up and has a known payment; the answer says if it became a test order (receipt of another day)
+if ($op === 'uber_import') {
+	$r = shop_uber_import(isset($_POST['id']) ? (int)$_POST['id'] : 0, false);
+	if (empty($r['ok'])) { sa_out(array('ok' => false, 'error' => $r['error'])); }
+	if (!empty($r['duplicate'])) { sa_out(array('ok' => true, 'message' => 'Diese Bestellung gab es schon'.(!empty($r['day_no']) ? ' (#'.$r['day_no'].')' : '').'.')); }
+	sa_out(array('ok' => true, 'message' => 'Bestellung #'.$r['day_no'].' angelegt'.(!empty($r['test']) ? ' (als Test, der Bon ist nicht von heute)' : '').(!empty($r['cash']) ? ', Barzahlung bei Lieferung' : ', bei Uber Eats bezahlt').'.'));
+}
+// reads the newest stored receipt once more (a test of the whole way: n8n, the model, the check), without creating anything
+if ($op === 'uber_read_test') {
+	$row = fb_row("SELECT id FROM ".fb_t('tp_shop_uber_slips')." ORDER BY id DESC LIMIT 1");
+	if (!$row) { sa_out(array('ok' => false, 'error' => 'Es ist noch kein Bon empfangen worden.')); }
+	$r = shop_uber_process((int)$row['id'], true);
+	if (empty($r['ok'])) { sa_out(array('ok' => false, 'error' => 'Bon '.(int)$row['id'].': '.(isset($r['error']) ? $r['error'] : implode(' ', $r['problems'])))); }
+	$msg = $r['status'] === 'read' ? 'Bon '.(int)$row['id'].' gelesen, die Summe stimmt (Stufe '.$r['tier'].').' : 'Bon '.(int)$row['id'].' gelesen, aber zu prüfen: '.implode(' ', $r['problems']);
+	sa_out(array('ok' => true, 'message' => $msg));
+}
 if ($op === 'save_google_key') {
 	$key = isset($_POST['google_key']) ? trim((string)$_POST['google_key']) : '';
 	if ($key !== '') {

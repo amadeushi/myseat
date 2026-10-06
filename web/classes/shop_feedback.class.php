@@ -37,7 +37,7 @@ function shop_fb_due($limit = 5) {
 	return fb_rows("SELECT o.id, o.number, o.day_no, o.type, o.customer_name, o.email, o.done_at FROM ".fb_t('tp_shop_orders')." o
 		LEFT JOIN ".fb_t('tp_feedback')." f ON f.order_id = o.id
 		LEFT JOIN ".fb_t('tp_shop_mail_optout')." x ON x.email_key = SHA1(CONCAT('mail|', LOWER(TRIM(o.email))))
-		WHERE o.status = 'done' AND o.is_test = 0 AND o.email <> '' AND o.source <> 'lieferando' AND f.feedback_id IS NULL AND x.email_key IS NULL
+		WHERE o.status = 'done' AND o.is_test = 0 AND o.email <> '' AND o.source NOT IN ('lieferando', 'uber_eats') AND f.feedback_id IS NULL AND x.email_key IS NULL
 		AND o.done_at >= ? AND o.done_at <= ? AND o.done_at >= ?
 		AND NOT EXISTS (SELECT 1 FROM ".fb_t('tp_feedback')." f2 WHERE LOWER(f2.guest_email) = LOWER(TRIM(o.email)) AND f2.requested_at > ?)
 		ORDER BY o.done_at LIMIT ".(int)$limit, 'ssss',

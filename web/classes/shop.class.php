@@ -363,10 +363,12 @@ function shop_uber_store($png) {
 	fb_exec("DELETE FROM ".fb_t('tp_shop_uber_slips')." WHERE received < ?", 's', array(date('Y-m-d H:i:s', time() - SHOP_UBER_KEEP_DAYS * 86400)));
 	return array('ok' => true, 'id' => $id, 'duplicate' => false);
 }
-// count and time of the last received receipt, for the backend page
+// count and time of the last received receipt and how many are in which state (new, reading, read, check, error), for the backend page
 function shop_uber_stats() {
 	$r = fb_row("SELECT COUNT(*) AS n, MAX(received) AS last FROM ".fb_t('tp_shop_uber_slips'));
-	return array('count' => $r ? (int)$r['n'] : 0, 'last' => $r && $r['last'] ? $r['last'] : '');
+	$by = array('new' => 0, 'reading' => 0, 'read' => 0, 'check' => 0, 'error' => 0, 'imported' => 0);
+	foreach (fb_rows("SELECT status, COUNT(*) AS n FROM ".fb_t('tp_shop_uber_slips')." GROUP BY status") as $b) { $by[$b['status']] = (int)$b['n']; }
+	return array('count' => $r ? (int)$r['n'] : 0, 'last' => $r && $r['last'] ? $r['last'] : '', 'by' => $by);
 }
 function shop_print_agent_alive() { return time() - (int)shop_setting('print_agent_seen') <= 20; }
 // The control figures every slip prints: positions (the lines of the order) and pieces (the sum of their quantities; options belong to their position and do not
@@ -2719,6 +2721,7 @@ function shop_sms_status($id, $status) {
 	try {
 		$o = shop_order($id);
 		if (!$o || (int)$o['is_test'] || !shop_flag('sms_orders')) { return; }
+		if (in_array($o['source'], array('lieferando', 'uber_eats'), true)) { return; }   // the platform tells the guest itself
 		$event = ($status === 'delivering' && $o['type'] === 'delivery') ? 'order_delivering' : (($status === 'ready' && $o['type'] === 'pickup') ? 'order_ready' : '');
 		if ($event === '' || !sms_enabled()) { return; }
 		$mobile = sms_normalize_phone((string)$o['phone']);
@@ -3171,6 +3174,7 @@ function shop_stamp_award($orderId) {
 	if (!$cfg['on']) { return; }
 	$o = shop_order((int)$orderId);
 	if (!$o || !empty($o['is_test'])) { return; }
+	if (in_array($o['source'], array('lieferando', 'uber_eats'), true)) { return; }   // orders of a platform do not collect stamps
 	$keys = shop_coupon_guest_keys($o['phone'], $o['email']);
 	// stamps are only collected with a guest account: the order must have been placed signed in, and then the account's keys count
 	if (shop_flag('account_on')) {

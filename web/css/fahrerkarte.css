@@ -72,6 +72,8 @@
 .fk-flag--warn { color: var(--amber); border-color: var(--amber); }
 .fk-flag--lief { color: #ff7a1a; border-color: rgba(255, 122, 26, 0.5); font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase; }
 .fk-dh h3 .fk-flag--lief { vertical-align: middle; font-size: 13px; }
+.fk-flag--uber { color: #06c167; border-color: rgba(6, 193, 103, 0.5); font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase; }
+.fk-dh h3 .fk-flag--uber { vertical-align: middle; font-size: 13px; }
 .fk-flag--ok { color: var(--success); }
 
 /* the details of the selection slide over the lists */

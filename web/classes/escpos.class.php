@@ -50,6 +50,7 @@ function shop_slip_escpos($o, $items, $full) {
 
 	// an order from Lieferando: a white-on-black bar on top (reverse print), so it is not mixed up with the own deliveries
 	if (isset($o['source']) && $o['source'] === 'lieferando') { $b .= "\x1ba\x01\x1dB\x01\x1d!\x11\x1bE\x01 LIEFERANDO \n\x1dB\x00\x1d!\x00\x1bE\x00\x1ba\x00\n"; }
+	if (isset($o['source']) && $o['source'] === 'uber_eats') { $b .= "\x1ba\x01\x1dB\x01\x1d!\x11\x1bE\x01 UBER EATS \n\x1dB\x00\x1d!\x00\x1bE\x00\x1ba\x00\n"; }
 	$put('#'.(int)$o['day_no'], 2, true);
 	$put($delivery ? 'LIEFERUNG' : 'ABHOLUNG', 1, true);
 	$put(($o['scheduled_at'] ? 'geplant ' : '').substr($due, 11, 5), 2, true);
@@ -83,7 +84,7 @@ function shop_slip_escpos($o, $items, $full) {
 	$rule();
 	if ($full) {
 		if (!empty($o['adjust_note'])) { foreach (explode('; ', $o['adjust_note']) as $adj) { $put($adj, 0, true); } }
-		$put(($o['payment_method'] === 'mollie' || $o['payment_method'] === 'lieferando') ? ($o['payment_method'] === 'lieferando' ? 'bei Lieferando bezahlt' : 'online bezahlt') : ($o['payment_method'] === 'cash' ? 'BAR kassieren: ' : 'KARTE kassieren: ').shop_money($o['total_cents']), 1, true);
+		$put(in_array($o['payment_method'], array('mollie', 'lieferando', 'uber_eats'), true) ? ($o['payment_method'] === 'lieferando' ? 'bei Lieferando bezahlt' : ($o['payment_method'] === 'uber_eats' ? 'bei Uber Eats bezahlt' : 'online bezahlt')) : ($o['payment_method'] === 'cash' ? 'BAR kassieren: ' : 'KARTE kassieren: ').shop_money($o['total_cents']), 1, true);
 		if (!empty($o['pay_with_cents']) && $o['payment_method'] === 'cash') { $put('Gast zahlt mit '.shop_money((int)$o['pay_with_cents']).', Rueckgeld '.shop_money((int)$o['pay_with_cents'] - (int)$o['total_cents']), 0, true); }
 		$rule();
 	}

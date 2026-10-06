@@ -25,11 +25,12 @@ function shop_report_data($date) {
 	foreach (fb_rows("SELECT id, name FROM ".fb_t('tp_shop_drivers')) as $dr) { $names[(int)$dr['id']] = $dr['name']; }
 	$z = function () { return array('n' => 0, 'sum' => 0); };
 	$d = array('date' => $date, 'orders' => 0, 'revenue' => 0, 'cash_rev' => 0, 'card_rev' => 0, 'online_rev' => 0,
-		'cash' => array('done' => $z(), 'open' => $z(), 'delivery' => $z(), 'pickup' => $z(), 'nodriver' => $z(), 'lieferando' => $z(), 'change' => 0, 'storno' => $z(), 'fee' => 0, 'tip' => 0, 'discount' => 0, 'surcharge' => 0),
+		'cash' => array('done' => $z(), 'open' => $z(), 'delivery' => $z(), 'pickup' => $z(), 'nodriver' => $z(), 'lieferando' => $z(), 'uber' => $z(), 'change' => 0, 'storno' => $z(), 'fee' => 0, 'tip' => 0, 'discount' => 0, 'surcharge' => 0),
 		'card' => array('done' => $z(), 'open' => $z(), 'storno' => $z()),
 		'drivers' => array(),
 		'shop' => array('paid' => $z(), 'delivery' => $z(), 'pickup' => $z(), 'by_method' => array(), 'tip' => 0, 'discount' => 0, 'refund' => $z(), 'failed' => 0, 'pending' => 0),
 		'lief' => array('paid' => $z(), 'delivery' => $z(), 'pickup' => $z(), 'storno' => $z()),
+		'uber' => array('paid' => $z(), 'delivery' => $z(), 'pickup' => $z(), 'storno' => $z()),
 		'hours' => array(), 'ready_sum' => 0, 'ready_n' => 0, 'open_n' => 0, 'top' => array());
 	$add = function (&$a, $c) { $a['n']++; $a['sum'] += (int)$c; };
 	$openStates = array('new', 'accepted', 'preparing', 'ready', 'delivering');
@@ -40,6 +41,7 @@ function shop_report_data($date) {
 		if ($st === 'cancelled' || $st === 'failed') {
 			if ($m === 'mollie') { if ($o['payment_status'] === 'paid') { $add($d['shop']['refund'], $t); } }
 			elseif ($m === 'lieferando') { $add($d['lief']['storno'], $t); }
+			elseif ($m === 'uber_eats') { $add($d['uber']['storno'], $t); }
 			elseif ($m === 'card_door') { $add($d['card']['storno'], $t); }
 			else { $add($d['cash']['storno'], $t); }
 			continue;
@@ -49,8 +51,8 @@ function shop_report_data($date) {
 		$h = (int)substr($o['created_at'], 11, 2); $d['hours'][$h] = (isset($d['hours'][$h]) ? $d['hours'][$h] : 0) + 1;
 		if (!empty($o['ready_at'])) { $d['ready_sum'] += max(0, (strtotime($o['ready_at']) - strtotime($o['created_at'])) / 60); $d['ready_n']++; }
 		$isDone = ($st === 'done');
-		if ($m === 'mollie' || $m === 'lieferando') {
-			$g = ($m === 'mollie') ? 'shop' : 'lief';
+		if ($m === 'mollie' || $m === 'lieferando' || $m === 'uber_eats') {
+			$g = ($m === 'mollie') ? 'shop' : ($m === 'uber_eats' ? 'uber' : 'lief');
 			$d['online_rev'] += $t; $add($d[$g]['paid'], $t); $add($d[$g][$delivery ? 'delivery' : 'pickup'], $t);
 			if ($m === 'mollie') {
 				$k = (string)$o['pay_detail']; if (!isset($d['shop']['by_method'][$k])) { $d['shop']['by_method'][$k] = $z(); } $add($d['shop']['by_method'][$k], $t);
@@ -66,6 +68,7 @@ function shop_report_data($date) {
 		if ($k === 'cash') {
 			if ((int)$o['pay_with_cents'] > $t) { $d['cash']['change'] += (int)$o['pay_with_cents'] - $t; }
 			if ($o['source'] === 'lieferando') { $add($d['cash']['lieferando'], $t); }
+			if ($o['source'] === 'uber_eats') { $add($d['cash']['uber'], $t); }
 			if (!$delivery) { $add($d['cash']['pickup'], $t); }
 			elseif ($o['driver_id']) { $add($d['cash']['delivery'], $t); } else { $add($d['cash']['nodriver'], $t); }
 		}
@@ -114,6 +117,7 @@ function shop_report_rows($kind, $d, $now = null) {
 		if ($c['nodriver']['n']) { $r[] = array('row', 'Lieferung ohne Fahrer', $m($c['nodriver']['sum'])); }
 		$r[] = array('row', 'Abholung (Kasse)', $m($c['pickup']['sum']));
 		if ($c['lieferando']['n']) { $r[] = array('note', 'darin Lieferando bar: '.$c['lieferando']['n'].' = '.$m($c['lieferando']['sum'])); }
+		if ($c['uber']['n']) { $r[] = array('note', 'darin Uber Eats bar: '.$c['uber']['n'].' = '.$m($c['uber']['sum'])); }
 		$r[] = array('row', 'Rückgeld ausgegeben', $m($c['change']));
 		$r[] = array('rule');
 		$r[] = array('sec', 'Je Fahrer');
@@ -144,7 +148,7 @@ function shop_report_rows($kind, $d, $now = null) {
 		$r[] = array('fill', 'Differenz');
 		$r[] = array('fill', 'Name');
 	} else {
-		$s = $d['shop']; $l = $d['lief'];
+		$s = $d['shop']; $l = $d['lief']; $u = $d['uber'];
 		$r[] = array('row', 'ONLINE GESAMT', $m($s['paid']['sum'] + $l['paid']['sum']), 'big');
 		$r[] = array('note', ($s['paid']['n'] + $l['paid']['n']).' online bezahlte Bestellungen');
 		$r[] = array('rule');
@@ -161,11 +165,20 @@ function shop_report_rows($kind, $d, $now = null) {
 		$r[] = array('row', '  Lieferung ('.$l['delivery']['n'].')', $m($l['delivery']['sum']));
 		$r[] = array('row', '  Abholung ('.$l['pickup']['n'].')', $m($l['pickup']['sum']));
 		$r[] = array('note', 'Die Auszahlung kommt von Lieferando, die Provision ist noch nicht abgezogen.');
+		if ($u['paid']['n'] || $u['storno']['n']) {
+			$r[] = array('rule');
+			$r[] = array('sec', 'Uber Eats (online bezahlt)');
+			$r[] = array('row', 'Bestellungen ('.$u['paid']['n'].')', $m($u['paid']['sum']), 'b');
+			$r[] = array('row', '  Lieferung ('.$u['delivery']['n'].')', $m($u['delivery']['sum']));
+			$r[] = array('row', '  Abholung ('.$u['pickup']['n'].')', $m($u['pickup']['sum']));
+			$r[] = array('note', 'Die Auszahlung kommt von Uber, die Gebühren sind noch nicht abgezogen.');
+		}
 		$chk = array();
 		if ($s['refund']['n']) { $chk[] = array('row', 'Online bezahlt, storniert ('.$s['refund']['n'].')', $m($s['refund']['sum'])); }
 		if ($s['failed']) { $chk[] = array('row', 'Zahlung fehlgeschlagen', (string)$s['failed']); }
 		if ($s['pending']) { $chk[] = array('row', 'Zahlung noch ausstehend', (string)$s['pending']); }
 		if ($l['storno']['n']) { $chk[] = array('row', 'Lieferando storniert ('.$l['storno']['n'].')', $m($l['storno']['sum'])); }
+		if ($u['storno']['n']) { $chk[] = array('row', 'Uber Eats storniert ('.$u['storno']['n'].')', $m($u['storno']['sum'])); }
 		if ($chk) { $r[] = array('rule'); $r[] = array('sec', 'Zu klären'); foreach ($chk as $a) { $r[] = $a; } if ($s['refund']['n']) { $r[] = array('note', 'Bei Mollie zurückzahlen, falls noch nicht geschehen.'); } }
 		$r[] = array('rule');
 		$r[] = array('sec', 'Der Tag');

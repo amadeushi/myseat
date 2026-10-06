@@ -51,6 +51,7 @@
 	function failReasonText(o) { return '<p class="k-onote k-fail-reason">Fehlgeschlagen: ' + esc(o.fail_reason || 'kein Grund angegeben') + '</p>'; }
 	function payText(o) {
 		if (o.pay === 'lieferando') { return '<span class="k-badge paid">bei Lieferando bezahlt</span>'; }
+		if (o.pay === 'uber_eats') { return '<span class="k-badge paid">bei Uber Eats bezahlt</span>'; }
 		if (o.pay === 'mollie') { return '<span class="k-badge paid">online bezahlt</span>'; }
 		return '<span class="k-badge cash">' + (o.pay === 'cash' ? 'bar kassieren' : 'Karte kassieren') + ' ' + money(o.total) + '</span>';
 	}
@@ -79,7 +80,7 @@
 		// "late" (still just waiting) and "failed" (actually broken) used to share the same danger-red ring -
 		// late now escalates through amber plus this text label, never through the failure color alone
 		var h = '<article class="k-card' + (o.status === 'new' ? ' is-new' : '') + (late ? ' is-late' : '') + (o.status === 'failed' ? ' is-failed' : '') + '" data-id="' + o.id + '"><div class="k-head"><span class="k-no">#' + o.day_no + '</span><span class="k-type ' + esc(o.type) + '">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + '</span>' +
-			(o.source === 'lieferando' ? '<span class="k-badge lief">Lieferando</span>' : '') +
+			(o.source === 'lieferando' ? '<span class="k-badge lief">Lieferando</span>' : '') + (o.source === 'uber_eats' ? '<span class="k-badge uber">Uber Eats</span>' : '') +
 			(o.source === 'phone' ? '<span class="k-badge">Telefon</span>' : '') +
 			(o.test ? '<span class="k-badge">Test</span>' : '') + '<span class="k-due' + (late ? ' k-late' : '') + '">' + esc(dueTxt) + '<small>' + sub + (o.status === 'new' ? ' · vor ' + ageMin + ' Min' : '') + (late ? ' · VERSPÄTET' : '') + '</small></span></div>' +
 			'<p class="k-who">' + esc(o.name) + (o.phone ? ' · ' + esc(o.phone) : '') + '</p>' + (o.address ? '<p class="k-addr">' + esc(o.address) + (o.address_note ? ' (' + esc(o.address_note) + ')' : '') + '</p>' : '') +

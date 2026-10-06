@@ -115,7 +115,7 @@
 		h += sec('Stempelkarte und Gutscheine', st);
 
 		// numbers
-		var pay = Object.keys(c.pay).map(function (k) { return ({ cash: 'bar', card_door: 'Karte', mollie: 'online', lieferando: 'Lieferando' }[k] || k) + ' ' + c.pay[k]; }).join(' · ');
+		var pay = Object.keys(c.pay).map(function (k) { return ({ cash: 'bar', card_door: 'Karte', mollie: 'online', lieferando: 'Lieferando', uber_eats: 'Uber Eats' }[k] || k) + ' ' + c.pay[k]; }).join(' · ');
 		h += sec('Zahlen', '<dl class="cu-dl"><div><dt>Umsatz</dt><dd>' + money(c.rev) + '</dd></div><div><dt>Ø Bestellung</dt><dd>' + money(c.avg) + '</dd></div><div><dt>Erste Bestellung</dt><dd>' + (c.first ? dmy(c.first) : '–') + '</dd></div><div><dt>Storniert</dt><dd>' + c.bad + '</dd></div></dl>' +
 			(c.top.length ? '<p class="cu-line"><span>Am liebsten</span> ' + c.top.map(function (t) { return esc(t[0]) + ' (' + t[1] + '×)'; }).join(', ') + '</p>' : '') + (pay ? '<p class="cu-line"><span>Zahlart</span> ' + esc(pay) + '</p>' : ''));
 

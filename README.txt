@@ -52,6 +52,25 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-06 == mySeat v6.28.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Uber Eats-Bons werden gelesen (web/classes/shop_uber.class.php). Das Bild geht an einen Webhook in n8n (Einstellung uber_read_url, Geheimnis uber_read_secret im Kopf X-Uber-Secret), dort liest ein OpenAI-
+   Bildmodell es und antwortet mit JSON; Anweisung und Schema (shop_uber_prompt, shop_uber_schema) liegen in mySeat, n8n reicht sie nur weiter. Stufe "small" (gpt-4.1-mini), Stufe "large" (gpt-4.1) nur, wenn
+   die Summe nicht stimmt und die Einstellung uber_read_large an ist. shop_uber_check rechnet nach: Positionen plus Optionen (der Preis einer Option gilt je Stück der Zeile) gegen die Zwischensumme, dann
+   Zwischensumme, Liefergebühr, weitere Gebührenzeilen (Marketplace-Gebühr), Rabatt und Trinkgeld gegen den Endbetrag. Zustände eines Bons: new, read (stimmt), check (zu prüfen, mit Grund), error, imported.
+   order/uber_import.php antwortet dem Pi zuerst und liest danach; was an n8n scheiterte, wird mit dem nächsten Bon nachgelesen. 13 Muster vom 3. bis 5. Oktober: alle echten Bons fehlerfrei gelesen.
+ * New: Einstellungen > Lieferservice > "Uber Eats Bons": Adresse des Webhooks, Haken für die zweite Stufe, Zähler je Zustand und die Liste der letzten Bons mit den gelesenen Positionen (ohne Namen und
+   Adressen). Knöpfe: "Letzten Bon testweise lesen", "Zu prüfende Bons neu lesen", "Die letzten 4 Bons neu lesen", "Neu lesen (Zahlart fehlt)" (Bons, die vor dem Format mit Zahlart gelesen wurden) und
+   "Als Bestellung übernehmen".
+ * New: Übernahme als Bestellung (shop_uber_import): source uber_eats, external_ref ue:<Code>, Name, Adresse (mit Koordinaten), Telefon, Positionen mit Optionen. Nur wenn die Summe stimmt und die Zahlart erkannt ist:
+   "Gezahlter Betrag" ist bei Uber bezahlt (payment_method uber_eats, bezahlt), "Fälliger Bargeldbetrag" ist Barzahlung, die der Fahrer kassiert (cash, offen). Weitere Gebührenzeilen zählen zur Gebühr. Ein Bon
+   nicht von heute wird als Test-Bestellung angelegt (nicht im Tagesbericht, löschbar; danach lässt er sich neu übernehmen). "Fällig um" auf dem Bon gilt als zugesagte Zeit (Wunschzeit), ohne Zeit gilt die
+   übliche Lieferzeit der Einstellungen. Die automatische Übernahme folgt, wenn echte Bons mit Adresse und Telefon gesehen sind.
+ * New: Abzeichen "Uber Eats" (grün) auf Küchenmonitor, Disposition und Fahrerkarte, Balken "UBER EATS" und "bei Uber Eats bezahlt" auf den Zetteln (bon.php, escpos.class.php), Zahlart in der Kundenübersicht.
+   Tagesbericht: Abschnitt "Uber Eats (online bezahlt)", Storno getrennt, Barzahlungen zählen wie eigene in die Bar-Kasse mit dem Hinweis "darin Uber Eats bar".
+ * Fix: Bestellungen von Lieferando und Uber Eats lösen keine SMS "unterwegs" (shop_sms_status), keine Treuestempel (shop_stamp_award) und keine Feedback-Mails (shop_feedback) mehr aus. Bei Lieferando
+   passierte das nur nicht, weil dort keine Telefonnummer gespeichert wird; Uber-Bons haben eine.
+
 2026-10-06 == mySeat v6.27.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Uber Eats-Bons kommen über den Pi in der Küche zu mySeat (tools/kitchen-pi/uber-eats-bridge). Der Pi meldet sich im WLAN wie der Epson-Bondrucker (TM-m30II), den das Uber-Eats-Tablet sucht: Suchanfragen
