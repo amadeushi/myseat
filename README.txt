@@ -52,6 +52,12 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-06 == mySeat v6.28.4 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Kasse: Der Schalter für die Vor-Ort-Abholung heißt jetzt "Vor-Ort-Abholung: keine Telefonnummer, Name freiwillig". Ist er angehakt, ist neben der Telefonnummer auch der Name keine Pflicht mehr (Feld zeigt
+   "freiwillig"). Ohne Namen wird die Bestellung als "Abholer" gespeichert, damit Küchenmonitor, Bon, Disposition und Tagesbericht kein leeres Namensfeld zeigen. Die Prüfung gilt in der Kasse
+   (orders_pos.js) und auf dem Server (shop_create_manual_order); Lieferungen verlangen weiter Name, Telefonnummer und Adresse.
+
 2026-10-06 == mySeat v6.28.3 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix: Tischplan: Die Rückfrage (z.B. "Trotzdem zuweisen?", Löschen, Online-Umstellung) erscheint im Seitenfeld und scrollte aus dem Bild, sobald man zu den Tischen heruntergescrollt hatte (das Seitenfeld

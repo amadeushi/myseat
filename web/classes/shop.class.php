@@ -1442,10 +1442,13 @@ function shop_create_manual_order($in) {
 	$name = mb_substr(trim((string)(isset($in['name']) ? $in['name'] : '')), 0, 120);
 	$phone = mb_substr(trim((string)(isset($in['phone']) ? $in['phone'] : '')), 0, 40);
 	$email = trim((string)(isset($in['email']) ? $in['email'] : ''));
-	if (mb_strlen($name) < 2) { return array('ok' => false, 'error' => 'Bitte einen Namen angeben.'); }
 	// a delivery always needs a number (the driver may have to call); a guest picking the order up in person
-	// right now can skip it if the till says so
+	// right now can skip it, and the name too, if the till says so (the order is then called "Abholer")
 	$noPhone = ($type === 'pickup' && !empty($in['no_phone']));
+	if (mb_strlen($name) < 2) {
+		if (!$noPhone) { return array('ok' => false, 'error' => 'Bitte einen Namen angeben.'); }
+		$name = 'Abholer';
+	}
 	if (!$noPhone && !shop_phone_ok($phone)) { return array('ok' => false, 'error' => 'Bitte eine Telefonnummer angeben.'); }
 	if ($noPhone) { $phone = ''; }
 	if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) { return array('ok' => false, 'error' => 'Die E-Mail-Adresse sieht nicht richtig aus.'); }

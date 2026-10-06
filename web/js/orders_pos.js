@@ -520,6 +520,8 @@
 		$('#pos-address').hidden = pickup; $('#pos-no-phone-label').hidden = !pickup;
 		if (!pickup) { $('#pos-no-phone').checked = false; }
 		var noPhone = pickup && $('#pos-no-phone').checked; f.elements.phone.disabled = noPhone;
+		// a spontaneous pick-up on the spot needs neither number nor name (the order is then called "Abholer")
+		f.elements.name.placeholder = noPhone ? 'freiwillig' : '';
 		checkZone(); loadQuote(); renderAlerts(); renderSum();
 	}
 	$$('input[name=type]', f).forEach(function (r) { r.addEventListener('change', syncType); });
@@ -737,7 +739,7 @@
 		if (!cart.length) { return fail('Der Bon ist leer.', search); }
 		if (cart.length > CART_MAX) { return fail('Zu viele Positionen (' + cart.length + ' von maximal ' + CART_MAX + '). Bitte in zwei Bestellungen aufteilen.'); }
 		if (!noPhone && el.phone.value.replace(/\D/g, '').length < 6) { return fail('Bitte eine Telefonnummer angeben.', el.phone, el.phone.closest('.kx-sec')); }
-		if (el.name.value.trim().length < 2) { return fail('Bitte einen Namen angeben.', el.name, el.name.closest('.kx-sec')); }
+		if (!noPhone && el.name.value.trim().length < 2) { return fail('Bitte einen Namen angeben.', el.name, el.name.closest('.kx-sec')); }
 		if (!pickup && el.street.value.trim().length < 3) { return fail('Bitte die Adresse angeben.', el.street, $('#pos-address')); }
 		var payload = {
 			type: type(), name: el.name.value, phone: el.phone.value, no_phone: !!el.no_phone.checked, street: el.street.value, zip: el.zip.value, city: el.city.value,

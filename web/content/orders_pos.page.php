@@ -49,7 +49,7 @@ if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = myse
 							<label class="kx-f">Telefon<input type="text" name="phone" id="pos-phone" inputmode="tel" autocomplete="off"/></label>
 							<label class="kx-f">Name<input type="text" name="name" id="pos-name" autocomplete="off"/></label>
 						</div>
-						<label class="kx-check" id="pos-no-phone-label" hidden><input type="checkbox" name="no_phone" id="pos-no-phone"/> Keine Telefonnummer (Vor-Ort-Abholung)</label>
+						<label class="kx-check" id="pos-no-phone-label" hidden><input type="checkbox" name="no_phone" id="pos-no-phone"/> Vor-Ort-Abholung: keine Telefonnummer, Name freiwillig</label>
 						<div class="kx-cust" id="kx-cust"></div>
 					</section>
 
