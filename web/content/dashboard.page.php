@@ -3,7 +3,7 @@
  <div class='header'>
 	<?php $de_lang = (substr($_SESSION['language'],0,2) == 'de'); ?>
 	<div class="date-nav">
-	<a href="?selectedDate=<?php echo buildDate($settings['dbdate'],$sd,$sm,$sj,-1); ?>" class="navgroup navgroup-prev" aria-label="<?php echo $de_lang ? 'Vorheriger Tag' : 'Previous day'; ?>">
+	<a href="?p=1&selectedDate=<?php echo buildDate($settings['dbdate'],$sd,$sm,$sj,-1); ?>" class="navgroup navgroup-prev" aria-label="<?php echo $de_lang ? 'Vorheriger Tag' : 'Previous day'; ?>">
 		<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><polyline points="15 5, 8 12, 15 19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 	</a>
 	<div class="date dategroup">
@@ -11,11 +11,11 @@
 		<input type="text" id="datepicker"/>
 		<input type="hidden" id="dbdate" value="<?php echo $_SESSION['selectedDate']; ?>"/>
 	</div>
-	<a href="?selectedDate=<?php echo buildDate($settings['dbdate'],$sd,$sm,$sj,1); ?>" class="navgroup navgroup-next" aria-label="<?php echo $de_lang ? 'Nächster Tag' : 'Next day'; ?>">
+	<a href="?p=1&selectedDate=<?php echo buildDate($settings['dbdate'],$sd,$sm,$sj,1); ?>" class="navgroup navgroup-next" aria-label="<?php echo $de_lang ? 'Nächster Tag' : 'Next day'; ?>">
 		<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><polyline points="9 5, 16 12, 9 19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 	</a>
 	<?php if ($_SESSION['selectedDate'] != date('Y-m-d')): ?>
-	<a href="?selectedDate=<?php echo date('Y-m-d'); ?>" class="today-btn"><?php echo _today; ?></a>
+	<a href="?p=1&selectedDate=<?php echo date('Y-m-d'); ?>" class="today-btn"><?php echo _today; ?></a>
 	<?php endif; ?>
 	</div>
 	<!-- Begin 2nd level tab -->

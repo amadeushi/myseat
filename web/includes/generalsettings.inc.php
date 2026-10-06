@@ -8,7 +8,7 @@
 		include('includes/messagebox.inc.php'); 
 		?>
 <!-- Beginn left column -->	
-<form method="post" action="?q=3" id="general_settings_form">
+<form method="post" action="?p=6&q=3" id="general_settings_form">
 	<input type="hidden" name="action" value="save_set">
 	<?php
 	//get new settings

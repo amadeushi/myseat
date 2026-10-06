@@ -55,13 +55,13 @@
 	// date when gotoCurrent is on, so it is replaced: jump straight to today's date
 	jQuery.datepicker._gotoToday = function(a){
 		var d = new Date(), p = function(n){ return (n < 10 ? '0' : '') + n; };
-		window.location.href = '?selectedDate=' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+		window.location.href = '?p=<?php echo (int)$_SESSION['page']; ?>&selectedDate=' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
 	};
 
 	$(document).ready(function() {
 		// Change of outlet ID in edit mode
 		$("#reservation_outlet_id").change(function(){
-		    window.location.href='?resedit=1&outletID=' + this.value;
+		    window.location.href='?p=<?php echo (int)$_SESSION['page']; ?>&resedit=1&outletID=' + this.value;
 		  });
 		
 		// Preload images
@@ -76,7 +76,7 @@
 			{
 				if ( data > 0 ) {
 				$("#realtimeupdate").html(
-					"<div class='alert_warning'><p style='margin-bottom:10px;'><a href='main_page.php?selectedDate=<?php echo $_SESSION['selectedDate']; ?>'>(" + data + ") <?php echo _new_entry;?></a></p></div>"
+					"<div class='alert_warning'><p style='margin-bottom:10px;'><a href='main_page.php?p=2&selectedDate=<?php echo $_SESSION['selectedDate']; ?>'>(" + data + ") <?php echo _new_entry;?></a></p></div>"
 					);	
 				};
 			}
@@ -99,7 +99,7 @@
 			showButtonPanel: true,
 			dateFormat: '<?php echo $general['datepickerformat'] ?? '';?>',
 			regional: '<?php echo substr($_SESSION['language'],0,2);?>',
-			onSelect: function(dateText, inst) { window.location.href="?selectedDate="+$("#dbdate").val(); }
+			onSelect: function(dateText, inst) { window.location.href="?p=<?php echo (int)$_SESSION['page']; ?>&selectedDate="+$("#dbdate").val(); }
 		});
 		// Setup datepickers export
 		<?php if($_SESSION['page']=='4'):?>

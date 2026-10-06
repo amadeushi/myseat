@@ -11,7 +11,7 @@ if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = myse
 	<div class="orders-bar">
 		<h3>Liefergebiete</h3>
 		<span class="orders-spacer"></span>
-		<a class="orders-kitchen" href="main_page.php?q=10">Lieferservice-Einstellungen</a>
+		<a class="orders-kitchen" href="main_page.php?p=6&q=10">Lieferservice-Einstellungen</a>
 	</div>
 	<p class="me-note" id="zo-note" role="status" aria-live="polite"></p>
 	<div class="zo-overlaps" id="zo-overlaps" hidden role="status" aria-live="polite"></div>

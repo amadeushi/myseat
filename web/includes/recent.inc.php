@@ -19,7 +19,7 @@
 			if ($recent) {
 				foreach($recent as $row) {
 					// reservations or storno ?
-					$link = ($row->reservation_hidden == 0) ? 'p=2' : 'q=3&s=1';
+					$link = ($row->reservation_hidden == 0) ? 'p=2' : 'p=2&q=3&s=1';
 					$text = ($row->reservation_hidden == 0) ? _booked_ : _canceled_;
 					echo "<li><a href=main_page.php?".$link."&selectedDate=".$row->reservation_date.">".$row->reservation_booker_name." ".$text." ".$row->reservation_pax." "._people_." ".$row->reservation_guest_name." "._for_." ".date($general['dateformat'],strtotime($row->reservation_date))." ".formatTime($row->reservation_time,$general['timeformat'])."</a></li>";
 				}

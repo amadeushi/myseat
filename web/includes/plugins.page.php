@@ -54,10 +54,10 @@ foreach ( $plugin_headers as $plugin_header ) {
 			<td>
 				<?php
 	if ($action==0){
-		echo '<a href="?q=7&action=plugins&button=activate&filename='.$plugin_header['filename'].'">
+		echo '<a href="?p=6&q=7&action=plugins&button=activate&filename='.$plugin_header['filename'].'">
 			'.uiIcon('play', array('alt' => 'Activate')).'</a>';
 	}else{
-		echo '<a href="?q=7&action=plugins&button=deactivate&filename='.$plugin_header['filename'].'">
+		echo '<a href="?p=6&q=7&action=plugins&button=deactivate&filename='.$plugin_header['filename'].'">
 			'.uiIcon('pause', array('alt' => 'Deactivate')).'</a>';
 	}
 	?>

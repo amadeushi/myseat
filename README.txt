@@ -52,6 +52,14 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-06 == mySeat v6.28.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: Die Pfeile neben dem Datum, "Heute" und die Kalenderauswahl im Backend verlinkten nur auf ?selectedDate=..., ohne die Seite zu nennen. Welche Seite danach kam, entschied $_SESSION['page'], und die gilt
+   für alle Browser-Tabs gemeinsam: Wer in einem zweiten Tab die Bestellübersicht oder die Disposition öffnete, wurde im Reservierungs-Tab beim nächsten Klick auf einen Pfeil dorthin geschickt. Die Links tragen
+   jetzt ihre Seite fest (Dashboard p=1, Reservierungstag p=2, im Footer die Seite des aktuellen Aufrufs).
+ * Fix: Dieselbe Schwäche an weiteren Stellen beseitigt: Reiter Liste/Neue Reservierung/Storniert und "Zurück" der Suche (p=2), Link zu stornierten Buchungen unter "Letzte Aktivitäten" (p=2), Hinweis "Neuer Eintrag"
+   (p=2), Event-Links im Meldungskasten (p=2), Links "Lieferservice-Einstellungen" im Menü- und Zonen-Editor, Formular der allgemeinen Einstellungen und Plugin-Links (p=6), Outlet-Wechsel im Bearbeitungsmodus.
+
 2026-10-06 == mySeat v6.28.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix: Eine an der Kasse erfasste Bestellung (shop_create_manual_order) wird sofort als "angenommen" angelegt, mit der Annahmezeit "jetzt", und musste vorher auf der Disposition noch einmal angenommen werden,

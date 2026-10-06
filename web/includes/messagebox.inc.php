@@ -77,7 +77,7 @@ if ($events_advertise && ($_SESSION['page'] == 2 || $_SESSION['page'] == 1) ) {
 			echo "
 			".uiIcon('cutlery')."
 			<span class='bold'>
-			<a href='".$_SERVER['SCRIPT_NAME']."?outletID=".$row->outlet_id."&selectedDate=".$row->event_date."'>".
+			<a href='".$_SERVER['SCRIPT_NAME']."?p=2&outletID=".$row->outlet_id."&selectedDate=".$row->event_date."'>".
 			_sp_events.": ".date($general['dateformat'],strtotime($row->event_date))." ".
 			$row->subject."</a> | ".$row->outlet_name."</span>
 			<p>".$row->description."</p><p><cite><span class='bold'>
@@ -103,7 +103,7 @@ if ($special_events && $_SESSION['page'] == 2 ) {
 			echo "
 			".uiIcon('cutlery')."
 			<span class='bold'>
-			<a href='".$_SERVER['SCRIPT_NAME']."?outletID=".$row->outlet_id."&selectedDate=".$row->event_date."'>".
+			<a href='".$_SERVER['SCRIPT_NAME']."?p=2&outletID=".$row->outlet_id."&selectedDate=".$row->event_date."'>".
 			_today.": ".$row->subject."</a></span>
 			<p class='margin-bottom-10'>".$row->description."</p><p><cite>
 			".date($general['dateformat'],strtotime($row->event_date)).
