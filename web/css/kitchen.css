@@ -122,8 +122,11 @@
 /* when a delivery has to leave the kitchen = due time minus the drive; amber when it is close, red with text once it is over */
 .ks-out { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 10px; flex-wrap: wrap; margin: 6px 0 0; padding: 2px 12px; border-radius: 10px; border: 2px solid var(--border); background: rgba(255, 255, 255, 0.03); }
 .ks-out span { font-size: 15px; font-weight: 700; color: var(--muted); flex: 0 0 auto; }
-.ks-out b { font-size: 32px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.ks-out b { font-size: 46px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
 .ks-out small { font-size: 17px; font-weight: 700; color: var(--muted); }
+/* a delivery has two times: when the food has to leave (the one that matters in the kitchen, big) and the due time at the guest (smaller, below) */
+.ks-out + .ks-due b { font-size: 24px; }
+.ks-out + .ks-due small { font-size: 15px; }
 .ks-out.is-soon { border-color: var(--amber); }
 .ks-out.is-soon b, .ks-out.is-soon small { color: var(--amber); }
 .ks-out.is-over { border-color: var(--danger); background: rgba(226, 134, 124, 0.12); }
@@ -308,8 +311,8 @@ body:not(.is-portrait) .k-col[data-col="out"], body:not(.is-portrait) .k-col[dat
 /* Erledigt: what the kitchen finished in the last two hours, next to the board. Same "Pos n" as on the slips, so a printed slip can be traced after the order has left the board. */
 .ks-main { flex: 1; min-height: 0; display: flex; }
 .ks-main .ks-board { flex: 1; min-width: 0; }
-.ks-done { flex: none; width: clamp(250px, 19vw, 340px); margin: 10px 10px 10px 0; padding: 12px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
-.ks-done[hidden] { display: none; }
+aside.ks-done { flex: none; width: clamp(250px, 19vw, 340px); margin: 10px 10px 10px 0; padding: 12px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
+aside.ks-done[hidden] { display: none; }
 .ksd-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; font-size: 22px; font-weight: 700; }
 .ksd-h small { font-size: 14px; font-weight: 600; color: var(--muted); }
 .ksd-empty { padding: 14px 2px; font-size: 18px; color: var(--muted); }
@@ -332,4 +335,4 @@ p.ksd-note { margin-top: 8px; }
 .ksd-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .ksd-acts .k-btn { flex: 1 1 120px; }
 .ks-pos { grid-column: 1; grid-row: 2; font-size: 15px; font-weight: 700; color: var(--muted); white-space: nowrap; }
-@media (max-width: 1000px) { .ks-main { flex-direction: column; } .ks-done { width: auto; margin: 0 10px 10px; max-height: 34vh; } }
+@media (max-width: 1000px) { .ks-main { flex-direction: column; } aside.ks-done { width: auto; margin: 0 10px 10px; max-height: 34vh; } }

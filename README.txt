@@ -52,6 +52,13 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-06 == mySeat v6.28.5 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Küchenmonitor: Bei Lieferungen (eigene und Lieferando) ist "Raus bis" jetzt größer (46 px) als die Lieferzeit darunter (24 px); für die Küche zählt, wann das Essen die Küche verlassen muss, nicht die
+   Zeit beim Gast. Abholungen und Sofort-Karten bleiben unverändert.
+ * Fix: Küchenmonitor: Der "Fertig"-Knopf der Karten war seit v6.26.0 fast unsichtbar (dunkler Hintergrund, dunkle Schrift, falsche Breite). Die Regeln der Spalte "Erledigt" (.ks-done) trafen wegen der
+   gleichen Klasse auch den Knopf; sie gelten jetzt nur noch für aside.ks-done.
+
 2026-10-06 == mySeat v6.28.4 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Kasse: Der Schalter für die Vor-Ort-Abholung heißt jetzt "Vor-Ort-Abholung: keine Telefonnummer, Name freiwillig". Ist er angehakt, ist neben der Telefonnummer auch der Name keine Pflicht mehr (Feld zeigt
