@@ -62,6 +62,8 @@
 	flex: 0 0 320px; box-sizing: border-box; padding: 16px;
 	background: var(--surface, #151312); color: var(--text, #f3ede1);
 	border: 1px solid var(--border, rgba(201,164,89,.22)); border-radius: var(--radius-sm, 6px);
+	/* beside the plan the panel stays in view while the page is scrolled down to the tables (and so does a question in it) */
+	position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto;
 }
 .tp-panel h3 { margin: 0 0 12px; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 22px; color: var(--gold-strong, #e2c07f); }
 .tp-panel p { margin: 0 0 12px; }
@@ -101,7 +103,12 @@
 
 @media (max-width: 900px) {
 	.tp-layout { flex-direction: column; }
-	.tp-panel { flex-basis: auto; width: 100%; }
+	.tp-panel { flex-basis: auto; width: 100%; position: static; max-height: none; overflow-y: visible; }
+	/* below the plan: while a question is open it sticks to the bottom edge of the window */
+	.tp-panel.tp-confirming {
+		position: sticky; bottom: 12px; z-index: 6; max-height: calc(100vh - 24px); overflow-y: auto;
+		border-color: var(--danger, #e2867c); box-shadow: 0 -6px 24px rgba(0,0,0,.45);
+	}
 }
 @media print { .tp-panel, .tp-msg { display: none; } }
 

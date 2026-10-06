@@ -52,6 +52,12 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-06 == mySeat v6.28.3 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: Tischplan: Die Rückfrage (z.B. "Trotzdem zuweisen?", Löschen, Online-Umstellung) erscheint im Seitenfeld und scrollte aus dem Bild, sobald man zu den Tischen heruntergescrollt hatte (das Seitenfeld
+   war ein normales Flex-Element oben neben dem Plan). Das Seitenfeld ist jetzt neben dem Plan sticky (top 12px, höchstens Fensterhöhe, scrollt in sich). Unter 900 px Breite, wo es unter dem Plan liegt,
+   klebt es solange eine Rückfrage offen ist unten am Fensterrand (Klasse tp-confirming, roter Rand, Schatten).
+
 2026-10-06 == mySeat v6.28.2 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix: Die Pfeile neben dem Datum, "Heute" und die Kalenderauswahl im Backend verlinkten nur auf ?selectedDate=..., ohne die Seite zu nennen. Welche Seite danach kam, entschied $_SESSION['page'], und die gilt

@@ -391,6 +391,8 @@
 
 	function renderPanel() {
 		while (panel.firstChild) { panel.removeChild(panel.firstChild); }
+		// lets the stylesheet pin the panel to the bottom of the window on narrow screens while a question is open
+		panel.classList.toggle('tp-confirming', !!st.confirm);
 		if (st.confirm) { renderConfirmPanel(); return; }
 		if (!st.edit) { renderDayPanel(); return; }
 		renderEditPanel();
