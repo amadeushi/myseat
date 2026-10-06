@@ -24,6 +24,27 @@
 	var MAXPAGE = { 'new': 3, ready: 4, out: 4 }, PAGE = { 'new': 3, ready: 4, out: 4 }, page = { 'new': 0, ready: 0, out: 0 }, lastAct = Date.now(), IDLE_BACK_MS = 45000;
 	var workOpen = false, assignOpen = {}, assignAll = {}, retryOpen = {}, newFlash = false;
 
+	// ---- automatic slip: "Bon bei Annahme". Every order that is accepted (by the dispatcher here, or at once when it comes from the till, Lieferando or Uber Eats) prints its delivery slip through the browser, once.
+	// What is on the board when the page is opened counts as printed already; the list is kept in the session, so a reload does not print again. The slips go out four seconds apart (a new print replaces the one before in the frame).
+	var autoPrint = false, printed = {}, printBase = false, printQueue = [], printBusy = false;
+	try { autoPrint = localStorage.getItem('dpAutoPrint') === '1'; var pj = sessionStorage.getItem('dpPrinted'); if (pj) { printed = JSON.parse(pj) || {}; printBase = true; } } catch (e) {}
+	function syncAuto() { var a = $('#k-auto'); if (!a) { return; } a.setAttribute('aria-pressed', autoPrint ? 'true' : 'false'); a.textContent = 'Bon bei Annahme: ' + (autoPrint ? 'an' : 'aus'); }
+	function pumpPrint() {
+		if (printBusy || !printQueue.length) { return; }
+		printBusy = true; MonitorPrint.slip(printQueue.shift(), true);
+		setTimeout(function () { printBusy = false; pumpPrint(); }, 4000);
+	}
+	function autoPrintCheck(orders) {
+		orders.forEach(function (o) {
+			if (['accepted', 'preparing', 'ready', 'delivering', 'done'].indexOf(o.status) < 0 || printed[o.id]) { return; }
+			printed[o.id] = 1;
+			if (printBase && autoPrint) { printQueue.push(o.id); }
+		});
+		printBase = true;
+		try { sessionStorage.setItem('dpPrinted', JSON.stringify(printed)); } catch (e) {}
+		pumpPrint();
+	}
+
 	function column(o) {
 		if (P) { return o.status === 'new' ? 'new' : (o.status === 'accepted' || o.status === 'preparing' ? 'work' : (o.status === 'ready' ? 'ready' : (o.status === 'delivering' ? 'out' : 'fail'))); }
 		return o.status === 'new' ? 'new' : (o.status === 'accepted' || o.status === 'preparing' ? 'work' : 'ready');
@@ -41,6 +62,8 @@
 
 	// ---- sound: shared module (choice of sounds, volume, repeat until somebody taps the order). Only the new orders on screen keep it going.
 	var sound = MonitorSound.create({ key: 'dispatch', mount: $('#k-tools'), pending: function () { return shown('new').filter(function (o) { return !acked[o.id]; }).length; } });
+	syncAuto();
+	$('#k-auto').addEventListener('click', function () { autoPrint = !autoPrint; try { localStorage.setItem('dpAutoPrint', autoPrint ? '1' : '0'); } catch (e) {} syncAuto(); });
 	$('#k-full').addEventListener('click', function () { var d = document.documentElement; if (document.fullscreenElement) { document.exitFullscreen(); } else if (d.requestFullscreen) { d.requestFullscreen(); } });
 
 	// ---- clock
@@ -331,6 +354,7 @@
 			if (!r.ok) { throw new Error('bad'); }
 			$('#k-offline').hidden = true; lastOk = Date.now();
 			var ids = r.orders.filter(function (o) { return o.status === 'new'; }).map(function (o) { return o.id; });
+			autoPrintCheck(r.orders);
 			current = r.orders; drivers = r.drivers || []; pause = r.pause || pause; driveMin = r.drive_min !== undefined ? r.drive_min : driveMin;
 			Object.keys(acked).forEach(function (k) { if (ids.indexOf(+k) < 0) { delete acked[k]; } });
 			var fresh = seen !== null && ids.some(function (id) { return seen.indexOf(id) < 0; });

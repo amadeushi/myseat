@@ -52,6 +52,15 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-06 == mySeat v6.28.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: Eine an der Kasse erfasste Bestellung (shop_create_manual_order) wird sofort als "angenommen" angelegt, mit der Annahmezeit "jetzt", und musste vorher auf der Disposition noch einmal angenommen werden,
+   obwohl sie schon eine Zeit hatte (die dem Anrufer genannte oder die gewählte Wunschzeit). Sie steht gleich auf dem Küchenmonitor und in der Spalte "in Arbeit" der Disposition, ohne Klingelton und ohne
+   die Frist von 8 Minuten für "neu". Bestellungen aus dem Gäste-Shop bleiben "neu", bis sie angenommen werden.
+ * New: Disposition: Schalter "Bon bei Annahme" (neben Vollbild, pro Browser gespeichert, zunächst aus). Ist er an, druckt der Browser für jede angenommene Bestellung einmal den Lieferschein, auch für die,
+   die gleich angenommen ankommen (Kasse, Lieferando, Uber Eats). Was beim Öffnen der Seite schon da ist, wird nicht nachgedruckt, mehrere Bons kommen mit vier Sekunden Abstand nacheinander, die Liste der
+   gedruckten Bestellungen bleibt über ein Neuladen erhalten (sessionStorage). Der Browser druckt ohne Rückfrage, wenn er mit --kiosk-printing gestartet ist.
+
 2026-10-06 == mySeat v6.28.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Uber Eats-Bons werden gelesen (web/classes/shop_uber.class.php). Das Bild geht an einen Webhook in n8n (Einstellung uber_read_url, Geheimnis uber_read_secret im Kopf X-Uber-Secret), dort liest ein OpenAI-

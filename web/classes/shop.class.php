@@ -1401,7 +1401,8 @@ function shop_pos_zone_info($lat, $lng, $street, $zip) {
  * "closed" for self-service and this can still be typed in, there is no minimum order value, no time-slot
  * picking (always "as soon as possible"), no coupon, no tip, no online payment, and no per-IP rate limit (there
  * is no guest IP - it's the till). $in: type, lines, name, phone, email, street, zip, city, address_note,
- * payment ('cash'|'card_door'), note. Always status 'new', source 'phone', is_test 0.
+ * payment ('cash'|'card_door'), note. Starts as 'accepted' (accepted_at now), source 'phone', is_test 0: the person at the till has already told the caller the time (or the wish time was chosen), so nobody has to
+ * accept it again on the dispatch screen; it is on the kitchen monitor and in the dispatch work column at once.
  */
 // the "-10 %" and "+ Aufschlag" keys of the till: the browser only says on/off, the amount of the surcharge and a reason from a fixed list; the amounts are worked out here.
 // The discount is a percentage of the goods plus the delivery fee, rounded to the cent and never more than that; the surcharge is added on top (euro, up to 50 EUR).
@@ -1480,11 +1481,11 @@ function shop_create_manual_order($in) {
 	$now = date('Y-m-d H:i:s');
 	$ok = fb_exec("INSERT INTO ".fb_t('tp_shop_orders')."
 		(token, number, day_no, order_date, type, status, scheduled_at, eta_at, customer_name, phone, email, street, zip, city, address_note, lat, lng, zone_id,
-		 ip_hash, subtotal_cents, fee_cents, tip_cents, total_cents, payment_method, payment_status, note, lang, source, is_test, created_at, updated_at, pay_with_cents, discount_cents, surcharge_cents, adjust_note)
-		VALUES (?, ?, ?, ?, ?, 'new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?, 0, ?, ?, 'open', ?, 'de', 'phone', 0, ?, ?, ?, ?, ?, ?)",
-		'ssisss'.'s'.'sssssss'.'ddi'.'iii'.'ssss'.'i'.'iis', array($token, $number, $dayNo, $today, $type, $scheduled, $eta, $name, $phone, $email, $street, $zip, $city, $addrNote,
+		 ip_hash, subtotal_cents, fee_cents, tip_cents, total_cents, payment_method, payment_status, note, lang, source, is_test, created_at, updated_at, pay_with_cents, discount_cents, surcharge_cents, adjust_note, accepted_at)
+		VALUES (?, ?, ?, ?, ?, 'accepted', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?, 0, ?, ?, 'open', ?, 'de', 'phone', 0, ?, ?, ?, ?, ?, ?, ?)",
+		'ssisss'.'s'.'sssssss'.'ddi'.'iii'.'ssss'.'i'.'iis'.'s', array($token, $number, $dayNo, $today, $type, $scheduled, $eta, $name, $phone, $email, $street, $zip, $city, $addrNote,
 			$lat === null ? 0 : $lat, $lng === null ? 0 : $lng, $zoneId === null ? 0 : $zoneId, $sub, $fee, $total, $pay,
-			mb_substr(trim((string)(isset($in['note']) ? $in['note'] : '')), 0, 500), $now, $now, $payWith, $adj['discount'], $adj['surcharge'], $adj['note']));
+			mb_substr(trim((string)(isset($in['note']) ? $in['note'] : '')), 0, 500), $now, $now, $payWith, $adj['discount'], $adj['surcharge'], $adj['note'], $now));
 	if (!$ok) { shop_dayno_unlock(); return array('ok' => false, 'error' => 'Die Bestellung konnte nicht gespeichert werden. Bitte versuche es noch einmal.'); }
 	$id = (int)mysqli_insert_id(fb_db()); shop_dayno_unlock();
 	foreach ($items as $it) {
