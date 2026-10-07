@@ -76,7 +76,7 @@
 .shop-layout { max-width: 1240px; margin: 0 auto; padding: 0 16px 120px; display: grid; grid-template-columns: 1fr; gap: 0 32px; }
 /* the bars that stay while the menu scrolls sit one below the other; their offsets are the real heights of what is above them (shop.js sets --shop-sticky-top = the top bar when it is sticky, else 0,
    and --shop-search-h = the search bar). The top bar wraps to up to four rows on a phone, so it scrolls away there and only search and categories stay; from 1024px up it stays too. */
-.shop-top--menu { position: static; }
+.shop-top--menu { position: relative; z-index: 30; }
 .shop-cats { position: sticky; top: calc(var(--shop-sticky-top, 0px) + var(--shop-search-h, 66px)); z-index: 20; display: flex; gap: 8px; overflow-x: auto; padding: 10px 16px; margin: 0 -16px; background: var(--bg); scrollbar-width: none; }
 .shop-cats::-webkit-scrollbar { display: none; }
 .shop-cats a { flex: none; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 16px; border: 1px solid var(--border-soft); border-radius: var(--radius-pill); color: var(--text-muted); font-size: 14px; font-weight: 600; text-decoration: none; white-space: nowrap; }

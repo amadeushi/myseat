@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-07 == mySeat v6.29.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: Gästeshop (Handy/Tablet): Der Dialog "Liefert ihr zu mir?" verschwand hinter Suchfeld und Kategorieleiste, weil die Kopfleiste seit v6.29.0 nicht mehr sticky ist und ihre Ebene (z-index) verlor.
+   Die Kopfleiste der Menüseite hat jetzt position: relative mit z-index 30.
+
 2026-10-07 == mySeat v6.29.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Uber Eats: gelesene Bons werden als Bestellung übernommen (Backend > Einstellungen > Lieferservice > Uber Eats Bons, Haken "Gelesene Bons sofort als Bestellung übernehmen"; aus, bis man ihn setzt).
