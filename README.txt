@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-08 == mySeat v6.29.3 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: Kunden: Beim Ausstellen eines Gutscheins und beim Gutschreiben eines Stempels behielt der feste Betrag seine Markierung, wenn man einen eigenen Betrag eintippte, und ein Klick auf Kulanz (oder einen
+   anderen Grund, die Gültigkeit) löschte den getippten Betrag. Jetzt verliert der feste Betrag beim Tippen die Markierung, und der getippte Betrag bleibt bei jeder weiteren Auswahl stehen.
+
 2026-10-08 == mySeat v6.29.2 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Küchenmonitor und Küchenbon: Bei "Sofort"-Bestellungen (keine Wunschzeit) steht "SOFORT" groß, die Uhrzeiten sind kleine Nebenzeilen ("Raus bis", Lieferzeit); die Küche sieht, dass nicht auf eine

@@ -14,7 +14,7 @@
 	var FLAGS = { stamm: 'Stammgast', vip: 'VIP', allergie: 'Allergie', vorsicht: 'Vorsicht', passend: 'Nur passend bar' };
 	var STATUS = { new: 'neu', accepted: 'angenommen', preparing: 'in der Küche', ready: 'fertig', delivering: 'unterwegs', done: 'erledigt', cancelled: 'storniert', failed: 'fehlgeschlagen' };
 	var REASONS = ['Kulanz', 'Reklamation', 'Korrektur', 'Sonstiges'];
-	var S = { notify: true, stampBase: 0, editStamp: 0, editBase: 0, view: 'all', q: '', rows: [], total: 0, counts: {}, unassigned: 0, sel: null, card: null, panel: '', draft: null, reason: '', amount: 0, days: 30, kb: -1 }, listSeq = 0, cardSeq = 0, msgTimer = null;
+	var S = { notify: true, stampBase: 0, editStamp: 0, editBase: 0, view: 'all', q: '', rows: [], total: 0, counts: {}, unassigned: 0, sel: null, card: null, panel: '', draft: null, reason: '', amount: 0, amtTxt: '', sbTxt: '', days: 30, kb: -1 }, listSeq = 0, cardSeq = 0, msgTimer = null;
 
 	function get(op, params) {
 		var u = URL_AJAX + '?op=' + op; Object.keys(params || {}).forEach(function (k) { u += '&' + k + '=' + encodeURIComponent(params[k]); });
@@ -96,13 +96,13 @@
 			st += '<div class="cu-form"><p><b>Stempel gutschreiben</b> · ein Stempel auf der Karte. Bei voller Karte ist der Gutschein ' + c.percent + ' % der Grundbeträge aller Stempel darauf.</p>' +
 				'<p class="cu-lbl">Grundbetrag des Stempels (vorgeschlagen: ' + esc(money(c.suggest)) + ', der Durchschnitt der Karte)</p><div class="cu-chips" role="group" aria-label="Grundbetrag">' +
 				chips.map(function (v) { return '<button type="button" class="cu-chip' + (S.stampBase === v ? ' is-on' : '') + '" data-sbase="' + v + '" aria-pressed="' + (S.stampBase === v) + '">' + esc(money(v).replace(',00', '')) + '</button>'; }).join('') +
-				'<input type="text" id="cu-sbase" inputmode="decimal" placeholder="anderer Betrag" aria-label="Grundbetrag in Euro" value="' + (S.stampBase && chips.indexOf(S.stampBase) < 0 ? esc((S.stampBase / 100).toFixed(2).replace('.', ',')) : '') + '"/></div>' + reasonChips(S.reason, 'r') + notifyBox(c, 'stamp') +
+				'<input type="text" id="cu-sbase" inputmode="decimal" placeholder="anderer Betrag" aria-label="Grundbetrag in Euro" value="' + esc(S.sbTxt) + '"/></div>' + reasonChips(S.reason, 'r') + notifyBox(c, 'stamp') +
 				'<div class="cu-acts"><button type="button" class="cu-btn is-gold" data-act="stamp-add">Gutschreiben</button><button type="button" class="cu-btn" data-act="panel" data-v="">Abbrechen</button></div></div>';
 		}
 		if (S.panel === 'coupon') {
 			st += '<div class="cu-form"><p><b>Gutschein ausstellen</b> · gilt ab einem Warenwert in Höhe des Betrags, wird einmal eingelöst.</p><div class="cu-chips" role="group" aria-label="Betrag">' +
 				[500, 1000, 1500, 2000].map(function (v) { return '<button type="button" class="cu-chip' + (S.amount === v ? ' is-on' : '') + '" data-amount="' + v + '" aria-pressed="' + (S.amount === v) + '">' + esc(money(v).replace(',00', '')) + '</button>'; }).join('') +
-				'<input type="text" id="cu-amt" inputmode="decimal" placeholder="anderer Betrag" aria-label="Betrag in Euro" value="' + (S.amount && [500, 1000, 1500, 2000].indexOf(S.amount) < 0 ? esc((S.amount / 100).toFixed(2).replace('.', ',')) : '') + '"/></div>' +
+				'<input type="text" id="cu-amt" inputmode="decimal" placeholder="anderer Betrag" aria-label="Betrag in Euro" value="' + esc(S.amtTxt) + '"/></div>' +
 				'<div class="cu-chips" role="group" aria-label="Gültig für">' + [14, 30, 60, 90].map(function (d) { return '<button type="button" class="cu-chip' + (S.days === d ? ' is-on' : '') + '" data-days="' + d + '" aria-pressed="' + (S.days === d) + '">' + d + ' Tage</button>'; }).join('') + '</div>' + reasonChips(S.reason, 'r') + notifyBox(c, 'coupon') +
 				'<div class="cu-acts"><button type="button" class="cu-btn is-gold" data-act="coupon-issue">Ausstellen</button><button type="button" class="cu-btn" data-act="panel" data-v="">Abbrechen</button></div></div>';
 		}
@@ -152,7 +152,7 @@
 		var scroll = root.scrollTop; root.innerHTML = cardHtml(c); root.scrollTop = scroll;
 	}
 	function openCard(id, keepPanel) {
-		S.sel = id; if (!keepPanel) { S.panel = ''; S.editStamp = 0; S.draft = null; S.reason = ''; S.amount = 0; S.days = 30; }
+		S.sel = id; if (!keepPanel) { S.panel = ''; S.editStamp = 0; S.draft = null; S.reason = ''; S.amount = 0; S.amtTxt = ''; S.sbTxt = ''; S.days = 30; }
 		try { history.replaceState(null, '', 'main_page.php?p=13&c=' + id); } catch (e) {}
 		var seq = ++cardSeq;
 		return get('card', { id: id }).then(function (r) {
@@ -177,6 +177,8 @@
 		var old = btn.textContent; btn.dataset.armed = '1'; btn.textContent = ask; btn.classList.add('is-armed');
 		setTimeout(function () { if (btn.isConnected) { btn.dataset.armed = ''; btn.textContent = old; btn.classList.remove('is-armed'); } }, 4000);
 	}
+	// typing an own amount: the fixed amounts lose their mark right away (no re-render, the caret stays in the field)
+	function unpick(sel) { Array.prototype.forEach.call(document.querySelectorAll('#cu-card ' + sel), function (e) { e.classList.remove('is-on'); e.setAttribute('aria-pressed', 'false'); }); }
 	function keepDraft() { var n = $('#cu-note'); if (n) { S.draft = { note: n.value, flags: (S.draft ? S.draft.flags : S.card.flags).slice() }; } }
 
 	$('#cu-card').addEventListener('click', function (ev) {
@@ -184,12 +186,12 @@
 		var f = ev.target.closest('[data-flag]');
 		if (f) { keepDraft(); var d = S.draft || { note: c.note, flags: c.flags.slice() }; var i = d.flags.indexOf(f.dataset.flag); if (i >= 0) { d.flags.splice(i, 1); } else { d.flags.push(f.dataset.flag); } S.draft = d; renderCard(); return; }
 		var rs = ev.target.closest('[data-reason]'); if (rs) { keepDraft(); S.reason = S.reason === rs.dataset.v ? '' : rs.dataset.v; renderCard(); return; }
-		var am = ev.target.closest('[data-amount]'); if (am) { keepDraft(); S.amount = S.amount === +am.dataset.amount ? 0 : +am.dataset.amount; renderCard(); return; }
-		var sb = ev.target.closest('[data-sbase]'); if (sb) { keepDraft(); S.stampBase = +sb.dataset.sbase; renderCard(); return; }
+		var am = ev.target.closest('[data-amount]'); if (am) { keepDraft(); S.amount = S.amount === +am.dataset.amount ? 0 : +am.dataset.amount; S.amtTxt = ''; renderCard(); return; }
+		var sb = ev.target.closest('[data-sbase]'); if (sb) { keepDraft(); S.stampBase = +sb.dataset.sbase; S.sbTxt = ''; renderCard(); return; }
 		var dy = ev.target.closest('[data-days]'); if (dy) { keepDraft(); S.days = +dy.dataset.days; renderCard(); return; }
 		var b = ev.target.closest('[data-act]'); if (!b) { return; }
 		var act = b.dataset.act, v = b.dataset.v;
-		if (act === 'panel') { keepDraft(); S.panel = S.panel === v ? '' : v; if (S.panel === 'stamp') { S.stampBase = c.suggest; } renderCard(); var li = $('#cu-link-q'); if (li) { li.focus(); } var ei = $('#cu-erase-in'); if (ei) { ei.focus(); } return; }
+		if (act === 'panel') { keepDraft(); S.panel = S.panel === v ? '' : v; if (S.panel === 'stamp') { S.stampBase = c.suggest; S.sbTxt = [1000, 1500, 2000].indexOf(c.suggest) < 0 ? (c.suggest / 100).toFixed(2).replace('.', ',') : ''; } renderCard(); var li = $('#cu-link-q'); if (li) { li.focus(); } var ei = $('#cu-erase-in'); if (ei) { ei.focus(); } return; }
 		if (act === 'note-save') { var n = $('#cu-note'); mutate('note', { note: n ? n.value : '', flags: (S.draft ? S.draft.flags : c.flags) }, 'Gespeichert.'); return; }
 		if (act === 'stamp-add') {
 			var sin = $('#cu-sbase'), sbv = S.stampBase; if (sin && sin.value.trim() !== '') { var sx = parseFloat(sin.value.replace(',', '.')); sbv = isFinite(sx) ? Math.round(sx * 100) : 0; }
@@ -217,8 +219,8 @@
 	});
 	$('#cu-card').addEventListener('input', function (ev) {
 		if (ev.target.id === 'cu-notify') { S.notify = ev.target.checked; return; }
-		if (ev.target.id === 'cu-amt') { S.amount = 0; return; }
-		if (ev.target.id === 'cu-sbase') { S.stampBase = 0; return; }
+		if (ev.target.id === 'cu-amt') { S.amtTxt = ev.target.value; S.amount = 0; unpick('[data-amount]'); return; }
+		if (ev.target.id === 'cu-sbase') { S.sbTxt = ev.target.value; S.stampBase = 0; unpick('[data-sbase]'); return; }
 		if (ev.target.id === 'cu-link-q') {
 			var q = ev.target.value.trim(); clearTimeout(qTimer);
 			qTimer = setTimeout(function () {
