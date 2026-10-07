@@ -40,7 +40,8 @@ $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 		<button type="button" class="k-btn" id="k-cols" aria-label="Anzahl der Spalten">5 Spalten</button>
 		<button type="button" class="k-btn" id="k-auto" aria-pressed="false" title="Druckt nach Fertig den Bon: bei Lieferungen den Lieferschein, bei Abholungen den Küchenbon">Bon bei Fertig: aus</button>
 		<button type="button" class="k-btn" id="k-done" aria-pressed="true" title="Zeigt die Bestellungen, die die Küche in den letzten 2 Stunden fertig gemeldet hat">Erledigt</button>
-		<button type="button" class="k-btn" id="k-full">Vollbild</button>
+		<button type="button" class="k-btn k-sq" id="k-full" aria-label="Vollbild" data-tip="Vollbild ein/aus"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+		<button type="button" class="k-btn k-sq" id="k-reload" aria-label="Neu laden" data-tip="Seite neu laden (wie F5)"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.500-5.800M20 4v5h-5"/></svg></button>
 		<a class="k-btn" href="disposition.php">Disposition</a>
 	</header>
 	<p class="k-offline" id="k-offline" role="alert" hidden>Keine Verbindung. Ich versuche es weiter ...</p>

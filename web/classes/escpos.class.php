@@ -53,7 +53,14 @@ function shop_slip_escpos($o, $items, $full) {
 	if (isset($o['source']) && $o['source'] === 'uber_eats') { $b .= "\x1ba\x01\x1dB\x01\x1d!\x11\x1bE\x01 UBER EATS \n\x1dB\x00\x1d!\x00\x1bE\x00\x1ba\x00\n"; }
 	$put('#'.(int)$o['day_no'], 2, true);
 	$put($delivery ? 'LIEFERUNG' : 'ABHOLUNG', 1, true);
-	$put(($o['scheduled_at'] ? 'geplant ' : '').substr($due, 11, 5), 2, true);
+	$platform = isset($o['source']) && in_array($o['source'], array('lieferando', 'uber_eats'), true);
+	if (!$o['scheduled_at'] && !$platform) {
+		// as soon as possible: nothing to wait for, so the word is the big line and the time only a small one
+		$put('SOFORT', 2, true);
+		$put(($delivery ? 'Lieferung ca. ' : 'Abholung ca. ').substr($due, 11, 5), 0);
+	} else {
+		$put(($o['scheduled_at'] ? 'geplant ' : '').substr($due, 11, 5), 2, true);
+	}
 	$put($o['number'].($o['is_test'] ? '  TEST' : ''), 0);
 	$rule();
 	if (!$full) {

@@ -58,7 +58,7 @@ window.MonitorSound = (function () {
 
 		// ---- panel
 		var wrap = document.createElement('div'); wrap.className = 'ms-wrap';
-		var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'k-btn ms-btn'; btn.setAttribute('aria-expanded', 'false');
+		var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'k-btn ms-btn' + (opts.icons ? ' k-sq' : ''); btn.setAttribute('aria-expanded', 'false');
 		var panel = document.createElement('div'); panel.className = 'ms-panel'; panel.hidden = true;
 		panel.innerHTML = '<label class="ms-row ms-check"><input type="checkbox" data-f="on"/> <span>Ton bei neuer Bestellung</span></label>' +
 			'<label class="ms-row"><span>Klang</span><select data-f="sound">' + Object.keys(SOUNDS).map(function (k) { return '<option value="' + k + '">' + SOUNDS[k].label + '</option>'; }).join('') + '</select></label>' +
@@ -67,7 +67,17 @@ window.MonitorSound = (function () {
 			'<button type="button" class="k-btn ms-test">Testen</button>';
 		wrap.appendChild(btn); wrap.appendChild(panel); opts.mount.appendChild(wrap);
 
-		function label() { btn.textContent = !S.on ? 'Ton aus' : ((ctx && ctx.state === 'running') ? 'Ton an' : 'Ton antippen'); btn.setAttribute('aria-pressed', S.on ? 'true' : 'false'); }
+		var SPK = '<path d="M4 9.500v5h4l5 4v-13l-5 4z" fill="currentColor" stroke="none"/>';
+		function label() {
+			var text = !S.on ? 'Ton aus' : ((ctx && ctx.state === 'running') ? 'Ton an' : 'Ton antippen');
+			if (opts.icons) {
+				// icon mode (kitchen monitor): speaker with waves = on, crossed out = off; amber while the browser still waits for a first tap
+				var waves = !S.on ? '<path d="M17 9.500l5 5M22 9.500l-5 5"/>' : '<path d="M16 9a4 4 0 0 1 0 6M18.500 6.500a8 8 0 0 1 0 11"/>';
+				btn.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + SPK + waves + '</svg>';
+				btn.setAttribute('aria-label', text); btn.setAttribute('data-tip', !S.on ? 'Ton ist aus: tippen für Einstellungen' : (text === 'Ton antippen' ? 'Einmal tippen, damit der Ton startet' : 'Ton ist an: tippen für Einstellungen')); btn.classList.toggle('is-wait', text === 'Ton antippen');
+			} else { btn.textContent = text; }
+			btn.setAttribute('aria-pressed', S.on ? 'true' : 'false');
+		}
 		function fill() {
 			panel.querySelector('[data-f=on]').checked = S.on; panel.querySelector('[data-f=sound]').value = S.sound; panel.querySelector('[data-f=volume]').value = S.volume; panel.querySelector('[data-f=repeat]').value = S.repeat;
 			panel.querySelector('[data-v=volume]').textContent = S.volume + ' %'; label();

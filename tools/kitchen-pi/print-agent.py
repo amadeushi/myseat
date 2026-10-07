@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bon-Druckdienst fuer die Kueche: fragt mySeat alle 2 Sekunden nach dem naechsten Bon und druckt ihn (ESC/POS) auf dem NCR 7197.
+"""Bon-Druckdienst fuer die Kueche: fragt mySeat alle 2 Sekunden nach dem naechsten Bon und druckt ihn (ESC/POS) auf dem NCR 7197 (serieller Adapter) oder auf dem Epson TM-m30II (USB, PRINT_TTY=/dev/usb/lp0).
 
 Der Bon geht ueber den Treiber des Rechners (io_edgeport, /dev/ttyUSB0) zum Drucker. Der Treiber bleibt dabei an: frueher wurde er fuer jeden Bon geloest, um den Drucker
 direkt per USB anzusprechen (pyusb). Danach startete sich der Drucker nach 5 bis 25 Sekunden selbst neu (neue USB-Nummer im Kernelprotokoll) und schnitt ab, was bis dahin nicht
@@ -29,14 +29,18 @@ def write_once(data):
     fd = os.open(TTY, os.O_WRONLY | os.O_NOCTTY | os.O_NONBLOCK)
     try:
         fcntl.fcntl(fd, fcntl.F_SETFL, fcntl.fcntl(fd, fcntl.F_GETFL) & ~os.O_NONBLOCK)
-        # raw, no handshake of our own, and no hang-up when the port is closed (the baud rate is not used by this printer)
-        a = termios.tcgetattr(fd)
-        a[0] = 0; a[1] = 0; a[2] = termios.CS8 | termios.CREAD | termios.CLOCAL; a[3] = 0; a[4] = a[5] = termios.B9600
-        termios.tcsetattr(fd, termios.TCSANOW, a)
+        # a serial port (NCR via io_edgeport): raw, no handshake of our own, and no hang-up when the port is closed (the baud rate is not used by this printer).
+        # A printer on the USB printer class (Epson TM-m30II, /dev/usb/lp0) is no terminal: bytes just go in, the driver waits for the printer itself
+        tty = os.isatty(fd)
+        if tty:
+            a = termios.tcgetattr(fd)
+            a[0] = 0; a[1] = 0; a[2] = termios.CS8 | termios.CREAD | termios.CLOCAL; a[3] = 0; a[4] = a[5] = termios.B9600
+            termios.tcsetattr(fd, termios.TCSANOW, a)
         n = 0
         while n < len(data):
             n += os.write(fd, data[n:])
-        termios.tcdrain(fd)  # returns when the driver has sent everything
+        if tty:
+            termios.tcdrain(fd)  # returns when the driver has sent everything
     finally:
         os.close(fd)
 

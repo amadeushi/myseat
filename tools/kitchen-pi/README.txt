@@ -6,6 +6,14 @@ print-agent.py        Druckdienst: fragt web/ajax/print_agent.php alle 2 Sekunde
                       der Treiber bleibt an. Früher wurde er für jeden Bon gelöst (pyusb); danach startete sich der Drucker nach 5 bis 25 s selbst neu und schnitt den Rest des Bons ab.
 bon-agent.service     systemd-Dienst dazu; liest AGENT_URL und AGENT_KEY aus /etc/bon-agent.env (nicht im Projekt, Rechte 640 root:hamun).
 
+Wechsel auf den Epson TM-m30II per USB (Vorbereitung, noch nicht am Gerät getestet): Der Druckdienst schreibt ESC/POS roh, ein Treiber ist nicht nötig. Der TM-m30II meldet sich als
+USB-Drucker und erscheint als /dev/usb/lp0 (Kernelmodul usblp, in Raspberry Pi OS vorhanden; prüfen mit lsusb und ls /dev/usb). Dann:
+  1. Benutzer hamun in die Gruppe lp:  sudo usermod -aG lp hamun
+  2. In /etc/bon-agent.env eintragen:  PRINT_TTY=/dev/usb/lp0   (Zeile für den NCR entfernen oder auskommentieren)
+  3. sudo systemctl restart bon-agent, dann in mySeat einen Test-Bon drucken (Umlaute, Schnitt, Positionszeilen, "SOFORT" prüfen).
+Der Dienst setzt die seriellen Einstellungen nur noch, wenn die Gerätedatei ein Terminal ist (NCR); beim USB-Drucker schreibt er die Bytes direkt.
+Der alte Drucker hing am Adapter (io_edgeport); mit dem TM-m30II entfällt dessen Absturz bei großen Bildern (Raster), der Uber-Bon könnte dann als Bild gedruckt werden.
+
 Pakete: xserver-xorg xinit openbox chromium unclutter-xfixes x11-xserver-utils (optional onboard als Bildschirmtastatur; python3-usb braucht der Druckdienst seit 2026-10-05 nicht mehr).
 Zugriff auf /dev/ttyUSB0: der Benutzer hamun ist in der Gruppe dialout. (Die frühere udev-Regel für den direkten USB-Zugriff, /etc/udev/rules.d/99-ncr7197.rules, wird nicht mehr gebraucht:)
   SUBSYSTEM=="usb", ATTR{idVendor}=="0404", ATTR{idProduct}=="0312", GROUP="plugdev", MODE="0664"

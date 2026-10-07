@@ -30,7 +30,7 @@
 	var page = 0, lastAct = Date.now(), unseen = {}, IDLE_BACK_MS = 45000;
 	function visible() { return orders.slice(page * cols, page * cols + cols); }
 	// only the orders of the page on screen keep the sound going; an order on another page rings once and flashes in the bar
-	var sound = MonitorSound.create({ key: 'kitchen_screen', mount: $('#k-tools'), pending: function () { return visible().filter(function (o) { return !acked[o.id]; }).length; } });
+	var sound = MonitorSound.create({ key: 'kitchen_screen', icons: true, mount: $('#k-tools'), pending: function () { return visible().filter(function (o) { return !acked[o.id]; }).length; } });
 
 	// ---- toolbar
 	function tick() { var d = new Date(); $('#k-clock').textContent = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
@@ -45,6 +45,8 @@
 	$('#k-cols').addEventListener('click', function () { cols = cols === 5 ? 4 : 5; try { localStorage.setItem('ksCols', cols); } catch (e) {} syncBar(); render(); });
 	$('#k-auto').addEventListener('click', function () { autoPrint = !autoPrint; try { localStorage.setItem('ksAutoPrint', autoPrint ? '1' : '0'); } catch (e) {} syncBar(); });
 	$('#k-done').addEventListener('click', function () { showDone = !showDone; try { localStorage.setItem('ksDone', showDone ? '1' : '0'); } catch (e) {} doneSig = ''; syncBar(); renderDone(); });
+	// the kitchen monitor has no keyboard (no F5): a reload from the screen, e.g. after an update
+	$('#k-reload').addEventListener('click', function () { location.reload(); });
 	$('#k-full').addEventListener('click', function () { var d = document.documentElement; if (document.fullscreenElement) { document.exitFullscreen(); } else if (d.requestFullscreen) { d.requestFullscreen(); } });
 	syncBar();
 
@@ -66,6 +68,13 @@
 		var s = outState(o), pickup = o.type !== 'delivery', platform = o.source === 'lieferando' || o.source === 'uber_eats', late = isLate(o);
 		var tag = late ? '<span class="ks-tag is-late">Verspätet</span>' : ((o.asap && o.source !== 'lieferando') ? '<span class="ks-tag">Sofort</span>' : '');
 		var guest = pickup ? '' : '<span class="ks-tg">' + (o.scheduled && !platform ? 'Wunschzeit' : 'Lieferung') + ' ' + esc(o.scheduled ? o.scheduled : o.due) + '</span>';
+		// "Sofort" (no time wanted): nothing to wait for, so the times shrink to small lines and the word itself is the big thing
+		var asap = !!(o.asap && o.source !== 'lieferando');
+		if (asap) {
+			var small = (pickup ? 'Abholung' : 'Raus') + ' ' + (pickup ? 'um' : 'bis') + ' ' + esc(o.out);
+			return '<div class="ks-out is-asap" data-out="' + o.out_ts + '"><div class="ks-t0">' + (late ? '<span class="ks-tag is-late">Verspätet</span>' : '') + guest + '</div>' +
+				'<div class="ks-t1"><span class="ks-tl">' + small + '</span><small>' + s.text + '</small></div><b>Sofort</b></div>';
+		}
 		return '<div class="ks-out' + s.cls + '" data-out="' + o.out_ts + '"' + (!pickup && o.drive_min ? ' title="Lieferzeit minus ' + o.drive_min + ' Min Fahrt"' : '') + '><div class="ks-t0">' + tag + guest + '</div>' +
 			'<div class="ks-t1"><span class="ks-tl">' + (pickup ? 'Abholung um' : 'Raus bis') + '</span><small>' + s.text + '</small></div><b>' + esc(o.out) + '</b></div>';
 	}

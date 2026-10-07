@@ -52,6 +52,13 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-08 == mySeat v6.29.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Küchenmonitor und Küchenbon: Bei "Sofort"-Bestellungen (keine Wunschzeit) steht "SOFORT" groß, die Uhrzeiten sind kleine Nebenzeilen ("Raus bis", Lieferzeit); die Küche sieht, dass nicht auf eine
+   Uhrzeit gewartet wird. Bestellungen mit Wunschzeit, Lieferando und Uber Eats unverändert.
+ * New: Küchenmonitor: Knopf "Neu laden" (der Monitor hat keine Tastatur für F5). Ton, Vollbild und Neu laden sind Symbole mit Hinweistext beim Darüberfahren (Ton nur im Küchenmonitor, nicht in der Disposition).
+ * New: Druckdienst (Pi): kann auch einen USB-Drucker (Epson TM-m30II, /dev/usb/lp0, PRINT_TTY) statt des NCR am seriellen Adapter ansprechen; Anleitung in tools/kitchen-pi/README.txt (noch nicht am Gerät getestet).
+
 2026-10-07 == mySeat v6.29.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix: Gästeshop (Handy/Tablet): Der Dialog "Liefert ihr zu mir?" verschwand hinter Suchfeld und Kategorieleiste, weil die Kopfleiste seit v6.29.0 nicht mehr sticky ist und ihre Ebene (z-index) verlor.
