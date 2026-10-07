@@ -64,7 +64,7 @@ $(document).ready(function(){
 	        	setFieldMsg(this, true);
 	        	return 1;
 	        } else {
-	            this.removeClass('error');
+	            this.removeClass('error notRight');
 	            setFieldMsg(this, false);
 	            return 0;
 	        }
@@ -74,7 +74,7 @@ $(document).ready(function(){
 		$.fn.validateEmail = function(){
 			var filter = /^[a-zA-Z0-9]+[a-zA-Z0-9_.-]+[a-zA-Z0-9_-]+@[a-zA-Z0-9]+[a-zA-Z0-9.-]+[a-zA-Z0-9]+.[a-z]{2,4}$/;
 			if(filter.test(this.val())){
-				this.removeClass("error");
+				this.removeClass('error notRight');
 				setFieldMsg(this, false);
 				return 0;
 			}else{
@@ -85,18 +85,29 @@ $(document).ready(function(){
 		}
 		//checkbox validation
 		$.fn.validateCheckbox = function(){
+			var $msg = $('#terms-error');
 			if(this.is(':checked')){
-				$('.checktext').removeClass("error");
+				$('.checktext').removeClass("error notRight");
+				$msg.text("");
 				return 0;
 			}else{
-				$('.checktext').addClass("notRight");
+				$('.checktext').addClass("notRight error");
+				$msg.text(this.attr("data-msg") || "");
 				return 1;
 			}
 		}
+		// picking a time clears the error marking of the whole time grid
+		$(document).on("change", "input[name='reservation_time']", function(){
+			$(".radiotext").removeClass("error notRight");
+		});
+		// ticking the box clears the hint
+		$(document).on("change", "#terms", function(){
+			if (this.checked) { $(".checktext").removeClass("error notRight"); $("#terms-error").text(""); }
+		});
 		//radio button validation
 		$.fn.validateRadio = function(){
 			if( $("#timefield input").is(':checked') ){
-				$('.radiotext').removeClass("error");
+				$('.radiotext').removeClass('error notRight');
 				return 0;
 			}else{
 				$('.radiotext').addClass("notRight");
@@ -107,7 +118,7 @@ $(document).ready(function(){
 		$.fn.validateDigits = function(){
 			var filter = /^[0-9]+$/;
 			if(filter.test(this.val())){
-				this.removeClass("error");
+				this.removeClass('error notRight');
 				return 0;
 			}else{
 				this.addClass("notRight");
@@ -125,7 +136,7 @@ $(document).ready(function(){
 	        	this.addClass("notRight");
 	        	return 1;
 	        } else {
-	            this.removeClass('error');
+	            this.removeClass('error notRight');
 	            return 0;
 	        }
 	    };

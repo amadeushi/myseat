@@ -121,6 +121,8 @@ function shop_ensure_schema() {
 	if (!$scol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `surcharge_cents` INT NOT NULL DEFAULT 0, ADD `adjust_note` VARCHAR(160) NOT NULL DEFAULT ''"); }
 	$mcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'pay_detail'"); // how the guest paid online at Mollie (creditcard, paypal ...), for the daily report
 	if (!$mcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `pay_detail` VARCHAR(30) NOT NULL DEFAULT ''"); }
+	$rcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_uber_slips')." LIKE 'ref'"); // reference receipts ('delivery', 'pickup'): the model examples that are never deleted
+	if (!$rcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_uber_slips')." ADD `ref` VARCHAR(12) NOT NULL DEFAULT ''"); }
 	$kcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_print_jobs')." LIKE 'kind'"); // print jobs that are no order slip: the daily reports
 	if (!$kcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_print_jobs')." ADD `kind` VARCHAR(16) NOT NULL DEFAULT 'order', ADD `report_date` DATE NULL"); }
 	// customer backend (web/content/customers.page.php): notes and marks per customer, links of two customers that are one person, the log of manual actions, a blocked account,
@@ -360,7 +362,7 @@ function shop_uber_store($png) {
 	$st = fb_exec("INSERT INTO ".fb_t('tp_shop_uber_slips')." (received, sha1, w, h, png) VALUES (?, ?, ?, ?, ?)", 'ssiis', array(date('Y-m-d H:i:s'), $sha, (int)$info[0], (int)$info[1], $png));
 	if (!$st) { return array('ok' => false, 'error' => 'Speichern fehlgeschlagen.'); }
 	$id = (int)mysqli_insert_id(fb_db());
-	fb_exec("DELETE FROM ".fb_t('tp_shop_uber_slips')." WHERE received < ?", 's', array(date('Y-m-d H:i:s', time() - SHOP_UBER_KEEP_DAYS * 86400)));
+	fb_exec("DELETE FROM ".fb_t('tp_shop_uber_slips')." WHERE received < ? AND ref = ''", 's', array(date('Y-m-d H:i:s', time() - SHOP_UBER_KEEP_DAYS * 86400)));
 	return array('ok' => true, 'id' => $id, 'duplicate' => false);
 }
 // count and time of the last received receipt and how many are in which state (new, reading, read, check, error), for the backend page
@@ -2725,7 +2727,7 @@ function shop_sms_status($id, $status) {
 	try {
 		$o = shop_order($id);
 		if (!$o || (int)$o['is_test'] || !shop_flag('sms_orders')) { return; }
-		if (in_array($o['source'], array('lieferando', 'uber_eats'), true)) { return; }   // the platform tells the guest itself
+		if ($o['source'] === 'lieferando') { return; }   // Lieferando tells the guest itself; the guests of Uber Eats get our SMS (and the status page) like the others
 		$event = ($status === 'delivering' && $o['type'] === 'delivery') ? 'order_delivering' : (($status === 'ready' && $o['type'] === 'pickup') ? 'order_ready' : '');
 		if ($event === '' || !sms_enabled()) { return; }
 		$mobile = sms_normalize_phone((string)$o['phone']);

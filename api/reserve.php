@@ -494,13 +494,14 @@ if($check_web_outlet==1){
 						<span><?php echo _reservation_advertise; ?></span>
 					</label>
 					<label class="checkbox-row">
-						<input type="checkbox" name="terms" class="required checkbox" id="terms" value="YES" checked="checked"/>
+						<input type="checkbox" name="terms" class="required checkbox" id="terms" value="YES" data-msg="<?php echo htmlspecialchars(bt('terms_invalid')); ?>"/>
 						<span class="checktext">
 							<?php if ($terms_link !== ''): ?>
 							<a href="<?php echo htmlspecialchars($terms_link); ?>" target="_blank" rel="noopener noreferrer"><?php echo _reservation_terms; ?></a>
 							<?php else: echo _reservation_terms; endif; ?>
 						</span>
 					</label>
+					<span class="field-error" id="terms-error" role="alert"></span>
 				</div>
 
 				<div class="wizard-nav">

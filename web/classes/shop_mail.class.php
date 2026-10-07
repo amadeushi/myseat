@@ -58,8 +58,10 @@ function shop_notify_order($o) {
 		$legal = bm_legal_lines(array());
 		$imprint_url = !empty($settings['imprintUrl']) ? $settings['imprintUrl'] : '';
 		$privacy_url = !empty($settings['privacyUrl']) ? $settings['privacyUrl'] : '';
+		$terms_url = (!empty($settings['termsLink']) && preg_match('#^https?://#i', $settings['termsLink'])) ? $settings['termsLink'] : '';
 		$legal_html = implode('<br>', array_map($h, $legal));
 		$links = array();
+		if ($terms_url !== '') { $links[] = '<a href="'.$h($terms_url).'" style="color:#8a6d3b;">AGB</a>'; }
 		if ($imprint_url !== '') { $links[] = '<a href="'.$h($imprint_url).'" style="color:#8a6d3b;">Impressum</a>'; }
 		if ($privacy_url !== '') { $links[] = '<a href="'.$h($privacy_url).'" style="color:#8a6d3b;">Datenschutz</a>'; }
 		$footer_html = $legal

@@ -754,6 +754,19 @@
 	setMode(state.mode);
 	watchCategories();
 	initSearch();
+	// the offsets of the sticky search bar and category bar: the height of the top bar (only while it is sticky, from 1024px up) and of the search bar. They change when the top bar wraps
+	// differently (width, the "closed" note that is loaded afterwards, fonts), so they are measured again whenever one of the two changes size
+	(function () {
+		var top = $('.shop-top--menu'), search = $('.shop-search-bar'), root = document.documentElement;
+		if (!top || !search) { return; }
+		function measure() {
+			var sticky = getComputedStyle(top).position === 'sticky';
+			root.style.setProperty('--shop-sticky-top', (sticky ? Math.round(top.getBoundingClientRect().height) : 0) + 'px');
+			root.style.setProperty('--shop-search-h', Math.round(search.getBoundingClientRect().height) + 'px');
+		}
+		measure(); window.addEventListener('resize', measure); window.addEventListener('load', measure);
+		if ('ResizeObserver' in window) { var ro = new ResizeObserver(measure); ro.observe(top); ro.observe(search); }
+	})();
 	initShopZone();
 	loadState();
 	setInterval(loadState, 60000);

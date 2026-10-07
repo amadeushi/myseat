@@ -358,6 +358,8 @@ function bm_build($d) {
 	$legal = bm_legal_lines($d['property']);
 	$imprint_url = !empty($settings['imprintUrl']) ? $settings['imprintUrl'] : '';
 	$privacy_url = !empty($settings['privacyUrl']) ? $settings['privacyUrl'] : '';
+	$terms_url = (!empty($settings['termsLink']) && preg_match('#^https?://#i', $settings['termsLink'])) ? $settings['termsLink'] : '';
+	$terms_l = ($imprint_l === 'Impressum') ? 'AGB' : 'Terms';
 
 	// ---- plain text
 	$p  = $greeting."\r\n\r\n".$intro."\r\n\r\n".$head."\r\n";
@@ -377,6 +379,7 @@ function bm_build($d) {
 	}
 	$p .= $contact."\r\n\r\n".$closing."\r\n".$sign."\r\n";
 	$p .= "\r\n--\r\n".$legal_h."\r\n".implode("\r\n", $legal)."\r\n";
+	if ($terms_url !== '') { $p .= $terms_l.': '.$terms_url."\r\n"; }
 	if ($imprint_url !== '') { $p .= $imprint_l.': '.$imprint_url."\r\n"; }
 	if ($privacy_url !== '') { $p .= $privacy_l.': '.$privacy_url."\r\n"; }
 	$p .= "\r\n".$auto."\r\n";
@@ -405,6 +408,7 @@ function bm_build($d) {
 	}
 	$legal_html = $tel(implode('<br>', array_map($h, $legal)));
 	$links = array();
+	if ($terms_url !== '') { $links[] = '<a href="'.$h($terms_url).'" style="color:#8a6d3b;">'.$h($terms_l).'</a>'; }
 	if ($imprint_url !== '') { $links[] = '<a href="'.$h($imprint_url).'" style="color:#8a6d3b;">'.$h($imprint_l).'</a>'; }
 	if ($privacy_url !== '') { $links[] = '<a href="'.$h($privacy_url).'" style="color:#8a6d3b;">'.$h($privacy_l).'</a>'; }
 

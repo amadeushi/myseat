@@ -1179,6 +1179,7 @@ a.contact-item:hover svg {
 .radiotext.error {
 	border-color: var(--danger);
 	color: var(--danger);
+	background: rgba(226, 134, 124, 0.1) !important;
 }
 
 /* daypart sub-headers inside the time grid (#timefield is display:grid, 3 columns; .elem1/.elem2
@@ -1423,6 +1424,7 @@ a.contact-item:hover svg {
 }
 .checkbox-row .checktext.error {
 	color: var(--danger);
+	background: transparent !important;
 }
 .checkbox-row a {
 	white-space: nowrap;

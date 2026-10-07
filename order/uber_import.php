@@ -4,7 +4,8 @@
  * receipt image out of each print job and POSTs it here as the raw PNG (Content-Type image/png) or as multipart field "png". Checked by header X-Api-Key
  * (shop_uber_key(), shown in the backend under Einstellungen > Lieferservice) — no session, this is not a browser page. Answers JSON with 'ok'. The image is stored
  * (tp_shop_uber_slips, kept SHOP_UBER_KEEP_DAYS days; the same image twice is stored once, 'duplicate' => true). If the address of the n8n webhook is set, the answer goes out first and then the
- * receipt is read (shop_uber_process, see shop_uber.class.php); it is only read and checked so far, no order is created from it.
+ * receipt is read (shop_uber_process, see shop_uber.class.php); with the setting "automatic" (uber_auto_import) a receipt that was read and adds up also becomes an order and the kitchen slip is printed
+ * (shop_uber_auto), otherwise it is only read and checked and a person takes it over in the backend.
  */
 require_once __DIR__.'/../web/classes/mysql_compat.php';
 include(__DIR__.'/../config/config.general.php');
@@ -44,4 +45,7 @@ while (ob_get_level()) { ob_end_flush(); }
 flush();
 if (function_exists('fastcgi_finish_request')) { fastcgi_finish_request(); }
 ignore_user_abort(true); set_time_limit(300);
-foreach (shop_uber_pending(3) as $slipId) { shop_uber_process($slipId); }
+foreach (shop_uber_pending(3) as $slipId) {
+	$r = shop_uber_process($slipId);
+	if (!empty($r['status']) && $r['status'] === 'read') { try { shop_uber_auto($slipId); } catch (Throwable $e) { error_log('uber auto import: '.$e->getMessage()); } }
+}

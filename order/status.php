@@ -51,7 +51,7 @@ $delivery = $order && $order['type'] === 'delivery';
 		<?php if ($telHref !== ''): ?><p class="st-again"><a class="cart-go" href="<?php echo $telHref; ?>">Anrufen: <?php echo shop_h($phone); ?></a></p><?php endif; ?>
 	<?php else:
 		$st = $order['status'];
-		$paidOnline = ($order['payment_method'] === 'mollie');
+		$paidOnline = ($order['payment_method'] === 'mollie' || $order['payment_method'] === 'uber_eats');   // (Uber Eats: paid on Uber's side, the order is marked paid)
 		$titles = array(
 			'pending' => 'Fast geschafft: bitte bezahlen', 'new' => 'Danke, deine Bestellung ist eingegangen', 'accepted' => 'Wir kümmern uns um deine Bestellung',
 			'preparing' => 'Deine Bestellung wird zubereitet', 'ready' => $delivery ? 'Deine Bestellung ist fertig und wird gleich abgeholt' : 'Deine Bestellung ist abholbereit',

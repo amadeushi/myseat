@@ -49,34 +49,37 @@
 	syncBar();
 
 	// ---- columns
-	function since(ts) { var m = Math.max(0, Math.round((Date.now() / 1000 - ts) / 60)); return m < 1 ? 'gerade' : 'seit ' + m + ' Min'; }
 	var LATE_AFTER_MIN = 20, SOON_MIN = 5;
 	// when the food has to leave the kitchen (delivery: due time minus the drive), and how long that is from now
 	function outState(o) {
 		var m = Math.floor((o.out_ts - Date.now() / 1000) / 60);
-		return { cls: m < 0 ? ' is-over' : (m <= SOON_MIN ? ' is-soon' : ''), text: m < 0 ? 'seit ' + (-m) + ' Min überfällig' : (m === 0 ? 'jetzt' : 'in ' + m + ' Min') };
-	}
-	function outLine(o) {
-		if (o.type !== 'delivery' || !o.drive_min) { return ''; }
-		var s = outState(o);
-		return '<div class="ks-out' + s.cls + '" data-out="' + o.out_ts + '" title="Lieferzeit minus ' + o.drive_min + ' Min Fahrt"><span>Raus bis</span><b>' + esc(o.out) + '</b><small>' + s.text + '</small></div>';
+		return { cls: m < 0 ? ' is-over' : (m <= SOON_MIN ? ' is-soon' : ''), text: m < 0 ? '\u2212' + (-m) + ' Min' : (m === 0 ? 'jetzt' : 'in ' + m + ' Min') };
 	}
 	// an order with a promised time (wish time of the guest, or the time Lieferando confirmed) is late only when the food has to leave the kitchen and does not;
 	// for the others (as soon as possible) it is late when it has been waiting in the kitchen for 20 minutes
 	function promised(o) { return o.scheduled !== '' || o.source === 'lieferando'; }
 	function isLate(o) { return promised(o) ? (Date.now() / 1000 > o.out_ts) : (Date.now() / 1000 - o.accepted_ts) / 60 >= LATE_AFTER_MIN; }
+	// the same time block on every card, deliveries and pickups, in the same place and the same height, so the eye finds the one time that counts at once: "Raus bis" (delivery: when the food has
+	// to leave the kitchen) or "Abholung um" (pickup: when the guest comes), big, with the minutes left. Above it the tag "Sofort" (no time given) or "Verspätet", and for a delivery the time at
+	// the guest as a small line; the minutes show a minus sign when the time has passed (the text is short on purpose, it must never wrap)
+	function timeBlock(o) {
+		var s = outState(o), pickup = o.type !== 'delivery', platform = o.source === 'lieferando' || o.source === 'uber_eats', late = isLate(o);
+		var tag = late ? '<span class="ks-tag is-late">Verspätet</span>' : ((o.asap && o.source !== 'lieferando') ? '<span class="ks-tag">Sofort</span>' : '');
+		var guest = pickup ? '' : '<span class="ks-tg">' + (o.scheduled && !platform ? 'Wunschzeit' : 'Lieferung') + ' ' + esc(o.scheduled ? o.scheduled : o.due) + '</span>';
+		return '<div class="ks-out' + s.cls + '" data-out="' + o.out_ts + '"' + (!pickup && o.drive_min ? ' title="Lieferzeit minus ' + o.drive_min + ' Min Fahrt"' : '') + '><div class="ks-t0">' + tag + guest + '</div>' +
+			'<div class="ks-t1"><span class="ks-tl">' + (pickup ? 'Abholung um' : 'Raus bis') + '</span><small>' + s.text + '</small></div><b>' + esc(o.out) + '</b></div>';
+	}
 	function card(o) {
-		var due = o.scheduled ? o.scheduled : o.due, dueLabel = (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + (o.scheduled ? ' · Wunschzeit' : (o.source === 'lieferando' ? ' · Lieferando-Zeit' : ''));
-		var ageMin = Math.max(0, Math.round((Date.now() / 1000 - o.accepted_ts) / 60)), late = isLate(o);
+		var late = isLate(o);
 		// "angenommen" vs. "wird gekocht" used to be invisible here - a cook couldn't tell whether dispatch had
 		// already started an order without opening disposition.php; lateness escalates through amber + text,
 		// never through the failure color alone, matching the fix already made on the dispatch board
 		// the buttons sit at the top of the column, directly under its head: the lower edge of a kitchen monitor is often hidden or hard to read
 		var actions = '<div class="ks-actions"><button type="button" class="k-go ks-done" data-done="' + o.id + '">Fertig</button><button type="button" class="k-icon ks-bon" data-bon="' + o.id + '" aria-label="Bon drucken" title="Bon drucken">' + ICON_PRINT + '</button><button type="button" class="k-icon ks-zoom" data-zoom="' + o.id + '" aria-pressed="' + (fit[o.id] ? 'true' : 'false') + '" aria-label="Ganze Bestellung zeigen" title="Ganze Bestellung zeigen">' + ICON_ZOOM + '</button></div>';
-		return '<article class="ks-card' + (acked[o.id] ? '' : ' is-fresh') + (late ? ' is-late' : '') + (fit[o.id] ? ' is-fit' : '') + '" data-id="' + o.id + '"><header class="ks-head"><span class="ks-no">#' + o.day_no + '</span><span class="k-type ' + esc(o.type) + '">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + '</span>' +
-			'<span class="k-badge">' + (o.status === 'preparing' ? 'Wird gekocht' : 'Angenommen') + '</span>' +
+		return '<article class="ks-card' + (acked[o.id] ? '' : ' is-fresh') + (late ? ' is-late' : '') + (fit[o.id] ? ' is-fit' : '') + '" data-id="' + o.id + '"><header class="ks-head"><span class="ks-no">#' + o.day_no + '</span><div class="ks-chips"><span class="k-type ' + esc(o.type) + '">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + '</span>' +
 			(o.source === 'lieferando' ? '<span class="k-badge lief">Lieferando</span>' : '') + (o.source === 'uber_eats' ? '<span class="k-badge uber">Uber Eats</span>' : '') +
-			(o.test ? '<span class="k-badge">Test</span>' : '') + '</header>' + actions + ((o.name || o.zip) ? '<p class="ks-who" title="' + esc(o.name) + '"><span class="ks-wname">' + esc(o.name) + '</span>' + (o.zip ? '<span class="ks-zip">' + esc(o.zip) + '</span>' : '') + '</p>' : '') + (o.asap && o.source !== 'lieferando' ? '<div class="ks-asap" role="status"><b>Sofort</b><span>so schnell wie möglich</span></div>' : '') + outLine(o) + '<div class="ks-due' + (late ? ' k-late' : '') + '"><span class="ks-dl">' + dueLabel + '</span><b>' + esc(due) + '</b><small>' + since(o.accepted_ts) + (late ? ' · VERSPÄTET' : '') + '</small></div>' +
+			(o.status === 'preparing' ? '<span class="k-badge">Wird gekocht</span>' : '') + (o.test ? '<span class="k-badge">Test</span>' : '') + '</div></header>' + actions +
+			((o.name || o.zip) ? '<p class="ks-who" title="' + esc(o.name) + '"><span class="ks-wname">' + esc(o.name) + '</span>' + (o.zip ? '<span class="ks-zip">' + esc(o.zip) + '</span>' : '') + '</p>' : '') + timeBlock(o) +
 			'<div class="ks-items"><ul class="ks-list">' + o.items.map(function (it, i) {
 				return '<li class="ks-item"><span class="ks-qty">' + it.qty + '×</span><span class="ks-pos">Pos ' + (i + 1) + '</span><span class="ks-title">' + esc(it.title) + '</span>' + (it.variation ? '<span class="ks-var">' + esc(it.variation) + '</span>' : '') +
 					it.options.map(function (op) { return '<span class="ks-opt">+ ' + esc(op) + '</span>'; }).join('') + (it.note ? '<span class="ks-note">' + esc(it.note) + '</span>' : '') + '</li>';
@@ -122,10 +125,8 @@
 					cardNodes[o.id] = fresh; cardSig[o.id] = sig;
 				} else {
 					var ol = cardNodes[o.id].querySelector('.ks-out');
-					if (ol) { var st = outState(o); ol.className = 'ks-out' + st.cls; ol.querySelector('small').textContent = st.text; }
-					var lt = isLate(o), small = cardNodes[o.id].querySelector('.ks-due small');
-					cardNodes[o.id].classList.toggle('is-late', lt); var dd = cardNodes[o.id].querySelector('.ks-due'); if (dd) { dd.classList.toggle('k-late', lt); }
-					if (small) { small.textContent = since(o.accepted_ts) + (lt ? ' · VERSPÄTET' : ''); }
+					if (ol) { ol.outerHTML = timeBlock(o); }
+					cardNodes[o.id].classList.toggle('is-late', isLate(o));
 				}
 				if (cardNodes[o.id].parentNode !== board) { board.appendChild(cardNodes[o.id]); }
 				if (fit[o.id] || cardNodes[o.id].classList.contains('is-fit')) { fitCard(cardNodes[o.id]); }

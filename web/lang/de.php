@@ -650,7 +650,7 @@ define ( '_contact_form_success', 'Vielen Dank für Ihre Reservierung. Eine Emai
 define ( '_form_notes', 'Wichtige Notizen (Allergien, Wünsche)');
 
 // original text: "I accept the terms of use of the restaurant."
-define ( '_reservation_terms', 'Ich akzeptiere die Nutzungsbedingungen des Restaurants.');
+define ( '_reservation_terms', 'Ich akzeptiere die AGB des Restaurants.');
 
 // Default text of the admin notification email	
 define ( 'text_mail_1', '<br/>Vielen Dank für Ihre Reservierung in unserem');

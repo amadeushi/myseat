@@ -39,7 +39,7 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 		<p>Unser Lieferservice startet in Kürze. Bis dahin erreichst du uns telefonisch.</p>
 	</main>
 <?php else: ?>
-	<header class="shop-top">
+	<header class="shop-top shop-top--menu">
 		<div class="shop-top-in">
 			<a class="shop-logo" href="./" aria-label="<?php echo shop_h($brand); ?>"><?php echo brand_logo_html($brand, 'brand-logo'); ?></a>
 			<div class="shop-mode" role="group" aria-label="Lieferart">

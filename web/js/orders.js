@@ -181,4 +181,15 @@
 		}
 	});
 	load(); setInterval(load, 20000);
+	// "Werkzeuge" is a plain <details>: it stays open once opened (also when the page comes back from the cache after one of its links was followed). It closes after an entry was used,
+	// on a click beside it, with Escape and when the page is shown again
+	(function () {
+		var tools = document.querySelector('.orders-tools');
+		if (!tools) { return; }
+		function closeTools() { if (tools.open) { tools.open = false; } }
+		tools.addEventListener('click', function (ev) { if (ev.target.closest('.orders-tools-panel a, .orders-tools-panel button')) { setTimeout(closeTools, 0); } });
+		document.addEventListener('click', function (ev) { if (!tools.contains(ev.target)) { closeTools(); } });
+		document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && tools.open) { closeTools(); var s = tools.querySelector('summary'); if (s) { s.focus(); } } });
+		window.addEventListener('pageshow', closeTools);
+	})();
 })();

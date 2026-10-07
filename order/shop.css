@@ -74,12 +74,15 @@
 
 /* layout */
 .shop-layout { max-width: 1240px; margin: 0 auto; padding: 0 16px 120px; display: grid; grid-template-columns: 1fr; gap: 0 32px; }
-.shop-cats { position: sticky; top: 121px; z-index: 20; display: flex; gap: 8px; overflow-x: auto; padding: 10px 16px; margin: 0 -16px; background: var(--bg); scrollbar-width: none; }
+/* the bars that stay while the menu scrolls sit one below the other; their offsets are the real heights of what is above them (shop.js sets --shop-sticky-top = the top bar when it is sticky, else 0,
+   and --shop-search-h = the search bar). The top bar wraps to up to four rows on a phone, so it scrolls away there and only search and categories stay; from 1024px up it stays too. */
+.shop-top--menu { position: static; }
+.shop-cats { position: sticky; top: calc(var(--shop-sticky-top, 0px) + var(--shop-search-h, 66px)); z-index: 20; display: flex; gap: 8px; overflow-x: auto; padding: 10px 16px; margin: 0 -16px; background: var(--bg); scrollbar-width: none; }
 .shop-cats::-webkit-scrollbar { display: none; }
 .shop-cats a { flex: none; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 16px; border: 1px solid var(--border-soft); border-radius: var(--radius-pill); color: var(--text-muted); font-size: 14px; font-weight: 600; text-decoration: none; white-space: nowrap; }
 .shop-cats a.is-active { color: #1a1408; background: var(--gold); border-color: var(--gold); }
 .shop-menu { min-width: 0; }
-.shop-cat { padding-top: 28px; scroll-margin-top: 180px; }
+.shop-cat { padding-top: 28px; scroll-margin-top: calc(var(--shop-sticky-top, 0px) + var(--shop-search-h, 66px) + 76px); }
 .shop-cat h2 { font-family: var(--font-display); font-weight: 400; font-size: 32px; line-height: 1.15; margin-bottom: 6px; text-wrap: balance; }
 .shop-cat-desc { color: var(--text-muted); font-size: 14px; max-width: 60ch; margin-bottom: 4px; }
 .shop-list { margin-top: 10px; }
@@ -220,10 +223,11 @@
 }
 @media (min-width: 1024px) {
 	.shop-layout { grid-template-columns: 190px minmax(0, 1fr) 340px; padding-bottom: 60px; }
-	.shop-cats { position: sticky; top: 152px; align-self: start; flex-direction: column; overflow: visible; margin: 28px 0 0; padding: 0; background: transparent; gap: 2px; max-height: calc(100vh - 176px); overflow-y: auto; }
+	.shop-top--menu { position: sticky; }
+	.shop-cats { position: sticky; top: calc(var(--shop-sticky-top, 61px) + var(--shop-search-h, 66px) + 25px); align-self: start; flex-direction: column; overflow: visible; margin: 28px 0 0; padding: 0; background: transparent; gap: 2px; max-height: calc(100vh - var(--shop-sticky-top, 61px) - var(--shop-search-h, 66px) - 49px); overflow-y: auto; }
 	.shop-cats a { border: 0; border-radius: var(--radius-md); min-height: 44px; white-space: normal; }
 	.shop-cats a.is-active { background: rgba(201, 162, 89, 0.16); color: var(--gold-strong); }
-	.shop-cat { scroll-margin-top: 156px; }
+	.shop-cat { scroll-margin-top: calc(var(--shop-sticky-top, 61px) + var(--shop-search-h, 66px) + 29px); }
 	.shop-cart { inset: auto; position: sticky; top: 152px; align-self: start; z-index: 1; transform: none; visibility: visible; margin-top: 28px; padding: 0 20px 20px; max-height: calc(100vh - 176px); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); }
 	.cart-head { background: var(--surface); }
 	.cart-close { display: none; }
@@ -551,7 +555,7 @@
 .co-coupon-off { border: 0; background: transparent; padding: 0 0 0 6px; color: var(--text-muted); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
 
 /* search */
-.shop-search-bar { position: sticky; top: 61px; z-index: 21; background: var(--bg); padding: 10px 16px; }
+.shop-search-bar { position: sticky; top: var(--shop-sticky-top, 0px); z-index: 21; background: var(--bg); padding: 10px 16px; }
 .shop-search-in { max-width: 1240px; margin: 0 auto; position: relative; display: flex; align-items: center; }
 .shop-search-icon { position: absolute; left: 14px; width: 18px; height: 18px; color: var(--text-muted); pointer-events: none; }
 .shop-search-bar input { width: 100%; min-height: 46px; border: 1px solid var(--border-soft); border-radius: var(--radius-pill); background: var(--surface-2); color: var(--text); font: inherit; font-size: 16px; padding: 0 44px; }

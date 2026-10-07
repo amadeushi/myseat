@@ -52,6 +52,20 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-07 == mySeat v6.29.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Uber Eats: gelesene Bons werden als Bestellung übernommen (Backend > Einstellungen > Lieferservice > Uber Eats Bons, Haken "Gelesene Bons sofort als Bestellung übernehmen"; aus, bis man ihn setzt).
+   Automatisch nur bei frischen Bons (bis 45 Min alt) mit sauberer Lesung, Lieferungen brauchen Adresse und Telefon; danach kommt der Küchenzettel über die Druckwarteschlange. Bei Barzahlung gilt der
+   "Fälliger Bargeldbetrag" des Bons als Summe (Marketplace-Gebühr wird nie aufgeschlagen, die Differenz steht als Rabatt mit Notiz). Uber-Bestellungen erhalten SMS und Statusseite, aber keinen Stempel;
+   Lieferando erhält weiterhin keine SMS. Datum/Uhrzeit werden in PHP aus dem Bontext gelesen, das Bild wird vor dem Lesen verdoppelt.
+ * New: Uber-Eats-Bridge (Pi): beantwortet das Tablet auch ohne den echten TM-m30II aus einem aufgezeichneten Dialog (PRINTER_MODE auto/offline/relay).
+ * New: AGB: Link zu den AGB im Reservierungsformular (Haken ist nicht mehr vorausgewählt, mit Hinweis bei fehlendem Haken), im Checkout, in der Fußzeile aller Gästeseiten und in den Reservierungs- und
+   Bestellbestätigungen (config: $settings['termsLink']).
+ * New: Küchenmonitor: einheitlicher Zeitblock für Lieferando, Uber Eats, eigene Lieferungen und Abholungen ("Raus bis" groß, andere Zeit klein), ruhigerer Kopf, Plattform-Badges, Gerichtsnamen brechen um.
+ * Fix: Gästeshop (Handy/Tablet): Suche und Kategorieleiste verschwanden beim Scrollen hinter der Kopfleiste; Abstände werden jetzt gemessen, unter 1024 px scrollt die Kopfleiste weg.
+ * Fix: Bestellübersicht: Das Werkzeuge-Menü bleibt nicht mehr offen.
+ * Fix: Reservierungsformular: Fehlermarkierung (rosa/rot) blieb auf den Uhrzeiten stehen und kam bei jedem Fehler zurück.
+
 2026-10-06 == mySeat v6.28.5 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Küchenmonitor: Bei Lieferungen (eigene und Lieferando) ist "Raus bis" jetzt größer (46 px) als die Lieferzeit darunter (24 px); für die Küche zählt, wann das Essen die Küche verlassen muss, nicht die

@@ -30,8 +30,10 @@ uber-eats-bridge/     Der Pi als Netzwerkdrucker für das Uber-Eats-Tablet (Stan
   uber-bridge.service systemd-Dienst dazu (Benutzer hamun; nur dieser Dienst darf Port 80 öffnen, CAP_NET_BIND_SERVICE).
   setup.sh            Einrichtung:  sudo ./setup.sh  (fragt Drucker-IP, Import-Adresse und Schlüssel; der Schlüssel steht in mySeat unter Einstellungen > Lieferservice > "Uber Eats Bons" und wird nur in
                       /etc/uber-bridge.conf gespeichert, Rechte 640 root:hamun). Danach: journalctl -u uber-bridge -f; Bilder in /var/spool/uber-bridge/pending (noch nicht gesendet) und sent.
-  Hinweis: Der echte Drucker (TM-m30II, 192.168.178.108) muss angeschaltet und im Netz sein, sonst kann der Pi weder in der Liste erscheinen noch durchreichen. Ohne ihn zu antworten (alle
-  Antworten des Druckers nachzubilden) ist der nächste Ausbau.
+  Betrieb ohne den echten Drucker (seit 2026-10-06): Antwortet der Drucker (TM-m30II, 192.168.178.108) nicht auf Port 9100 (der Pi prüft das alle 5 Sekunden), beantwortet der Pi das Tablet allein:
+  die Antworten auf die Suche (OFFLINE_UDP) und das Gespräch auf Port 9100 (STEPS, Emulator) sind am echten m30II aufgezeichnet und wurden gegen den Mitschnitt Byte für Byte geprüft; die Bons
+  werden wie sonst aufgenommen und an mySeat geschickt, nur auf Papier kommt nichts. Läuft der Drucker wieder, reicht der Pi automatisch wieder durch. Einstellung PRINTER_MODE in
+  /etc/uber-bridge.conf: auto (Standard), offline (den Drucker nie fragen), relay (immer durchreichen). Ohne PRINTER_IP ist es offline.
 
 uber-eats-lauscher/   Das Prüfwerkzeug, aus dem die Bridge entstand: lauscht an den Ports, protokolliert alles (auch die Inhalte der Bons, deshalb nur zum Testen, danach das Log löschen),
                       mit PROXY_TO=<IP> reicht es durch. Start: PROXY_TO=192.168.178.108 python3 lauscher.py (Port 80 braucht dafür Rechte, siehe Bridge).

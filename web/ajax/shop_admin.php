@@ -63,6 +63,7 @@ if ($op === 'save_uber_read') {
 	if ($url !== '' && !preg_match('#^https://[^\s]+$#i', $url)) { sa_out(array('ok' => false, 'error' => 'Die Adresse muss mit https:// beginnen.')); }
 	shop_setting_set('uber_read_url', $url);
 	shop_setting_set('uber_read_large', !empty($_POST['uber_read_large']) ? '1' : '0');
+	shop_setting_set('uber_auto_import', !empty($_POST['uber_auto_import']) ? '1' : '0');
 	sa_out(array('ok' => true, 'message' => 'Gespeichert.'));
 }
 // reads receipts once more: one by id, or (id 0) the ones that are "check", "error" or still new (at most 4 at a time, every reading takes 5 to 20 seconds, up to twice that when the stronger model is needed)

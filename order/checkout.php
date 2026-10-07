@@ -8,6 +8,7 @@ $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 $lang = 'de';
 if (!$shop_public || !$shop_accepting) { header('Location: ./'); exit; }
 $privacy = (!empty($settings['privacyUrl']) && preg_match('#^https?://#i', $settings['privacyUrl'])) ? $settings['privacyUrl'] : '';
+$terms = (!empty($settings['termsLink']) && preg_match('#^https?://#i', $settings['termsLink'])) ? $settings['termsLink'] : '';
 $imprint = (!empty($settings['imprintUrl']) && preg_match('#^https?://#i', $settings['imprintUrl'])) ? $settings['imprintUrl'] : '';
 ?>
 <!DOCTYPE html>
@@ -118,7 +119,7 @@ $imprint = (!empty($settings['imprintUrl']) && preg_match('#^https?://#i', $sett
 				<div class="co-progress-track"><div class="co-progress-fill" id="co-progress-fill"></div></div>
 				<p class="co-progress-text" id="co-progress-text"></p>
 			</div>
-			<p class="co-legal">Mit dem Klick auf den Knopf gibst du eine verbindliche Bestellung ab und bist zur Zahlung verpflichtet. Speisen werden für dich frisch zubereitet, ein Widerrufsrecht besteht dafür nicht. <?php if ($privacy): ?>Hinweise zum Datenschutz findest du <a href="<?php echo shop_h($privacy); ?>" target="_blank" rel="noopener noreferrer">hier</a>.<?php endif; ?> <?php if ($imprint): ?><a href="<?php echo shop_h($imprint); ?>" target="_blank" rel="noopener noreferrer">Impressum</a><?php endif; ?></p>
+			<p class="co-legal">Mit dem Klick auf den Knopf gibst du eine verbindliche Bestellung ab und bist zur Zahlung verpflichtet. Speisen werden für dich frisch zubereitet, ein Widerrufsrecht besteht dafür nicht. <?php if ($terms): ?>Es gelten unsere <a href="<?php echo shop_h($terms); ?>" target="_blank" rel="noopener noreferrer">AGB</a>.<?php endif; ?> <?php if ($privacy): ?>Hinweise zum Datenschutz findest du <a href="<?php echo shop_h($privacy); ?>" target="_blank" rel="noopener noreferrer">hier</a>.<?php endif; ?> <?php if ($imprint): ?><a href="<?php echo shop_h($imprint); ?>" target="_blank" rel="noopener noreferrer">Impressum</a><?php endif; ?></p>
 			<button type="submit" form="co-form" class="cart-go" id="co-submit" disabled>Zahlungspflichtig bestellen</button>
 			<p class="co-why" id="co-why" role="status" aria-live="polite"></p>
 		</aside>

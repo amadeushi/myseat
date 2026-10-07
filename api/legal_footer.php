@@ -2,6 +2,7 @@
 // Imprint and privacy links under every guest page, from $settings['imprintUrl'] / ['privacyUrl'].
 $lf_lang = isset($lang) ? substr($lang, 0, 2) : (isset($_SESSION['lang']) ? substr($_SESSION['lang'], 0, 2) : 'de');
 $lf_links = array();
+if (!empty($settings['termsLink']) && preg_match('#^https?://#i', $settings['termsLink'])) { $lf_links[] = array($lf_lang === 'en' ? 'Terms' : 'AGB', $settings['termsLink']); }
 if (!empty($settings['imprintUrl']) && preg_match('#^https?://#i', $settings['imprintUrl'])) { $lf_links[] = array($lf_lang === 'en' ? 'Legal notice' : 'Impressum', $settings['imprintUrl']); }
 if (!empty($settings['privacyUrl']) && preg_match('#^https?://#i', $settings['privacyUrl'])) { $lf_links[] = array($lf_lang === 'en' ? 'Privacy policy' : 'Datenschutz', $settings['privacyUrl']); }
 if ($lf_links): ?>

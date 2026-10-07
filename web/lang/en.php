@@ -650,7 +650,7 @@ define ( '_contact_form_success', 'Thank you for your reservation. An email conf
 // original text: "Important details (allergies, wishes)"
 define ( '_form_notes', 'Important details (allergies, wishes)');
 
-// original text: "I accept the terms of use of the restaurant."
+// original text: "I accept the terms and conditions of the restaurant."
 define ( '_reservation_terms', 'I accept the terms of use of the restaurant.');
 
 // Default text of the admin notification email	

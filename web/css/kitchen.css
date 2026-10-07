@@ -63,8 +63,8 @@
 .k-badge { padding: 3px 10px; border-radius: 8px; font-weight: 800; font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase; background: var(--surface); color: var(--muted); border: 1px solid var(--border); }
 .k-badge.paid { color: var(--success); border-color: rgba(151, 201, 130, 0.5); }
 .k-badge.cash { color: var(--amber); border-color: rgba(232, 176, 74, 0.5); }
-.k-badge.lief { color: #ff7a1a; border-color: rgba(255, 122, 26, 0.5); }
-.k-badge.uber { color: #06c167; border-color: rgba(6, 193, 103, 0.5); }
+.k-badge.lief { background: #ff8000; color: #231000; border-color: #ff8000; }
+.k-badge.uber { background: #06c167; color: #03210f; border-color: #06c167; }
 .k-addr { margin-top: 6px; font-size: 16px; color: var(--muted); }
 .k-actions { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .k-go { min-height: 56px; padding: 0 22px; border: 0; border-radius: 12px; background: var(--gold); color: #1a1408; font: inherit; font-size: 20px; font-weight: 800; cursor: pointer; flex: 1; min-width: 120px; }
@@ -102,43 +102,37 @@
 /* an order sitting in the kitchen too long used to look identical to one accepted seconds ago - escalates
    through amber plus the "VERSPÄTET" text in kitchen_screen.js, same non-color-only pattern as disposition.php */
 .ks-card.is-late { border-color: var(--amber); box-shadow: 0 0 0 2px rgba(232, 176, 74, 0.3); }
-.ks-due.k-late b, .ks-due.k-late small { color: var(--amber); }
 @keyframes ks-pulse { 50% { box-shadow: 0 0 0 6px rgba(232, 176, 74, 0.28); } }
 @media (prefers-reduced-motion: reduce) { .ks-card.is-fresh { animation: none; box-shadow: 0 0 0 4px rgba(232, 176, 74, 0.28); } }
-.ks-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ks-head { display: flex; align-items: flex-start; gap: 10px; }
+.ks-chips { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 4px 6px; min-height: 58px; padding-top: 1px; }
+.ks-chips .k-type, .ks-chips .k-badge { line-height: 1.25; }
 .ks-no { font-size: 44px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
-.ks-due { display: flex; align-items: baseline; justify-content: space-between; gap: 4px 10px; margin: 6px 0 8px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
-.ks-dl { flex: 0 1 auto; font-size: 15px; font-weight: 700; color: var(--muted); }
-.ks-due { flex-wrap: wrap; }
-.ks-due b { font-size: 34px; font-weight: 800; font-variant-numeric: tabular-nums; }
-.ks-due small { font-size: 18px; color: var(--muted); font-weight: 600; }
-/* "so schnell wie moeglich": a solid amber bar, readable from across the kitchen; the word carries it, not only the color */
-.ks-asap { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 6px 0 0; padding: 4px 12px; border-radius: 10px; background: var(--amber); color: #1c1305; }
-.ks-asap b { font-size: 24px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.1; }
-.ks-asap span { display: none; font-size: 16px; font-weight: 700; }
-/* the word "Sofort" says it; the explanation only where the card is wide enough for it to stay on one line */
+/* the card is a container: the dish names shrink with its width (see .ks-title) */
 .ks-card { container-type: inline-size; }
-@container (min-width: 290px) { .ks-asap span { display: inline; } }
-/* when a delivery has to leave the kitchen = due time minus the drive; amber when it is close, red with text once it is over */
-.ks-out { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 10px; flex-wrap: wrap; margin: 6px 0 0; padding: 2px 12px; border-radius: 10px; border: 2px solid var(--border); background: rgba(255, 255, 255, 0.03); }
-.ks-out span { font-size: 15px; font-weight: 700; color: var(--muted); flex: 0 0 auto; }
-.ks-out b { font-size: 46px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
-.ks-out small { font-size: 17px; font-weight: 700; color: var(--muted); }
-/* a delivery has two times: when the food has to leave (the one that matters in the kitchen, big) and the due time at the guest (smaller, below) */
-.ks-out + .ks-due b { font-size: 24px; }
-.ks-out + .ks-due small { font-size: 15px; }
+/* the time block, the same on every card (deliveries and pickups): "Raus bis" / "Abholung um" big, the minutes left beside its label, above it the tag "Sofort" or "Verspätet" and, for a delivery,
+   the time at the guest as a small line. Amber when the time is close, red with a minus sign once it has passed. Everything stays on one line each, so the block has the same height on every card. */
+.ks-out { margin: 8px 0 6px; padding: 4px 12px 2px; border-radius: 10px; border: 2px solid var(--border); background: rgba(255, 255, 255, 0.03); }
+.ks-t0 { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 26px; }
+.ks-tag { padding: 1px 10px; border-radius: 6px; background: var(--amber); color: #1c1305; font-size: 15px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.4; }
+.ks-tag.is-late { background: var(--danger); color: #1c0c09; }
+.ks-tg { margin-left: auto; font-size: 14px; font-weight: 700; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ks-t1 { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-top: 2px; }
+.ks-tl { font-size: 17px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+.ks-out small { font-size: 19px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+.ks-out b { display: block; font-size: 60px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; padding-bottom: 4px; }
 .ks-out.is-soon { border-color: var(--amber); }
-.ks-out.is-soon b, .ks-out.is-soon small { color: var(--amber); }
+.ks-out.is-soon b, .ks-out.is-soon small, .ks-out.is-soon .ks-tl { color: var(--amber); }
 .ks-out.is-over { border-color: var(--danger); background: rgba(226, 134, 124, 0.12); }
-.ks-out.is-over b, .ks-out.is-over small { color: var(--danger); }
+.ks-out.is-over b, .ks-out.is-over small, .ks-out.is-over .ks-tl { color: var(--danger); }
 .ks-items { flex: 1; min-height: 70px; overflow-y: auto; }
 .ks-item { padding: 10px 0; border-bottom: 1px solid var(--border); display: grid; grid-template-columns: auto 1fr; column-gap: 12px; }
 .ks-item:last-child { border-bottom: 0; }
 .ks-qty { grid-row: 1; font-size: 34px; font-weight: 800; color: var(--gold-strong); line-height: 1.1; }
-.ks-title { font-size: 30px; font-weight: 800; line-height: 1.15; }
+.ks-title { font-size: clamp(21px, 7.5cqi, 30px); font-weight: 800; line-height: 1.15; min-width: 0; overflow-wrap: anywhere; }
 .ks-var, .ks-opt, .ks-note { grid-column: 2; }
 .ks-var { font-size: 22px; font-weight: 600; color: var(--muted); }
-.ks-opt { font-size: 25px; font-weight: 600; line-height: 1.25; margin-top: 2px; }
+.ks-opt { font-size: clamp(19px, 6.4cqi, 25px); font-weight: 600; line-height: 1.25; margin-top: 2px; min-width: 0; overflow-wrap: anywhere; }
 .ks-note, .ks-onote { margin-top: 6px; padding: 6px 12px; border-radius: 10px; background: rgba(232, 176, 74, 0.18); color: var(--amber); font-size: 25px; font-weight: 800; line-height: 1.25; }
 .ks-onote { margin-top: 10px; }
 .ks-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; margin: 10px 0 4px; }
@@ -149,7 +143,7 @@ body.ks { box-sizing: border-box; padding-bottom: var(--bottom-safe, 57px); }
 .ks-zoom[aria-pressed="true"] { background: var(--gold); border-color: var(--gold); color: #1a1408; }
 .ks-list { margin: 0; padding: 0; list-style: none; }
 /* loupe on: the head of the column gets smaller too, so the dishes get the room (number, time and the signals stay readable) */
-.ks-card.is-fit .ks-head, .ks-card.is-fit .ks-who, .ks-card.is-fit .ks-asap, .ks-card.is-fit .ks-out, .ks-card.is-fit .ks-due, .ks-card.is-fit .ks-onote { zoom: 0.72; }
+.ks-card.is-fit .ks-head, .ks-card.is-fit .ks-who, .ks-card.is-fit .ks-out, .ks-card.is-fit .ks-onote { zoom: 0.72; }
 /* too long even at the smallest size: the list scrolls again, the amber edge says so */
 .ks-card.is-fit.is-scroll .ks-items { box-shadow: inset 0 -10px 10px -10px var(--amber); }
 
