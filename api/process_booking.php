@@ -135,6 +135,7 @@ $prp_info = querySQL('property_info');
 	<link href="style/style.css?v=<?php echo @filemtime(__DIR__.'/style/style.css'); ?>" rel="stylesheet" type="text/css" />
 
     <title><?php echo _reservations;?> &ndash; <?php echo htmlspecialchars($outlet_name); ?></title>
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body onLoad="window.parent.scroll(0,0);">
 <div class="booking-shell confirm-shell">

@@ -377,7 +377,9 @@
 .st-map .leaflet-bar a { background: var(--surface-2); color: var(--text); border-color: var(--border-soft); }
 .st-pin span { display: block; width: 26px; height: 26px; margin: 2px; border-radius: 50%; border: 3px solid var(--gold); background: var(--bg); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); }
 .st-pin-home span { border-radius: 8px 8px 8px 0; transform: rotate(-45deg) scale(0.85); background: var(--gold); border-color: var(--bg); }
-.st-pin-driver span { background: var(--gold); border-color: var(--text); animation: st-pulse 1.8s ease-out infinite; }
+.st-pin-driver span { width: 50px; height: 50px; margin: 1px; border: 0; border-radius: 0; background: url(zeus_dot.png) 50% 50% / contain no-repeat; box-shadow: none; filter: drop-shadow(0 0 1px #f3ede1) drop-shadow(0 0 5px rgba(226, 192, 127, 0.9)); animation: st-glow 1.8s ease-in-out infinite; }
+/* the driver is the silhouette of Zeus: the glow follows his outline (drop-shadow uses the alpha of the picture) */
+@keyframes st-glow { 0%, 100% { filter: drop-shadow(0 0 1px #f3ede1) drop-shadow(0 0 4px rgba(226, 192, 127, 0.75)); } 50% { filter: drop-shadow(0 0 1px #f3ede1) drop-shadow(0 0 10px rgba(226, 192, 127, 1)); } }
 @keyframes st-pulse { 0% { box-shadow: 0 0 0 0 rgba(201, 162, 89, 0.6); } 100% { box-shadow: 0 0 0 16px rgba(201, 162, 89, 0); } }
 .st-tip.leaflet-tooltip { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-sm); font: 600 12px var(--font-body); box-shadow: none; padding: 3px 8px; }
 .st-tip.leaflet-tooltip-top::before { border-top-color: var(--border); }

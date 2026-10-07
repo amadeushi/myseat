@@ -162,6 +162,7 @@ textarea:focus { outline: none; border-color: var(--gold); }
 .legal-footer a { color: var(--text-muted); padding: 10px 8px; text-decoration: none; border-bottom: 1px solid transparent; transition: color .2s ease, border-color .2s ease; }
 .legal-footer a:hover, .legal-footer a:focus-visible { color: var(--gold-strong); border-bottom-color: currentColor; }
 </style>
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
 	<div class="brand"><?php echo htmlspecialchars($brand); ?></div>

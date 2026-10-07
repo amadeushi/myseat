@@ -29,6 +29,7 @@ $telHref = $phone !== '' ? 'tel:'.shop_h(preg_replace('/\s+/', '', $phone)) : ''
 	<link rel="stylesheet" href="../web/fonts/fonts.css"/>
 	<link rel="stylesheet" href="vendor/leaflet/leaflet.css"/>
 	<link rel="stylesheet" href="shop.css?v=<?php echo @filemtime(__DIR__.'/shop.css'); ?>"/>
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body class="shop-shell dv" data-token="<?php echo shop_h($_SESSION['shop_token']); ?>" data-device="<?php echo shop_h($device); ?>">
 <?php if (!$driver): ?>

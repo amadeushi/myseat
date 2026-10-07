@@ -98,6 +98,7 @@ body {
 .pager a:hover { text-decoration: underline; }
 .pager span.disabled { color: var(--text-muted); opacity: .4; }
 </style>
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
 	<div class="wrap">

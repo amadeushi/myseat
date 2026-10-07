@@ -36,6 +36,7 @@ $back = isset($_GET['from']) && $_GET['from'] === 'orders' ? array('main_page.ph
 	<link rel="stylesheet" href="fonts/fonts.css"/>
 	<link rel="stylesheet" href="css/kitchen.css?v=<?php echo @filemtime(__DIR__.'/css/kitchen.css'); ?>"/>
 	<link rel="stylesheet" href="css/tagesbericht.css?v=<?php echo @filemtime(__DIR__.'/css/tagesbericht.css'); ?>"/>
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body class="kitchen tb-page" data-token="<?php echo htmlspecialchars($_SESSION['shop_admin_token']); ?>" data-date="<?php echo htmlspecialchars($date); ?>">
 	<header class="k-top">

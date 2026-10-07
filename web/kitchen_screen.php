@@ -19,6 +19,10 @@ if (empty($_SESSION['valid_user'])) { header('Location: ../PLC/index.php'); exit
 if (!current_user_can('Reservation-Edit')) { http_response_code(403); echo 'Keine Berechtigung.'; exit; }
 if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = myseat_admin_token(); }
 $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
+// the restaurant's logo (white on transparent), dimmed behind the cards; only shown where no card covers it
+require_once('classes/brand.class.php');
+$logo = brand_logo_url();
+$logoCss = preg_match('#^https?://[^\s\'"()\\\\]+$#', $logo) ? ' style="--ks-logo:url(\''.htmlspecialchars($logo).'\')"' : '';
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -30,8 +34,9 @@ $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 	<title>Küchenbildschirm &ndash; <?php echo htmlspecialchars($brand); ?></title>
 	<link rel="stylesheet" href="fonts/fonts.css"/>
 	<link rel="stylesheet" href="css/kitchen.css?v=<?php echo @filemtime(__DIR__.'/css/kitchen.css'); ?>"/>
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
-<body class="kitchen ks" data-token="<?php echo htmlspecialchars($_SESSION['shop_admin_token']); ?>">
+<body class="kitchen ks"<?php echo $logoCss; ?> data-token="<?php echo htmlspecialchars($_SESSION['shop_admin_token']); ?>">
 	<header class="k-top">
 		<h1>Küche</h1>
 		<div class="k-counts" id="k-counts" aria-live="polite"></div>

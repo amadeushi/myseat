@@ -92,8 +92,15 @@
 	var ICON_PRINT = '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M7 9V4h10v5M7 17H5a1.5 1.5 0 0 1-1.500-1.500v-5A1.500 1.500 0 0 1 5 9h14a1.500 1.500 0 0 1 1.500 1.500v5A1.500 1.500 0 0 1 19 17h-2M7 14h10v6H7z" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 	var ICON_LINK = '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.700 0l3-3a4 4 0 0 0-5.700-5.700l-1 1M14 10a4 4 0 0 0-5.700 0l-3 3a4 4 0 0 0 5.700 5.700l1-1" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 	var ICON_CHECK = '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M5 12.500l4.500 4.500L19 7.500" fill="none" stroke="currentColor" stroke-width="2.400" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+	var ICON_DOC = '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9.500 8h5M9.500 12h5" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+	// the original receipt of an order from Lieferando (PDF) or Uber Eats (picture) is kept: a button to print it again in the browser
+	function origBtn(o) {
+		if (!o.orig) { return ''; }
+		var t = 'Originalbon von ' + (o.source === 'uber_eats' ? 'Uber Eats' : 'Lieferando') + ' drucken';
+		return '<button type="button" class="k-icon" data-orig="' + o.id + '" aria-label="' + t + '" title="' + t + '">' + ICON_DOC + '</button>';
+	}
 	function moreHtml(o) {
-		return '<span class="k-icons"><button type="button" class="k-icon" data-bon="' + o.id + '" aria-label="Lieferschein drucken" title="Lieferschein drucken">' + ICON_PRINT + '</button>' +
+		return '<span class="k-icons">' + origBtn(o) + '<button type="button" class="k-icon" data-bon="' + o.id + '" aria-label="Lieferschein drucken" title="Lieferschein drucken">' + ICON_PRINT + '</button>' +
 			'<button type="button" class="k-icon" data-guestlink="' + esc(guestUrl(o)) + '" aria-label="Gast-Link kopieren" title="Gast-Link kopieren">' + ICON_LINK + '</button></span>';
 	}
 	function card(o) {
@@ -398,6 +405,7 @@
 			return;
 		}
 		var mo = ev.target.closest('[data-mapopen]'); if (mo) { var host = mo.closest('[data-id]'); location.href = 'fahrerkarte.php' + (host && host.dataset.id ? '?o=' + encodeURIComponent(host.dataset.id) : ''); return; }
+		var origB = ev.target.closest('[data-orig]'); if (origB) { window.open('bon_original.php?id=' + encodeURIComponent(origB.dataset.orig) + '&print=1', '_blank'); return; }
 		var bonBtn = ev.target.closest('[data-bon]'); if (bonBtn) { MonitorPrint.slip(bonBtn.dataset.bon, true); return; }
 		var gl = ev.target.closest('[data-guestlink]');
 		if (gl) {

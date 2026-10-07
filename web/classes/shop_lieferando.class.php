@@ -279,6 +279,7 @@ function lieferando_import($pdfBytes) {
 			'iissiiis', array($id, $productId, $it['title'], json_encode(array_map(function ($o) { return array('title' => $o['title'], 'qty' => 1, 'price_cents' => $o['price_cents']); }, $it['options']), JSON_UNESCAPED_UNICODE),
 				$it['qty'], $unit, $unit * $it['qty'], $it['note']));
 	}
+	shop_doc_save($id, 'pdf', $pdfBytes);   // the original receipt, for printing it again from the dispatch
 	shop_log($id, 'created', 'lieferando '.$p['external_id'].($p['warnings'] ? ' - prüfen: '.implode('; ', $p['warnings']) : ''));
 	return array('ok' => true, 'id' => $id, 'day_no' => $dayNo, 'number' => $number, 'type' => $p['type'], 'items' => count($p['items']));
 }

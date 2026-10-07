@@ -102,6 +102,7 @@ $title = count($reservations) > 1 ? 'Reservierungsschilder '.$reservations[0]['r
 		body.solo .slip.cur { display: block; }
 		@media screen { body { margin: 12px auto; } .slip { border: 1px dashed #999; margin-bottom: 12px; } }
 	</style>
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
 <?php foreach ($slips as $sl): $r = $sl['r']; $i = $sl['i']; $n = $sl['n']; $label = preg_replace('/^Tisch\s+/i', '', $sl['table']);

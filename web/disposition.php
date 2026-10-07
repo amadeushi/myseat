@@ -30,6 +30,7 @@ $dp_pause = shop_pause_state();
 	<title>Disposition &ndash; <?php echo htmlspecialchars($brand); ?></title>
 	<link rel="stylesheet" href="fonts/fonts.css"/>
 	<link rel="stylesheet" href="css/kitchen.css?v=<?php echo @filemtime(__DIR__.'/css/kitchen.css'); ?>"/>
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body class="kitchen" data-token="<?php echo htmlspecialchars($_SESSION['shop_admin_token']); ?>">
 	<header class="k-top">

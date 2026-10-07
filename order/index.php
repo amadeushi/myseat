@@ -30,6 +30,7 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 	<link rel="stylesheet" href="shop.css?v=<?php echo @filemtime(__DIR__.'/shop.css'); ?>"/>
 	<?php if ($has_conf): ?><link rel="stylesheet" href="pizza.css?v=<?php echo @filemtime(__DIR__.'/pizza.css'); ?>"/><?php endif; ?>
 	<?php if ($acc_on): ?><link rel="stylesheet" href="stempel.css?v=<?php echo @filemtime(__DIR__.'/stempel.css'); ?>"/><link rel="stylesheet" href="konto.css?v=<?php echo @filemtime(__DIR__.'/konto.css'); ?>"/><?php endif; ?>
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body class="shop-shell" data-token="<?php echo shop_h($_SESSION['shop_token']); ?>" data-accepting="<?php echo $shop_accepting ? '1' : '0'; ?>" data-account="<?php echo $acc_on ? '1' : '0'; ?>" data-stamp="<?php $sc = shop_stamp_cfg(); echo ($acc_on && $sc['on']) ? (int)$sc['percent'] : 0; ?>">
 <?php if (!$shop_public): ?>

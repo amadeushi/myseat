@@ -46,6 +46,7 @@ $favs = $c['accounts'] ? fb_rows("SELECT f.created_at, p.title FROM ".fb_t('tp_s
 		.small { font-size: 9.5pt; color: #333; } .bar { margin-bottom: 14px; } button { font-size: 12pt; padding: 8px 16px; }
 		@media print { .bar { display: none; } }
 	</style>
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
 	<div class="bar"><button type="button" onclick="window.print()">Drucken</button></div>

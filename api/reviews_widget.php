@@ -60,6 +60,7 @@ body {
 .item-comment { margin: 4px 0 0; color: #f3ede1; }
 .empty { padding: 20px 14px; color: #a89e8c; }
 </style>
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
 	<?php if ($stats['count']): ?>

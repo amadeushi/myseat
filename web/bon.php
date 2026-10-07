@@ -55,6 +55,7 @@ $due = $o['scheduled_at'] ?: ($o['eta_at'] ?: $o['created_at']);
 		.pay { font-size: 15pt; font-weight: 800; margin-top: 6px; }
 		@media screen { body { padding: 12px; border: 1px dashed #999; margin-top: 12px; } }
 	</style>
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
 	<?php if (isset($o['source']) && $o['source'] === 'lieferando'): ?><div class="src">LIEFERANDO</div><?php endif; ?>

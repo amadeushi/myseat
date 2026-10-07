@@ -101,7 +101,8 @@
 
 /* kitchen screen: one tall column per order */
 .ks-board { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1fr); display: grid; grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr)); gap: 10px; padding: 10px; }
-.ks-empty { grid-column: 1 / -1; align-self: center; text-align: center; font-size: 44px; font-weight: 700; color: var(--muted); }
+/* the message sits low, under the dimmed logo of the restaurant (centered behind the board) instead of over it */
+.ks-empty { grid-column: 1 / -1; align-self: end; padding-bottom: 7vh; text-align: center; font-size: 44px; font-weight: 700; color: var(--muted); }
 .ks-empty span { font-size: 28px; font-weight: 500; }
 .ks-card { min-height: 0; display: flex; flex-direction: column; background: var(--surface); border: 2px solid var(--border); border-radius: 14px; padding: 12px 16px 10px; }
 .ks-card.is-fresh { border-color: var(--amber); animation: ks-pulse 1.4s ease-in-out infinite; }
@@ -314,7 +315,10 @@ body:not(.is-portrait) .k-col[data-col="out"], body:not(.is-portrait) .k-col[dat
 .ks-zip { flex: none; padding: 1px 10px; border-radius: 8px; background: rgba(201, 162, 89, 0.18); color: var(--gold-strong); font-variant-numeric: tabular-nums; }
 
 /* Erledigt: what the kitchen finished in the last two hours, next to the board. Same "Pos n" as on the slips, so a printed slip can be traced after the order has left the board. */
-.ks-main { flex: 1; min-height: 0; display: flex; }
+.ks-main { flex: 1; min-height: 0; display: flex; position: relative; }
+/* the restaurant's logo as a dimmed background: visible where no card covers it (few orders), never in the way of the text */
+.ks-main::before { content: ""; position: absolute; inset: 0; background: var(--ks-logo, none) 50% 45% / min(36%, 520px) auto no-repeat; opacity: 0.08; pointer-events: none; }
+.ks-main > * { position: relative; z-index: 1; }
 .ks-main .ks-board { flex: 1; min-width: 0; }
 aside.ks-done { flex: none; width: clamp(250px, 19vw, 340px); margin: 10px 10px 10px 0; padding: 12px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
 aside.ks-done[hidden] { display: none; }

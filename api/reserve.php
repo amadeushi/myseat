@@ -219,7 +219,6 @@ if($check_web_outlet==1){
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<meta name="apple-mobile-web-app-capable" content="yes" />
 	<meta name="apple-mobile-web-app-status-bar-style" content="black" />
-	<link rel="shortcut icon" href="http://www.myseat.us/favicon.ico">
 
 	<!-- CSS - Setup -->
 	<link rel="stylesheet" href="../web/fonts/fonts.css"/>
@@ -268,6 +267,7 @@ if($check_web_outlet==1){
 <!-- color scheme for the booking form END -->
 
     <title><?php echo _reservations;?></title>
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
 	    

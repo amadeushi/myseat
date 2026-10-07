@@ -33,6 +33,7 @@ $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 	<link rel="stylesheet" href="css/kitchen.css?v=<?php echo @filemtime(__DIR__.'/css/kitchen.css'); ?>"/>
 	<link rel="stylesheet" href="css/fahrerkarte.css?v=<?php echo @filemtime(__DIR__.'/css/fahrerkarte.css'); ?>"/>
 	<link rel="stylesheet" href="js/leaflet/leaflet.css"/>
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body class="kitchen fk-page" data-token="<?php echo htmlspecialchars($_SESSION['shop_admin_token']); ?>">
 	<header class="k-top">

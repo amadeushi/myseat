@@ -88,6 +88,7 @@ $icon_class = ($state === 'approved') ? 'is-success' : (($state === 'pending' ||
 	<link rel="stylesheet" href="../web/fonts/fonts.css"/>
 	<link href="style/style.css?v=<?php echo @filemtime(__DIR__.'/style/style.css'); ?>" rel="stylesheet" type="text/css" />
 	<title><?php echo $h($titles[$state]); ?><?php echo $outlet_name !== '' ? ' &ndash; '.$h($outlet_name) : ''; ?></title>
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
 <div class="booking-shell confirm-shell">

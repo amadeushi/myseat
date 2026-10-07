@@ -340,6 +340,9 @@ function shop_uber_import($slipId, $auto = false) {
 			'iissiiis', array($id, shop_uber_find_product($l['title']), $l['title'], json_encode($l['opts'], JSON_UNESCAPED_UNICODE), $l['qty'], $l['unit'], $l['line'], $l['note']));
 	}
 	fb_exec("UPDATE ".fb_t('tp_shop_uber_slips')." SET order_id = ?, status = 'imported' WHERE id = ?", 'ii', array($id, (int)$slipId));
+	// the slips are purged after a while, the original receipt stays with the order
+	$pic = fb_row("SELECT png FROM ".fb_t('tp_shop_uber_slips')." WHERE id = ?", 'i', array((int)$slipId));
+	if ($pic) { shop_doc_save($id, 'png', $pic['png']); }
 	shop_log($id, 'created', 'uber_eats '.$code.($warn ? ' - '.implode('; ', $warn) : ''));
 	return array('ok' => true, 'id' => $id, 'day_no' => $dayNo, 'number' => $number, 'test' => (bool)$test, 'type' => $isDelivery ? 'delivery' : 'pickup', 'cash' => $cash);
 }

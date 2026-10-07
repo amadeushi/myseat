@@ -34,6 +34,7 @@ $tryKey = $try !== '' ? shop_item_icon($try) : null;
 	<title>Handbuch Pizza-Konfigurator &ndash; <?php echo $h($brand); ?></title>
 	<link rel="stylesheet" href="fonts/fonts.css"/>
 	<link rel="stylesheet" href="css/handbuch.css?v=<?php echo @filemtime(__DIR__.'/css/handbuch.css'); ?>"/>
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body class="hb">
 	<header class="hb-top">

@@ -254,6 +254,7 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 	<link href="style/style.css?v=<?php echo @filemtime(__DIR__.'/style/style.css'); ?>" rel="stylesheet" type="text/css" />
 
 	<title><?php echo $h($state == 'view' ? $page_title : $t['lookup_title']); ?><?php echo $prp_info['name'] ? ' &ndash; '.$prp_info['name'] : ''; ?></title>
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
 <div class="booking-shell <?php echo $state == 'view' ? 'guest-shell' : 'confirm-shell'; ?>">

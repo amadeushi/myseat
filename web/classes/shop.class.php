@@ -95,6 +95,9 @@ function shop_ensure_schema() {
 	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_uber_slips')." (
 		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `received` DATETIME NOT NULL, `sha1` CHAR(40) NOT NULL, `w` SMALLINT UNSIGNED NOT NULL, `h` SMALLINT UNSIGNED NOT NULL,
 		`png` MEDIUMBLOB NOT NULL, `status` VARCHAR(12) NOT NULL DEFAULT 'new', `data` MEDIUMTEXT NULL, `order_id` INT UNSIGNED NULL, UNIQUE KEY `sha1` (`sha1`), KEY `received` (`received`)) $opts");
+	// the original receipt of a platform order (Lieferando: the PDF, Uber Eats: the picture the Pi made of the print job), kept with the order so the dispatch can print it again
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_order_docs')." (
+		`order_id` INT UNSIGNED NOT NULL PRIMARY KEY, `kind` CHAR(3) NOT NULL, `data` MEDIUMBLOB NOT NULL, `created` DATETIME NOT NULL) $opts");
 	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_coupon_uses')." (
 		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `coupon_id` INT UNSIGNED NOT NULL, `order_id` INT UNSIGNED NOT NULL, `guest_key` CHAR(40) NOT NULL DEFAULT '', `guest_key2` CHAR(40) NOT NULL DEFAULT '',
 		`discount_cents` INT NOT NULL DEFAULT 0, `created_at` DATETIME NOT NULL, KEY `coupon` (`coupon_id`), KEY `ord` (`order_id`)) $opts");
@@ -1577,6 +1580,17 @@ function shop_create_demo_order($type, $street = '', $zip = '', $city = '') {
 function shop_log($orderId, $event, $detail = '') {
 	fb_exec("INSERT INTO ".fb_t('tp_shop_order_log')." (order_id, event, detail, at) VALUES (?, ?, ?, ?)", 'isss', array((int)$orderId, $event, mb_substr($detail, 0, 200), date('Y-m-d H:i:s')));
 }
+// original receipt of a platform order: array('kind' => 'pdf'|'png', 'data' => bytes) or null. Orders from before the receipts were kept have none (Uber Eats: the picture is still taken from the slip table while it lasts)
+function shop_doc_save($orderId, $kind, $bytes) {
+	if ($bytes === '' || $bytes === null || !in_array($kind, array('pdf', 'png'), true)) { return false; }
+	return fb_exec("REPLACE INTO ".fb_t('tp_shop_order_docs')." (order_id, kind, data, created) VALUES (?, ?, ?, ?)", 'isss', array((int)$orderId, $kind, $bytes, date('Y-m-d H:i:s')));
+}
+function shop_doc_get($orderId) {
+	$d = fb_row("SELECT kind, data FROM ".fb_t('tp_shop_order_docs')." WHERE order_id = ?", 'i', array((int)$orderId));
+	if ($d) { return array('kind' => $d['kind'], 'data' => $d['data']); }
+	$s = fb_row("SELECT png FROM ".fb_t('tp_shop_uber_slips')." WHERE order_id = ? ORDER BY id DESC LIMIT 1", 'i', array((int)$orderId));
+	return $s ? array('kind' => 'png', 'data' => $s['png']) : null;
+}
 function shop_order($id) { return fb_row("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE id = ?", 'i', array((int)$id)); }
 function shop_order_by_token($token) { return fb_row("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE token = ?", 's', array((string)$token)); }
 function shop_order_items($id) {
@@ -1770,10 +1784,15 @@ function shop_orders_with_items($rows) {
 		foreach ((json_decode((string)$it['options'], true) ?: array()) as $o) { $opts[] = ($o['qty'] > 1 ? $o['qty'].'× ' : '').$o['title']; }
 		$items[(int)$it['order_id']][] = array('qty' => (int)$it['qty'], 'title' => $it['title'], 'variation' => $it['variation'], 'options' => $opts, 'note' => $it['note'], 'line' => (int)$it['line_cents']);
 	}
+	// which orders have an original receipt (only the kind, not the bytes)
+	$orig = array();
+	foreach (fb_rows("SELECT order_id, kind FROM ".fb_t('tp_shop_order_docs')." WHERE order_id IN (".implode(',', $ids).")") as $dr) { $orig[(int)$dr['order_id']] = $dr['kind']; }
+	foreach (fb_rows("SELECT DISTINCT order_id FROM ".fb_t('tp_shop_uber_slips')." WHERE order_id IN (".implode(',', $ids).")") as $sr) { if (!isset($orig[(int)$sr['order_id']])) { $orig[(int)$sr['order_id']] = 'png'; } }
 	$out = array();
 	foreach ($rows as $r) {
 		$due = $r['scheduled_at'] ?: ($r['eta_at'] ?: $r['created_at']);
 		$out[] = array(
+			'orig' => isset($orig[(int)$r['id']]) ? $orig[(int)$r['id']] : '',
 			'id' => (int)$r['id'], 'number' => $r['number'], 'day_no' => (int)$r['day_no'], 'type' => $r['type'], 'status' => $r['status'], 'test' => (int)$r['is_test'],
 			'source' => $r['source'],
 			'created' => substr($r['created_at'], 11, 5), 'created_ts' => strtotime($r['created_at']), 'scheduled' => $r['scheduled_at'] ? substr($r['scheduled_at'], 11, 5) : '',
@@ -1825,6 +1844,7 @@ function shop_delete_test_order($id) {
 	if (!$o || !(int)$o['is_test']) { return false; }
 	fb_exec("DELETE FROM ".fb_t('tp_shop_order_items')." WHERE order_id = ?", 'i', array((int)$id));
 	fb_exec("DELETE FROM ".fb_t('tp_shop_order_log')." WHERE order_id = ?", 'i', array((int)$id));
+	fb_exec("DELETE FROM ".fb_t('tp_shop_order_docs')." WHERE order_id = ?", 'i', array((int)$id));
 	fb_exec("DELETE FROM ".fb_t('tp_shop_orders')." WHERE id = ?", 'i', array((int)$id));
 	return true;
 }

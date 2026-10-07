@@ -52,6 +52,15 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-08 == mySeat v6.30.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Disposition: Bestellungen von Lieferando und Uber Eats haben einen Knopf "Originalbon drucken". Uber Eats: das Bild des Bons, Lieferando: die PDF; beides öffnet sich in einem neuen Tab zum Drucken
+   im Browser (web/bon_original.php, Recht Reservierung bearbeiten). Die Originale werden ab jetzt mit der Bestellung gespeichert (neue Tabelle tp_shop_order_docs, wird beim ersten Aufruf angelegt);
+   Lieferando-Bestellungen von vorher haben keine PDF, bei Uber Eats gilt das Bild, solange es noch in der Bon-Tabelle liegt.
+ * New: Gästekarte (Status der Bestellung): der Fahrer ist Zeus (order/zeus_dot.png), als Silhouette mit goldenem Schimmer, der dem Umriss folgt.
+ * New: Küchenmonitor: das Restaurant-Logo steht gedimmt im Hintergrund (sichtbar, wo keine Karte liegt); "Keine offenen Bestellungen" sitzt unter dem Logo.
+ * New: Favicon der ganzen Seite ist der Kopf von Zeus (favicon.ico, favicon-32.png, apple-touch-icon.png), in allen Seiten eingebunden; die mySeat-Logos (web/images, uploads/logo) sind durch das Logo des Restaurants ersetzt.
+
 2026-10-08 == mySeat v6.29.3 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix: Kunden: Beim Ausstellen eines Gutscheins und beim Gutschreiben eines Stempels behielt der feste Betrag seine Markierung, wenn man einen eigenen Betrag eintippte, und ein Klick auf Kulanz (oder einen
