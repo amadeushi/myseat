@@ -60,6 +60,12 @@ function formatTime($tm, $format){
 	return $time_new;
 }
 
+// time for a guest: German speakers read 24-hour times (19:00 Uhr) whatever the 12/24 setting of the backend says; the others get the setting
+function formatTimeGuest($tm, $lang) {
+	global $general;
+	return formatTime($tm, substr((string)$lang, 0, 2) === 'de' ? 24 : $general['timeformat']);
+}
+
 // read translation text from database
 function translateSite($lang='en', $apx = ''){
 	GLOBAL $general;

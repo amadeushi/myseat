@@ -52,6 +52,13 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-08 == mySeat v6.30.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: Mail "Reservierung bestätigt" nach der Genehmigung über den Link in der Benachrichtigungsmail (api/request.php): die Uhrzeit kam als "7:00 pm Uhr" und das Datum fehlte, weil dort keine Sitzung die
+   Einstellungen ($general) lädt. appr_send_guest_mail liest Zeit- und Datumsformat jetzt aus den Einstellungen des Standorts (Rückfall 24 h, d.m.Y).
+ * Fix: Deutsche Reservierungsmails, die Seite "Reservierung ansehen/absagen" (api/cancel.php) und die Bestätigungsseite (api/process_booking.php) zeigen die Uhrzeit immer im 24-Stunden-Format ("19:00 Uhr"),
+   egal was das Zeitformat im Backend sagt (neue Funktion formatTimeGuest in local.class.php).
+
 2026-10-08 == mySeat v6.30.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Disposition: Bestellungen von Lieferando und Uber Eats haben einen Knopf "Originalbon drucken". Uber Eats: das Bild des Bons, Lieferando: die PDF; beides öffnet sich in einem neuen Tab zum Drucken

@@ -72,7 +72,7 @@ $prp_info = querySQL('property_info');
     $availability = getAvailability($resbyTime,$general['timeintervall']); 
  // some constants
     $bookingdate = date($general['dateformat'],strtotime($_POST['dbdate']));
-    $bookingtime = formatTime($_POST['reservation_time'],$general['timeformat']);
+    $bookingtime = formatTimeGuest($_POST['reservation_time'], isset($_POST['email_type']) ? $_POST['email_type'] : 'en');
     $outlet_name = querySQL('db_outlet');
     //$_SESSION['booking_number'] = '';
   

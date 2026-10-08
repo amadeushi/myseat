@@ -246,7 +246,10 @@ function bm_build($d) {
 	} else {
 		$date_txt = $weekday.', '.$d['date_text'];
 	}
-	$time_txt = $de ? $d['time_text'].' Uhr' : $d['time_text'];
+	// callers format the time with the 12/24 setting of the backend ("7:00 pm"); a German mail always reads 24 hours ("19:00 Uhr")
+	$time_de  = $d['time_text'];
+	if ($de && ($tsT = strtotime($d['time_text'])) !== false && preg_match('/\d/', $d['time_text'])) { $time_de = date('H:i', $tsT); }
+	$time_txt = $de ? $time_de.' Uhr' : $d['time_text'];
 	$brand    = $outlet !== '' ? $outlet : bm_clean($d['property']['name']);
 	$phone_contact = !empty($settings['mailPhone']) ? $settings['mailPhone'] : (!empty($d['property']['phone']) ? bm_clean($d['property']['phone']) : '');
 	$mail_contact  = !empty($d['property']['email']) ? bm_clean($d['property']['email']) : '';

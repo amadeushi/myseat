@@ -212,7 +212,7 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 		$is_past = ($res['reservation_date'] < date('Y-m-d'));
 		$brand = $outlet_name !== '' ? $outlet_name : $prp_info['name'];
 		$when = bm_weekday($res['reservation_date'], $lang).', '.date($general['dateformat'], strtotime($res['reservation_date']));
-		$at = formatTime($res['reservation_time'], $general['timeformat']).$t['clock'];
+		$at = formatTimeGuest($res['reservation_time'], $lang).$t['clock'];
 		$tel_digits = preg_replace('/\D/', '', (string)$contact_phone);
 		$tel_href = strlen($tel_digits) >= 6 ? 'tel:'.(substr($tel_digits, 0, 1) === '0' ? '+49'.substr($tel_digits, 1) : '+'.$tel_digits) : '';
 		// calendar file of this reservation (same event as in the confirmation mail: same UID, so no duplicate)

@@ -63,6 +63,14 @@ function appr_send_guest_mail($r, $mode) {
 	$property = $outlet ? mysqli_fetch_assoc(mysqli_query($link,
 		"SELECT * FROM `".$dbTables->properties."` WHERE id = ".(int)$outlet['property_id']." LIMIT 1")) : null;
 	if (!$outlet || !$property) { return; }
+	// the date/time settings of the restaurant: $general is only filled in the backend (it is read for the property of the session); the decision link in the mail
+	// (api/request.php) runs without a session, so $general is empty there - the time then came out as "7:00 pm" and the date was missing
+	$gen = (is_array($general) && !empty($general['timeformat']) && !empty($general['dateformat'])) ? $general : null;
+	if (!$gen) {
+		$gq = mysqli_query($link, "SELECT timeformat, dateformat FROM `".$dbTables->settings."` WHERE property_id = ".(int)$outlet['property_id']." LIMIT 1");
+		$gen = $gq ? mysqli_fetch_assoc($gq) : null;
+		if (!$gen || empty($gen['timeformat']) || empty($gen['dateformat'])) { $gen = array('timeformat' => 24, 'dateformat' => 'd.m.Y'); }
+	}
 
 	$lang = (isset($r['reservation_email_lang']) && $r['reservation_email_lang'] === 'en') ? 'en' : 'de';
 	$form = array(
@@ -79,8 +87,8 @@ function appr_send_guest_mail($r, $mode) {
 	$m = bm_build(array(
 		'form' => $form, 'outlet' => $outlet, 'property' => $property,
 		'date' => $r['reservation_date'],
-		'date_text' => date($general['dateformat'], strtotime($r['reservation_date'])),
-		'time_text' => formatTime($r['reservation_time'], $general['timeformat']),
+		'date_text' => date($gen['dateformat'], strtotime($r['reservation_date'])),
+		'time_text' => formatTime($r['reservation_time'], $gen['timeformat']),
 		'booking_number' => $r['reservation_bookingnumber'],
 		'cancel_url' => $cancel_url, 'origin' => 'backend', 'mode' => $mode,
 	));
