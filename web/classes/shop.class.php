@@ -2903,51 +2903,71 @@ function shop_me_delete_coupon($id) {
 	return array('ok' => true);
 }
 
-// ---- upsell ("Noch etwas dazu?"): learns from past real orders which dishes are bought together with what is in the cart.
-// Needs enough order history before it trusts the data; until then the caller falls back to its own heuristic.
+// ---- upsell ("Noch etwas dazu?"): suggests what goes with the cart and is easily left over: something sweet, a drink, a snack or side. Not another main course.
+// The categories are recognised by their name (desserts, drinks, snacks/sides/starters); a dish costs at most SHOP_UPSELL_MAX_CENTS (an add-on, not a second meal), and the ones
+// that are most often bought, and bought with what is in this cart, come first. One suggestion per kind, so the guest is offered a sweet AND a drink AND a snack and not three drinks;
+// a kind the cart already has (a dessert in it: no second dessert) is skipped while there is something else to offer.
+define('SHOP_UPSELL_MAX_CENTS', 900);
+function shop_upsell_kind($categoryName) {
+	$n = mb_strtolower((string)$categoryName, 'UTF-8');
+	if (preg_match('/dessert|s(ü|ue)(ß|ss)|nachspeise|nachtisch|kuchen|\beis\b|eiscreme/u', $n)) { return 'sweet'; }
+	if (preg_match('/wein/u', $n)) { return ''; }   // a bottle of wine is not an impulse add-on
+	if (preg_match('/getr(ä|ae)nk|drink|bier|limo|saft|wasser/u', $n)) { return 'drink'; }
+	if (preg_match('/snack|beilage|vorspeise|brot|\bdips?\b|fingerfood/u', $n)) { return 'snack'; }
+	return '';
+}
 function shop_upsell_candidates($cartProductIds, $limit = 3) {
 	shop_ensure_schema();
 	$cartIds = array_values(array_unique(array_filter(array_map('intval', (array)$cartProductIds))));
-	$totalOrders = (int)fb_row("SELECT COUNT(*) AS n FROM ".fb_t('tp_shop_orders')." WHERE is_test = 0 AND status <> 'cancelled'")['n'];
-	$learned = $totalOrders >= 15; // a handful of test clicks should not steer real suggestions
-	$found = array();
-	if ($learned && $cartIds) {
+	$kindOf = array();   // category id => kind
+	foreach (fb_rows("SELECT id, name FROM ".fb_t('tp_shop_categories')." WHERE active = 1") as $c) { $k = shop_upsell_kind($c['name']); if ($k !== '') { $kindOf[(int)$c['id']] = $k; } }
+	if (!$kindOf) { return array('learned' => false, 'items' => array()); }   // no such category: the browser guesses
+	$ok = " o.is_test = 0 AND o.status <> 'cancelled'";
+	// how often each dish was bought in real orders, and how often together with something that is in this cart
+	$pop = array(); $co = array();
+	foreach (fb_rows("SELECT oi.product_id AS pid, COUNT(DISTINCT oi.order_id) AS n FROM ".fb_t('tp_shop_order_items')." oi JOIN ".fb_t('tp_shop_orders')." o ON o.id = oi.order_id
+		WHERE oi.product_id IS NOT NULL AND $ok GROUP BY oi.product_id") as $r) { $pop[(int)$r['pid']] = (int)$r['n']; }
+	if ($cartIds) {
 		$in = implode(',', $cartIds);
-		// dishes that showed up in the same past orders as something already in this cart, most often first
-		$rows = fb_rows("SELECT oi2.product_id AS pid, COUNT(DISTINCT oi1.order_id) AS n
-			FROM ".fb_t('tp_shop_order_items')." oi1
-			JOIN ".fb_t('tp_shop_order_items')." oi2 ON oi2.order_id = oi1.order_id AND oi2.product_id IS NOT NULL AND oi2.product_id NOT IN ($in)
+		foreach (fb_rows("SELECT oi2.product_id AS pid, COUNT(DISTINCT oi1.order_id) AS n FROM ".fb_t('tp_shop_order_items')." oi1
+			JOIN ".fb_t('tp_shop_order_items')." oi2 ON oi2.order_id = oi1.order_id AND oi2.product_id IS NOT NULL
 			JOIN ".fb_t('tp_shop_orders')." o ON o.id = oi1.order_id
-			WHERE oi1.product_id IN ($in) AND o.is_test = 0 AND o.status <> 'cancelled'
-			GROUP BY oi2.product_id HAVING n >= 2 ORDER BY n DESC LIMIT 20");
-		foreach ($rows as $r) { $found[] = (int)$r['pid']; }
+			WHERE oi1.product_id IN ($in) AND $ok GROUP BY oi2.product_id") as $r) { $co[(int)$r['pid']] = (int)$r['n']; }
 	}
-	if (count($found) < $limit) {
-		// fill up with the overall bestsellers the guest does not have yet
-		$skip = array_merge($cartIds, $found); $skip[] = 0;
-		$pop = fb_rows("SELECT oi.product_id AS pid, COUNT(DISTINCT oi.order_id) AS n FROM ".fb_t('tp_shop_order_items')." oi
-			JOIN ".fb_t('tp_shop_orders')." o ON o.id = oi.order_id
-			WHERE oi.product_id IS NOT NULL AND oi.product_id NOT IN (".implode(',', $skip).") AND o.is_test = 0 AND o.status <> 'cancelled'
-			GROUP BY oi.product_id ORDER BY n DESC LIMIT 20");
-		foreach ($pop as $r) { $found[] = (int)$r['pid']; }
+	$cartKinds = array();
+	$cands = array();
+	foreach (fb_rows("SELECT p.id, p.category_id, p.title, p.price_cents,
+			(SELECT MIN(price_cents) FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id) AS vmin,
+			(SELECT COUNT(*) FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id) AS nvar,
+			(SELECT COUNT(*) FROM ".fb_t('tp_shop_product_groups')." pg WHERE pg.product_id = p.id) AS ngroup
+		FROM ".fb_t('tp_shop_products')." p WHERE p.active = 1 ORDER BY p.sort, p.id") as $p) {
+		$pid = (int)$p['id']; $cid = (int)$p['category_id'];
+		if (!isset($kindOf[$cid])) { continue; }
+		if (in_array($pid, $cartIds, true)) { $cartKinds[$kindOf[$cid]] = true; continue; }
+		$choices = ((int)$p['nvar'] > 0 || (int)$p['ngroup'] > 0);
+		$price = ((int)$p['nvar'] > 0) ? min((int)$p['price_cents'], (int)$p['vmin']) : (int)$p['price_cents'];
+		if ($price > SHOP_UPSELL_MAX_CENTS || $price <= 0) { continue; }
+		// bought often, bought with this cart (counts three times), and one tap is better than a dialog
+		$score = (isset($pop[$pid]) ? $pop[$pid] : 0) + 3 * (isset($co[$pid]) ? $co[$pid] : 0) + ($choices ? 0 : 2);
+		$cands[] = array('id' => $pid, 'kind' => $kindOf[$cid], 'title' => $p['title'], 'price' => $price, 'choices' => $choices, 'score' => $score);
 	}
-	$found = array_slice(array_unique($found), 0, $limit + 5);
-	$items = array();
-	if ($found) {
-		$prods = fb_rows("SELECT id, title, price_cents,
-				(SELECT MIN(price_cents) FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id) AS vmin,
-				(SELECT COUNT(*) FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id) AS nvar,
-				(SELECT COUNT(*) FROM ".fb_t('tp_shop_product_groups')." pg WHERE pg.product_id = p.id) AS ngroup
-			FROM ".fb_t('tp_shop_products')." p WHERE p.id IN (".implode(',', $found).") AND p.active = 1");
-		$byId = array(); foreach ($prods as $p) { $byId[(int)$p['id']] = $p; }
-		foreach ($found as $pid) {
-			if (!isset($byId[$pid]) || count($items) >= $limit) { continue; }
-			$p = $byId[$pid];
-			$choices = ((int)$p['nvar'] > 0 || (int)$p['ngroup'] > 0);
-			$items[] = array('id' => (int)$p['id'], 'title' => $p['title'], 'price' => ($choices && (int)$p['nvar'] > 0) ? min((int)$p['price_cents'], (int)$p['vmin']) : (int)$p['price_cents'], 'choices' => $choices);
+	// best first (the same score: the cheaper one, the easier decision)
+	usort($cands, function ($a, $b) { return $b['score'] - $a['score'] ?: $a['price'] - $b['price'] ?: $a['id'] - $b['id']; });
+	$items = array(); $taken = array();
+	// pass one: the best of every kind the cart does not have yet; pass two: a second one of those kinds (somebody with a dessert in the cart takes a second drink sooner than a second dessert);
+	// pass three: the kinds the cart has
+	$free = array(); $have = array();
+	foreach (array('sweet', 'drink', 'snack') as $kind) { if (empty($cartKinds[$kind])) { $free[] = $kind; } else { $have[] = $kind; } }
+	foreach (array($free, $free, $have) as $kinds) {
+		foreach ($kinds as $kind) {
+			if (count($items) >= $limit) { break 2; }
+			foreach ($cands as $c) { if ($c['kind'] === $kind && empty($taken[$c['id']])) { $items[] = $c; $taken[$c['id']] = 1; break; } }
 		}
 	}
-	return array('learned' => $learned, 'items' => $items);
+	foreach ($cands as $c) { if (count($items) >= $limit) { break; } if (empty($taken[$c['id']])) { $items[] = $c; $taken[$c['id']] = 1; } }
+	$out = array();
+	foreach ($items as $c) { $out[] = array('id' => $c['id'], 'title' => $c['title'], 'price' => $c['price'], 'choices' => $c['choices'], 'kind' => $c['kind']); }
+	return array('learned' => count($out) > 0, 'items' => $out);
 }
 
 /*

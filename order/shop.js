@@ -281,8 +281,8 @@
 	function minOrder() { if (!state.info) { return 0; } return state.mode === 'delivery' ? (state.zone ? state.zone.min : state.info.min_delivery) : state.info.min_pickup; }
 
 	var ICON_TRASH = '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M4 6h12M8 6V4h4v2M6 6l.7 10h6.6L14 6M8.5 9v4.5M11.5 9v4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-	// "Noch etwas dazu?": learned from past orders (what is bought together with what is already in the cart), falling
-	// back to a simple guess (drinks, sides, desserts, dips) until enough orders have happened or while the guess loads
+	// "Noch etwas dazu?": something sweet, a drink or a snack - what is bought most often and together with what is in the cart (shop_upsell_candidates),
+	// with a simple guess of the same kinds while the answer loads or if it fails
 	var upsellCache = { sig: '', items: [], learned: false };
 	function cartSig() { return state.cart.map(function (l) { return l.pid; }).sort(function (a, b) { return a - b; }).join(','); }
 	function refreshUpsell() {
@@ -294,7 +294,7 @@
 		var inCart = {}; state.cart.forEach(function (l) { inCart[l.pid] = true; });
 		var out = [];
 		$$('.shop-cat').forEach(function (sec) {
-			if (out.length >= 3 || !/getr(ä|ae)nk|drink|dessert|nachspeise|nachtisch|beilage|dip|so(ß|ss)e|eis\b/i.test($('h2', sec).textContent)) { return; }
+			if (out.length >= 3 || !/getr(ä|ae)nk|drink|bier|dessert|s(ü|ue)(ß|ss)|nachspeise|nachtisch|kuchen|snack|vorspeise|brot|beilage|dip|so(ß|ss)e|eis\b/i.test($('h2', sec).textContent)) { return; }
 			var li = $$('.shop-item', sec).filter(function (x) { return !inCart[x.dataset.id]; }).sort(function (a, b) { return (a.dataset.choices === '1') - (b.dataset.choices === '1'); })[0];
 			if (li) { out.push(li); }
 		});

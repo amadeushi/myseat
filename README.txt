@@ -52,6 +52,13 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-09 == mySeat v6.30.3 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: "Noch etwas dazu?" im Warenkorb schlägt nur noch Beiverkauf vor: ein Dessert, ein Getränk und einen Snack bzw. eine Beilage (Kategorien werden am Namen erkannt, höchstens 9 EUR, keine Weinflaschen,
+   keine Hauptgerichte). Reihenfolge nach Bestellhäufigkeit, mit dreifachem Gewicht für das, was zusammen mit dem Inhalt des Warenkorbs bestellt wurde; pro Art ein Vorschlag, eine Art, die schon im Warenkorb liegt,
+   kommt zuletzt (shop_upsell_candidates in shop.class.php).
+ * Fix: Bestellseite am Desktop: Der Warenkorb rutschte beim Scrollen hinter die Suchzeile (fester Abstand von 152 px); er richtet sich jetzt nach den gemessenen Höhen von Kopfleiste und Suchzeile.
+
 2026-10-09 == mySeat v6.30.2 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix (Audit app.amds.at/order/): Die Gerichtsbilder der Speisekarte kommen als Vorschauen (240 und 480 px, uploads/menu/t240 und t480, per srcset) statt als Originale mit 115 bis 190 KB: 76 Bilder waren zusammen
