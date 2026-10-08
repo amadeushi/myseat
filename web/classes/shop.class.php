@@ -2084,8 +2084,35 @@ function shop_img_store($bin) {
 	$name = substr(sha1($out), 0, 20).'.'.$ext;
 	if (!is_writable($dir) || @file_put_contents($dir.'/'.$name, $out, LOCK_EX) === false) { return array('ok' => false, 'error' => 'Das Bild konnte nicht auf dem Server gespeichert werden (Ordner uploads/menu nicht beschreibbar).'); }
 	@chmod($dir.'/'.$name, 0644);
+	shop_img_thumb(shop_img_prefix().$name, 240); shop_img_thumb(shop_img_prefix().$name, 480);
 	return array('ok' => true, 'url' => shop_img_prefix().$name);
 }
+// a smaller copy of a dish picture for the list (240 px and 480 px wide, in uploads/menu/t240/, t480/): the list shows the picture at 80-96 px, the original (up to 1200 px, 115-190 KB) is
+// only needed larger. Made when the picture is stored, or on the first view for the ones that were there before; returns the address of the copy, or of the original if there is none.
+function shop_img_thumb($url, $w) {
+	$w = (int)$w; $file = shop_img_file($url);
+	if ($file === '' || !is_file($file) || $w < 40) { return $url; }
+	$name = basename($file); $dir = shop_img_dir().'/t'.$w; $rel = shop_img_prefix().'t'.$w.'/'.$name;
+	if (is_file($dir.'/'.$name)) { return $rel; }
+	if (!function_exists('imagecreatefromstring')) { return $url; }
+	$im = @imagecreatefromstring((string)@file_get_contents($file));
+	if (!$im) { return $url; }
+	$sw = imagesx($im); $sh = imagesy($im);
+	if ($sw <= $w) { imagedestroy($im); return $url; }   // the original is no bigger than the copy would be
+	$nh = max(1, (int)round($sh * $w / $sw));
+	$dst = imagecreatetruecolor($w, $nh); imagealphablending($dst, false); imagesavealpha($dst, true);
+	imagefill($dst, 0, 0, imagecolorallocatealpha($dst, 255, 255, 255, 127));
+	imagecopyresampled($dst, $im, 0, 0, 0, 0, $w, $nh, $sw, $sh); imagedestroy($im);
+	ob_start();
+	if (substr($name, -5) === '.webp' && function_exists('imagewebp')) { imagewebp($dst, null, 80); } else { $flat = imagecreatetruecolor($w, $nh); imagefill($flat, 0, 0, imagecolorallocate($flat, 255, 255, 255)); imagecopy($flat, $dst, 0, 0, 0, 0, $w, $nh); imagejpeg($flat, null, 82); imagedestroy($flat); }
+	$out = ob_get_clean(); imagedestroy($dst);
+	if (!$out) { return $url; }
+	if (!is_dir($dir)) { @mkdir($dir, 0755, true); }
+	if (!is_writable($dir) || @file_put_contents($dir.'/'.$name, $out, LOCK_EX) === false) { return $url; }
+	@chmod($dir.'/'.$name, 0644);
+	return $rel;
+}
+function shop_img_thumbs_remove($name) { foreach (array(240, 480) as $w) { $f = shop_img_dir().'/t'.$w.'/'.basename($name); if (is_file($f)) { @unlink($f); } } }
 function shop_img_from_upload($f) {
 	if (!is_array($f) || !isset($f['error']) || $f['error'] !== UPLOAD_ERR_OK) {
 		$big = is_array($f) && isset($f['error']) && in_array($f['error'], array(UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE), true);
@@ -2123,14 +2150,14 @@ function shop_img_release($url) {
 	$f = shop_img_file($url);
 	if ($f === '' || !is_file($f)) { return; }
 	$n = fb_row("SELECT COUNT(*) AS n FROM ".fb_t('tp_shop_products')." WHERE image_url = ?", 's', array((string)$url));
-	if ($n && (int)$n['n'] === 0) { @unlink($f); }
+	if ($n && (int)$n['n'] === 0) { @unlink($f); shop_img_thumbs_remove($f); }
 }
 // pictures uploaded but never saved with a dish: gone after a day
 function shop_img_gc() {
 	$used = array();
 	foreach (fb_rows("SELECT image_url FROM ".fb_t('tp_shop_products')." WHERE image_url <> ''") as $r) { $used[$r['image_url']] = 1; }
 	foreach ((array)glob(shop_img_dir().'/*') as $f) {
-		if (is_file($f) && filemtime($f) < time() - 86400 && empty($used[shop_img_prefix().basename($f)])) { @unlink($f); }
+		if (is_file($f) && filemtime($f) < time() - 86400 && empty($used[shop_img_prefix().basename($f)])) { @unlink($f); shop_img_thumbs_remove($f); }
 	}
 }
 // dishes whose picture is still linked from another site

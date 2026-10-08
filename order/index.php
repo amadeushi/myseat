@@ -40,6 +40,7 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 		<p>Unser Lieferservice startet in Kürze. Bis dahin erreichst du uns telefonisch.</p>
 	</main>
 <?php else: ?>
+	<a class="skip-link" href="#shop-menu">Zur Speisekarte springen</a>
 	<header class="shop-top shop-top--menu">
 		<div class="shop-top-in">
 			<a class="shop-logo" href="./" aria-label="<?php echo shop_h($brand); ?>"><?php echo brand_logo_html($brand, 'brand-logo'); ?></a>
@@ -90,7 +91,8 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 			<?php foreach ($menu as $c): ?><a href="#cat-<?php echo (int)$c['id']; ?>" data-cat="<?php echo (int)$c['id']; ?>"><?php echo shop_h(trim($c['name'])); ?></a><?php endforeach; ?>
 		</nav>
 
-		<main class="shop-menu" id="shop-menu">
+		<main class="shop-menu" id="shop-menu" tabindex="-1">
+			<h1 class="sr-only">Bestellen bei <?php echo shop_h($brand); ?></h1>
 			<?php if (!$menu): ?>
 				<p class="shop-empty">Die Speisekarte ist noch leer.</p>
 			<?php endif; ?>
@@ -108,7 +110,7 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 							<h3><?php echo shop_h($p['title']); ?></h3>
 							<?php if (trim($p['description']) !== ''): ?><p><?php echo shop_h($p['description']); ?></p><?php endif; ?>
 						</div>
-						<?php if ($p['image_url'] !== ''): ?><img class="shop-item-img" src="<?php echo shop_h($p['image_url']); ?>" alt="" loading="lazy" width="80" height="80"/><?php endif; ?>
+						<?php if ($p['image_url'] !== ''): ?><?php $t240 = shop_img_thumb($p['image_url'], 240); $t480 = shop_img_thumb($p['image_url'], 480); ?><img class="shop-item-img" src="<?php echo shop_h($t240); ?>"<?php if ($t240 !== $p['image_url']): ?> srcset="<?php echo shop_h($t240); ?> 240w, <?php echo shop_h($t480); ?> 480w" sizes="(min-width: 1024px) 96px, 80px"<?php endif; ?> alt="" loading="lazy" decoding="async" width="80" height="80"/><?php endif; ?>
 						<div class="shop-item-buy">
 							<span class="shop-price"><?php echo ($choices && (int)$p['nvar'] > 0) ? 'ab ' : ''; ?><?php echo shop_money($from); ?></span>
 							<?php $conf = !empty($p['configurator']); ?>

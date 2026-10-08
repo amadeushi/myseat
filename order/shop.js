@@ -248,7 +248,7 @@
 		var io = new IntersectionObserver(function (entries) {
 			entries.forEach(function (e) {
 				if (!e.isIntersecting) { return; }
-				links.forEach(function (a) { var on = a.dataset.cat === e.target.id.replace('cat-', ''); a.classList.toggle('is-active', on); if (on && window.innerWidth < 1024) { a.scrollIntoView({ inline: 'center', block: 'nearest' }); } });
+				links.forEach(function (a) { var on = a.dataset.cat === e.target.id.replace('cat-', ''); a.classList.toggle('is-active', on); if (on) { a.setAttribute('aria-current', 'true'); } else { a.removeAttribute('aria-current'); } if (on && window.innerWidth < 1024) { a.scrollIntoView({ inline: 'center', block: 'nearest' }); } });
 			});
 		}, { rootMargin: '-130px 0px -70% 0px' });
 		$$('.shop-cat').forEach(function (s) { io.observe(s); });

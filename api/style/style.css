@@ -1836,7 +1836,10 @@ a.contact-item:hover svg {
 }
 .booking-shell .legal-footer a {
 	color: var(--text-muted);
-	padding: 10px 8px;
+	display: inline-flex;
+	align-items: center;
+	min-height: 44px;
+	padding: 0 8px;
 	text-decoration: none;
 	border-bottom: 1px solid transparent;
 	transition: color .2s ease, border-color .2s ease;

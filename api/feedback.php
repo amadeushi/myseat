@@ -159,7 +159,7 @@ textarea:focus { outline: none; border-color: var(--gold); }
 .ext-btn-primary { background: var(--gold); border-color: var(--gold); color: #1a1408; }
 .ext-btn-primary:hover { background: var(--gold-strong); border-color: var(--gold-strong); color: #1a1408; }
 .legal-footer { display: flex; justify-content: center; align-items: center; gap: 4px; padding: 20px 16px 28px; font-size: 14px; letter-spacing: .02em; color: var(--text-muted); }
-.legal-footer a { color: var(--text-muted); padding: 10px 8px; text-decoration: none; border-bottom: 1px solid transparent; transition: color .2s ease, border-color .2s ease; }
+.legal-footer a { color: var(--text-muted); display: inline-flex; align-items: center; min-height: 44px; padding: 0 8px; text-decoration: none; border-bottom: 1px solid transparent; transition: color .2s ease, border-color .2s ease; }
 .legal-footer a:hover, .legal-footer a:focus-visible { color: var(--gold-strong); border-bottom-color: currentColor; }
 </style>
 <link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">

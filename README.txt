@@ -52,6 +52,14 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-09 == mySeat v6.30.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix (Audit app.amds.at/order/): Die Gerichtsbilder der Speisekarte kommen als Vorschauen (240 und 480 px, uploads/menu/t240 und t480, per srcset) statt als Originale mit 115 bis 190 KB: 76 Bilder waren zusammen
+   9,9 MB, die 240-px-Fassungen sind zusammen 0,7 MB. Neue Uploads bekommen ihre Vorschauen sofort, bestehende beim ersten Aufruf der Seite; beim Löschen eines Bildes gehen sie mit.
+ * Fix: Barrierefreiheit der Bestellseite: unsichtbare Hauptüberschrift (h1), aria-current an der aktiven Kategorie, Sprunglink "Zur Speisekarte springen" (erscheint beim ersten Tab).
+ * Fix: Die Links AGB, Impressum und Datenschutz unter den Gästeseiten (Bestellung, Reservierung, Feedback) sind 44 px hoch.
+ * Doc: DESIGN.md beschreibt die Pizza-Oberfläche (eigene Farben und Radien) als bewusste Abweichung.
+
 2026-10-08 == mySeat v6.30.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix: Mail "Reservierung bestätigt" nach der Genehmigung über den Link in der Benachrichtigungsmail (api/request.php): die Uhrzeit kam als "7:00 pm Uhr" und das Datum fehlte, weil dort keine Sitzung die

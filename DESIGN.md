@@ -26,6 +26,17 @@ colors:
   status-cancelled: "#e0685f"
   capacity-full: "#c65a4f"
   capacity-low: "#6f9c5f"
+  pizza-wood: "#4a2f1a"
+  pizza-wood-deep: "#2d1b0e"
+  pizza-paper: "#efdfbd"
+  pizza-paper-light: "#f8ecd0"
+  pizza-ink: "#3a2413"
+  pizza-ink-soft: "#6b4f30"
+  pizza-cream: "#fff6df"
+  pizza-tomato: "#c63d2a"
+  pizza-tomato-deep: "#a82f1e"
+  pizza-line: "#cdb27f"
+  pizza-focus: "#ffd27a"
 typography:
   display:
     fontFamily: "Cormorant Garamond, Georgia, serif"
@@ -54,6 +65,9 @@ rounded:
   sm: "6px"
   md: "10px"
   pill: "999px"
+  pizza-sm: "11px"
+  pizza-md: "12px"
+  pizza-lg: "14px"
 spacing:
   xs: "6px"
   sm: "8px"
@@ -217,6 +231,17 @@ Kanten sind durchgehend weich gerundet, nie scharf — passend zur warmen, einla
 ### Navigation
 - **Style:** Flache Textlinks im Ruhezustand; aktiver Tab bekommt vollen Kerzengold-Hintergrund mit dunklem Text (nicht nur Unterstreichung). Datumsnavigation (Vor/Zurück) sind Kreis-Icon-Buttons mit SVG-Chevron, kein Unicode-Pfeil und kein `<<`/`>>`-Text.
 - **Mobile:** Touch-Ziele mindestens 44px hoch (mit `box-sizing: border-box` — ein früherer Fehler ließ sie durch `content-box` auf 65px anwachsen, siehe Do's and Don'ts).
+
+## Pizza-Konfigurator (eigene Oberfläche, bewusst abweichend)
+Der Wunschpizza-Konfigurator (`order/pizza.css`, `order/pizza.js`) hat auf Wunsch des Betreibers eine eigene, helle Optik, die an das Spiel Pizza Connection erinnert: Holztisch, Pergamentpapier, gemalte Zutaten. Sie gilt nur innerhalb des Konfigurator-Dialogs und löst das Kerzengold des übrigen Shops nicht ab.
+- **Holz:** `pizza-wood` (#4a2f1a) für die Fläche, `pizza-wood-deep` (#2d1b0e) für die Kopfleiste.
+- **Papier:** `pizza-paper` (#efdfbd) und `pizza-paper-light` (#f8ecd0) für Karten und Raster, `pizza-cream` (#fff6df) für Schrift auf Holz.
+- **Tinte:** `pizza-ink` (#3a2413) für Text auf Papier, `pizza-ink-soft` (#6b4f30) für Nebentext, `pizza-line` (#cdb27f) für Linien.
+- **Tomate:** `pizza-tomato` (#c63d2a), gedrückt `pizza-tomato-deep` (#a82f1e), für Auswahl und Hauptaktion.
+- **Fokus:** `pizza-focus` (#ffd27a), 3 px Ring, auf Holz; auf Papier ist der Ring `pizza-ink`.
+- **Radien:** 11, 12 und 14 px für Karten und Zutatenkacheln (`pizza-sm`, `pizza-md`, `pizza-lg`), Pille für Knöpfe. Touch-Ziele bleiben mindestens 44 px.
+- **Illustrationsfarben:** Die gemalten Zutaten und der Teig (Käse-, Tomaten-, Paprika-, Pilzfarben und ihre Schattierungen in `pizza.css` und `pizza.js`) sind Bildfarben der Zeichnungen und keine Oberflächen-Tokens. Sie stehen bewusst nicht in der Palette oben; neue Zutaten bekommen ihre Farben im Bild selbst.
+- Die Zutaten sind stilisierte SVGs, kein Foto. Bedienung per Tastatur und Screenreader ist unabhängig von der gemalten Optik gesichert (siehe `PRODUCT.md`).
 
 ## Do's and Don'ts
 
