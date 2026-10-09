@@ -57,7 +57,7 @@ function shop_slip_escpos($o, $items, $full) {
 	if (!$o['scheduled_at'] && !$platform) {
 		// as soon as possible: nothing to wait for, so the word is the big line and the time only a small one
 		$put('SOFORT', 2, true);
-		$put(($delivery ? 'Lieferung ca. ' : 'Abholung ca. ').substr($due, 11, 5), 0);
+		$put(($delivery ? 'Lieferung ca. ' : 'Abholung ca. ').substr($due, 11, 5), 1, true);
 	} else {
 		$put(($o['scheduled_at'] ? 'geplant ' : '').substr($due, 11, 5), 2, true);
 	}
@@ -65,29 +65,29 @@ function shop_slip_escpos($o, $items, $full) {
 	$rule();
 	if (!$full) {
 		$who = trim((string)$o['customer_name']).(($delivery && trim((string)$o['zip']) !== '') ? ' - '.$o['zip'] : '');
-		if ($who !== '') { $put($who, 1, true); $rule(); }
+		if ($who !== '') { $put($who, 2, true); $rule(); }
 	} else {
-		$put(trim((string)$o['customer_name']), 1, true);
+		$put(trim((string)$o['customer_name']), 2, true);
 		if ($delivery) {
-			$put(trim((string)$o['street']), 1);
-			$put(trim($o['zip'].' '.$o['city']), 1);
-			if (trim((string)$o['address_note']) !== '') { $put('Hinweis: '.$o['address_note'], 0, true); }
+			$put(trim((string)$o['street']), 2, true);
+			$put(trim($o['zip'].' '.$o['city']), 2, true);
+			if (trim((string)$o['address_note']) !== '') { $put('Hinweis: '.$o['address_note'], 1, true); }
 		}
 		$rule();
 	}
 	$cnt = shop_slip_counts($items); $pos = 0;
 	foreach ($items as $it) {
-		$pos++; $put('Pos '.$pos.' von '.$cnt['pos'], 0); // small line above the dish: a position that is missing shows as a jump in the numbers
-		$put((int)$it['qty'].'x '.$it['title'], 1, true);
-		if ($it['variation'] !== '') { $put('   '.$it['variation'], 0); }
-		foreach ($it['options'] as $op) { $put('   + '.($op['qty'] > 1 ? (int)$op['qty'].'x ' : '').$op['title'], 1); }
-		if ($it['note'] !== '') { $put('   >> '.$it['note'].' <<', 1, true); }
-		$b .= "\n";
+		$pos++; $put('Pos '.$pos.' von '.$cnt['pos'], 0, true); // small line above the dish: a position that is missing shows as a jump in the numbers
+		$put((int)$it['qty'].'x '.$it['title'], 2, true);
+		if ($it['variation'] !== '') { $put('   '.$it['variation'], 1, true); }
+		foreach ($it['options'] as $op) { $put('  + '.($op['qty'] > 1 ? (int)$op['qty'].'x ' : '').$op['title'], 2); }
+		if ($it['note'] !== '') { $put('>> '.$it['note'].' <<', 2, true); }
+		$b .= str_repeat('.', $W)."\n"; // a dotted line between the dishes
 	}
-	if ($o['note'] !== '') { $put('>> '.$o['note'].' <<', 1, true); }
+	if ($o['note'] !== '') { $put('>> '.$o['note'].' <<', 2, true); }
 	if ($pos !== $cnt['pos']) { error_log('slip: '.$pos.' positions printed, '.$cnt['pos'].' counted'); } // cannot happen: both come from the same list
 	$rule();
-	$put(shop_slip_control_text($cnt), 0, true);
+	$put(shop_slip_control_text($cnt), 1, true);
 	$rule();
 	if ($full) {
 		if (!empty($o['adjust_note'])) { foreach (explode('; ', $o['adjust_note']) as $adj) { $put($adj, 0, true); } }

@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-09 == mySeat v6.31.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geaendert: Der Kuechenbon (ESC/POS) ist besser lesbar: Gerichte und Optionen in doppelter Breite und Hoehe, Name, Strasse, Ort und Anmerkungen gross, Punktlinie zwischen den Gerichten.
+ * Neu: Epson TM-m30II per USB am Pi (PRINT_TTY=/dev/usb/lp0); der Druckdienst schreibt direkt, ohne serielle Einstellungen.
+
 2026-10-09 == mySeat v6.31.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: Angebote ohne Code (web/classes/shop_offers.class.php, Einstellungen > Lieferservice > Angebote): Gratis-Extra ab einem Warenwert, der mit der Zahl der Hauptgerichte wächst (22 / 38 / 55 EUR bei 1 / 2 / 3+),
