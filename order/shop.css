@@ -79,6 +79,14 @@
 .shop-top--menu { position: relative; z-index: 30; }
 .shop-cats { position: sticky; top: calc(var(--shop-sticky-top, 0px) + var(--shop-search-h, 66px)); z-index: 20; display: flex; gap: 8px; overflow-x: auto; padding: 10px 16px; margin: 0 -16px; background: var(--bg); scrollbar-width: none; }
 .shop-cats::-webkit-scrollbar { display: none; }
+/* diet filter: three toggles at the start of the category bar (a column of their own above the categories on a wide screen) */
+.shop-diets { display: flex; flex: none; gap: 8px; padding-right: 10px; margin-right: 2px; border-right: 1px solid var(--border-soft); }
+.shop-diet-chip { flex: none; min-height: 44px; box-sizing: border-box; padding: 0 16px; border: 1px dashed var(--border); border-radius: var(--radius-pill); background: transparent; color: var(--text-muted); font: inherit; font-size: 14px; cursor: pointer; white-space: nowrap; }
+.shop-diet-chip:hover { color: var(--text); border-color: var(--gold); }
+.shop-diet-chip.is-on { border-style: solid; border-color: var(--gold); background: rgba(201, 162, 89, 0.16); color: var(--gold-strong); font-weight: 700; }
+.shop-diet { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0; }
+.shop-diet span { padding: 1px 8px; border: 1px solid var(--border); border-radius: var(--radius-pill); color: var(--success); font-size: 12px; font-weight: 700; }
+.shop-diet span.is-spicy { color: var(--danger); }
 .shop-cats a { flex: none; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 16px; border: 1px solid var(--border-soft); border-radius: var(--radius-pill); color: var(--text-muted); font-size: 14px; font-weight: 600; text-decoration: none; white-space: nowrap; }
 .shop-cats a.is-active { color: #1a1408; background: var(--gold); border-color: var(--gold); }
 .shop-menu { min-width: 0; }
@@ -236,6 +244,8 @@
 	.shop-top--menu { position: sticky; }
 	.shop-cats { position: sticky; top: calc(var(--shop-sticky-top, 61px) + var(--shop-search-h, 66px) + 25px); align-self: start; flex-direction: column; overflow: visible; margin: 28px 0 0; padding: 0; background: transparent; gap: 2px; max-height: calc(100vh - var(--shop-sticky-top, 61px) - var(--shop-search-h, 66px) - 49px); overflow-y: auto; }
 	.shop-cats a { border: 0; border-radius: var(--radius-md); min-height: 44px; white-space: normal; }
+	.shop-diets { flex-direction: column; gap: 4px; padding: 0 0 10px; margin: 0 0 10px; border-right: 0; border-bottom: 1px solid var(--border-soft); }
+	.shop-diet-chip { border-radius: var(--radius-md); text-align: left; }
 	.shop-cats a.is-active { background: rgba(201, 162, 89, 0.16); color: var(--gold-strong); }
 	.shop-cat { scroll-margin-top: calc(var(--shop-sticky-top, 61px) + var(--shop-search-h, 66px) + 29px); }
 	.shop-menu { scroll-margin-top: calc(var(--shop-sticky-top, 61px) + var(--shop-search-h, 66px) + 29px); }
@@ -331,6 +341,16 @@
 .cart-up h3 { font-size: 15px; font-weight: 700; margin-bottom: 10px; }
 .cart-up-list { display: flex; flex-wrap: wrap; gap: 8px; }
 .cart-up-item { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 14px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: transparent; color: var(--text); font-size: 14px; font-weight: 600; text-align: left; transition: background 150ms ease, border-color 150ms ease; }
+.cart-offer { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-soft); }
+.cart-offer .cart-goal { margin: 0; }
+.cart-offer h3 { font-size: 15px; font-weight: 700; margin-bottom: 10px; }
+.cart-offer-sub { margin: 10px 0 8px; color: var(--text-muted); font-size: 14px; line-height: 1.5; }
+.cart-extra-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.cart-extra { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 14px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: transparent; color: var(--text); font: inherit; font-size: 14px; cursor: pointer; text-align: left; }
+.cart-extra small { color: var(--gold-strong); font-size: 13px; font-weight: 700; }
+.cart-extra:hover { background: rgba(201, 162, 89, 0.12); border-color: var(--gold); }
+.cart-extra.is-on { background: var(--gold); border-color: var(--gold); color: #1a1408; }
+.cart-extra.is-on small { color: #1a1408; }
 .cart-up-item:hover { background: rgba(201, 162, 89, 0.12); border-color: var(--gold); }
 .cart-up-item small { color: var(--gold-strong); font-size: 13px; font-weight: 700; white-space: nowrap; }
 .shop-shell .cart-stamp { margin-top: 10px; color: var(--text-muted); font-size: 13px; text-align: center; text-wrap: balance; }
@@ -396,7 +416,52 @@
 .st-tip.leaflet-tooltip-top::before { border-top-color: var(--border); }
 .shop-shell .st-mapnote { margin-top: 10px; color: var(--text-muted); font-size: 14px; }
 .shop-shell .st-mapnote:empty { display: none; }
-@media (prefers-reduced-motion: reduce) { .st-pin-driver span { animation: none; } }
+/* who is ordering: the line at the top of the checkout and in the cart, and the question before an order without the account the device had */
+.co-acc { display: flex; align-items: center; gap: 10px 12px; flex-wrap: wrap; margin: 0 0 18px; padding: 12px 14px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface); font-size: 14px; line-height: 1.5; }
+.co-acc[hidden], .co-accwarn[hidden] { display: none; }
+.co-acc > span:nth-child(2) { flex: 1 1 200px; min-width: 0; }
+.co-acc-dot, .cart-acc-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--text-muted); }
+.co-acc.is-in .co-acc-dot, .cart-acc-dot { background: var(--success); }
+.cart-acc-dot { display: inline-block; margin-right: 8px; }
+.co-acc.is-out .co-acc-dot { background: var(--gold); }
+.co-acc.is-warn { border-color: var(--gold); background: rgba(201, 162, 89, 0.1); }
+.co-acc-btn, .co-acc-out { flex: none; min-height: 44px; display: inline-flex; align-items: center; padding: 0 16px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: transparent; color: var(--gold-strong); font: inherit; font-size: 14px; font-weight: 700; text-decoration: none; cursor: pointer; }
+.co-acc-out { font-weight: 400; color: var(--text-muted); }
+.co-acc-btn:hover, .co-acc-out:hover { border-color: var(--gold); color: var(--text); }
+.co-accwarn { margin: 0 0 12px; padding: 14px; border: 1px solid var(--gold); border-radius: var(--radius-md); background: rgba(201, 162, 89, 0.1); }
+.co-accwarn p { margin: 0 0 10px; font-size: 14px; line-height: 1.5; }
+.co-accwarn-act { display: flex; flex-direction: column; gap: 8px; }
+.co-accwarn-act .cart-go { text-align: center; }
+.co-accwarn-skip { min-height: 44px; border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.cart-stamp strong { color: var(--text); }
+/* Zeus in small everyday moments: the thanks for a rating, the empty cart (the same glow along his outline as the driver on the map; still, never animated) */
+.st-zeus, .cart-zeus { filter: drop-shadow(0 0 1px #f3ede1) drop-shadow(0 0 5px rgba(226, 192, 127, 0.7)); }
+.st-ratethanks { display: flex; align-items: center; gap: 12px; }
+.st-ratethanks .st-zeus[hidden] { display: none; }
+.cart-zeus { margin-bottom: 8px; }
+.st-push { margin: 14px 0; padding: 14px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface); }
+.st-push p { margin: 0 0 10px; color: var(--text-muted); font-size: 14px; line-height: 1.5; }
+.st-push .cart-go { width: 100%; }
+.st-pushmsg { margin: 8px 0 0 !important; min-height: 20px; }
+.st-pushmsg.is-error { color: var(--danger) !important; }
+.st-pushdone { margin: 0 !important; color: var(--success) !important; font-weight: 700; }
+/* the voucher instead of the free extra, on the status page */
+.st-voucher { margin: 14px 0 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-md); background: rgba(201, 162, 89, 0.08); color: var(--text); font-size: 14px; line-height: 1.5; }
+/* pickup: "Ich bin da"; delivery: stars for the driver (one tap) */
+.st-here { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-soft); }
+.st-here p { margin: 0 0 10px; color: var(--text-muted); }
+.st-here .cart-go { width: 100%; }
+.st-heredone { color: var(--success) !important; font-weight: 700; }
+.st-heremsg { margin: 8px 0 0 !important; color: var(--danger) !important; font-size: 14px; }
+.st-heremsg:empty { display: none; }
+.st-stars { display: flex; gap: 2px; margin: 4px 0 8px; }
+.st-star { display: grid; place-items: center; width: 52px; height: 52px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--gold); cursor: pointer; }
+.st-star svg { fill: none; stroke: currentColor; stroke-width: 1.6; transition: fill .12s ease, transform .12s ease; }
+.st-star.is-on svg { fill: currentColor; }
+.st-star:hover:not(:disabled) svg { transform: scale(1.12); }
+.st-star:disabled { cursor: default; }
+.st-ratemsg { margin: 0; min-height: 22px; color: var(--text-muted); }
+@media (prefers-reduced-motion: reduce) { .st-pin-driver span { animation: none; } .st-star svg { transition: none; } .st-star:hover:not(:disabled) svg { transform: none; } }
 
 /* driver page (order/driver.php): a phone in one hand, in a car or on the street, in sun or at night. Big touch targets, the district and the
    distance first, and nothing that a tap in a pocket could trigger: finishing and starting need a swipe, the risky buttons sit behind "Mehr". */

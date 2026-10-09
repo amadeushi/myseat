@@ -9,6 +9,8 @@
 	if (!dlg) { return; }
 	var esc = SH.esc, fmt = SH.fmt;
 	var me = null, pending = null, tab = 'orders', timer = null, trigger = null;
+	// where to go after signing in (the checkout or the status page of an order sent the guest here): only these two pages
+	var NEXT = ''; try { var nx = new URLSearchParams(location.search).get('next') || ''; if (/^(checkout\.php|status\.php\?t=[a-f0-9]{32})$/.test(nx)) { NEXT = nx; } } catch (e) {}
 
 	function $(s, r) { return (r || document).querySelector(s); }
 	function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
@@ -32,7 +34,9 @@
 	// ---- the button in the header and the row of favorites above the menu
 	function setMe(r) {
 		me = r;
-		var lab = $('#acc-btn-label'); if (lab) { lab.textContent = signedIn() ? 'Mein Konto' : 'Anmelden'; }
+		// the header says who is signed in (a first name), so a guest sees at a glance that this browser knows her; the device remembers that there was an account (the checkout warns when it is gone)
+		var lab = $('#acc-btn-label'); if (lab) { var fn = signedIn() && me.contact && me.contact.name ? String(me.contact.name).trim().split(/\s+/)[0] : ''; lab.textContent = signedIn() ? (fn ? 'Hallo ' + fn : 'Mein Konto') : 'Anmelden'; }
+		if (signedIn()) { try { localStorage.setItem('amadeusHadAccount', '1'); } catch (e) {} }
 		renderFavRow(); markHearts(); stampHint(); if (!signedIn()) { applied = ''; } else { applyAddress(); }
 	}
 	function refresh() { return api('me').then(function (r) { if (r && r.ok) { setMe(r); } return r; }).catch(function () {}); }
@@ -162,6 +166,7 @@
 		clearInterval(timer);
 		if (link) { SH.toast('Bestätigt, die Angabe gehört jetzt zu deinem Konto'); viewAccount(); return; }
 		SH.toast('Du bist angemeldet');
+		if (NEXT) { setTimeout(function () { location.href = NEXT; }, 700); return; }
 		if (pending) { var p = pending; pending = null; dlg.close(); p(); return; }
 		viewAccount();
 	}
@@ -304,6 +309,10 @@
 	function stampHint() {
 		var el = $('[data-stamp-hint]'); if (!el) { return; }
 		var pc = +body.dataset.stamp || 0, lost = Math.round(SH.subtotal() * pc / 100);
+		if (signedIn() && me.account) {
+			var st = me.stamp, nm = (me.contact && me.contact.name) ? me.contact.name : (me.account.mask_mail || me.account.mask_phone || 'deinem Konto');
+			el.innerHTML = '<span class="cart-acc-dot" aria-hidden="true"></span>Angemeldet als <strong>' + esc(nm) + '</strong>' + (st && st.goal ? ' · ' + (st.count || 0) + ' von ' + st.goal + ' Stempeln' : ''); el.hidden = false; return;
+		}
 		if (signedIn() || !me || pc <= 0 || lost <= 0) { el.hidden = true; return; }
 		el.innerHTML = 'Ohne Kundenkonto entgehen dir bei dieser Bestellung ca. <strong>' + SH.fmt(lost) + '</strong> Stempel-Guthaben. <button type="button" class="cart-stamp-btn" data-acc-open>Jetzt anmelden</button>';
 		el.hidden = false;
@@ -316,6 +325,7 @@
 		var q = ''; try { q = new URLSearchParams(location.search).get('konto') || ''; } catch (e) {}
 		if (!q) { return; }
 		try { history.replaceState(null, '', location.pathname + location.search.replace(/([?&])konto=1&?/, '$1').replace(/[?&]$/, '') + location.hash); } catch (e) {}
+		if (me && me.ok && signedIn() && NEXT) { location.href = NEXT; return; }
 		if (me && me.ok) { if (signedIn()) { viewAccount(); } else { viewLogin('login'); } openDlg(); }
 	});
 })();

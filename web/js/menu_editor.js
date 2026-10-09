@@ -103,8 +103,10 @@
 	}
 
 	// ---- lists
+	var DIETS = { veg: 'vegetarisch', vegan: 'vegan', spicy: 'scharf' };
 	function dishBadges(p) {
 		var b = '';
+		if (p.diet_set) { p.diet.forEach(function (f) { if (f === 'veg' && p.diet.indexOf('vegan') >= 0) { return; } b += '<span class="me-tag">' + DIETS[f] + '</span>'; }); } else { b += '<span class="me-tag me-tag-open">Kennzeichen prüfen</span>'; }
 		if (!p.active) { b += '<span class="me-tag">versteckt</span>'; }
 		if (p.groups.length) { b += '<span class="me-tag">' + p.groups.length + ' Gruppe' + (p.groups.length > 1 ? 'n' : '') + '</span>'; }
 		return b;
@@ -162,6 +164,7 @@
 			'<div><label class="me-l" for="me-price">Preis (€)</label><input id="me-price" inputmode="decimal" value="' + eur(d.price) + '"/><small class="me-help">Bei Varianten gelten deren Preise.</small></div></div>' +
 			'<label class="me-l" for="me-desc">Beschreibung</label><textarea id="me-desc" maxlength="800" rows="3">' + esc(d.description) + '</textarea>' +
 			'<label class="me-l" for="me-all">Allergene und Zusatzstoffe</label><input id="me-all" maxlength="400" value="' + esc(d.allergens) + '" placeholder="z. B. Weizen, Milch, Eier"/>' +
+			dietBlock(d) +
 			'<span class="me-l">Bild</span><div id="me-imgwrap">' + imgBlock(d.image_url) + '</div>' +
 			'<label class="offer-check"><input type="checkbox" id="me-active"' + (d.active ? ' checked' : '') + '/> Im Shop sichtbar</label>' +
 			'<label class="me-l" for="me-conf">Wunschpizza-Konfigurator</label><select id="me-conf"><option value="0"' + (!d.configurator ? ' selected' : '') + '>Aus (normale Auswahl)</option><option value="1"' + (d.configurator === 1 ? ' selected' : '') + '>Pizza (rund)</option><option value="2"' + (d.configurator === 2 ? ' selected' : '') + '>Flammkuchen (oval, extra dünn, Holzbrett)</option></select>' +
@@ -174,9 +177,16 @@
 			'<div class="me-actions"><button type="submit" class="button_dark">' + (isNew ? 'Gericht anlegen' : 'Speichern') + '</button>' +
 			(isNew ? '' : '<button type="button" class="me-mini" data-prodmove="up">Nach oben</button><button type="button" class="me-mini" data-prodmove="down">Nach unten</button><button type="button" class="offer-delete" data-delprod>Gericht löschen</button>') + '</div></form>';
 	}
+	// vegetarian / vegan / spicy: what the guest can filter by. Ticked by the owner; a dish that was never saved with marks starts with a suggestion (from its name and category) and says so
+	function dietBlock(d) {
+		var cur = d.diet_set ? d.diet : (d.diet_suggest || []);
+		return '<fieldset class="me-diet"><legend class="me-l">Kennzeichen für Gäste</legend>' + Object.keys(DIETS).map(function (k) {
+			return '<label class="offer-check"><input type="checkbox" data-diet="' + k + '"' + (cur.indexOf(k) >= 0 ? ' checked' : '') + '/> ' + DIETS[k].charAt(0).toUpperCase() + DIETS[k].slice(1) + '</label>';
+		}).join('') + (d.diet_set ? '' : '<p class="me-help">Das ist ein Vorschlag aus dem Namen. Gäste sehen ein Kennzeichen erst, wenn du das Gericht gespeichert hast. Bitte prüfe es, besonders bei Soßen und Zutaten.</p>') + '<p class="me-help">Vegan schließt vegetarisch ein.</p></fieldset>';
+	}
 	function readDish() {
 		return { id: sel.draft.id || 0, title: $('#me-title').value, category_id: +$('#me-cat').value, price: $('#me-price').value, description: $('#me-desc').value, allergens: $('#me-all').value,
-			image_url: $('#me-img').value, active: $('#me-active').checked ? 1 : 0, configurator: +$('#me-conf').value || 0, groups: sel.draft.groups.slice(),
+			diet: $$('[data-diet]').filter(function (c) { return c.checked; }).map(function (c) { return c.dataset.diet; }), image_url: $('#me-img').value, active: $('#me-active').checked ? 1 : 0, configurator: +$('#me-conf').value || 0, groups: sel.draft.groups.slice(),
 			variations: $$('.me-var').map(function (r) { return { id: +r.dataset.id || 0, title: $('.v-t', r).value, price: $('.v-p', r).value, mult: $('.v-m', r).value }; }) };
 	}
 

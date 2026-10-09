@@ -24,6 +24,7 @@ $imprint = (!empty($settings['imprintUrl']) && preg_match('#^https?://#i', $sett
 	<link rel="stylesheet" href="shop.css?v=<?php echo @filemtime(__DIR__.'/shop.css'); ?>"/>
 	<link rel="stylesheet" href="stempel.css?v=<?php echo @filemtime(__DIR__.'/stempel.css'); ?>"/>
 <link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
 </head>
 <body class="shop-shell checkout" data-token="<?php echo shop_h($_SESSION['shop_token']); ?>" data-account="<?php echo shop_acc_enabled() ? '1' : '0'; ?>">
 	<header class="shop-top">
@@ -36,6 +37,7 @@ $imprint = (!empty($settings['imprintUrl']) && preg_match('#^https?://#i', $sett
 	<div class="co-layout">
 		<form class="co-form" id="co-form" novalidate autocomplete="on">
 			<h1>Zur Kasse</h1>
+			<div class="co-acc" id="co-acc" role="status" hidden></div>
 			<p class="co-empty" id="co-empty" hidden>Dein Warenkorb ist leer. <a href="./">Zur Speisekarte</a></p>
 
 			<fieldset class="co-sec">
@@ -121,6 +123,7 @@ $imprint = (!empty($settings['imprintUrl']) && preg_match('#^https?://#i', $sett
 				<p class="co-progress-text" id="co-progress-text"></p>
 			</div>
 			<p class="co-legal">Mit dem Klick auf den Knopf gibst du eine verbindliche Bestellung ab und bist zur Zahlung verpflichtet. Speisen werden für dich frisch zubereitet, ein Widerrufsrecht besteht dafür nicht. <?php if ($terms): ?>Es gelten unsere <a href="<?php echo shop_h($terms); ?>" target="_blank" rel="noopener noreferrer">AGB</a>.<?php endif; ?> <?php if ($privacy): ?>Hinweise zum Datenschutz findest du <a href="<?php echo shop_h($privacy); ?>" target="_blank" rel="noopener noreferrer">hier</a>.<?php endif; ?> <?php if ($imprint): ?><a href="<?php echo shop_h($imprint); ?>" target="_blank" rel="noopener noreferrer">Impressum</a><?php endif; ?></p>
+			<div class="co-accwarn" id="co-accwarn" role="alert" hidden></div>
 			<button type="submit" form="co-form" class="cart-go" id="co-submit" disabled>Zahlungspflichtig bestellen</button>
 			<p class="co-why" id="co-why" role="status" aria-live="polite"></p>
 		</aside>

@@ -100,7 +100,7 @@ function shop_acc_send_sms($to, $code, $link) {
 function shop_acc_send_mail($to, $code, $link) {
 	if (shop_mail_from() === '') { return false; }
 	shop_stamp_mail($to, array(
-		'subject' => 'Dein Anmeldecode: '.$code, 'headline' => 'Dein Anmeldecode', 'lead' => 'Gib diesen Code im Bestellshop ein, oder tippe auf den Knopf, dann bist du gleich drin.',
+		'subject' => 'Dein Anmeldecode: '.$code, 'headline' => 'Dein Anmeldecode', 'lead' => 'Gib diesen Code im Bestellshop ein, am besten in dem Browser, in dem dein Warenkorb liegt. Der Knopf meldet nur den Browser an, in dem du ihn öffnest.',
 		'image' => '', 'alt' => '', 'box' => array('label' => 'Anmeldecode', 'value' => $code, 'note' => 'gültig '.(int)(SHOP_ACC_TTL / 60).' Minuten, nur einmal nutzbar'),
 		'after' => 'Du hast das nicht angefordert? Dann kannst du diese Mail einfach löschen, ohne den Code passiert nichts.',
 		'btn' => 'Jetzt anmelden', 'url' => $link, 'signoff' => 'Dein Team von '.shop_acc_brand()));
@@ -185,6 +185,26 @@ function shop_acc_session_start($accountId) {
 	setcookie(SHOP_ACC_COOKIE, $token, array('expires' => time() + SHOP_ACC_SESSION_DAYS * 86400, 'path' => shop_acc_cookie_path(), 'secure' => $https, 'httponly' => true, 'samesite' => 'Lax'));
 	$_COOKIE[SHOP_ACC_COOKIE] = $token;
 	shop_acc_current(true);
+	try { shop_acc_claim_orders((int)$accountId); } catch (Throwable $e) { error_log('mySeat claim orders: '.$e->getMessage()); }
+}
+
+// Orders of the last three days that were placed without being signed in, with the phone number or e-mail address of this account, belong to it from now on (the guest has just
+// proved with a code that the number or address is hers). A finished one gets its stamp now; one still running gets it when it is finished. Returns how many were taken over.
+function shop_acc_claim_orders($accountId) {
+	$a = fb_row("SELECT key_phone, key_mail FROM ".fb_t('tp_shop_accounts')." WHERE id = ?", 'i', array((int)$accountId));
+	if (!$a) { return 0; }
+	$mine = array($a['key_phone'] !== null ? (string)$a['key_phone'] : '', $a['key_mail'] !== null ? (string)$a['key_mail'] : '');
+	if ($mine[0] === '' && $mine[1] === '') { return 0; }
+	$n = 0;
+	foreach (fb_rows("SELECT id, phone, email, status FROM ".fb_t('tp_shop_orders')." WHERE account_id IS NULL AND is_test = 0 AND source = 'shop' AND status NOT IN ('cancelled', 'failed') AND created_at > ?", 's', array(date('Y-m-d H:i:s', time() - 3 * 86400))) as $o) {
+		$k = shop_coupon_guest_keys($o['phone'], $o['email']);
+		if (!(($mine[0] !== '' && $k[0] === $mine[0]) || ($mine[1] !== '' && $k[1] === $mine[1]))) { continue; }
+		$st = fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET account_id = ? WHERE id = ? AND account_id IS NULL", 'ii', array((int)$accountId, (int)$o['id']));
+		if (!$st || mysqli_stmt_affected_rows($st) !== 1) { continue; }
+		$n++; shop_log((int)$o['id'], 'claimed', 'nach der Anmeldung dem Konto zugeordnet');
+		if ($o['status'] === 'done') { shop_stamp_award((int)$o['id']); }
+	}
+	return $n;
 }
 
 // the signed-in account of this request, or null

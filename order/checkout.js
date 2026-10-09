@@ -3,7 +3,7 @@
 (function () {
 	'use strict';
 	var KEY = 'amadeusCartV2', GUEST = 'amadeusGuestV1', TOKEN = document.body.dataset.token;
-	var S = { mode: 'delivery', cart: [], info: null, zone: null, zoneKey: '', zoneAmbiguous: false, zoneWords: '', w3wKey: '', slots: null, tipPct: 0, tipCustom: '', when: 'asap', pay: '', busy: false, coupon: null, group: null, stamp: null, voucher: null, stampSig: '' };
+	var S = { mode: 'delivery', cart: [], extra: '', offers: null, info: null, zone: null, zoneKey: '', zoneAmbiguous: false, zoneWords: '', w3wKey: '', slots: null, tipPct: 0, tipCustom: '', when: 'asap', pay: '', busy: false, coupon: null, group: null, stamp: null, voucher: null, stampSig: '' };
 	var GKEY = 'amadeusBasketV1';
 	var form = document.getElementById('co-form');
 
@@ -16,7 +16,7 @@
 		return fetch('api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(data) }).then(function (r) { return r.json(); });
 	}
 	function load() {
-		try { var d = JSON.parse(localStorage.getItem(KEY) || '{}'); if (d && Array.isArray(d.cart)) { S.cart = d.cart; } if (d && (d.mode === 'pickup' || d.mode === 'delivery')) { S.mode = d.mode; } } catch (e) {}
+		try { var d = JSON.parse(localStorage.getItem(KEY) || '{}'); if (d && Array.isArray(d.cart)) { S.cart = d.cart; } if (d && (d.mode === 'pickup' || d.mode === 'delivery')) { S.mode = d.mode; } if (d && (d.extra === 'voucher' || +d.extra > 0)) { S.extra = d.extra; } } catch (e) {}
 	}
 	function saveMode() { try { var d = JSON.parse(localStorage.getItem(KEY) || '{}'); d.mode = S.mode; localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) {} }
 
@@ -46,7 +46,13 @@
 		if (S.tipPct === 'custom') { return Math.max(0, Math.round((parseFloat(String(S.tipCustom).replace(',', '.')) || 0) * 100)); }
 		return Math.round(subtotal() * ((+S.tipPct || 0) / 100));
 	}
-	function total() { return subtotal() - discount() + fee() + tipCents(); }
+	// offers (the server works them out from the priced cart and decides again when the order is placed): the pizza + drink discount and the free extra
+	function offerCents() { return (S.offers && S.offers.on) ? (S.offers.combo_cents || 0) : 0; }
+	function loadOffers() {
+		if (!S.cart.length) { return; }
+		post('offers', { extra: S.extra, lines: S.cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; }) }).then(function (r) { S.offers = r.ok ? r : null; renderSummary(); }).catch(function () {});
+	}
+	function total() { return Math.max(0, subtotal() - discount() - offerCents() + fee() + tipCents()); }
 
 	// ---- summary
 	function renderSummary() {
@@ -55,7 +61,14 @@
 				(l.who ? '<p class="cart-opts">für ' + esc(l.who) + '</p>' : '') +
 				(l.optText ? '<p class="cart-opts">' + esc(l.optText) + '</p>' : '') + (l.note ? '<p class="cart-opts">Hinweis: ' + esc(l.note) + '</p>' : '') + '</div>';
 		}).join('');
+		// the free extra: its line (price 0) and, when the guest chose a voucher instead, what comes
+		var of = S.offers;
+		if (of && of.on && of.reached) {
+			if (of.choice && of.choice !== 'voucher') { var ex = (of.extras || []).filter(function (e) { return e.id === of.choice; })[0]; if (ex) { $('#co-lines').innerHTML += '<div class="cart-line"><h3>1× ' + esc(ex.title) + '</h3><span class="cart-lineprice">gratis</span><p class="cart-opts">dein Gratis-Extra</p></div>'; } }
+			else if (of.choice === 'voucher') { $('#co-lines').innerHTML += '<div class="cart-line"><h3>Gutschein statt Extra</h3><span class="cart-lineprice">' + fmt(of.voucher_cents) + '</span><p class="cart-opts">kommt nach der Bestellung per Mail oder SMS</p></div>'; }
+		}
 		var h = '<div class="cart-row"><span>Zwischensumme</span><span>' + fmt(subtotal()) + '</span></div>';
+		if (offerCents() > 0) { h += '<div class="cart-row coupon"><span>' + esc(S.offers.combo_text) + '</span><span>&minus;' + fmt(offerCents()) + '</span></div>'; }
 		if (S.coupon) { h += '<div class="cart-row coupon"><span>Gutschein ' + esc(S.coupon.code) + ' <button type="button" class="co-coupon-off" id="co-coupon-off">entfernen</button></span><span>&minus;' + fmt(S.coupon.discount) + '</span></div>'; }
 		else if (S.voucher && S.voucher.discount > 0) { h += '<div class="cart-row coupon"><span>Stempelkarten-Gutschein</span><span>&minus;' + fmt(S.voucher.discount) + '</span></div>'; }
 		if (S.mode === 'delivery') { h += '<div class="cart-row muted"><span>Liefergebühr</span><span>' + (S.zone ? fmt(S.zone.fee) : 'nach Adresse') + '</span></div>'; }
@@ -84,10 +97,29 @@
 		}
 	}
 	// signed in: name, phone, e-mail and address of the last order fill the form (only fields that are still empty)
+	// who is ordering: shown at the top of the checkout, signed in or not (a guest who made an account but is not signed in in THIS browser used to order without noticing)
+	function hadAccount() { try { return localStorage.getItem('amadeusHadAccount') === '1'; } catch (e) { return false; } }
+	function accStamp(r) { var st = r.stamp; return st && st.goal ? ' · ' + (st.count || 0) + ' von ' + st.goal + ' Stempeln' : ''; }
+	function renderAcc(r) {
+		var el = $('#co-acc'); if (!el) { return; }
+		var next = './?konto=1&next=checkout.php';
+		if (r.signed_in) {
+			var nm = (r.contact && r.contact.name) ? r.contact.name : ((r.account && (r.account.mask_mail || r.account.mask_phone)) || 'deinem Konto');
+			el.className = 'co-acc is-in'; el.innerHTML = '<span class="co-acc-dot" aria-hidden="true"></span><span>Angemeldet als <strong>' + esc(nm) + '</strong>' + accStamp(r) + '</span><button type="button" class="co-acc-out" id="co-acc-out">Nicht du? Abmelden</button>';
+			try { localStorage.setItem('amadeusHadAccount', '1'); } catch (e) {}
+		} else if (hadAccount()) {
+			el.className = 'co-acc is-out is-warn'; el.innerHTML = '<span class="co-acc-dot" aria-hidden="true"></span><span><strong>Du bist gerade nicht angemeldet.</strong> Du warst hier schon einmal angemeldet. Melde dich wieder an, damit diese Bestellung für deine Stempelkarte zählt.</span><a class="co-acc-btn" href="' + next + '">Anmelden</a>';
+		} else {
+			el.className = 'co-acc is-out'; el.innerHTML = '<span class="co-acc-dot" aria-hidden="true"></span><span><strong>Du bestellst ohne Konto.</strong> Mit Konto sammelst du Stempel und bekommst Gutscheine.</span><a class="co-acc-btn" href="' + next + '">Anmelden</a>';
+		}
+		el.hidden = false;
+	}
 	function accountPrefill() {
 		if (!ACCOUNT) { return; }
 		fetch('api.php?op=me&type=' + S.mode, { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) {
-			if (!r.ok || !r.signed_in) { return; }
+			if (!r.ok) { return; }
+			S.accChecked = true; renderAcc(r);
+			if (!r.signed_in) { return; }
 			S.signedIn = true;
 			// the number or address typed to sign in comes first, then what the last order held
 			var p = Object.assign({}, r.profile || {}), c = r.contact || {}, filled = false;
@@ -324,6 +356,8 @@
 		if (ev.target.closest('#co-coupon-toggle')) { var bx = $('#co-coupon-box'); bx.hidden = !bx.hidden; if (!bx.hidden) { $('#co-coupon-in').focus(); } $('#co-coupon-toggle').setAttribute('aria-expanded', bx.hidden ? 'false' : 'true'); return; }
 		if (ev.target.closest('#co-coupon-go')) { applyCoupon($('#co-coupon-in').value, false); return; }
 		if (ev.target.closest('#co-coupon-off')) { removeCoupon(); return; }
+		if (ev.target.closest('#co-accwarn-skip')) { S.skipAcc = true; $('#co-accwarn').hidden = true; form.requestSubmit(); return; }
+		if (ev.target.closest('#co-acc-out')) { post('logout', {}).then(function () { location.reload(); }).catch(function () { location.reload(); }); return; }
 		var m = ev.target.closest('.mode-btn'); if (m) { setMode(m.dataset.mode); if (S.coupon) { applyCoupon(S.coupon.code, true); } return; }
 		var tp = ev.target.closest('.tip-btn');
 		if (tp) {
@@ -345,11 +379,17 @@
 		if (!when) { err.textContent = 'Bitte wähle eine Zeit.'; return; }
 		if (!f.name.value.trim()) { err.textContent = 'Bitte gib deinen Namen an.'; f.name.focus(); return; }
 		if (!f.phone.value.trim()) { err.textContent = 'Bitte gib deine Telefonnummer an.'; f.phone.focus(); return; }
+		// not signed in on a device that had an account: ask once before the order goes (stamps and vouchers only count for an account)
+		if (ACCOUNT && S.accChecked && !S.signedIn && hadAccount() && !S.skipAcc) {
+			var w = $('#co-accwarn');
+			w.innerHTML = '<p><strong>Einen Moment, du bist nicht angemeldet.</strong> Diese Bestellung zählt dann nicht für deine Stempelkarte. Du kannst sie nach der Anmeldung noch nachtragen lassen.</p><div class="co-accwarn-act"><a class="cart-go" href="./?konto=1&amp;next=checkout.php">Anmelden</a><button type="button" class="co-accwarn-skip" id="co-accwarn-skip">Trotzdem ohne Konto bestellen</button></div>';
+			w.hidden = false; w.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); return;
+		}
 		remember();
 		S.busy = true; updateSubmit(); $('#co-submit').textContent = 'Einen Moment ...';
 		post('create', {
 			type: S.mode, when: when, payment: S.pay, tip: tipCents(), name: f.name.value, phone: f.phone.value, email: f.email.value, note: f.note.value,
-			street: f.street.value, zip: f.zip.value, city: f.city.value, words: S.zoneWords, address_note: f.address_note.value, website: f.website.value, coupon: S.coupon ? S.coupon.code : '',
+			street: f.street.value, zip: f.zip.value, city: f.city.value, words: S.zoneWords, address_note: f.address_note.value, website: f.website.value, coupon: S.coupon ? S.coupon.code : '', extra: S.extra,
 			lines: S.cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; }),
 			group: S.group ? S.group.token : '', me: S.group ? S.group.me : '', rev: S.group ? (S.group.rev || '') : ''
 		}).then(function (r) {
@@ -362,7 +402,7 @@
 		}).catch(function () { var msg = 'Das hat nicht geklappt. Bitte versuche es noch einmal.'; err.textContent = msg; S.busy = false; updateSubmit(); $('#co-why').textContent = msg; err.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); });
 	});
 
-	load(); prefill(); accountPrefill();
+	load(); prefill(); accountPrefill(); loadOffers();
 	form.addEventListener('input', function (ev) { if (ev.target && (ev.target.name === 'phone' || ev.target.name === 'email')) { clearTimeout(stampTimer); stampTimer = setTimeout(refreshStamp, 600); } });
 	// coming from a shared basket (checkout.php?g=...): the lines are everybody's, the organizer of that basket orders and pays
 	var gTok = ''; try { gTok = new URLSearchParams(location.search).get('g') || ''; } catch (e) {}
@@ -379,7 +419,7 @@
 			S.group.rev = v.rev; // what the order is checked against: changed basket = the organizer looks again first
 			v.members.forEach(function (m) { m.lines.forEach(function (l) { if (!l.unavailable) { var c = {}; Object.keys(l).forEach(function (k) { c[k] = l[k]; }); c.who = m.name; S.cart.push(c); } }); });
 			if (!S.cart.length) { showEmpty(); return; }
-			setMode(S.mode); checkZone(); renderSummary();
+			setMode(S.mode); checkZone(); renderSummary(); loadOffers();
 		});
 	});
 	renderSummary();

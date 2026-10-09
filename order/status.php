@@ -37,6 +37,7 @@ $delivery = $order && $order['type'] === 'delivery';
 	<link rel="stylesheet" href="shop.css?v=<?php echo @filemtime(__DIR__.'/shop.css'); ?>"/>
 	<link rel="stylesheet" href="stempel.css?v=<?php echo @filemtime(__DIR__.'/stempel.css'); ?>"/>
 <link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
 </head>
 <body class="shop-shell" data-token="<?php echo shop_h($_SESSION['shop_token']); ?>">
 	<header class="shop-top">
@@ -110,6 +111,27 @@ $delivery = $order && $order['type'] === 'delivery';
 		<?php endif; ?>
 
 		<?php if ($st !== 'cancelled' && $st !== 'failed' && $st !== 'done'): ?><p class="st-hint">Diese Seite aktualisiert sich von selbst. Du kannst sie offen lassen oder den Link speichern.</p><?php endif; ?>
+		<?php if (in_array($st, array('new', 'accepted', 'preparing', 'ready', 'delivering'), true) && shop_flag('push_on')): ?>
+		<div class="st-push" id="st-push" data-order="<?php echo shop_h($token); ?>" hidden>
+			<p>Du musst die Seite nicht offen lassen: Wir melden uns auf diesem Gerät, wenn sich etwas tut.</p>
+			<button type="button" class="cart-go">Benachrichtigung einschalten</button>
+			<p class="st-pushmsg" id="st-pushmsg" role="status" aria-live="polite"></p>
+		</div>
+		<script src="push.js?v=<?php echo @filemtime(__DIR__.'/push.js'); ?>"></script>
+		<?php endif; ?>
+		<?php if ($st === 'done' && $delivery):
+			// one tap on the stars for the delivery (the driver, when he is known by name): saved at once, asked once
+			$drvName = ''; if (!empty($order['driver_id'])) { $dm = shop_drivers_name_map(); $drvName = isset($dm[(int)$order['driver_id']]) ? trim((string)strtok(trim((string)$dm[(int)$order['driver_id']]), ' ')) : ''; }
+			$rated = $order['driver_rating'] !== null ? (int)$order['driver_rating'] : 0;
+		?>
+		<div class="st-box st-rate" id="st-rate" data-rated="<?php echo $rated; ?>">
+			<h2>Wie war deine Lieferung<?php echo $drvName !== '' ? ' durch '.shop_h($drvName) : ''; ?>?</h2>
+			<div class="st-stars" role="group" aria-label="Bewertung von 1 bis 5 Sternen">
+				<?php for ($i = 1; $i <= 5; $i++): ?><button type="button" class="st-star<?php echo $i <= $rated ? ' is-on' : ''; ?>" data-rate="<?php echo $i; ?>" aria-label="<?php echo $i; ?> von 5 Sternen"<?php echo $rated ? ' disabled' : ''; ?>><svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z" stroke-linejoin="round"/></svg></button><?php endfor; ?>
+			</div>
+			<div class="st-ratethanks"><img class="st-zeus" id="st-zeus" src="zeus_dot.png" alt="" width="48" height="48"<?php echo $rated ? '' : ' hidden'; ?>/><p class="st-ratemsg" id="st-ratemsg" role="status" aria-live="polite"><?php echo $rated ? 'Danke dir! Zeus freut sich.' : ''; ?></p></div>
+		</div>
+		<?php endif; ?>
 		<?php if ($st === 'done'): ?><p class="st-again"><a class="cart-go" href="./">Noch einmal bestellen</a></p><?php endif; ?>
 
 		<?php
@@ -153,7 +175,7 @@ $delivery = $order && $order['type'] === 'delivery';
 		</script>
 		<?php endif; ?>
 		<?php if (shop_acc_enabled() && !shop_acc_current()): ?>
-		<p class="st-account">Alle deine Bestellungen, Lieblingsgerichte und deine Stempelkarte findest du in deinem Konto. <a href="./?konto=1">Jetzt anmelden</a></p>
+		<p class="st-account">Du bist nicht angemeldet, deshalb zählt diese Bestellung noch nicht für deine Stempelkarte. Melde dich an (mit derselben Telefonnummer oder E-Mail-Adresse wie bei dieser Bestellung), dann tragen wir sie nach. <a href="./?konto=1&amp;next=<?php echo rawurlencode('status.php?t='.$token); ?>">Jetzt anmelden</a></p>
 		<?php endif; ?>
 
 		<div class="st-box">
@@ -171,11 +193,15 @@ $delivery = $order && $order['type'] === 'delivery';
 				<?php if ($delivery): ?><div class="cart-row muted"><span>Liefergebühr</span><span><?php echo shop_money($order['fee_cents']); ?></span></div><?php endif; ?>
 				<?php if ($order['tip_cents'] > 0): ?><div class="cart-row muted"><span>Trinkgeld</span><span><?php echo shop_money($order['tip_cents']); ?></span></div><?php endif; ?>
 				<?php if ((int)$order['discount_cents'] > 0): ?><div class="cart-row muted"><span><?php echo $order['coupon_code'] !== '' ? 'Gutschein '.shop_h($order['coupon_code']) : 'Rabatt'; ?></span><span>&minus;<?php echo shop_money($order['discount_cents']); ?></span></div><?php endif; ?>
+				<?php if ((int)$order['offer_cents'] > 0): ?><div class="cart-row muted"><span><?php echo shop_h($order['offer_note'] !== '' ? preg_replace('/ -[\d,]+ €$/u', '', $order['offer_note']) : 'Kombi-Vorteil'); ?></span><span>&minus;<?php echo shop_money($order['offer_cents']); ?></span></div><?php endif; ?>
 				<?php if ((int)$order['surcharge_cents'] > 0): ?><div class="cart-row muted"><span>Aufschlag</span><span><?php echo shop_money($order['surcharge_cents']); ?></span></div><?php endif; ?>
 				<div class="cart-row total"><span>Gesamt</span><span><?php echo shop_money($order['total_cents']); ?></span></div>
 				<div class="cart-row muted"><span>Zahlung</span><span><?php
 					echo $paidOnline ? ($order['payment_status'] === 'paid' ? 'online bezahlt' : 'online, noch offen') : (($order['payment_method'] === 'cash' ? 'bar' : 'mit Karte').($delivery ? ' bei Lieferung' : ' bei Abholung')); ?></span></div>
 			</div>
+			<?php if ($order['offer_choice'] === 'voucher'): $ev = fb_row("SELECT code, value, min_order_cents, valid_until FROM ".fb_t('tp_shop_coupons')." WHERE source = 'offer' AND note = ? LIMIT 1", 's', array('Ersatz für das Gratis-Extra, Bestellung '.$order['number'])); if ($ev): ?>
+			<p class="st-voucher">Dein Gutschein statt des Extras: <strong><?php echo shop_h($ev['code']); ?></strong> über <?php echo shop_money($ev['value']); ?>, gültig bis <?php echo shop_h(date('d.m.Y', strtotime($ev['valid_until']))); ?> ab <?php echo shop_money($ev['min_order_cents']); ?> Warenwert. Wir ziehen ihn bei deiner nächsten Bestellung automatisch ab.</p>
+			<?php endif; endif; ?>
 		</div>
 
 		<div class="st-box">
@@ -184,6 +210,17 @@ $delivery = $order && $order['type'] === 'delivery';
 				<p><?php echo shop_h($order['customer_name']); ?><br/><?php echo shop_h($order['street']); ?><br/><?php echo shop_h($order['zip'].' '.$order['city']); ?><?php echo $order['address_note'] !== '' ? '<br/><span class="cart-opts">'.shop_h($order['address_note']).'</span>' : ''; ?></p>
 			<?php else: ?>
 				<p>Du holst deine Bestellung bei uns ab, <?php echo shop_h($brand); ?>. Nenne beim Abholen deine Bestellnummer <strong><?php echo shop_h($order['number']); ?></strong>.</p>
+			<?php endif; ?>
+			<?php if (!$delivery && in_array($st, array('accepted', 'preparing', 'ready'), true)): ?>
+			<div class="st-here" id="st-here">
+				<?php if ($order['arrived_at'] !== null): ?>
+				<p class="st-heredone" role="status">Danke, wir wissen Bescheid. Wir sind gleich bei dir.</p>
+				<?php else: ?>
+				<p>Bist du schon da? Tippe kurz, dann wissen wir Bescheid.</p>
+				<button type="button" class="cart-go" id="st-here-btn">Ich bin da</button>
+				<p class="st-heremsg" id="st-heremsg" role="status" aria-live="polite"></p>
+				<?php endif; ?>
+			</div>
 			<?php endif; ?>
 			<?php if ($tel !== ''): ?><p class="cart-opts" style="margin-top:10px">Fragen zur Bestellung? <?php echo $tel; ?></p><?php endif; ?>
 		</div>
@@ -195,6 +232,35 @@ $delivery = $order && $order['type'] === 'delivery';
 			var lateIn = <?php echo json_encode($eta ? max(0, $eta + 301 - time()) : 0); ?>;
 			if (!done && lateIn > 0 && lateIn < 10800) { setTimeout(function () { location.reload(); }, lateIn * 1000); }
 			if (!done) { setInterval(function () { fetch('status.php?t=' + t + '&json=1', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) { if (r.ok && (r.status + '|' + r.payment) !== status) { location.reload(); return; } if (r.ok && window.StatusMap) { window.StatusMap.update(r.driver); } }).catch(function () {}); }, <?php echo $st === 'delivering' ? 6000 : 12000; ?>); }
+			// "Ich bin da" (pickup) and the stars for the delivery: one tap, saved at once
+			function post(op, extra) {
+				return fetch('api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(Object.assign({ op: op, token: TOKEN, order: t }, extra || {})) }).then(function (r) { return r.json(); });
+			}
+			var hb = document.getElementById('st-here-btn');
+			if (hb) { hb.addEventListener('click', function () {
+				hb.disabled = true; var hm = document.getElementById('st-heremsg');
+				post('arrived').then(function (r) {
+					if (r.ok) { var box = document.getElementById('st-here'); box.innerHTML = '<p class="st-heredone" role="status">Danke, wir wissen Bescheid. Wir sind gleich bei dir.</p>'; }
+					else { hb.disabled = false; hm.textContent = r.error || 'Das hat nicht geklappt. Bitte sag uns kurz Bescheid.'; }
+				}).catch(function () { hb.disabled = false; hm.textContent = 'Keine Verbindung. Bitte versuche es noch einmal.'; });
+			}); }
+			var rb = document.getElementById('st-rate');
+			if (rb) {
+				var stars = [].slice.call(rb.querySelectorAll('.st-star'));
+				function paint(n) { stars.forEach(function (s, i) { s.classList.toggle('is-on', i < n); }); }
+				stars.forEach(function (s) {
+					s.addEventListener('mouseenter', function () { if (!s.disabled) { paint(+s.dataset.rate); } });
+					s.addEventListener('focus', function () { if (!s.disabled) { paint(+s.dataset.rate); } });
+					s.addEventListener('click', function () {
+						var n = +s.dataset.rate; stars.forEach(function (x) { x.disabled = true; }); paint(n);
+						post('rate_driver', { rating: n }).then(function (r) {
+							document.getElementById('st-ratemsg').textContent = r.ok ? 'Danke dir! Zeus freut sich.' : (r.error || 'Das hat nicht geklappt.'); document.getElementById('st-zeus').hidden = !r.ok;
+							if (!r.ok) { stars.forEach(function (x) { x.disabled = false; }); paint(0); }
+						}).catch(function () { document.getElementById('st-ratemsg').textContent = 'Keine Verbindung. Bitte versuche es noch einmal.'; stars.forEach(function (x) { x.disabled = false; }); paint(0); });
+					});
+				});
+				rb.addEventListener('mouseleave', function () { if (!stars[0].disabled) { paint(0); } });
+			}
 			var re = document.getElementById('st-repay');
 			if (re) { re.addEventListener('click', function (ev) { ev.preventDefault(); var m = document.getElementById('st-repay-msg'); m.textContent = ' Einen Moment ...';
 				fetch('api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ op: 'repay', token: TOKEN, order: t }) }).then(function (r) { return r.json(); }).then(function (r) {

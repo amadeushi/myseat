@@ -4,7 +4,7 @@
 	'use strict';
 	var body = document.body, ACCEPT = body.dataset.accepting === '1', KEY = 'amadeusCartV2', TOKEN = body.dataset.token, ACCOUNT = body.dataset.account === '1';
 	var HEART = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 21s-7-4.35-9.33-8.9C1.07 8.9 3.2 5 6.9 5c2 0 3.6 1.1 5.1 3.1C13.5 6.1 15.1 5 17.1 5c3.7 0 5.83 3.9 4.23 7.1C19 16.65 12 21 12 21z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>';
-	var state = { mode: 'delivery', cart: [], info: null, zone: null, group: null, gv: null, noteEdit: null, noteDraft: '', noteFocus: false };
+	var state = { mode: 'delivery', cart: [], extra: '', info: null, zone: null, group: null, gv: null, noteEdit: null, noteDraft: '', noteFocus: false };
 
 	function $(s, r) { return (r || document).querySelector(s); }
 	function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
@@ -14,9 +14,9 @@
 
 	// ---- storage
 	function load() {
-		try { var d = JSON.parse(localStorage.getItem(KEY) || '{}'); if (d && Array.isArray(d.cart)) { state.cart = d.cart; } if (d && (d.mode === 'pickup' || d.mode === 'delivery')) { state.mode = d.mode; } } catch (e) {}
+		try { var d = JSON.parse(localStorage.getItem(KEY) || '{}'); if (d && Array.isArray(d.cart)) { state.cart = d.cart; } if (d && (d.mode === 'pickup' || d.mode === 'delivery')) { state.mode = d.mode; } if (d && (d.extra === 'voucher' || +d.extra > 0)) { state.extra = d.extra; } } catch (e) {}
 	}
-	function save() { try { localStorage.setItem(KEY, JSON.stringify({ mode: state.mode, cart: state.cart })); } catch (e) {} }
+	function save() { try { localStorage.setItem(KEY, JSON.stringify({ mode: state.mode, cart: state.cart, extra: state.extra })); } catch (e) {} }
 
 	// ---- opening state text under the mode switch
 	function renderStatus() {
@@ -218,21 +218,34 @@
 		return qWords.every(function (q) { return words.some(function (w) { return wordMatches(q, w); }); });
 	}
 	var searchIn = $('#shop-search'), searchClear = $('#shop-search-clear'), searchEmpty = $('#shop-search-empty');
+	// diet filter chips (vegetarian, vegan, spicy): all chosen marks must be on the dish; vegan counts as vegetarian
+	var diets = {};
+	function dietOk(li) { var d = ',' + (li.dataset.diet || '') + ','; return Object.keys(diets).every(function (k) { return d.indexOf(',' + k + ',') >= 0 || (k === 'veg' && d.indexOf(',vegan,') >= 0); }); }
 	function applySearch(q) {
-		var qWords = wordsOf(q), any = false;
+		var qWords = wordsOf(q), any = false, dietOn = Object.keys(diets).length > 0;
 		$$('.shop-cat').forEach(function (sec) {
 			var hits = 0;
 			$$('.shop-item', sec).forEach(function (li) {
 				var desc = $('.shop-item-text p', li), text = li.dataset.title + ' ' + (desc ? desc.textContent : '');
-				var show = !qWords.length || textMatchesQuery(text, qWords);
+				var show = (!qWords.length || textMatchesQuery(text, qWords)) && (!dietOn || dietOk(li));
 				li.hidden = !show; if (show) { hits++; any = true; }
 			});
-			sec.hidden = qWords.length > 0 && hits === 0;
+			sec.hidden = (qWords.length > 0 || dietOn) && hits === 0;
 		});
-		if (searchEmpty) { searchEmpty.hidden = !(qWords.length && !any); }
+		if (searchEmpty) { searchEmpty.hidden = !((qWords.length || dietOn) && !any); }
 		$$('#shop-cats').forEach(function (nav) { nav.classList.toggle('is-filtered', qWords.length > 0); });
 	}
+	function initDiets() {
+		$$('.shop-diet-chip').forEach(function (b) {
+			b.addEventListener('click', function () {
+				var k = b.dataset.diet, on = !diets[k]; if (on) { diets[k] = true; } else { delete diets[k]; }
+				b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.classList.toggle('is-on', on);
+				applySearch(searchIn ? searchIn.value : '');
+			});
+		});
+	}
 	function initSearch() {
+		initDiets();
 		if (!searchIn) { return; }
 		var searchTimer;
 		searchIn.addEventListener('input', function () {
@@ -281,6 +294,46 @@
 	function minOrder() { if (!state.info) { return 0; } return state.mode === 'delivery' ? (state.zone ? state.zone.min : state.info.min_delivery) : state.info.min_pickup; }
 
 	var ICON_TRASH = '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M4 6h12M8 6V4h4v2M6 6l.7 10h6.6L14 6M8.5 9v4.5M11.5 9v4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+	// ---- offers (worked out by the server from the priced cart, the same function decides when the order is placed): the free extra above a threshold that grows with
+	// the main dishes, what is missing and what closes the gap, the voucher instead of the extra, and the pizza + drink discount
+	var offersCache = { sig: '', data: null };
+	function offersSig() { return JSON.stringify(state.cart.map(function (l) { return [l.pid, l.vid, l.opts, l.qty]; })) + '|' + state.extra; }
+	function refreshOffers() {
+		var sig = offersSig(); if (sig === offersCache.sig || !TOKEN || !state.cart.length) { return; }
+		offersCache = { sig: sig, data: offersCache.data };   // asked; the old answer stays on screen until the new one is there
+		fetch('api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ op: 'offers', token: TOKEN, extra: state.extra, lines: state.cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; }) }) })
+			.then(function (r) { return r.json(); }).then(function (r) { if (sig !== offersSig()) { return; } offersCache = { sig: sig, data: r.ok ? r : null }; renderCart(); }).catch(function () {});
+	}
+	function offerCents() { var o = offersCache.data; return (o && o.on && state.cart.length) ? (o.combo_cents || 0) : 0; }
+	function offersHtml() {
+		var o = offersCache.data; if (!o || !o.on || !o.mains || !state.cart.length) { return ''; }
+		var h = '<div class="cart-offer' + (o.reached ? ' is-met' : '') + '">';
+		if (!o.reached) {
+			h += '<div class="cart-goal"><div class="cart-goal-bar" role="progressbar" aria-valuemin="0" aria-valuemax="' + o.threshold + '" aria-valuenow="' + Math.min(o.sub, o.threshold) + '"><span style="--p:' + Math.min(1, o.sub / o.threshold).toFixed(3) + '"></span></div>' +
+				'<p>Noch <strong>' + fmt(o.gap) + '</strong> bis zu deinem Gratis-Extra</p></div>';
+			if (o.fillers && o.fillers.length) {
+				h += '<p class="cart-offer-sub">Das bringt dich ans Ziel:</p><div class="cart-up-list">' + o.fillers.map(function (f) {
+					return '<button type="button" class="cart-up-item" data-up="' + f.id + '"><span>' + esc(f.title) + '</span><small>' + (f.choices ? 'ab ' : '+ ') + fmt(f.price) + '</small></button>';
+				}).join('') + '</div>';
+			}
+		} else if (o.extras && o.extras.length) {
+			h += '<h3>Dein Gratis-Extra</h3><div class="cart-extra-list" role="group" aria-label="Gratis-Extra wählen">' + o.extras.map(function (e) {
+				var on = o.choice === e.id;
+				return '<button type="button" class="cart-extra' + (on ? ' is-on' : '') + '" data-extra="' + e.id + '" aria-pressed="' + on + '"><span>' + esc(e.title) + '</span><small>gratis</small></button>';
+			}).join('');
+			if (o.voucher_cents > 0 && o.account) {
+				var von = o.choice === 'voucher';
+				h += '<button type="button" class="cart-extra' + (von ? ' is-on' : '') + '" data-extra="voucher" aria-pressed="' + von + '"><span>Kein Extra, lieber ' + fmt(o.voucher_cents) + ' Gutschein</span></button>';
+			}
+			h += '</div>';
+			if (o.choice === 'voucher') { h += '<p class="cart-offer-sub">Den Gutschein über ' + fmt(o.voucher_cents) + ' bekommst du nach der Bestellung per Mail oder SMS, er gilt für deine nächste Bestellung ab ' + fmt(o.voucher_min_cents) + ' Warenwert.</p>'; }
+			else if (o.voucher_cents > 0 && !o.account) { h += '<p class="cart-offer-sub">Kein Extra? Mit Kundenkonto bekommst du stattdessen einen Gutschein über ' + fmt(o.voucher_cents) + '. <a href="./?konto=1">Anmelden</a></p>'; }
+		} else { return ''; }
+		if (o.pizzas > 0 && o.combo_missing_drinks > 0) {
+			h += '<p class="cart-offer-sub">Zur Pizza ein Getränk? Das ist bei uns jeweils günstiger (Kombi Pizza + Getränk).</p>';
+		}
+		return h + '</div>';
+	}
 	// "Noch etwas dazu?": something sweet, a drink or a snack - what is bought most often and together with what is in the cart (shop_upsell_candidates),
 	// with a simple guess of the same kinds while the answer loads or if it fails
 	var upsellCache = { sig: '', items: [], learned: false };
@@ -326,7 +379,7 @@
 			if (m) { m.textContent = q ? q + '× im Warenkorb' : ''; m.hidden = !q; }
 		});
 		if (state.group) { renderGroupCart(box, sub, min, below); return; }
-		if (!n) { box.innerHTML = '<p class="cart-empty">Dein Warenkorb ist noch leer.<br/>Such dir etwas Feines aus, wir kochen es frisch für dich.</p>' + groupInvite(); return; }
+		if (!n) { box.innerHTML = '<p class="cart-empty"><img class="cart-zeus" src="zeus_dot.png" alt="" width="56" height="56"/><br/>Dein Warenkorb ist noch leer.<br/>Such dir etwas Feines aus, wir kochen es frisch für dich.</p>' + groupInvite(); return; }
 		var s0 = state.info ? state.info[state.mode] : null, h = '';
 		if (s0) { h += '<p class="cart-eta">' + (state.mode === 'delivery' ? 'Lieferung' : 'Abholung') + (s0.open ? ' in etwa ' + s0.lead + ' Minuten' : (s0.paused ? ' gerade pausiert' + (s0.paused_until ? ' bis etwa ' + s0.paused_until + ' Uhr' : '') : ' zurzeit nicht möglich' + (s0.next ? ', ' + s0.next : ''))) + '</p>'; }
 		if (min > 0) {
@@ -338,17 +391,23 @@
 				(l.optText ? '<p class="cart-opts">' + esc(l.optText) + '</p>' : '') + (l.note ? '<p class="cart-opts">Hinweis: ' + esc(l.note) + '</p>' : '') + noteControl(l, i) +
 				'<div class="cart-qty"><button type="button" class="qty-btn' + (l.qty === 1 ? ' is-trash' : '') + '" data-i="' + i + '" data-d="-1" aria-label="' + (l.qty === 1 ? 'Entfernen' : 'Weniger') + '">' + (l.qty === 1 ? ICON_TRASH : '&minus;') + '</button><span class="qty-num" aria-live="polite">' + l.qty + '</span><button type="button" class="qty-btn" data-i="' + i + '" data-d="1" aria-label="Mehr">+</button>' + (ACCOUNT ? '<button type="button" class="fav-btn" data-fav-i="' + i + '" aria-pressed="false" aria-label="' + esc(l.title) + ' als Favorit merken">' + HEART + '</button>' : '') + (l.ch ? '<button type="button" class="cart-edit" data-edit="' + i + '">Ändern</button>' : '') + '</div></div>';
 		}).join('');
+		refreshOffers();
+		h += offersHtml();
+		// while the offers box suggests what closes the gap, "Noch etwas dazu?" would show the same things twice
+		var ob = offersCache.data, gapSuggested = !!(ob && ob.on && ob.mains && !ob.reached && ob.fillers && ob.fillers.length);
 		refreshUpsell();
-		var ups = upsell();
+		var ups = gapSuggested ? [] : upsell();
 		if (ups.length) {
 			h += '<div class="cart-up"><h3>Noch etwas dazu?</h3><div class="cart-up-list">' + ups.map(function (li) {
 				return '<button type="button" class="cart-up-item" data-up="' + li.dataset.id + '"><span>' + esc(li.dataset.title) + '</span><small>' + (li.dataset.choices === '1' ? 'auswählen' : '+ ' + fmt(+li.dataset.price)) + '</small></button>';
 			}).join('') + '</div></div>';
 		}
+		var combo = offerCents(), od0 = offersCache.data;
 		h += '<div class="cart-sum"><div class="cart-row"><span>Zwischensumme</span><span>' + fmt(sub) + '</span></div>' +
+			(combo > 0 ? '<div class="cart-row coupon"><span>' + esc(od0.combo_text) + '</span><span>&minus;' + fmt(combo) + '</span></div>' : '') +
 			(state.mode === 'delivery' ? '<div class="cart-row muted"><span>Liefergebühr</span><span>' + (state.zone ? fmt(state.zone.fee) : 'nach Adresse') + '</span></div>' : '') + '</div>';
 		if (ACCOUNT && +body.dataset.stamp > 0) { h += '<p class="cart-stamp" data-stamp-hint hidden></p>'; }
-		h += '<a class="cart-go" href="checkout.php"' + (below ? ' aria-disabled="true" tabindex="-1"' : '') + '>' + (below ? 'Noch ' + fmt(min - sub) + ' bis zur Kasse' : 'Zur Kasse · ' + fmt(sub)) + '</a>' +
+		h += '<a class="cart-go" href="checkout.php"' + (below ? ' aria-disabled="true" tabindex="-1"' : '') + '>' + (below ? 'Noch ' + fmt(min - sub) + ' bis zur Kasse' : 'Zur Kasse · ' + fmt(sub - combo)) + '</a>' +
 			'<p class="cart-trust">Frisch für dich zubereitet. Bezahlen kannst du online, bar oder mit Karte.</p>' +
 			'<button type="button" class="cart-clear" data-clear>Warenkorb leeren</button>' + groupInvite();
 		box.innerHTML = h;
@@ -712,6 +771,8 @@
 		if (ns) { var ni = +ns.dataset.noteSave, nl2 = state.cart[ni]; state.noteEdit = null; if (nl2) { replaceLine(ni, Object.assign({}, nl2, { note: state.noteDraft.trim().slice(0, 200) })); } else { renderCart(); } return; }
 		var ed = t.closest('[data-edit]');
 		if (ed) { var el = state.cart[+ed.dataset.edit]; if (el) { openProduct(el.pid, { i: +ed.dataset.edit, line: el }); } return; }
+		var xe = t.closest('[data-extra]');
+		if (xe) { state.extra = xe.dataset.extra === 'voucher' ? 'voucher' : +xe.dataset.extra; save(); renderCart(); return; }
 		var up = t.closest('[data-up]');
 		if (up) {
 			var uli = $('.shop-item[data-id="' + up.dataset.up + '"]');

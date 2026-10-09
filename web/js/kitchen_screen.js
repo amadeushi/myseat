@@ -2,7 +2,7 @@
    New orders play the sound (repeated until somebody taps the column) and can be printed on a slip automatically. */
 (function () {
 	'use strict';
-	var TOKEN = document.body.dataset.token, board = document.getElementById('ks-board'), lastOk = Date.now(), orders = [], acked = {}, seen = null, printed = {};
+	var TOKEN = document.body.dataset.token, board = document.getElementById('ks-board'), lastOk = Date.now(), orders = [], acked = {}, seen = null, arrivedSeen = null, printed = {};
 	var cols = 5, autoPrint = false;
 	// the "Erledigt" column: what the kitchen has finished in the last two hours (so a printed slip can be traced after the order has left the board)
 	var done = [], doneOpen = 0, doneSig = '', showDone = true;
@@ -85,9 +85,9 @@
 		// never through the failure color alone, matching the fix already made on the dispatch board
 		// the buttons sit at the top of the column, directly under its head: the lower edge of a kitchen monitor is often hidden or hard to read
 		var actions = '<div class="ks-actions"><button type="button" class="k-go ks-done" data-done="' + o.id + '">Fertig</button><button type="button" class="k-icon ks-bon" data-bon="' + o.id + '" aria-label="Bon drucken" title="Bon drucken">' + ICON_PRINT + '</button><button type="button" class="k-icon ks-zoom" data-zoom="' + o.id + '" aria-pressed="' + (fit[o.id] ? 'true' : 'false') + '" aria-label="Ganze Bestellung zeigen" title="Ganze Bestellung zeigen">' + ICON_ZOOM + '</button></div>';
-		return '<article class="ks-card' + (acked[o.id] ? '' : ' is-fresh') + (late ? ' is-late' : '') + (fit[o.id] ? ' is-fit' : '') + '" data-id="' + o.id + '"><header class="ks-head"><span class="ks-no">#' + o.day_no + '</span><div class="ks-chips"><span class="k-type ' + esc(o.type) + '">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + '</span>' +
+		return '<article class="ks-card' + (acked[o.id] ? '' : ' is-fresh') + (late ? ' is-late' : '') + (o.arrived ? ' is-here' : '') + (fit[o.id] ? ' is-fit' : '') + '" data-id="' + o.id + '"><header class="ks-head"><span class="ks-no">#' + o.day_no + '</span><div class="ks-chips"><span class="k-type ' + esc(o.type) + '">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + '</span>' +
 			(o.source === 'lieferando' ? '<span class="k-badge lief">Lieferando</span>' : '') + (o.source === 'uber_eats' ? '<span class="k-badge uber">Uber Eats</span>' : '') +
-			(o.status === 'preparing' ? '<span class="k-badge">Wird gekocht</span>' : '') + (o.test ? '<span class="k-badge">Test</span>' : '') + '</div></header>' + actions +
+			(o.arrived ? '<span class="k-badge here">Gast ist da</span>' : '') + (o.status === 'preparing' ? '<span class="k-badge">Wird gekocht</span>' : '') + (o.test ? '<span class="k-badge">Test</span>' : '') + '</div></header>' + actions +
 			((o.name || o.zip) ? '<p class="ks-who" title="' + esc(o.name) + '"><span class="ks-wname">' + esc(o.name) + '</span>' + (o.zip ? '<span class="ks-zip">' + esc(o.zip) + '</span>' : '') + '</p>' : '') + timeBlock(o) +
 			'<div class="ks-items"><ul class="ks-list">' + o.items.map(function (it, i) {
 				return '<li class="ks-item"><span class="ks-qty">' + it.qty + '×</span><span class="ks-pos">Pos ' + (i + 1) + '</span><span class="ks-title">' + esc(it.title) + '</span>' + (it.variation ? '<span class="ks-var">' + esc(it.variation) + '</span>' : '') +
@@ -236,7 +236,11 @@
 			Object.keys(unseen).forEach(function (k) { if (ids.indexOf(+k) < 0) { delete unseen[k]; } });
 			Object.keys(acked).forEach(function (k) { if (ids.indexOf(+k) < 0) { delete acked[k]; } }); saveAcked();
 			Object.keys(fit).forEach(function (k) { if (ids.indexOf(+k) < 0) { delete fit[k]; } }); saveFit();
-			if (fresh.length) {
+			// a pickup guest tapped "Ich bin da" while the order is still in the kitchen: ring once
+			var arr = r.orders.filter(function (o) { return o.arrived; }).map(function (o) { return o.id; });
+			var arrNew = arrivedSeen !== null && arr.some(function (id) { return arrivedSeen.indexOf(id) < 0; });
+			arrivedSeen = arr;
+			if (fresh.length || arrNew) {
 				sound.notify();
 			}
 			render(); sound.ack();

@@ -78,6 +78,22 @@ if ($op === 'upsell') {
 	api_out(array('ok' => true, 'learned' => $r['learned'], 'items' => $r['items']));
 }
 
+// offers of the cart (free extra above a threshold, suggestions that close the gap, pizza + drink): worked out from the priced cart; the same function decides when the order is placed
+if ($op === 'offers') {
+	$lines = (isset($body['lines']) && is_array($body['lines'])) ? array_slice($body['lines'], 0, 60) : array();
+	$items = array(); $ids = array();
+	foreach ($lines as $l) {
+		$r = shop_price_line(is_array($l) ? $l : array());
+		if (!$r['ok']) { api_out(array('ok' => false, 'error' => $r['error'])); }
+		$items[] = $r['line']; if (!empty($r['line']['product_id'])) { $ids[] = (int)$r['line']['product_id']; }
+	}
+	$e = shop_offers_eval($items, isset($body['extra']) ? $body['extra'] : null);
+	$e['fillers'] = ($e['on'] && !$e['reached'] && $e['mains'] > 0) ? shop_offers_fillers($e['gap'], $ids, 3) : array();
+	$e['account'] = (bool)shop_acc_current();
+	$e['ok'] = true;
+	api_out($e);
+}
+
 if ($op === 'quote') {
 	$lines = (isset($body['lines']) && is_array($body['lines'])) ? array_slice($body['lines'], 0, 60) : array();
 	$out = array(); $sub = 0;
@@ -101,6 +117,23 @@ if ($op === 'coupon') {
 	// personal coupons (stamp card) are checked with the phone / e-mail the guest typed in the checkout
 	$r = shop_coupon_check(isset($body['code']) ? (string)$body['code'] : '', $type, $sub, shop_coupon_guest_keys(mb_substr((string)(isset($body['phone']) ? $body['phone'] : ''), 0, 40), mb_substr((string)(isset($body['email']) ? $body['email'] : ''), 0, 160)));
 	api_out($r['ok'] ? array('ok' => true, 'code' => $r['coupon']['code'], 'discount' => $r['discount'], 'label' => shop_coupon_describe($r['coupon'])) : array('ok' => false, 'error' => $r['error']));
+}
+
+// pickup: "Ich bin da" and delivery: one tap on the stars for the driver (status page); the order is found by its secret token
+if ($op === 'arrived' || $op === 'rate_driver') {
+	$order = shop_order_by_token(isset($body['order']) ? (string)$body['order'] : '');
+	if (!$order) { api_out(array('ok' => false, 'error' => 'Bestellung nicht gefunden.'), 404); }
+	api_out($op === 'arrived' ? shop_order_arrived($order) : shop_order_rate_driver($order, isset($body['rating']) ? $body['rating'] : 0));
+}
+
+// notifications for the status page: the public key of the shop (the browser needs it to subscribe) and the subscription of this browser for one order
+if ($op === 'push_key') {
+	if (!shop_flag('push_on')) { api_out(array('ok' => false)); }
+	$k = shop_push_keys(); api_out($k ? array('ok' => true, 'key' => $k[0]) : array('ok' => false));
+}
+if ($op === 'push_subscribe') {
+	if (!shop_flag('push_on')) { api_out(array('ok' => false, 'error' => 'Benachrichtigungen sind nicht eingeschaltet.')); }
+	api_out(shop_push_subscribe(shop_order_by_token(isset($body['order']) ? (string)$body['order'] : ''), isset($body['endpoint']) ? (string)$body['endpoint'] : ''));
 }
 
 if ($op === 'repay') {

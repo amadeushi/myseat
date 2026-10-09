@@ -52,6 +52,18 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-09 == mySeat v6.31.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * New: Angebote ohne Code (web/classes/shop_offers.class.php, Einstellungen > Lieferservice > Angebote): Gratis-Extra ab einem Warenwert, der mit der Zahl der Hauptgerichte wächst (22 / 38 / 55 EUR bei 1 / 2 / 3+),
+   zur Auswahl (Dessert oder kleines Getränk, nur Gerichte ohne Auswahl); darunter zeigt der Warenkorb, was fehlt, und schlägt Snacks, Beilagen und Getränke vor, deren Preis die Lücke schließt. Wer kein Extra will,
+   bekommt mit Kundenkonto einen persönlichen Gutschein (2 EUR ab 20 EUR, 30 Tage, wird automatisch abgezogen). Kombi Pizza + Getränk: 1 EUR Nachlass auf das Getränk je Pizza (alkoholfrei und Bier, kein Wein).
+   Alles wird auf dem Server gerechnet (neue Spalten offer_cents, offer_note, offer_choice).
+ * New: Abholung: Knopf "Ich bin da" auf der Statusseite; Küchenmonitor und Disposition zeigen "Gast ist da" und läuten einmal. Lieferung: Bewertung mit fünf Sternen (ein Tipp) auf der Statusseite, in der Bestellübersicht zu sehen.
+ * New: Kennzeichen vegetarisch / vegan / scharf je Gericht (Speisekarten-Editor, mit Vorschlag; Gäste sehen sie erst nach dem Speichern) und Filter-Knöpfe über der Speisekarte. Allergen-Filter bewusst nicht: bei 42 Gerichten fehlt die Allergenangabe.
+ * New: Benachrichtigungen auf dem Handy: Knopf auf der Statusseite, Push bei Statuswechsel (web/classes/shop_push.class.php, order/sw.js, VAPID-Schlüssel in den Einstellungen), Manifest und App-Symbole mit Zeus.
+ * New: Anmeldestatus sichtbar: Streifen an der Kasse und im Warenkorb, Frage vor dem Abschicken, wenn dieses Gerät schon angemeldet war; Stempel werden nach der Anmeldung für Bestellungen der letzten drei Tage nachgetragen
+   (shop_acc_claim_orders); Hinweise in Code-Mail und Anmeldeseite (Code im Browser mit dem Warenkorb eingeben). Zeus im leeren Warenkorb und bei der Bewertung.
+
 2026-10-09 == mySeat v6.30.3 == amadeushi - http://github.com/amadeushi/myseat
 
  * New: "Noch etwas dazu?" im Warenkorb schlägt nur noch Beiverkauf vor: ein Dessert, ein Getränk und einen Snack bzw. eine Beilage (Kategorien werden am Namen erkannt, höchstens 9 EUR, keine Weinflaschen,

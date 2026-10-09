@@ -35,6 +35,7 @@ header('Referrer-Policy: no-referrer');
 	<link rel="stylesheet" href="../web/fonts/fonts.css"/>
 	<link rel="stylesheet" href="shop.css?v=<?php echo @filemtime(__DIR__.'/shop.css'); ?>"/>
 <link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
 </head>
 <body class="shop-shell">
 	<header class="shop-top">
@@ -47,6 +48,7 @@ header('Referrer-Policy: no-referrer');
 	<?php if ($valid): ?>
 		<h1 class="st-title">Bei <?php echo shop_h($brand); ?> anmelden</h1>
 		<p class="st-lead">Tippe auf den Knopf, dann bist du angemeldet und siehst deine Bestellungen, Lieblingsgerichte und deine Stempelkarte.</p>
+		<p class="st-lead">Wichtig: Der Knopf meldet <strong>diesen Browser</strong> an. Liegt dein Warenkorb in einem anderen Browser (zum Beispiel in Safari oder Chrome, und diese Seite hat sich in der Mail-App geöffnet), geh dorthin zurück und gib dort den 6-stelligen Code aus der Mail ein.</p>
 		<form method="post" action="anmelden.php" class="st-again">
 			<input type="hidden" name="t" value="<?php echo shop_h($token); ?>"/>
 			<input type="hidden" name="token" value="<?php echo shop_h($_SESSION['shop_token']); ?>"/>

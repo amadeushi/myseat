@@ -124,6 +124,15 @@ function shop_ensure_schema() {
 	if (!$scol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `surcharge_cents` INT NOT NULL DEFAULT 0, ADD `adjust_note` VARCHAR(160) NOT NULL DEFAULT ''"); }
 	$mcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'pay_detail'"); // how the guest paid online at Mollie (creditcard, paypal ...), for the daily report
 	if (!$mcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `pay_detail` VARCHAR(30) NOT NULL DEFAULT ''"); }
+	// pickup: when the guest tapped "Ich bin da" on the status page; delivery: the one-tap rating (1-5) of the driver on the status page after the delivery
+	$acol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'arrived_at'");
+	if (!$acol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `arrived_at` DATETIME NULL, ADD `driver_rating` TINYINT NULL, ADD `driver_rated_at` DATETIME NULL"); }
+	// diet marks of a dish, ticked in the menu editor: 'veg', 'vegan' (implies veg), 'spicy', comma separated; NULL = nobody has looked at this dish yet (nothing is shown to guests)
+	$dcol2 = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_products')." LIKE 'diet'");
+	if (!$dcol2) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_products')." ADD `diet` VARCHAR(40) NULL DEFAULT NULL"); }
+	// offers: what the pizza + drink offer took off (offer_cents), what it says on the bon, and the guest's wish for the free extra ('voucher' = a voucher instead)
+	$ocol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'offer_cents'");
+	if (!$ocol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `offer_cents` INT NOT NULL DEFAULT 0, ADD `offer_note` VARCHAR(160) NOT NULL DEFAULT '', ADD `offer_choice` VARCHAR(12) NOT NULL DEFAULT ''"); }
 	$rcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_uber_slips')." LIKE 'ref'"); // reference receipts ('delivery', 'pickup'): the model examples that are never deleted
 	if (!$rcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_uber_slips')." ADD `ref` VARCHAR(12) NOT NULL DEFAULT ''"); }
 	$kcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_print_jobs')." LIKE 'kind'"); // print jobs that are no order slip: the daily reports
@@ -314,6 +323,12 @@ function shop_defaults() {
 		'notify_email' => '',       // sender of the order mails and address that gets a mail for every new order
 		'resmio_slug' => 'amadeus-cafe-restaurant-bar',
 		'sms_orders' => '1',        // SMS to the guest when the delivery is on its way / the pickup is ready (only with SMS sending set up)
+		'push_on' => '1',           // push messages for the status page of an order (web/classes/shop_push.class.php)
+		'offers_on' => '1',         // offers without a code: free extra above a threshold that grows with the main dishes, pizza + drink (web/classes/shop_offers.class.php)
+		'offer_t1' => '22', 'offer_t2' => '38', 'offer_t3' => '55', // threshold in euro for one / two / three or more main dishes
+		'offer_extras' => '',       // product ids (without choices) the guest can take as the free extra, comma separated
+		'offer_voucher' => '2', 'offer_voucher_min' => '20', 'offer_voucher_days' => '30', // the voucher instead of the extra: euro, from this goods value (euro), days valid
+		'offer_combo' => '1',       // pizza + drink: euro off the drink per pizza (0 = off)
 		'stamp_on' => '1',          // stamp card: every finished order is a stamp, a full card becomes a voucher (see shop_stamp_*)
 		'stamp_percent' => '10', 'stamp_goal' => '5', 'stamp_months' => '12', 'voucher_days' => '90',
 		'account_on' => '1',        // guest accounts: sign-in by code or link, order history, favorites (see shop_account.class.php)
@@ -1151,7 +1166,7 @@ function shop_find_zone_w3w($words) {
 function shop_menu() {
 	shop_ensure_schema();
 	$cats = fb_rows("SELECT id, name, description FROM ".fb_t('tp_shop_categories')." WHERE active = 1 ORDER BY sort, id");
-	$prods = fb_rows("SELECT p.id, p.category_id, p.title, p.description, p.image_url, p.price_cents, p.configurator,
+	$prods = fb_rows("SELECT p.id, p.category_id, p.title, p.description, p.image_url, p.price_cents, p.configurator, p.diet,
 			(SELECT COUNT(*) FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id) AS nvar,
 			(SELECT MIN(v.price_cents) FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id) AS vmin,
 			(SELECT COUNT(*) FROM ".fb_t('tp_shop_product_groups')." pg WHERE pg.product_id = p.id) AS nmod
@@ -1219,6 +1234,12 @@ function shop_create_order($in) {
 		if (!$r['ok']) { return array('ok' => false, 'error' => $r['error']); }
 		$items[] = $r['line']; $sub += $r['line']['line_cents'];
 	}
+	// offers (worked out here from the priced cart, never taken from the browser): the free extra as a line with price 0, the pizza + drink discount
+	$offers = shop_offers_eval($items, isset($in['extra']) ? $in['extra'] : null);
+	$extraLine = shop_offers_extra_line($offers);
+	if ($extraLine) { $items[] = $extraLine; }
+	$offerCents = $offers['on'] ? (int)$offers['combo_cents'] : 0; $offerNote = $offerCents > 0 ? $offers['combo_text'].' -'.shop_money($offerCents) : '';
+	$offerChoice = ($offers['on'] && $offers['reached'] && $offers['choice'] === 'voucher' && !empty($in['acc_id'])) ? 'voucher' : '';
 	// contact
 	$name = mb_substr(trim((string)(isset($in['name']) ? $in['name'] : '')), 0, 120);
 	$phone = mb_substr(trim((string)(isset($in['phone']) ? $in['phone'] : '')), 0, 40);
@@ -1285,7 +1306,7 @@ function shop_create_order($in) {
 		if (!$cr['ok'] && !$auto) { return array('ok' => false, 'error' => $cr['error']); }
 		if ($cr['ok']) { $coupon = $cr['coupon']; $discount = $cr['discount']; }
 	}
-	$total = $sub - $discount + $fee + $tip;
+	$total = max(0, $sub - $discount - $offerCents + $fee + $tip);
 	// a visitor may not flood the kitchen
 	$ip = substr(hash('sha256', (isset($in['ip']) ? $in['ip'] : '').'|myseat-shop'), 0, 16);
 	$recent = fb_row("SELECT COUNT(*) AS n FROM ".fb_t('tp_shop_orders')." WHERE ip_hash = ? AND created_at > ?", 'ss', array($ip, date('Y-m-d H:i:s', time() - 600)));
@@ -1315,6 +1336,7 @@ function shop_create_order($in) {
 	}
 	$id = (int)mysqli_insert_id($db); shop_dayno_unlock();
 	if (!empty($in['acc_id'])) { fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET account_id = ? WHERE id = ?", 'ii', array((int)$in['acc_id'], $id)); }
+	if ($offerCents > 0 || $offerChoice !== '') { fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET offer_cents = ?, offer_note = ?, offer_choice = ? WHERE id = ?", 'issi', array($offerCents, $offerNote, $offerChoice, $id)); }
 	if ($coupon) {
 		fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET coupon_code = ?, discount_cents = ? WHERE id = ?", 'sii', array($coupon['code'], $discount, $id));
 		if (!$test) {
@@ -1591,6 +1613,25 @@ function shop_doc_get($orderId) {
 	$s = fb_row("SELECT png FROM ".fb_t('tp_shop_uber_slips')." WHERE order_id = ? ORDER BY id DESC LIMIT 1", 'i', array((int)$orderId));
 	return $s ? array('kind' => 'png', 'data' => $s['png']) : null;
 }
+// pickup: the guest says he is here (button on the status page). Once per order, only while the order is still to be collected; the kitchen monitor and the dispatch show it.
+function shop_order_arrived($order) {
+	if (!$order || $order['type'] !== 'pickup' || !in_array($order['status'], array('accepted', 'preparing', 'ready'), true)) { return array('ok' => false, 'error' => 'Das geht bei dieser Bestellung gerade nicht.'); }
+	if ($order['arrived_at'] === null) {
+		fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET arrived_at = ? WHERE id = ? AND arrived_at IS NULL", 'si', array(date('Y-m-d H:i:s'), (int)$order['id']));
+		shop_log((int)$order['id'], 'arrived', 'Gast ist da');
+	}
+	return array('ok' => true);
+}
+// delivery: the guest rates the driver with one tap (1-5) after the delivery; once, later taps do not change it
+function shop_order_rate_driver($order, $rating) {
+	$rating = (int)$rating;
+	if (!$order || $order['type'] !== 'delivery' || $order['status'] !== 'done' || $rating < 1 || $rating > 5) { return array('ok' => false, 'error' => 'Das geht bei dieser Bestellung nicht.'); }
+	if ($order['driver_rating'] === null) {
+		fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET driver_rating = ?, driver_rated_at = ? WHERE id = ? AND driver_rating IS NULL", 'isi', array($rating, date('Y-m-d H:i:s'), (int)$order['id']));
+		shop_log((int)$order['id'], 'driver_rating', (string)$rating.' von 5');
+	}
+	return array('ok' => true);
+}
 function shop_order($id) { return fb_row("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE id = ?", 'i', array((int)$id)); }
 function shop_order_by_token($token) { return fb_row("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE token = ?", 's', array((string)$token)); }
 function shop_order_items($id) {
@@ -1612,7 +1653,7 @@ function shop_set_status($id, $status, $by = '', $etaMinutes = 0) {
 	if ($status === 'done' || $status === 'cancelled' || $status === 'failed') { $set .= ", done_at = ?"; $types .= 's'; $params[] = $now; }
 	$types .= 'i'; $params[] = (int)$id;
 	$st = fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET $set WHERE id = ?", $types, $params);
-	if ($st) { shop_log($id, 'status', $status.($by !== '' ? ' ('.$by.')' : '')); shop_sms_status((int)$id, $status); if ($status === 'cancelled' || $status === 'failed') { shop_coupon_release((int)$id); } if ($status === 'done') { try { shop_stamp_award((int)$id); } catch (Throwable $e) { error_log('mySeat stamp: '.$e->getMessage()); } } }
+	if ($st) { shop_log($id, 'status', $status.($by !== '' ? ' ('.$by.')' : '')); shop_sms_status((int)$id, $status); shop_push_status((int)$id, $status); if ($status === 'cancelled' || $status === 'failed') { shop_coupon_release((int)$id); } if ($status === 'done') { try { shop_stamp_award((int)$id); } catch (Throwable $e) { error_log('mySeat stamp: '.$e->getMessage()); } } }
 	return (bool)$st;
 }
 
@@ -1765,6 +1806,16 @@ function shop_after_order_placed($orderId) {
 	$o = shop_order((int)$orderId);
 	if (!$o || !empty($o['is_test'])) { return; }
 	if (function_exists('shop_notify_order')) { try { shop_notify_order($o); } catch (Throwable $e) { error_log('mySeat shop notify: '.$e->getMessage()); } }
+	// the guest did not want the free extra: a voucher for the next order instead (only for an account, the voucher is bound to its keys)
+	if ($o['offer_choice'] === 'voucher' && !empty($o['account_id'])) {
+		try {
+			$a = fb_row("SELECT key_phone, key_mail, contact_phone, contact_mail FROM ".fb_t('tp_shop_accounts')." WHERE id = ?", 'i', array((int)$o['account_id']));
+			if ($a) {
+				if (trim((string)$o['email']) === '') { $o['email'] = (string)$a['contact_mail']; } if (trim((string)$o['phone']) === '') { $o['phone'] = (string)$a['contact_phone']; }
+				shop_offers_issue_voucher($o, array($a['key_phone'] !== null ? $a['key_phone'] : '', $a['key_mail'] !== null ? $a['key_mail'] : ''));
+			}
+		} catch (Throwable $e) { error_log('mySeat offer voucher: '.$e->getMessage()); }
+	}
 }
 
 // an online order that was not paid within 45 minutes is given up (the kitchen never saw it)
@@ -1793,6 +1844,8 @@ function shop_orders_with_items($rows) {
 		$due = $r['scheduled_at'] ?: ($r['eta_at'] ?: $r['created_at']);
 		$out[] = array(
 			'orig' => isset($orig[(int)$r['id']]) ? $orig[(int)$r['id']] : '',
+			'offer' => (int)$r['offer_cents'], 'offer_note' => (string)$r['offer_note'],
+			'arrived' => !empty($r['arrived_at']) ? substr($r['arrived_at'], 11, 5) : '', 'driver_rating' => isset($r['driver_rating']) && $r['driver_rating'] !== null ? (int)$r['driver_rating'] : 0,
 			'id' => (int)$r['id'], 'number' => $r['number'], 'day_no' => (int)$r['day_no'], 'type' => $r['type'], 'status' => $r['status'], 'test' => (int)$r['is_test'],
 			'source' => $r['source'],
 			'created' => substr($r['created_at'], 11, 5), 'created_ts' => strtotime($r['created_at']), 'scheduled' => $r['scheduled_at'] ? substr($r['scheduled_at'], 11, 5) : '',
@@ -1866,7 +1919,7 @@ function shop_kitchen_board() {
 			'due' => $o['due'], 'scheduled' => $o['scheduled'], 'asap' => ($o['scheduled'] === ''), 'due_ts' => $dueTs, 'drive_min' => $min, 'out_ts' => $dueTs - $min * 60, 'out' => date('H:i', $dueTs - $min * 60),
 			// of a delivery only the name and the postcode: enough to talk the tours through with the kitchen, no street, no phone
 			'name' => $o['name'], 'zip' => $o['type'] === 'delivery' ? $o['zip'] : '',
-			'accepted_ts' => $accepted[$o['id']], 'note' => $o['note'], 'items' => $o['items']);
+			'accepted_ts' => $accepted[$o['id']], 'arrived' => $o['arrived'], 'note' => $o['note'], 'items' => $o['items']);
 	}
 	// what has to leave the kitchen first stands first
 	usort($out, function ($a, $b) { return $a['out_ts'] === $b['out_ts'] ? $a['id'] - $b['id'] : $a['out_ts'] - $b['out_ts']; });
@@ -1905,12 +1958,26 @@ function shop_me_group_rows() {
 	}
 	return $groups;
 }
+// a suggestion for the diet marks of a dish (only a suggestion for the menu editor: the owner ticks what is true; guests see nothing until a dish has been saved with marks)
+function shop_diet_suggest($title, $description, $cat) {
+	$t = mb_strtolower((string)$title.' '.(string)$description, 'UTF-8'); $c = mb_strtolower((string)$cat, 'UTF-8'); $out = array();
+	if (preg_match('/vegan/u', $t.' '.$c)) { $out[] = 'veg'; $out[] = 'vegan'; }
+	elseif (preg_match('/vegetar/u', $c) || preg_match('/vegetar/u', $t)) { $out[] = 'veg'; }
+	if (preg_match('/chili|sambal|peperoni|arrabbiata|diavola|pikant|jalape|scharf/u', mb_strtolower((string)$title, 'UTF-8')) || preg_match('/\bscharf/u', mb_strtolower((string)$description, 'UTF-8'))) { $out[] = 'spicy'; }
+	return $out;
+}
+function shop_diet_clean($list) {
+	$ok = array(); foreach ((array)$list as $f) { if (in_array($f, array('veg', 'vegan', 'spicy'), true)) { $ok[$f] = true; } }
+	if (isset($ok['vegan'])) { $ok['veg'] = true; }
+	return implode(',', array_keys($ok));
+}
 function shop_me_products($onlyId = 0) {
 	$where = $onlyId ? "WHERE id = ".(int)$onlyId : '';
 	$out = array();
-	foreach (fb_rows("SELECT id, category_id, title, description, image_url, price_cents, allergens, active, configurator FROM ".fb_t('tp_shop_products')." $where ORDER BY sort, id") as $p) {
+	foreach (fb_rows("SELECT p.id, p.category_id, p.title, p.description, p.image_url, p.price_cents, p.allergens, p.active, p.configurator, p.diet, c.name AS cat FROM ".fb_t('tp_shop_products')." p LEFT JOIN ".fb_t('tp_shop_categories')." c ON c.id = p.category_id ".str_replace('WHERE id', 'WHERE p.id', $where)." ORDER BY p.sort, p.id") as $p) {
 		$out[(int)$p['id']] = array('id' => (int)$p['id'], 'category_id' => (int)$p['category_id'], 'title' => $p['title'], 'description' => $p['description'], 'image_url' => $p['image_url'],
-			'price' => (int)$p['price_cents'], 'allergens' => $p['allergens'], 'active' => (int)$p['active'], 'configurator' => (int)$p['configurator'], 'variations' => array(), 'groups' => array());
+			'price' => (int)$p['price_cents'], 'allergens' => $p['allergens'], 'active' => (int)$p['active'], 'configurator' => (int)$p['configurator'], 'variations' => array(), 'groups' => array(),
+			'diet' => $p['diet'] === null ? array() : array_values(array_filter(explode(',', $p['diet']))), 'diet_set' => $p['diet'] !== null, 'diet_suggest' => shop_diet_suggest($p['title'], $p['description'], $p['cat']));
 	}
 	if ($out) {
 		foreach (fb_rows("SELECT id, product_id, title, price_cents, multiplier FROM ".fb_t('tp_shop_variations')." ORDER BY sort, id") as $v) {
@@ -2014,6 +2081,8 @@ function shop_me_save_product($d) {
 		fb_exec("INSERT INTO ".fb_t('tp_shop_products')." (category_id, title, description, image_url, price_cents, allergens, active, configurator, sort) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", 'isssisiid', array($cat, $title, $desc, $image, $price, $all, $active, $conf, (float)$max['m'] + 1));
 		$id = (int)mysqli_insert_id(fb_db());
 	}
+	// the diet marks the owner ticked: saving a dish marks it as looked at (an empty tick list is an answer, too)
+	if (array_key_exists('diet', $d)) { fb_exec("UPDATE ".fb_t('tp_shop_products')." SET diet = ? WHERE id = ?", 'si', array(shop_diet_clean($d['diet']), $id)); }
 	if ($oldImg && $oldImg['image_url'] !== '' && $oldImg['image_url'] !== $image) { shop_img_release($oldImg['image_url']); }
 	// variations: keep the ids that stay, add new ones, drop the rest
 	$keep = array(); $n = 0;
@@ -3259,7 +3328,7 @@ function shop_stamp_award($orderId) {
 		$keys = array($a['key_phone'] !== null ? $a['key_phone'] : '', $a['key_mail'] !== null ? $a['key_mail'] : '');
 	}
 	if (!shop_stamp_has_keys($keys)) { return; }
-	$base = max(0, (int)$o['subtotal_cents'] - (int)$o['discount_cents']);
+	$base = max(0, (int)$o['subtotal_cents'] - (int)$o['discount_cents'] - (int)$o['offer_cents']);
 	$st = fb_exec("INSERT IGNORE INTO ".fb_t('tp_shop_stamps')." (order_id, guest_key, guest_key2, base_cents, earned_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)", 'ississ',
 		array((int)$o['id'], $keys[0], $keys[1], $base, date('Y-m-d H:i:s'), date('Y-m-d H:i:s', strtotime('+'.$cfg['months'].' months'))));
 	if (!$st || mysqli_stmt_affected_rows($st) !== 1) { return; }
@@ -3316,7 +3385,7 @@ function shop_stamp_issue($keys, $value, $validUntil, $parentId, $note) {
 function shop_stamp_voucher($keys) {
 	if (!shop_stamp_has_keys($keys)) { return null; }
 	shop_ensure_schema();
-	return fb_row("SELECT * FROM ".fb_t('tp_shop_coupons')." WHERE source = 'stamp' AND active = 1 AND used < max_uses AND (valid_until IS NULL OR valid_until > ?) AND ".shop_stamp_match()." ORDER BY valid_until, id LIMIT 1",
+	return fb_row("SELECT * FROM ".fb_t('tp_shop_coupons')." WHERE source IN ('stamp', 'offer') AND active = 1 AND used < max_uses AND (valid_until IS NULL OR valid_until > ?) AND ".shop_stamp_match()." ORDER BY valid_until, id LIMIT 1",
 		'sss', array(date('Y-m-d H:i:s'), $keys[0], $keys[1]));
 }
 
@@ -3419,3 +3488,6 @@ function shop_stamp_notify_voucher($phone, $email, $value, $until, $name = '', $
 		if ($m !== null && sms_enabled()) { global $settings; $b = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus'; sms_enqueue(null, $m, 'voucher', sms_gsm_clean($b.': Geschafft'.($first !== '' ? ', '.$first : '').'! Stempelkarte voll, Gutschein '.shop_money($value).' bis '.date('d.m.Y', $until).', ab '.shop_money($value).' Warenwert. Wird automatisch abgezogen.')); }
 	} catch (Throwable $e) { error_log('mySeat voucher notice: '.$e->getMessage()); }
 }
+
+require_once __DIR__.'/shop_offers.class.php';
+require_once __DIR__.'/shop_push.class.php';

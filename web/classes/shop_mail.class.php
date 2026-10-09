@@ -54,7 +54,7 @@ function shop_notify_order($o) {
 			$st = $font.'font-size:'.($big ? '17px;color:#1c1a18;font-weight:bold;padding-top:8px;' : '14px;color:#777;padding-top:4px;');
 			return '<tr><td style="'.$st.'">'.$h($label).'</td><td align="right" style="'.$st.'">'.$h($value).'</td></tr>';
 		};
-		$sums = $sumRow('Zwischensumme', shop_money($o['subtotal_cents'])).((int)$o['discount_cents'] > 0 ? $sumRow('Gutschein '.$o['coupon_code'], '-'.shop_money($o['discount_cents'])) : '').($delivery ? $sumRow('Liefergebühr', shop_money($o['fee_cents'])) : '').($o['tip_cents'] > 0 ? $sumRow('Trinkgeld', shop_money($o['tip_cents'])) : '').$sumRow('Gesamt', $total, true);
+		$sums = $sumRow('Zwischensumme', shop_money($o['subtotal_cents'])).((int)$o['discount_cents'] > 0 ? $sumRow('Gutschein '.$o['coupon_code'], '-'.shop_money($o['discount_cents'])) : '').((int)$o['offer_cents'] > 0 ? $sumRow('Kombi Pizza + Getränk', '-'.shop_money($o['offer_cents'])) : '').($delivery ? $sumRow('Liefergebühr', shop_money($o['fee_cents'])) : '').($o['tip_cents'] > 0 ? $sumRow('Trinkgeld', shop_money($o['tip_cents'])) : '').$sumRow('Gesamt', $total, true);
 		$legal = bm_legal_lines(array());
 		$imprint_url = !empty($settings['imprintUrl']) ? $settings['imprintUrl'] : '';
 		$privacy_url = !empty($settings['privacyUrl']) ? $settings['privacyUrl'] : '';

@@ -31,6 +31,7 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 	<?php if ($has_conf): ?><link rel="stylesheet" href="pizza.css?v=<?php echo @filemtime(__DIR__.'/pizza.css'); ?>"/><?php endif; ?>
 	<?php if ($acc_on): ?><link rel="stylesheet" href="stempel.css?v=<?php echo @filemtime(__DIR__.'/stempel.css'); ?>"/><link rel="stylesheet" href="konto.css?v=<?php echo @filemtime(__DIR__.'/konto.css'); ?>"/><?php endif; ?>
 <link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
 </head>
 <body class="shop-shell" data-token="<?php echo shop_h($_SESSION['shop_token']); ?>" data-accepting="<?php echo $shop_accepting ? '1' : '0'; ?>" data-account="<?php echo $acc_on ? '1' : '0'; ?>" data-stamp="<?php $sc = shop_stamp_cfg(); echo ($acc_on && $sc['on']) ? (int)$sc['percent'] : 0; ?>">
 <?php if (!$shop_public): ?>
@@ -86,8 +87,16 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 
 	<?php if ($acc_on): ?><section class="acc-favs" id="acc-favs" aria-label="Deine Favoriten" hidden></section><?php endif; ?>
 
+	<?php
+		// diet filter: only the marks that at least one dish has (the owner ticks them in the menu editor)
+		$diet_has = array();
+		foreach ($menu as $c0) { foreach ($c0['products'] as $p0) { foreach (array_filter(explode(',', (string)$p0['diet'])) as $f0) { $diet_has[$f0] = true; } } }
+		if (isset($diet_has['vegan'])) { $diet_has['veg'] = true; }
+		$diet_chips = array('veg' => 'Vegetarisch', 'vegan' => 'Vegan', 'spicy' => 'Scharf');
+	?>
 	<div class="shop-layout">
 		<nav class="shop-cats" id="shop-cats" aria-label="Kategorien">
+			<?php if ($diet_has): ?><div class="shop-diets" role="group" aria-label="Filter"><?php foreach ($diet_chips as $dk => $dl): if (isset($diet_has[$dk])): ?><button type="button" class="shop-diet-chip" data-diet="<?php echo $dk; ?>" aria-pressed="false"><?php echo $dl; ?></button><?php endif; endforeach; ?></div><?php endif; ?>
 			<?php foreach ($menu as $c): ?><a href="#cat-<?php echo (int)$c['id']; ?>" data-cat="<?php echo (int)$c['id']; ?>"><?php echo shop_h(trim($c['name'])); ?></a><?php endforeach; ?>
 		</nav>
 
@@ -105,10 +114,11 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 						$choices = ((int)$p['nvar'] > 0 || (int)$p['nmod'] > 0);
 						$from = ((int)$p['nvar'] > 0) ? min((int)$p['price_cents'], (int)$p['vmin']) : (int)$p['price_cents'];
 					?>
-					<li class="shop-item" data-id="<?php echo (int)$p['id']; ?>" data-choices="<?php echo $choices ? '1' : '0'; ?>" data-title="<?php echo shop_h($p['title']); ?>" data-price="<?php echo (int)$p['price_cents']; ?>">
+					<li class="shop-item" data-diet="<?php echo shop_h((string)$p['diet']); ?>" data-id="<?php echo (int)$p['id']; ?>" data-choices="<?php echo $choices ? '1' : '0'; ?>" data-title="<?php echo shop_h($p['title']); ?>" data-price="<?php echo (int)$p['price_cents']; ?>">
 						<div class="shop-item-text">
 							<h3><?php echo shop_h($p['title']); ?></h3>
 							<?php if (trim($p['description']) !== ''): ?><p><?php echo shop_h($p['description']); ?></p><?php endif; ?>
+							<?php $dm = array_filter(explode(',', (string)$p['diet'])); if ($dm): ?><p class="shop-diet"><?php if (in_array('vegan', $dm, true)): ?><span>vegan</span><?php elseif (in_array('veg', $dm, true)): ?><span>vegetarisch</span><?php endif; ?><?php if (in_array('spicy', $dm, true)): ?><span class="is-spicy">scharf</span><?php endif; ?></p><?php endif; ?>
 						</div>
 						<?php if ($p['image_url'] !== ''): ?><?php $t240 = shop_img_thumb($p['image_url'], 240); $t480 = shop_img_thumb($p['image_url'], 480); ?><img class="shop-item-img" src="<?php echo shop_h($t240); ?>"<?php if ($t240 !== $p['image_url']): ?> srcset="<?php echo shop_h($t240); ?> 240w, <?php echo shop_h($t480); ?> 480w" sizes="(min-width: 1024px) 96px, 80px"<?php endif; ?> alt="" loading="lazy" decoding="async" width="80" height="80"/><?php endif; ?>
 						<div class="shop-item-buy">

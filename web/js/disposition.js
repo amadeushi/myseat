@@ -3,7 +3,7 @@
    ready and waiting for a driver, on the road - with the kitchen as one line; every band pages with big buttons (a trackball is the input). */
 (function () {
 	'use strict';
-	var TOKEN = document.body.dataset.token, seen = null, lastOk = Date.now();
+	var TOKEN = document.body.dataset.token, seen = null, arrivedSeen = null, lastOk = Date.now();
 
 	function $(s, r) { return (r || document).querySelector(s); }
 	function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -109,9 +109,9 @@
 		if (o.status === 'new' && ageMin >= 8) { late = true; }
 		// "late" (still just waiting) and "failed" (actually broken) used to share the same danger-red ring -
 		// late now escalates through amber plus this text label, never through the failure color alone
-		var h = '<article class="k-card' + (o.status === 'new' ? ' is-new' : '') + (late ? ' is-late' : '') + (o.status === 'failed' ? ' is-failed' : '') + '" data-id="' + o.id + '"><div class="k-head"><span class="k-no">#' + o.day_no + '</span><span class="k-type ' + esc(o.type) + '">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + '</span>' +
+		var h = '<article class="k-card' + (o.status === 'new' ? ' is-new' : '') + (late ? ' is-late' : '') + (o.status === 'failed' ? ' is-failed' : '') + (o.arrived ? ' is-here' : '') + '" data-id="' + o.id + '"><div class="k-head"><span class="k-no">#' + o.day_no + '</span><span class="k-type ' + esc(o.type) + '">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + '</span>' +
 			(o.source === 'lieferando' ? '<span class="k-badge lief">Lieferando</span>' : '') + (o.source === 'uber_eats' ? '<span class="k-badge uber">Uber Eats</span>' : '') +
-			(o.source === 'phone' ? '<span class="k-badge">Telefon</span>' : '') +
+			(o.source === 'phone' ? '<span class="k-badge">Telefon</span>' : '') + (o.arrived ? '<span class="k-badge here">Gast ist da ' + esc(o.arrived) + '</span>' : '') +
 			(o.test ? '<span class="k-badge">Test</span>' : '') + '<span class="k-due' + (late ? ' k-late' : '') + '">' + esc(dueTxt) + '<small>' + sub + (o.status === 'new' ? ' · vor ' + ageMin + ' Min' : '') + (late ? ' · VERSPÄTET' : '') + '</small></span></div>' +
 			'<p class="k-who">' + esc(o.name) + (o.phone ? ' · ' + esc(o.phone) : '') + '</p>' + (o.address ? '<p class="k-addr">' + esc(o.address) + (o.address_note ? ' (' + esc(o.address_note) + ')' : '') + '</p>' : '') +
 			(o.status === 'failed' ? failReasonText(o) : '') +
@@ -164,6 +164,7 @@
 		var wait = minutesSince(o.ready_ts || o.created_ts), delivery = o.type === 'delivery', free = delivery && !o.driver_id;
 		var lvl = free ? (wait >= 10 ? ' is-over' : (wait >= 5 ? ' is-soon' : '')) : '';
 		var txt = delivery ? (o.driver_id ? 'vorgemerkt von ' + esc(o.driver_name) : 'wartet auf Fahrer seit ' + wait + ' Min') : 'abholbereit seit ' + wait + ' Min';
+		if (!delivery && o.arrived) { txt = 'Gast ist da seit ' + esc(o.arrived) + ' (abholbereit seit ' + wait + ' Min)'; lvl = ' is-here'; }
 		var h = '<article class="k-row k-row-ready' + lvl + '" data-id="' + o.id + '"><div class="k-row-main"><span class="k-no">#' + o.day_no + '</span><span class="k-type ' + esc(o.type) + '">' + (delivery ? 'Lieferung' : 'Abholung') + '</span>' +
 			(o.test ? '<span class="k-badge">Test</span>' : '') + '<span class="k-rwho">' + esc(o.name) + '</span>' + (delivery ? '<span class="k-raddr">' + shortAddr(o) + '</span>' : '') + '</div>' +
 			'<div class="k-row-wait"><b>' + txt + '</b>' + (lvl === ' is-over' ? '<span class="k-lvl">DRINGEND</span>' : (lvl === ' is-soon' ? '<span class="k-lvl">bald zu lang</span>' : '')) + '</div><div class="k-row-act">';
@@ -376,6 +377,10 @@
 				}
 			}
 			seen = ids;
+			// a pickup guest tapped "Ich bin da": ring once for every new one (not for those that were already there when the page opened)
+			var arr = r.orders.filter(function (o) { return o.type !== 'delivery' && o.arrived; }).map(function (o) { return o.id; });
+			if (arrivedSeen !== null && arr.some(function (id) { return arrivedSeen.indexOf(id) < 0; })) { sound.notify(); }
+			arrivedSeen = arr;
 			drawPause(); render(); sound.ack();
 		}).catch(function (e) { if (e.message !== 'login' && Date.now() - lastOk > 20000) { $('#k-offline').hidden = false; } });
 	}

@@ -98,6 +98,32 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 			<input type="text" id="sh-sd" name="voucher_days" inputmode="numeric" value="<?php echo $sh_e($sh['voucher_days']); ?>"/>
 		</div>
 
+		<h4 class="sms-sub">Angebote</h4>
+		<small class="offer-help">Angebote ohne Code, im Warenkorb. <b>Gratis-Extra:</b> Ab einem Warenwert, der mit der Zahl der Hauptgerichte wächst (Pizza, Pasta, Fleisch, Fisch ...; Desserts, Getränke, Vorspeisen und Wein zählen nicht), wählt der Gast ein Extra gratis. Darunter zeigt der Warenkorb, was fehlt, und schlägt Snacks, Beilagen und Getränke vor, deren Preis die Lücke schließt. Wer kein Extra will, bekommt (nur mit Kundenkonto) einen persönlichen Gutschein für die nächste Bestellung. <b>Pizza + Getränk:</b> Für jede Pizza (auch Calzone und Wunschpizza) kostet ein alkoholfreies Getränk oder ein Bier einen festen Betrag weniger, kein Wein. Gratis-Extras müssen Gerichte ohne Auswahl sein (keine Größen, keine Zutatengruppen).</small>
+		<label class="offer-check"><input type="checkbox" name="offers_on" value="1"<?php echo $sh_check('offers_on'); ?>/> Angebote anbieten</label>
+		<div class="shop-grid">
+			<label class="offer-label" for="sh-ot1">Gratis-Extra ab Warenwert bei 1 Hauptgericht (Euro)</label>
+			<input type="text" id="sh-ot1" name="offer_t1" inputmode="decimal" value="<?php echo $sh_e($sh['offer_t1']); ?>"/>
+			<label class="offer-label" for="sh-ot2">... bei 2 Hauptgerichten (Euro)</label>
+			<input type="text" id="sh-ot2" name="offer_t2" inputmode="decimal" value="<?php echo $sh_e($sh['offer_t2']); ?>"/>
+			<label class="offer-label" for="sh-ot3">... bei 3 und mehr Hauptgerichten (Euro)</label>
+			<input type="text" id="sh-ot3" name="offer_t3" inputmode="decimal" value="<?php echo $sh_e($sh['offer_t3']); ?>"/>
+			<?php $sh_ext = array_values(array_filter(array_map('intval', explode(',', (string)$sh['offer_extras'])))); $sh_pick = fb_rows("SELECT p.id, p.title, p.price_cents, c.name AS cat FROM ".fb_t('tp_shop_products')." p LEFT JOIN ".fb_t('tp_shop_categories')." c ON c.id = p.category_id WHERE p.active = 1 AND NOT EXISTS (SELECT 1 FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id) AND NOT EXISTS (SELECT 1 FROM ".fb_t('tp_shop_product_groups')." g WHERE g.product_id = p.id) AND p.price_cents <= 900 ORDER BY c.sort, p.sort, p.id");
+			for ($sh_i = 0; $sh_i < 3; $sh_i++): ?>
+			<label class="offer-label" for="sh-ox<?php echo $sh_i; ?>">Gratis-Extra <?php echo $sh_i + 1; ?><?php echo $sh_i === 0 ? ' (ist vorgewählt)' : ''; ?></label>
+			<select id="sh-ox<?php echo $sh_i; ?>" name="offer_extra_<?php echo $sh_i; ?>"><option value="0">(keins)</option>
+				<?php foreach ($sh_pick as $sh_p): ?><option value="<?php echo (int)$sh_p['id']; ?>"<?php echo (isset($sh_ext[$sh_i]) && $sh_ext[$sh_i] === (int)$sh_p['id']) ? ' selected' : ''; ?>><?php echo $sh_e($sh_p['title'].' ('.$sh_p['cat'].', '.number_format($sh_p['price_cents'] / 100, 2, ',', '').' €)'); ?></option><?php endforeach; ?>
+			</select>
+			<?php endfor; ?>
+			<label class="offer-label" for="sh-ov">Gutschein statt Extra (Euro)</label>
+			<input type="text" id="sh-ov" name="offer_voucher" inputmode="decimal" value="<?php echo $sh_e($sh['offer_voucher']); ?>"/>
+			<label class="offer-label" for="sh-ovm">... gilt ab Warenwert (Euro)</label>
+			<input type="text" id="sh-ovm" name="offer_voucher_min" inputmode="decimal" value="<?php echo $sh_e($sh['offer_voucher_min']); ?>"/>
+			<label class="offer-label" for="sh-ovd">... gültig (Tage)</label>
+			<input type="text" id="sh-ovd" name="offer_voucher_days" inputmode="numeric" value="<?php echo $sh_e($sh['offer_voucher_days']); ?>"/>
+			<label class="offer-label" for="sh-oc">Pizza + Getränk: Nachlass auf das Getränk (Euro, 0 = aus)</label>
+			<input type="text" id="sh-oc" name="offer_combo" inputmode="decimal" value="<?php echo $sh_e($sh['offer_combo']); ?>"/>
+		</div>
 		<h4 class="sms-sub">Kundenkonto</h4>
 		<small class="offer-help">Gäste melden sich im Shop ohne Passwort mit E-Mail-Adresse oder Handynummer an: Sie bekommen einen 6-stelligen Code und einen Link (bei SMS ein Kurzlink über YOURLS, wenn dort "Kurzlink" eingerichtet ist). Danach sehen sie ihre früheren Bestellungen und können sie nachbestellen, speichern Lieblingsgerichte und sehen ihre Stempelkarte. Das Konto ist die bestätigte Nummer oder Adresse, die Bestellungen werden darüber gefunden. Der Anmelde-Code per SMS braucht eingerichteten SMS-Versand, per Mail die E-Mail-Adresse oben.</small>
 		<label class="offer-check"><input type="checkbox" name="account_on" value="1"<?php echo $sh_check('account_on'); ?>/> Kundenkonto anbieten</label>

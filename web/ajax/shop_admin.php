@@ -29,12 +29,25 @@ shop_ensure_schema();
 $op = isset($_POST['op']) ? (string)$_POST['op'] : '';
 
 if ($op === 'save') {
-	foreach (array('public', 'accepting', 'test_mode', 'allow_cash', 'allow_card_door', 'allow_online', 'tip_enabled', 'sms_orders', 'stamp_on', 'account_on', 'account_sms', 'feedback_on', 'places_suggest') as $flag) {
+	foreach (array('public', 'accepting', 'test_mode', 'allow_cash', 'allow_card_door', 'allow_online', 'tip_enabled', 'sms_orders', 'stamp_on', 'offers_on', 'account_on', 'account_sms', 'feedback_on', 'places_suggest') as $flag) {
 		shop_setting_set($flag, !empty($_POST[$flag]) ? '1' : '0');
 	}
 	foreach (array('eta_delivery_min' => array(10, 240), 'kitchen_drive_min' => array(0, 60), 'lead_pickup_min' => array(0, 240), 'slot_min' => array(5, 60), 'days_ahead' => array(0, 14),
 		'stamp_percent' => array(1, 100), 'stamp_goal' => array(2, 12), 'stamp_months' => array(1, 60), 'voucher_days' => array(7, 730), 'account_sms_daily' => array(1, 5000), 'track_days' => array(0, 30), 'last_order_min' => array(0, 240)) as $k => $range) {
 		if (isset($_POST[$k])) { shop_setting_set($k, (string)max($range[0], min($range[1], (int)$_POST[$k]))); }
+	}
+	// offers: amounts in euro, the days, and up to three free extras (products without choices)
+	foreach (array('offer_t1' => 500, 'offer_t2' => 500, 'offer_t3' => 500, 'offer_voucher' => 100, 'offer_voucher_min' => 500, 'offer_combo' => 20) as $k => $max) {
+		if (isset($_POST[$k])) { shop_setting_set($k, number_format(max(0, min($max, (float)str_replace(',', '.', $_POST[$k]))), 2, '.', '')); }
+	}
+	if (isset($_POST['offer_voucher_days'])) { shop_setting_set('offer_voucher_days', (string)max(7, min(365, (int)$_POST['offer_voucher_days']))); }
+	if (isset($_POST['offer_extra_0']) || isset($_POST['offer_extra_1']) || isset($_POST['offer_extra_2'])) {
+		$ex = array();
+		foreach (array('offer_extra_0', 'offer_extra_1', 'offer_extra_2') as $k) {
+			$pid = isset($_POST[$k]) ? (int)$_POST[$k] : 0;
+			if ($pid > 0 && !in_array($pid, $ex, true) && fb_row("SELECT id FROM ".fb_t('tp_shop_products')." WHERE id = ? AND active = 1", 'i', array($pid))) { $ex[] = $pid; }
+		}
+		shop_setting_set('offer_extras', implode(',', $ex));
 	}
 	foreach (array('min_order_delivery', 'min_order_pickup') as $k) {
 		if (isset($_POST[$k])) { shop_setting_set($k, number_format(max(0, min(500, (float)str_replace(',', '.', $_POST[$k]))), 2, '.', '')); }
