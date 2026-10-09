@@ -29,6 +29,7 @@ function shop_uber_prompt() {
 		."- kind: \"delivery\" bei LIEFERUNG, \"pickup\" bei ABHOLUNG. order_code und customer_name stehen im schwarzen Balken (der Code rechts, der Name links).\n"
 		."- items: Jede Zeile mit Menge (\"2 x\") und fettem Titel ist ein Gericht; qty ist die Menge, price_cents der Preis ganz rechts in genau dieser Zeile. Die eingerückten Zeilen darunter sind Optionen dieses Gerichts: group ist die Überschrift in Großbuchstaben darüber (z. B. \"WÄHLE DEINE SAUCE\"), qty die Zahl vor dem \"x\", title der Text, price_cents der Preis rechts. note ist ein gedruckter Hinweis zum Gericht.\n"
 		."- note (oben): Anmerkung des Gastes zur Bestellung, wenn gedruckt. phone, street, zip, city nur, wenn gedruckt.\n"
+		."- Adressblock (Lieferung): street ist NUR die erste Adresszeile (Straße, ggf. mit Nummer, wenn sie dort steht). Die Zeile darunter mit Postleitzahl, Ort und Land (z. B. \"Angerburger Str., 31141 Hildesheim, Deutschland\") ist nicht Teil von street: aus ihr kommen zip und city. house_no ist der Text hinter \"Hausnummer oder Name:\", address_extra der Text hinter \"Zusätzliche Adressangaben:\" (bis zur Telefonnummer), instructions der Text hinter \"Anweisungen:\" ohne die eckigen Klammern. Jeweils null, wenn nicht gedruckt.\n"
 		."- subtotal_cents ist die Zwischensumme, fee_cents die Liefergebühr, discount_cents Rabatte (als positive Zahl), tip_cents Trinkgeld.\n"
 		."- other_fees: jede weitere Gebührenzeile zwischen Zwischensumme und Endbetrag, die nicht die Liefergebühr ist (zum Beispiel \"Marketplace-Gebühr (Gebühren von Uber)\", \"Servicegebühr\", \"Kleinmengenzuschlag\"), jeweils label (der gedruckte Text, ohne Klammerzusatz in der nächsten Zeile) und cents. Keine solche Zeile: leere Liste.\n"
 		."- total_cents ist der große Endbetrag unten (bei \"Gezahlter Betrag\", \"Fälliger Bargeldbetrag\" oder \"Gesamtbetrag\"). payment ist \"cash_due\", wenn \"Fälliger Bargeldbetrag\" gedruckt ist (der Fahrer kassiert bar), \"paid_online\", wenn \"Gezahlter Betrag\" oder eine Online-Zahlung gedruckt ist, sonst null.\n"
@@ -43,7 +44,7 @@ function shop_uber_schema() {
 	$item = $obj(array('qty' => array('type' => 'integer'), 'title' => array('type' => 'string'), 'price_cents' => $s('integer'), 'note' => $s(), 'options' => array('type' => 'array', 'items' => $option)));
 	return $obj(array(
 		'order_code' => $s(), 'kind' => array('type' => array('string', 'null'), 'enum' => array('delivery', 'pickup', null)), 'customer_name' => $s(), 'phone' => $s(),
-		'street' => $s(), 'zip' => $s(), 'city' => $s(), 'note' => $s(), 'items' => array('type' => 'array', 'items' => $item),
+		'street' => $s(), 'house_no' => $s(), 'address_extra' => $s(), 'instructions' => $s(), 'zip' => $s(), 'city' => $s(), 'note' => $s(), 'items' => array('type' => 'array', 'items' => $item),
 		'subtotal_cents' => $s('integer'), 'fee_cents' => $s('integer'), 'discount_cents' => $s('integer'), 'tip_cents' => $s('integer'),
 		'other_fees' => array('type' => 'array', 'items' => $obj(array('label' => array('type' => 'string'), 'cents' => array('type' => 'integer')))),
 		'total_cents' => $s('integer'), 'payment' => array('type' => array('string', 'null'), 'enum' => array('paid_online', 'cash_due', null)),
@@ -256,6 +257,38 @@ function shop_uber_find_product($title) {
  * $auto = true is the automatic way (shop_uber_auto): the receipt must be fresh (ordered within the last 45 minutes, so a reprint of an old order from the archive never becomes a live order), and a
  * delivery needs address and phone number; a person pressing the button may import without (the note says so).
  */
+/*
+ * Street, house number and notes of the delivery address from what the model read. The receipt prints the street, a line "Straße, PLZ Ort, Land", "Hausnummer oder Name: 35", "Zusätzliche Adressangaben: ..."
+ * and "Anweisungen: [...]". The model gives street, house_no, address_extra and instructions apart; if it ran them together into the street (as it once did), they are taken apart here again.
+ * Returns array(street, note): the street with its house number ("Angerburger Straße 35") and what the driver should know (house name, extra address text, instructions).
+ */
+function shop_uber_address($p) {
+	$street = isset($p['street']) ? trim((string)$p['street']) : '';
+	$house = isset($p['house_no']) ? trim((string)$p['house_no']) : '';
+	$extra = isset($p['address_extra']) ? trim((string)$p['address_extra']) : '';
+	$instr = isset($p['instructions']) ? trim((string)$p['instructions'], " \t\n\r[]") : '';
+	if (preg_match('/Zus[äa]tzliche Adressangaben:\s*(.*)$/isu', $street, $m)) { if ($extra === '') { $extra = trim($m[1]); } $street = trim(substr($street, 0, strlen($street) - strlen($m[0]))); }
+	if (preg_match('/Hausnummer oder Name:\s*(.*)$/isu', $street, $m)) { if ($house === '') { $house = trim($m[1]); } $street = trim(substr($street, 0, strlen($street) - strlen($m[0]))); }
+	// the line with postcode, town and country ("Angerburger Str., 31141 Hildesheim, Deutschland") does not belong to the street: cut it off, together with the street typed a second time in front of it
+	$zip = isset($p['zip']) ? trim((string)$p['zip']) : '';
+	if ($zip !== '' && ($pos = strpos($street, $zip)) !== false) {
+		$before = trim(substr($street, 0, $pos), " ,");
+		$first = preg_split('/\s+/u', $before)[0];
+		$again = ($first !== '' && mb_strlen($before) > mb_strlen($first)) ? mb_strpos($before, $first, 1) : false;   // "Angerburger Straße Angerburger Str." -> "Angerburger Straße"
+		$street = trim($again ? mb_substr($before, 0, $again) : $before, " ,");
+	}
+	$note = array();
+	if ($house !== '') {
+		if (preg_match('/^\d+\s*[a-zA-Z]?(\s*[-\/]\s*\d+\s*[a-zA-Z]?)?$/u', $house)) { if (!preg_match('/\d\s*[a-zA-Z]?$/u', $street)) { $street .= ' '.$house; } }
+		else { $note[] = 'Haus: '.$house; }
+	}
+	// the extra text is often only the street typed again: not repeated
+	$norm = function ($t) { return preg_replace('/[^a-z0-9]/', '', strtr(mb_strtolower($t), array('ß' => 'ss', 'ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue', 'strasse' => 'str', 'straße' => 'str'))); };
+	if ($extra !== '' && strpos($norm($street), $norm($extra)) === false) { $note[] = $extra; }
+	if ($instr !== '') { $note[] = $instr; }
+	return array($street, implode('; ', $note));
+}
+
 function shop_uber_import($slipId, $auto = false) {
 	shop_ensure_schema();
 	$slip = fb_row("SELECT id, data, order_id FROM ".fb_t('tp_shop_uber_slips')." WHERE id = ?", 'i', array((int)$slipId));
@@ -318,26 +351,30 @@ function shop_uber_import($slipId, $auto = false) {
 	if ($isDelivery && empty($p['phone'])) { $warn[] = 'keine Telefonnummer auf dem Bon'; }
 	if (!$isToday) { $warn[] = 'Bon vom '.($placed !== '' ? date('d.m.Y', strtotime($placed)) : 'unbekanntem Tag').', als Test angelegt'; }
 	if ($warn) { $note = trim('[Uber Eats: '.implode('; ', $warn).'] '.$note); }
-	$street = isset($p['street']) ? trim((string)$p['street']) : ''; $zip = isset($p['zip']) ? trim((string)$p['zip']) : ''; $city = isset($p['city']) ? trim((string)$p['city']) : '';
+	list($street, $addrNote) = shop_uber_address($p); $zip = isset($p['zip']) ? trim((string)$p['zip']) : ''; $city = isset($p['city']) ? trim((string)$p['city']) : '';
 	$phone = isset($p['phone']) ? trim((string)$p['phone']) : '';
 	$token = bin2hex(random_bytes(16)); $number = shop_order_number();
 	shop_dayno_lock();
 	$dayNo = (int)(fb_row("SELECT COALESCE(MAX(day_no), 0) + 1 AS n FROM ".fb_t('tp_shop_orders')." WHERE order_date = ?", 's', array($today))['n']);
 	$db = fb_db();
+	// order and items go in together (one transaction): the dispatch screen prints the slip of an accepted order at once, and must never see the order without its items
+	mysqli_begin_transaction($db);
 	$ok = fb_exec("INSERT INTO ".fb_t('tp_shop_orders')."
 		(token, number, day_no, order_date, type, status, customer_name, street, zip, city, phone, note, subtotal_cents, fee_cents, tip_cents, total_cents, discount_cents, surcharge_cents, adjust_note,
 		 payment_method, payment_status, lang, is_test, source, external_ref, created_at, updated_at, accepted_at, eta_at, scheduled_at, pay_with_cents)
 		VALUES (?, ?, ?, ?, ?, 'accepted', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'de', ?, 'uber_eats', ?, ?, ?, ?, ?, ?, NULL)",
 		'ssiss'.'ssssss'.'iiiiii'.'sss'.'i'.'ssssss', array($token, $number, $dayNo, $today, $isDelivery ? 'delivery' : 'pickup', (string)$p['customer_name'], $street, $zip, $city, $phone, $note, $sub, $fee, $tip, $total, $disc, $sur, $adjNote,
 			$cash ? 'cash' : 'uber_eats', $cash ? 'open' : 'paid', $test, $ref, $created, $now, $now, $eta, $sched));
-	if (!$ok) { shop_dayno_unlock(); return array('ok' => false, 'error' => 'Die Bestellung konnte nicht gespeichert werden.'); }
-	$id = (int)mysqli_insert_id($db); shop_dayno_unlock();
-	if ($street !== '') {   // a point for the driver page and the map (they only look up orders that have one); a miss does not stop the import
-		try { $g = shop_geocode($street, $zip, $city); if ($g && $g[0] !== null && $g[1] !== null) { fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET lat = ?, lng = ? WHERE id = ?", 'ddi', array((float)$g[0], (float)$g[1], $id)); } } catch (Throwable $e) { error_log('uber geocode: '.$e->getMessage()); }
-	}
+	if (!$ok) { mysqli_rollback($db); shop_dayno_unlock(); return array('ok' => false, 'error' => 'Die Bestellung konnte nicht gespeichert werden.'); }
+	$id = (int)mysqli_insert_id($db);
 	foreach ($lines as $l) {
 		fb_exec("INSERT INTO ".fb_t('tp_shop_order_items')." (order_id, product_id, title, variation, options, qty, unit_cents, line_cents, note) VALUES (?, ?, ?, '', ?, ?, ?, ?, ?)",
 			'iissiiis', array($id, shop_uber_find_product($l['title']), $l['title'], json_encode($l['opts'], JSON_UNESCAPED_UNICODE), $l['qty'], $l['unit'], $l['line'], $l['note']));
+	}
+	if ($addrNote !== '') { fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET address_note = ? WHERE id = ?", 'si', array($addrNote, $id)); }
+	mysqli_commit($db); shop_dayno_unlock();
+	if ($street !== '') {   // a point for the driver page and the map (they only look up orders that have one); a miss does not stop the import
+		try { $g = shop_geocode($street, $zip, $city); if ($g && $g[0] !== null && $g[1] !== null) { fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET lat = ?, lng = ? WHERE id = ?", 'ddi', array((float)$g[0], (float)$g[1], $id)); } } catch (Throwable $e) { error_log('uber geocode: '.$e->getMessage()); }
 	}
 	fb_exec("UPDATE ".fb_t('tp_shop_uber_slips')." SET order_id = ?, status = 'imported' WHERE id = ?", 'ii', array($id, (int)$slipId));
 	// the slips are purged after a while, the original receipt stays with the order

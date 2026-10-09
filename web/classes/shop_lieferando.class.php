@@ -259,25 +259,28 @@ function lieferando_import($pdfBytes) {
 	// the time of the order is the one printed on the receipt (the import can come minutes later); only if it is from today and not in the future
 	$created = ($p['placed_at'] && substr($p['placed_at'], 0, 10) === $today && strtotime($p['placed_at']) <= time() + 300) ? $p['placed_at'] : $now;
 	$db = fb_db();
+	// order and items go in together (one transaction): the dispatch screen prints the slip of an accepted order at once, and must never see the order without its items
+	mysqli_begin_transaction($db);
 	$ok = fb_exec("INSERT INTO ".fb_t('tp_shop_orders')."
 		(token, number, day_no, order_date, type, status, customer_name, street, zip, city, phone, note, subtotal_cents, fee_cents, tip_cents, total_cents, discount_cents,
 		 payment_method, payment_status, lang, is_test, source, external_ref, created_at, updated_at, accepted_at, eta_at, pay_with_cents)
 		VALUES (?, ?, ?, ?, ?, 'accepted', ?, ?, ?, ?, '', ?, ?, ?, ?, ?, ?, ?, ?, 'de', 0, 'lieferando', ?, ?, ?, ?, ?, ?)",
 		'ssisssssssiiiiisssssssi', array($token, $number, $dayNo, $today, $p['type'], $p['customer_name'], $p['street'], $p['zip'], $p['city'], $note, $sub, $p['fee_cents'], $p['tip_cents'], $total, $p['discount_cents'],
 			$p['payment_method'], $p['payment_status'] === 'paid' ? 'paid' : 'open', $p['external_id'], $created, $now, $now, $p['confirmed_at'], $p['pay_with_cents'] ?: null));
-	if (!$ok) { shop_dayno_unlock(); return array('ok' => false, 'error' => 'Die Bestellung ('.$p['external_id'].') konnte nicht gespeichert werden.'); }
-	$id = (int)mysqli_insert_id($db); shop_dayno_unlock();
-	// the address of a delivery (the street without its house number, PLZ, town) becomes a point, so that the driver page and the map can show district and distance as for every
-	// other order (they look up only orders that have one); a miss is no reason to fail the import
-	if ($p['street'] !== '') {
-		try { $g = shop_geocode($p['street'], $p['zip'], $p['city']); if ($g && $g[0] !== null && $g[1] !== null) { fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET lat = ?, lng = ? WHERE id = ?", 'ddi', array((float)$g[0], (float)$g[1], $id)); } } catch (Throwable $e) {}
-	}
+	if (!$ok) { mysqli_rollback($db); shop_dayno_unlock(); return array('ok' => false, 'error' => 'Die Bestellung ('.$p['external_id'].') konnte nicht gespeichert werden.'); }
+	$id = (int)mysqli_insert_id($db);
 	foreach ($p['items'] as $it) {
 		$productId = lieferando_find_product($it['title']);
 		$unit = $it['unit_cents'] ?: 0;
 		fb_exec("INSERT INTO ".fb_t('tp_shop_order_items')." (order_id, product_id, title, variation, options, qty, unit_cents, line_cents, note) VALUES (?, ?, ?, '', ?, ?, ?, ?, ?)",
 			'iissiiis', array($id, $productId, $it['title'], json_encode(array_map(function ($o) { return array('title' => $o['title'], 'qty' => 1, 'price_cents' => $o['price_cents']); }, $it['options']), JSON_UNESCAPED_UNICODE),
 				$it['qty'], $unit, $unit * $it['qty'], $it['note']));
+	}
+	mysqli_commit($db); shop_dayno_unlock();
+	// the address of a delivery (the street without its house number, PLZ, town) becomes a point, so that the driver page and the map can show district and distance as for every
+	// other order (they look up only orders that have one); a miss is no reason to fail the import
+	if ($p['street'] !== '') {
+		try { $g = shop_geocode($p['street'], $p['zip'], $p['city']); if ($g && $g[0] !== null && $g[1] !== null) { fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET lat = ?, lng = ? WHERE id = ?", 'ddi', array((float)$g[0], (float)$g[1], $id)); } } catch (Throwable $e) {}
 	}
 	shop_doc_save($id, 'pdf', $pdfBytes);   // the original receipt, for printing it again from the dispatch
 	shop_log($id, 'created', 'lieferando '.$p['external_id'].($p['warnings'] ? ' - prüfen: '.implode('; ', $p['warnings']) : ''));

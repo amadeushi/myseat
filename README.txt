@@ -52,6 +52,13 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-09 == mySeat v6.31.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Behoben: Uber Eats und Lieferando: Bestellung und Positionen werden in einer Transaktion gespeichert (das Nachschlagen der Adresse kommt danach). Vorher konnte die Disposition den Lieferzettel
+   ("Bon bei Annahme") drucken, bevor die Positionen da waren: Zettel ohne Bestellinhalte.
+ * Behoben: Uber Eats Adresse: Straße mit Hausnummer ("Angerburger Straße 35"), Hausnummer-/Zusatzangaben und Anweisungen ("An die Haustür liefern") kommen getrennt vom Bon (shop_uber_address) und gehen ins Hinweisfeld.
+ * Behoben: Lieferando-Originalbon: Der Pi (tools/kitchen-pi/lieferando-drucker/myseat-pdf) schneidet die A4-PDF des Tablets auf die Breite des Bons zu (ghostscript), damit er auf 80 mm passt.
+
 2026-10-09 == mySeat v6.31.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geaendert: Der Kuechenbon (ESC/POS) ist besser lesbar: Gerichte und Optionen in doppelter Breite und Hoehe, Name, Strasse, Ort und Anmerkungen gross, Punktlinie zwischen den Gerichten.

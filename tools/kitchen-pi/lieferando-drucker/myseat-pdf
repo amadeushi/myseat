@@ -9,7 +9,7 @@ Every PDF is also kept in /var/spool/myseat-pdf (the newest 200), so a receipt t
 
 Exit codes of a CUPS backend: 0 done, 5 cancel the job, 6 try again later.
 """
-import os, sys, time, glob, urllib.request, urllib.error, syslog
+import os, re, sys, time, glob, subprocess, tempfile, urllib.request, urllib.error, syslog
 
 CONF = '/etc/myseat-printer.conf'
 KEEP_DIR = '/var/spool/myseat-pdf'
@@ -39,6 +39,33 @@ def pdf_part(data):
     j = data.rfind(b'%%EOF')
     return data[i:j + 5] + b'\n' if j > i else data[i:]
 
+def crop_pdf(data):
+    """The tablet picks A4 for this printer and prints the narrow receipt as a strip at the top of the page. The page is cut to the strip (ghostscript: bounding box of the
+    content plus a small margin), so the original receipt prints at receipt width later. Text stays text. On any problem the PDF is returned unchanged."""
+    try:
+        with tempfile.TemporaryDirectory() as d:
+            src, dst = os.path.join(d, 'in.pdf'), os.path.join(d, 'out.pdf')
+            with open(src, 'wb') as f:
+                f.write(data)
+            r = subprocess.run(['gs', '-q', '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dFirstPage=1', '-dLastPage=1', '-sDEVICE=bbox', src], capture_output=True, text=True, timeout=30)
+            m = re.search(r'%%HiResBoundingBox: ([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+)', r.stderr)
+            if not m:
+                return data
+            x0, y0, x1, y1 = [float(v) for v in m.groups()]
+            pad = 8.0
+            x0, y0 = max(0.0, x0 - pad), max(0.0, y0 - pad)
+            w, h = x1 + pad - x0, y1 + pad - y0
+            if w < 50 or h < 50:
+                return data
+            subprocess.run(['gs', '-q', '-dSAFER', '-dBATCH', '-dNOPAUSE', '-dFirstPage=1', '-dLastPage=1', '-sDEVICE=pdfwrite', '-dFIXEDMEDIA',
+                            '-dDEVICEWIDTHPOINTS=%.2f' % w, '-dDEVICEHEIGHTPOINTS=%.2f' % h, '-sOutputFile=' + dst,
+                            '-c', '<</PageOffset [%.2f %.2f]>> setpagedevice' % (-x0, -y0), '-f', src], check=True, capture_output=True, timeout=60)
+            out = open(dst, 'rb').read()
+            return out if out.startswith(b'%PDF-') else data
+    except Exception as e:
+        log('cropping failed, PDF sent as it is: %s' % e)
+        return data
+
 def keep(data, job, ext='.pdf'):
     try:
         os.makedirs(KEEP_DIR, mode=0o750, exist_ok=True)
@@ -64,7 +91,8 @@ def main():
         keep(raw, job, '.bin')  # what arrived is kept, to see what it was
         log('job %s is not a PDF (%d bytes, starts with %r), cancelled' % (job, len(raw), raw[:16]))
         return 5
-    keep(data, job)
+    keep(data, job)  # the original as it arrived
+    data = crop_pdf(data)
 
     c = conf()
     if not c.get('IMPORT_URL') or not c.get('IMPORT_KEY'):
