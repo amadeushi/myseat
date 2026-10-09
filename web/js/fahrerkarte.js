@@ -86,7 +86,7 @@
 	}
 	function orderCard(o) {
 		const k = kindOf(o), d = o.driver_id ? findD(o.driver_id) : null;
-		const flags = (o.source === 'lieferando' ? '<span class="fk-flag fk-flag--lief">Lieferando</span>' : '') + (o.source === 'uber_eats' ? '<span class="fk-flag fk-flag--uber">Uber Eats</span>' : '') + (o.late_min > 0 ? '<span class="fk-flag fk-flag--late">' + esc(lateText(o)) + '</span>' : '') +
+		const flags = (o.source === 'courier' ? '<span class="fk-flag">Fahrauftrag</span>' : '') + (o.source === 'lieferando' ? '<span class="fk-flag fk-flag--lief">Lieferando</span>' : '') + (o.source === 'uber_eats' ? '<span class="fk-flag fk-flag--uber">Uber Eats</span>' : '') + (o.late_min > 0 ? '<span class="fk-flag fk-flag--late">' + esc(lateText(o)) + '</span>' : '') +
 			(d ? '<span class="fk-flag fk-flag--drv" style="--c:' + colorOf(d) + '">' + esc(d.name) + '</span>' : '') +
 			'<span class="fk-flag">' + esc(payText(o)) + '</span>' + (o.lat == null ? '<span class="fk-flag fk-flag--warn">ohne Standort</span>' : '');
 		return '<button type="button" class="fk-card fk-o fk-o--' + k + (sel.o === o.id ? ' is-sel' : '') + (o.late_min > 0 ? ' is-late' : '') + '" data-o="' + o.id + '"' + (d ? ' style="--c:' + colorOf(d) + '"' : '') + '>' +
@@ -315,6 +315,20 @@
 	$('#fk-zones').addEventListener('click', e => {
 		zonesOn = !zonesOn; store.set('fkZones', zonesOn ? '1' : '0'); e.currentTarget.setAttribute('aria-pressed', String(zonesOn));
 		if (zonesOn && !zones) { get('zones').then(r => { zones = r.ok ? r.zones : []; drawZones(); }).catch(() => {}); } else { drawZones(); }
+	});
+	// a hand-typed job for the drivers (no kitchen, no sale): form in a dialog, posted to the dispatch operations
+	const jobDlg = $('#fk-job'), jobForm = $('#fk-job-form'), jobMsg = $('#fk-job-msg');
+	$('#fk-new').addEventListener('click', () => { jobForm.reset(); jobMsg.textContent = ''; jobDlg.showModal(); $('input[name="street"]', jobForm).focus(); });
+	$('#fk-job-close').addEventListener('click', () => jobDlg.close());
+	jobForm.addEventListener('submit', e => {
+		e.preventDefault();
+		const f = {}; new FormData(jobForm).forEach((v, k) => { f[k] = v; });
+		const go = $('#fk-job-go'); go.disabled = true; jobMsg.textContent = 'Adresse wird geprüft ...';
+		post('courier_job', f).then(r => {
+			go.disabled = false;
+			if (!r.ok) { jobMsg.textContent = r.error || 'Das hat nicht geklappt.'; return; }
+			jobDlg.close(); toast('Fahrauftrag #' + r.day_no + ' ist bei den Fahrern.'); load();
+		}).catch(() => { go.disabled = false; jobMsg.textContent = 'Das hat nicht geklappt. Bitte versuche es noch einmal.'; });
 	});
 	$('#fk-fit').addEventListener('click', () => drawMap(true));
 	$('#k-full').addEventListener('click', () => { if (document.fullscreenElement) { document.exitFullscreen(); } else if (document.documentElement.requestFullscreen) { document.documentElement.requestFullscreen(); } });

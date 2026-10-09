@@ -35,6 +35,7 @@ function shop_report_data($date) {
 	$add = function (&$a, $c) { $a['n']++; $a['sum'] += (int)$c; };
 	$openStates = array('new', 'accepted', 'preparing', 'ready', 'delivering');
 	foreach ($rows as $o) {
+		if ($o['source'] === 'courier') { continue; }   // a hand-typed driver job is no sale of the shop (it only counts in the drivers' list below)
 		$t = (int)$o['total_cents']; $m = $o['payment_method']; $st = $o['status']; $delivery = ($o['type'] === 'delivery');
 		if ($m === 'mollie' && in_array($o['payment_status'], array('failed', 'expired', 'canceled'), true) && $st !== 'new') { $d['shop']['failed']++; continue; }
 		if ($st === 'pending') { $d['shop']['pending']++; continue; }
@@ -84,7 +85,7 @@ function shop_report_data($date) {
 	}
 	uasort($d['drivers'], function ($a, $b) { return strcasecmp($a['name'], $b['name']); });
 	foreach (fb_rows("SELECT i.title, SUM(i.qty) AS q FROM ".fb_t('tp_shop_order_items')." i JOIN ".fb_t('tp_shop_orders')." o ON o.id = i.order_id
-		WHERE o.order_date = ? AND o.is_test = 0 AND o.status NOT IN ('pending', 'cancelled', 'failed') GROUP BY i.title ORDER BY q DESC, i.title LIMIT 3", 's', array($date)) as $t) { $d['top'][] = array($t['title'], (int)$t['q']); }
+		WHERE o.order_date = ? AND o.is_test = 0 AND o.source <> 'courier' AND o.status NOT IN ('pending', 'cancelled', 'failed') GROUP BY i.title ORDER BY q DESC, i.title LIMIT 3", 's', array($date)) as $t) { $d['top'][] = array($t['title'], (int)$t['q']); }
 	return $d;
 }
 

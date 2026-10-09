@@ -47,6 +47,7 @@ $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 		</div>
 		<button type="button" class="k-btn" id="fk-trails" aria-pressed="true">Spuren</button>
 		<button type="button" class="k-btn" id="fk-zones" aria-pressed="false">Liefergebiete</button>
+		<button type="button" class="k-btn" id="fk-new">Fahrauftrag</button>
 		<button type="button" class="k-btn" id="k-full">Vollbild</button>
 		<a class="k-btn" href="disposition.php">Disposition</a>
 	</header>
@@ -68,6 +69,25 @@ $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 			<aside class="fk-detail" id="fk-detail" aria-live="polite" hidden></aside>
 		</section>
 	</main>
+	<dialog class="fk-dialog" id="fk-job" aria-labelledby="fk-job-t">
+		<form method="dialog" id="fk-job-form" autocomplete="off">
+			<h2 id="fk-job-t">Fahrauftrag anlegen</h2>
+			<p class="fk-job-hint">Ein Auftrag nur für die Fahrer: erscheint sofort bei den Fahrern, ohne Küche, ohne Bon und ohne Umsatz.</p>
+			<div class="k-retry-grid">
+				<label class="k-retry-f wide"><span>Straße und Hausnummer</span><input type="text" name="street" maxlength="160" required/></label>
+				<label class="k-retry-f"><span>PLZ</span><input type="text" name="zip" maxlength="10"/></label>
+				<label class="k-retry-f"><span>Ort</span><input type="text" name="city" maxlength="80" value="Hildesheim" required/></label>
+				<label class="k-retry-f wide"><span>Was wird mitgenommen?</span><textarea name="text" maxlength="400" rows="3" required></textarea></label>
+				<label class="k-retry-f"><span>Name oder Bezeichnung</span><input type="text" name="name" maxlength="120" placeholder="Fahrauftrag"/></label>
+				<label class="k-retry-f"><span>Telefon (optional)</span><input type="text" name="phone" maxlength="40" inputmode="tel"/></label>
+				<label class="k-retry-f"><span>Betrag zum Kassieren in Euro (leer: nichts)</span><input type="text" name="amount" maxlength="10" inputmode="decimal"/></label>
+				<label class="k-retry-f"><span>Zahlart</span><select name="payment"><option value="cash">Bar</option><option value="card_door">Karte</option></select></label>
+				<label class="k-retry-f wide"><span>Hinweis für den Fahrer</span><input type="text" name="address_note" maxlength="200"/></label>
+			</div>
+			<p class="k-retry-msg" id="fk-job-msg" role="status"></p>
+			<div class="k-assign-foot"><button type="submit" class="k-go" id="fk-job-go" value="go">Auftrag anlegen</button><button type="button" class="k-go secondary" id="fk-job-close">Abbrechen</button></div>
+		</form>
+	</dialog>
 	<div class="fk-toast" id="fk-toast" role="status" hidden></div>
 	<script src="js/leaflet/leaflet.js"></script>
 	<script src="js/fahrerkarte.js?v=<?php echo @filemtime(__DIR__.'/js/fahrerkarte.js'); ?>"></script>

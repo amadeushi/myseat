@@ -52,6 +52,13 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-09 == mySeat v6.32.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Disposition: "Adresse bearbeiten" an jeder laufenden Lieferung (Straße mit Hausnummer, PLZ, Ort, Hinweis; gleicher Adress- und Zonencheck wie bei "Nochmal zustellen", Eintrag im Verlauf, Betrag bleibt,
+   der Zettel wird nicht von selbst neu gedruckt). Lieferando-/Uber-Lieferungen ohne Hausnummer tragen "Hausnummer fehlt", das Feld ist dann schon offen (shop_dispatch_edit_address).
+ * Neu: Fahrerkarte: "Fahrauftrag" legt einen Lieferauftrag von Hand an (Adresse, Freitext, Betrag zum Kassieren oder 0, Bar/Karte): sofort im Pool der Fahrer, ohne Küche, ohne Küchenbon, ohne SMS und ohne
+   Umsatz (nicht im Tagesbericht und den Tageszahlen; beim Fahrer zählen Lieferung und kassierter Betrag). Quelle 'courier' (shop_create_courier_job).
+
 2026-10-09 == mySeat v6.31.2 == amadeushi - http://github.com/amadeushi/myseat
 
  * Behoben: Uber Eats und Lieferando: Bestellung und Positionen werden in einer Transaktion gespeichert (das Nachschlagen der Adresse kommt danach). Vorher konnte die Disposition den Lieferzettel

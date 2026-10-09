@@ -83,7 +83,7 @@ $due = $o['scheduled_at'] ?: ($o['eta_at'] ?: $o['created_at']);
 		<hr/>
 		<?php if (!empty($o['adjust_note'])): foreach (explode('; ', $o['adjust_note']) as $adj): ?><div class="small"><?php echo $h($adj); ?></div><?php endforeach; endif; ?>
 		<?php if (!empty($o['offer_note'])): ?><div class="small"><?php echo $h($o['offer_note']); ?></div><?php endif; ?>
-		<div class="pay"><?php echo in_array($o['payment_method'], array('mollie', 'lieferando', 'uber_eats'), true) ? ($o['payment_method'] === 'lieferando' ? 'bei Lieferando bezahlt' : ($o['payment_method'] === 'uber_eats' ? 'bei Uber Eats bezahlt' : 'online bezahlt')) : ($o['payment_method'] === 'cash' ? 'BAR kassieren: ' : 'KARTE kassieren: ').shop_money($o['total_cents']); ?></div>
+		<div class="pay"><?php echo (isset($o['source']) && $o['source'] === 'courier' && (int)$o['total_cents'] === 0) ? 'nichts zu kassieren' : (in_array($o['payment_method'], array('mollie', 'lieferando', 'uber_eats'), true) ? ($o['payment_method'] === 'lieferando' ? 'bei Lieferando bezahlt' : ($o['payment_method'] === 'uber_eats' ? 'bei Uber Eats bezahlt' : 'online bezahlt')) : ($o['payment_method'] === 'cash' ? 'BAR kassieren: ' : 'KARTE kassieren: ').shop_money($o['total_cents'])); ?></div>
 		<?php if (!empty($o['pay_with_cents']) && $o['payment_method'] === 'cash'): ?><div class="small">Gast zahlt mit <?php echo shop_money((int)$o['pay_with_cents']); ?> &middot; Rückgeld <strong><?php echo shop_money((int)$o['pay_with_cents'] - (int)$o['total_cents']); ?></strong></div><?php endif; ?>
 	<?php endif; ?>
 	<hr/>

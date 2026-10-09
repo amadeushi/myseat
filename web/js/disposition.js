@@ -22,7 +22,7 @@
 	// ---- state
 	var acked = {}, current = [], drivers = [], pause = null, driveMin = 15;
 	var MAXPAGE = { 'new': 3, ready: 4, out: 4 }, PAGE = { 'new': 3, ready: 4, out: 4 }, page = { 'new': 0, ready: 0, out: 0 }, lastAct = Date.now(), IDLE_BACK_MS = 45000;
-	var workOpen = false, assignOpen = {}, assignAll = {}, retryOpen = {}, newFlash = false;
+	var workOpen = false, assignOpen = {}, assignAll = {}, retryOpen = {}, newFlash = false, addrOpen = {}, addrDraft = {};
 
 	// ---- automatic slip: "Bon bei Annahme". Every order that is accepted (by the dispatcher here, or at once when it comes from the till, Lieferando or Uber Eats) prints its delivery slip through the browser, once.
 	// What is on the board when the page is opened counts as printed already; the list is kept in the session, so a reload does not print again. The slips go out four seconds apart (a new print replaces the one before in the frame).
@@ -99,8 +99,23 @@
 		var t = 'Originalbon von ' + (o.source === 'uber_eats' ? 'Uber Eats' : 'Lieferando') + ' drucken';
 		return '<button type="button" class="k-icon" data-orig="' + o.id + '" aria-label="' + t + '" title="' + t + '">' + ICON_DOC + '</button>';
 	}
+	var ICON_PIN = '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M12 21s-6.500-5.800-6.500-11a6.500 6.500 0 0 1 13 0c0 5.200-6.500 11-6.500 11zM12 12.500a2.500 2.500 0 1 0 0-5 2.500 2.500 0 0 0 0 5z" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+	// a delivery from Lieferando or Uber Eats whose street has no house number (Lieferando does not send it; it can be read on the tablet): marked red, the address panel opens by itself
+	function missingNo(o) { return o.type === 'delivery' && (o.source === 'lieferando' || o.source === 'uber_eats') && !/\d/.test(o.street || ''); }
+	function addrEditable(o) { return o.type === 'delivery' && ['new', 'accepted', 'preparing', 'ready', 'delivering'].indexOf(o.status) >= 0; }
+	function addrIsOpen(o) { return addrEditable(o) && (addrOpen[o.id] !== undefined ? addrOpen[o.id] : missingNo(o)); }
+	function noBadge(o) { return missingNo(o) ? ' <span class="k-badge k-nonum">Hausnummer fehlt</span>' : ''; }
+	// the address of an order that is under way: street with house number, postcode, town, note for the driver; saved after the same check as for "Nochmal zustellen"
+	function addrPanel(o) {
+		if (!addrIsOpen(o)) { return ''; }
+		var d = addrDraft[o.id] || {};
+		function f(name, label, val, wide, max) { return '<label class="k-retry-f' + (wide ? ' wide' : '') + '"><span>' + label + '</span><input type="text" name="' + name + '" value="' + esc(d[name] !== undefined ? d[name] : (val || '')) + '" maxlength="' + max + '" autocomplete="off"/></label>'; }
+		return '<div class="k-assign k-retry k-addr-edit" data-order="' + o.id + '" role="group" aria-label="Adresse von Lieferung ' + o.day_no + '"><p class="k-assign-t">' + (missingNo(o) ? 'Hausnummer eintragen (steht auf dem Tablet)' : 'Adresse bearbeiten') + '</p>' +
+			'<div class="k-retry-grid">' + f('street', 'Straße und Hausnummer', o.street, true, 160) + f('zip', 'PLZ', o.zip, false, 10) + f('city', 'Ort', o.city, false, 80) + f('note', 'Hinweis für den Fahrer', o.address_note, true, 200) + '</div>' +
+			'<p class="k-retry-msg" role="status"></p><div class="k-assign-foot"><button type="button" class="k-go" data-addr-go="' + o.id + '">Adresse speichern</button><button type="button" class="k-go secondary" data-addr-close="' + o.id + '">Schließen</button></div></div>';
+	}
 	function moreHtml(o) {
-		return '<span class="k-icons">' + origBtn(o) + '<button type="button" class="k-icon" data-bon="' + o.id + '" aria-label="Lieferschein drucken" title="Lieferschein drucken">' + ICON_PRINT + '</button>' +
+		return '<span class="k-icons">' + origBtn(o) + (addrEditable(o) ? '<button type="button" class="k-icon" data-addr-open="' + o.id + '" aria-label="Adresse bearbeiten" title="Adresse bearbeiten">' + ICON_PIN + '</button>' : '') + '<button type="button" class="k-icon" data-bon="' + o.id + '" aria-label="Lieferschein drucken" title="Lieferschein drucken">' + ICON_PRINT + '</button>' +
 			'<button type="button" class="k-icon" data-guestlink="' + esc(guestUrl(o)) + '" aria-label="Gast-Link kopieren" title="Gast-Link kopieren">' + ICON_LINK + '</button></span>';
 	}
 	function card(o) {
@@ -111,9 +126,9 @@
 		// late now escalates through amber plus this text label, never through the failure color alone
 		var h = '<article class="k-card' + (o.status === 'new' ? ' is-new' : '') + (late ? ' is-late' : '') + (o.status === 'failed' ? ' is-failed' : '') + (o.arrived ? ' is-here' : '') + '" data-id="' + o.id + '"><div class="k-head"><span class="k-no">#' + o.day_no + '</span><span class="k-type ' + esc(o.type) + '">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + '</span>' +
 			(o.source === 'lieferando' ? '<span class="k-badge lief">Lieferando</span>' : '') + (o.source === 'uber_eats' ? '<span class="k-badge uber">Uber Eats</span>' : '') +
-			(o.source === 'phone' ? '<span class="k-badge">Telefon</span>' : '') + (o.arrived ? '<span class="k-badge here">Gast ist da ' + esc(o.arrived) + '</span>' : '') +
+			(o.source === 'phone' ? '<span class="k-badge">Telefon</span>' : '') + (o.source === 'courier' ? '<span class="k-badge">Fahrauftrag</span>' : '') + (o.arrived ? '<span class="k-badge here">Gast ist da ' + esc(o.arrived) + '</span>' : '') +
 			(o.test ? '<span class="k-badge">Test</span>' : '') + '<span class="k-due' + (late ? ' k-late' : '') + '">' + esc(dueTxt) + '<small>' + sub + (o.status === 'new' ? ' · vor ' + ageMin + ' Min' : '') + (late ? ' · VERSPÄTET' : '') + '</small></span></div>' +
-			'<p class="k-who">' + esc(o.name) + (o.phone ? ' · ' + esc(o.phone) : '') + '</p>' + (o.address ? '<p class="k-addr">' + esc(o.address) + (o.address_note ? ' (' + esc(o.address_note) + ')' : '') + '</p>' : '') +
+			'<p class="k-who">' + esc(o.name) + (o.phone ? ' · ' + esc(o.phone) : '') + '</p>' + (o.address ? '<p class="k-addr">' + esc(o.address) + (o.address_note ? ' (' + esc(o.address_note) + ')' : '') + noBadge(o) + '</p>' : '') +
 			(o.status === 'failed' ? failReasonText(o) : '') +
 			'<ul class="k-items">' + o.items.map(function (it) {
 				return '<li class="k-item"><span class="k-qty">' + it.qty + '×</span>' + esc(it.title) + (it.variation ? ' <span class="k-var">' + esc(it.variation) + '</span>' : '') +
@@ -137,12 +152,12 @@
 		}
 		else if (o.status === 'delivering') { h += driverBadge(o) + '<button type="button" class="k-go secondary" data-release="' + o.id + '">Zurück in den Pool</button><button type="button" class="k-go" data-act="done">Geliefert</button>'; }
 		else if (o.status === 'failed') { h += driverBadge(o) + '<button type="button" class="k-go" data-retry-open="' + o.id + '">Nochmal zustellen</button><button type="button" class="k-go secondary" data-act="cancelled">Stornieren</button>'; }
-		return h + '</div>' + (side ? pay + '</div>' : '') + (o.status === 'failed' && retryOpen[o.id] ? retryPanel(o) : '') + '</article>';
+		return h + '</div>' + (side ? pay + '</div>' : '') + (o.status === 'failed' && retryOpen[o.id] ? retryPanel(o) : '') + addrPanel(o) + '</article>';
 	}
 
 	// ---- portrait: rows of the lower bands
 	function minutesSince(ts) { return ts ? Math.max(0, Math.floor((nowS() - ts) / 60)) : 0; }
-	function shortAddr(o) { return o.address ? esc(o.address.replace(/,\s*$/, '')) : ''; }
+	function shortAddr(o) { return (o.address ? esc(o.address.replace(/,\s*$/, '')) : '') + noBadge(o); }
 	// how a driver is doing, for the choice when handing a delivery over
 	function driverInfo(d) {
 		var onRoad = current.some(function (o) { return o.driver_id === d.id && o.status === 'delivering'; });
@@ -172,7 +187,7 @@
 			h += '<button type="button" class="k-go" data-assign-open="' + o.id + '">' + (o.driver_id ? 'Umteilen' : 'Fahrer zuteilen') + '</button>' +
 				(o.driver_id ? '<button type="button" class="k-go secondary" data-release="' + o.id + '">Zurück in den Pool</button>' : '<button type="button" class="k-go secondary" data-act="delivering">Unterwegs ohne App</button>');
 		} else { h += '<button type="button" class="k-go" data-act="done">Abgeholt</button>'; }
-		h += moreHtml(o) + '</div>' + (assignOpen[o.id] ? assignPanel(o) : '') + '</article>';
+		h += moreHtml(o) + '</div>' + (assignOpen[o.id] ? assignPanel(o) : '') + addrPanel(o) + '</article>';
 		return h;
 	}
 	function rowOut(o) {
@@ -182,7 +197,7 @@
 			(o.test ? '<span class="k-badge">Test</span>' : '') + '<span class="k-raddr">' + shortAddr(o) + '</span></div>' +
 			'<div class="k-row-wait"><b>Lieferzeit ' + esc(o.due) + '</b><span class="k-lvl">' + (m < 0 ? (-m) + ' Min zu spät' : 'in ' + m + ' Min') + '</span><small>unterwegs seit ' + since + ' Min</small></div>' +
 			'<div class="k-row-act"><button type="button" class="k-go" data-act="done">Geliefert</button><button type="button" class="k-go secondary" data-release="' + o.id + '">Zurück in den Pool</button>' +
-			'<button type="button" class="k-go secondary" data-mapopen>Karte</button>' + moreHtml(o) + '</div></article>';
+			'<button type="button" class="k-go secondary" data-mapopen>Karte</button>' + moreHtml(o) + '</div>' + addrPanel(o) + '</article>';
 	}
 	// a failed delivery is fetched back: check and correct the address details, then it goes into the pool again
 	function retryPanel(o) {
@@ -200,9 +215,9 @@
 		var m = Math.floor((outTs(o) - nowS()) / 60), lvl = m < 0 ? ' is-over' : (m <= 5 ? ' is-soon' : '');
 		var sum = o.items.slice(0, 3).map(function (it) { return it.qty + '× ' + it.title; }).join(', ') + (o.items.length > 3 ? ' +' + (o.items.length - 3) : '');
 		var d = new Date(outTs(o) * 1000), hhmm = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
-		return '<article class="k-row k-row-work' + lvl + '" data-id="' + o.id + '"><div class="k-row-main"><span class="k-no">#' + o.day_no + '</span><span class="k-type ' + esc(o.type) + '">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + '</span><span class="k-rwho">' + esc(sum) + '</span></div>' +
+		return '<article class="k-row k-row-work' + lvl + '" data-id="' + o.id + '"><div class="k-row-main"><span class="k-no">#' + o.day_no + '</span><span class="k-type ' + esc(o.type) + '">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + '</span><span class="k-rwho">' + esc(sum) + '</span>' + (o.type === 'delivery' ? '<span class="k-raddr">' + shortAddr(o) + '</span>' : '') + '</div>' +
 			'<div class="k-row-wait"><b>raus bis ' + hhmm + '</b><span class="k-lvl">' + (m < 0 ? (-m) + ' Min überfällig' : 'in ' + m + ' Min') + '</span><small>' + (o.status === 'preparing' ? 'wird gekocht' : 'angenommen') + '</small></div>' +
-			'<div class="k-row-act">' + (o.status === 'accepted' ? '<button type="button" class="k-go secondary" data-act="preparing">Wird gekocht</button>' : '<button type="button" class="k-go secondary" data-act="ready">Fertig</button>') + '</div></article>';
+			'<div class="k-row-act">' + (o.status === 'accepted' ? '<button type="button" class="k-go secondary" data-act="preparing">Wird gekocht</button>' : '<button type="button" class="k-go secondary" data-act="ready">Fertig</button>') + moreHtml(o) + '</div>' + addrPanel(o) + '</article>';
 	}
 
 	// ---- diff-rendered by order id instead of a wholesale innerHTML replace every poll: a full rebuild used to wipe
@@ -252,7 +267,7 @@
 		if (!P) {
 			['new', 'work', 'ready'].forEach(function (k) {
 				var root = $('#col-' + k);
-				syncList(root, bandList(k), card, k === 'ready' ? function (o) { return retryOpen[o.id] ? 'r' : ''; } : null, k === 'new' ? 'Alles erledigt' : 'Nichts hier', live);
+				syncList(root, bandList(k), card, function (o) { return (k === 'ready' && retryOpen[o.id] ? 'r' : '') + (addrIsOpen(o) ? 'A' : ''); }, k === 'new' ? 'Alles erledigt' : 'Nichts hier', live);
 				$('#n-' + k).textContent = byCol[k];
 				// a column silently overflowing below the fold (a busy night queuing orders nobody is expected to
 				// scroll for) used to give zero signal - a persistent hint below the list fixes that
@@ -265,7 +280,7 @@
 			['new', 'ready', 'out'].forEach(function (k) {
 				var pages = pagesOf(k); if (page[k] > pages - 1) { page[k] = pages - 1; }
 				var rb = { 'new': card, ready: rowReady, out: rowOut }[k];
-				syncList($('#col-' + k), shown(k), rb, k === 'ready' ? function (o) { return (assignOpen[o.id] ? 'a' + (assignAll[o.id] ? 'x' : '') + JSON.stringify(drivers) : '') + Math.floor(nowS() / 60); } : (k === 'out' ? function () { return Math.floor(nowS() / 60); } : null),
+				syncList($('#col-' + k), shown(k), rb, k === 'ready' ? function (o) { return (assignOpen[o.id] ? 'a' + (assignAll[o.id] ? 'x' : '') + JSON.stringify(drivers) : '') + (addrIsOpen(o) ? 'A' : Math.floor(nowS() / 60)); } : (k === 'out' ? function (o) { return addrIsOpen(o) ? 'A' : Math.floor(nowS() / 60); } : (k === 'new' ? function (o) { return addrIsOpen(o) ? 'A' : ''; } : null)),
 					k === 'new' ? 'Alles erledigt' : (k === 'ready' ? 'Nichts wartet' : 'Niemand unterwegs'), live);
 				bandNav(k, pages); $('#n-' + k).textContent = byCol[k];
 			});
@@ -273,7 +288,7 @@
 			syncList($('#col-fail'), bandList('fail'), rowFail, function (o) { return retryOpen[o.id] ? 'r' : ''; }, '', live); $('#n-fail').textContent = byCol.fail;
 			$('#sec-fail').hidden = !byCol.fail;
 			// the kitchen is one line (the kitchen has its own monitor); one tap opens the list
-			var work = bandList('work'), wroot = $('#col-work'), wsig = JSON.stringify(work) + '|' + workOpen + '|' + Math.floor(nowS() / 60);
+			var work = bandList('work'), wroot = $('#col-work'), wsig = JSON.stringify(work) + '|' + workOpen + '|' + work.map(function (o) { return addrIsOpen(o) ? o.id : ''; }).join(',') + '|' + (work.some(addrIsOpen) ? 0 : Math.floor(nowS() / 60));
 			if (wroot.dataset.sig !== wsig) {
 				wroot.dataset.sig = wsig;
 				var worst = work[0], line = 'Nichts in der Küche';
@@ -454,6 +469,30 @@
 		}).catch(function () { btn.disabled = false; msg.textContent = 'Das hat nicht geklappt. Bitte versuche es noch einmal.'; });
 	}
 	document.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' && ev.target.closest && ev.target.closest('.k-retry input')) { var g = $('[data-retry-go]', ev.target.closest('.k-retry')); if (g && !g.disabled) { retryGo(g); } } });
+	// address of a running delivery: open/close, keep what is typed while the lists refresh, save after the address check
+	document.addEventListener('click', function (ev) {
+		var op = ev.target.closest('[data-addr-open]'), cl = ev.target.closest('[data-addr-close]'), go = ev.target.closest('[data-addr-go]');
+		if (op) { var oo = current.filter(function (x) { return String(x.id) === op.dataset.addrOpen; })[0]; addrOpen[op.dataset.addrOpen] = oo ? !addrIsOpen(oo) : true; render(); var inp = $('.k-addr-edit[data-order="' + op.dataset.addrOpen + '"] input[name="street"]'); if (inp && addrOpen[op.dataset.addrOpen]) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } return; }
+		if (cl) { addrOpen[cl.dataset.addrClose] = false; delete addrDraft[cl.dataset.addrClose]; render(); return; }
+		if (go) { addrGo(go); }
+	});
+	document.addEventListener('input', function (ev) {
+		var box = ev.target.closest && ev.target.closest('.k-addr-edit'); if (!box || !ev.target.name) { return; }
+		var id = box.dataset.order; addrDraft[id] = addrDraft[id] || {}; addrDraft[id][ev.target.name] = ev.target.value;
+	});
+	document.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' && ev.target.closest && ev.target.closest('.k-addr-edit input')) { var g = $('[data-addr-go]', ev.target.closest('.k-addr-edit')); if (g && !g.disabled) { addrGo(g); } } });
+	function addrGo(btn) {
+		var box = btn.closest('.k-addr-edit'), msg = $('.k-retry-msg', box), id = btn.dataset.addrGo;
+		var f = { op: 'address', id: id }; ['street', 'zip', 'city', 'note'].forEach(function (n) { f[n] = $('input[name="' + n + '"]', box).value; });
+		btn.disabled = true; msg.textContent = 'Adresse wird geprüft ...';
+		post(f).then(function (r) {
+			btn.disabled = false;
+			if (!r.ok) { msg.textContent = r.error || 'Das hat nicht geklappt.'; return; }
+			addrOpen[id] = false; delete addrDraft[id];
+			if (r.fee_note) { notify(r.fee_note); }
+			load();
+		}).catch(function () { btn.disabled = false; msg.textContent = 'Das hat nicht geklappt. Bitte versuche es noch einmal.'; });
+	}
 	var onLayout = function () { applyLayout(); resetNodes(); page['new'] = page.ready = page.out = 0; render(); };
 	if (PQ.addEventListener) { PQ.addEventListener('change', onLayout); } else if (PQ.addListener) { PQ.addListener(onLayout); }
 	load(); setInterval(load, 6000);

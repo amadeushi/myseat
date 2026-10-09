@@ -92,7 +92,7 @@ function shop_slip_escpos($o, $items, $full) {
 	if ($full) {
 		if (!empty($o['adjust_note'])) { foreach (explode('; ', $o['adjust_note']) as $adj) { $put($adj, 0, true); } }
 		if (!empty($o['offer_note'])) { $put($o['offer_note'], 0, true); }
-		$put(in_array($o['payment_method'], array('mollie', 'lieferando', 'uber_eats'), true) ? ($o['payment_method'] === 'lieferando' ? 'bei Lieferando bezahlt' : ($o['payment_method'] === 'uber_eats' ? 'bei Uber Eats bezahlt' : 'online bezahlt')) : ($o['payment_method'] === 'cash' ? 'BAR kassieren: ' : 'KARTE kassieren: ').shop_money($o['total_cents']), 1, true);
+		$put((isset($o['source']) && $o['source'] === 'courier' && (int)$o['total_cents'] === 0) ? 'nichts zu kassieren' : (in_array($o['payment_method'], array('mollie', 'lieferando', 'uber_eats'), true) ? ($o['payment_method'] === 'lieferando' ? 'bei Lieferando bezahlt' : ($o['payment_method'] === 'uber_eats' ? 'bei Uber Eats bezahlt' : 'online bezahlt')) : ($o['payment_method'] === 'cash' ? 'BAR kassieren: ' : 'KARTE kassieren: ').shop_money($o['total_cents'])), 1, true);
 		if (!empty($o['pay_with_cents']) && $o['payment_method'] === 'cash') { $put('Gast zahlt mit '.shop_money((int)$o['pay_with_cents']).', Rueckgeld '.shop_money((int)$o['pay_with_cents'] - (int)$o['total_cents']), 0, true); }
 		$rule();
 	}

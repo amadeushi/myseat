@@ -70,6 +70,11 @@ if ($op === 'report_print') {
 	if ($kind === 'online' || $kind === 'both') { shop_print_enqueue_report('online', $date); }
 	so_out(array('ok' => true, 'queued' => true));
 }
+if ($op === 'courier_job') {
+	$who0 = isset($_SESSION['valid_user']) && is_string($_SESSION['valid_user']) ? $_SESSION['valid_user'] : 'Disposition';
+	$in = array(); foreach (array('name', 'phone', 'street', 'zip', 'city', 'address_note', 'text', 'amount', 'payment') as $k) { $in[$k] = isset($_POST[$k]) ? (string)$_POST[$k] : ''; }
+	so_out(shop_create_courier_job($in, $who0));
+}
 if ($op === 'demo') {
 	$new = shop_create_demo_order(isset($_POST['type']) ? (string)$_POST['type'] : 'delivery',
 		isset($_POST['street']) ? (string)$_POST['street'] : '', isset($_POST['zip']) ? (string)$_POST['zip'] : '', isset($_POST['city']) ? (string)$_POST['city'] : '');
@@ -97,6 +102,9 @@ if ($op === 'status') {
 	}
 	shop_set_status($id, $to, $who, (int)(isset($_POST['eta']) ? $_POST['eta'] : 0));
 	so_out(array('ok' => true));
+}
+if ($op === 'address') {
+	so_out(shop_dispatch_edit_address($id, array('street' => isset($_POST['street']) ? $_POST['street'] : '', 'zip' => isset($_POST['zip']) ? $_POST['zip'] : '', 'city' => isset($_POST['city']) ? $_POST['city'] : '', 'note' => isset($_POST['note']) ? $_POST['note'] : ''), $who));
 }
 if ($op === 'retry') {
 	so_out(shop_dispatch_retry_order($id, array('street' => isset($_POST['street']) ? $_POST['street'] : '', 'zip' => isset($_POST['zip']) ? $_POST['zip'] : '', 'city' => isset($_POST['city']) ? $_POST['city'] : '',

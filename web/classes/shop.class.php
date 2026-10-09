@@ -1885,7 +1885,7 @@ function shop_day_stats($date) {
 	$r = fb_row("SELECT COUNT(*) AS n, COALESCE(SUM(total_cents), 0) AS sum, COALESCE(SUM(type = 'delivery'), 0) AS deliveries, COALESCE(SUM(type = 'pickup'), 0) AS pickups,
 			COALESCE(SUM(status IN ('new', 'accepted', 'preparing', 'ready', 'delivering')), 0) AS open_n,
 			COALESCE(SUM(payment_method = 'mollie' AND payment_status = 'paid'), 0) AS paid_online
-		FROM ".fb_t('tp_shop_orders')." WHERE order_date = ? AND status NOT IN ('pending', 'cancelled', 'failed') AND is_test = 0", 's', array($date));
+		FROM ".fb_t('tp_shop_orders')." WHERE order_date = ? AND status NOT IN ('pending', 'cancelled', 'failed') AND is_test = 0 AND source <> 'courier'", 's', array($date));
 	$prep = fb_row("SELECT AVG(TIMESTAMPDIFF(MINUTE, created_at, ready_at)) AS m FROM ".fb_t('tp_shop_orders')." WHERE order_date = ? AND ready_at IS NOT NULL AND is_test = 0", 's', array($date));
 	return array('orders' => (int)$r['n'], 'revenue' => (int)$r['sum'], 'deliveries' => (int)$r['deliveries'], 'pickups' => (int)$r['pickups'], 'open' => (int)$r['open_n'], 'paid_online' => (int)$r['paid_online'],
 		'avg_ready_min' => ($prep && $prep['m'] !== null) ? (int)round($prep['m']) : null);
@@ -1930,7 +1930,7 @@ function shop_kitchen_board() {
 // "Erledigt" column so that a slip that has been printed can be traced after the order has left the board. Same fields as the board, plus the time it was finished.
 function shop_kitchen_done($minutes = 120) {
 	$since = date('Y-m-d H:i:s', time() - max(10, min(720, (int)$minutes)) * 60);
-	$rows = fb_rows("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE status IN ('ready', 'delivering', 'done') AND COALESCE(ready_at, done_at, updated_at) >= ?
+	$rows = fb_rows("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE status IN ('ready', 'delivering', 'done') AND source <> 'courier' AND COALESCE(ready_at, done_at, updated_at) >= ?
 		ORDER BY COALESCE(ready_at, done_at, updated_at) DESC, id DESC LIMIT 40", 's', array($since));
 	if (!$rows) { return array(); }
 	$when = array();
@@ -2726,6 +2726,67 @@ function shop_dispatch_drivers() {
 // A failed delivery (guest not met, address wrong) is fetched back: address details are corrected, the order goes back into the pool as
 // ready and can be delivered again. A changed street/zip/city is checked against the delivery zones again (new coordinates and zone); the
 // amount the guest paid stays as it is, a difference in the delivery fee only goes into the log.
+// the address of a delivery that is already under way (the dispatch fills in a house number that an order from Lieferando does not bring, or corrects a typo): the same check as for a retry (shop_find_zone),
+// new point and zone, the amount stays as it is (a different fee of the new zone is only reported); the slip is not printed again by itself
+/*
+ * "Fahrauftrag" (source 'courier'): a delivery job the dispatch types in by hand on the driver card (web/fahrerkarte.php) - an address, a free text of what to take along and an amount the driver collects (0 = nothing).
+ * It is ready at once and stands in the pool of the drivers like any delivery, but it is no sale of the shop: not in the day report (revenue, top dishes), not in the day figures, no kitchen slip, not on the
+ * kitchen monitor, no SMS to the guest. The driver still counts it as a delivery with the cash he took (so that the cash he has to hand in is right). $in: name, phone, street, zip, city, address_note, text, amount (euro), payment ('cash'|'card_door').
+ */
+function shop_create_courier_job($in, $by = 'Disposition') {
+	shop_ensure_schema();
+	$f = function ($k, $max) use ($in) { return trim(mb_substr((string)(isset($in[$k]) ? $in[$k] : ''), 0, $max)); };
+	$name = $f('name', 120); $phone = $f('phone', 40); $street = $f('street', 160); $zip = $f('zip', 10); $city = $f('city', 80); $addrNote = $f('address_note', 200); $text = $f('text', 400);
+	if ($name === '') { $name = 'Fahrauftrag'; }
+	if ($text === '') { return array('ok' => false, 'error' => 'Bitte schreib auf, was mitgenommen wird.'); }
+	if ($street === '' || $city === '' || !preg_match('/\d/', $street)) { return array('ok' => false, 'error' => 'Bitte gib Straße mit Hausnummer und den Ort an.'); }
+	if ($phone !== '' && (!preg_match('/^[+0-9 ()\/.\-]{6,40}$/', $phone) || strlen(preg_replace('/\D/', '', $phone)) < 6)) { return array('ok' => false, 'error' => 'Die Telefonnummer sieht nicht richtig aus.'); }
+	$amountTxt = str_replace(array('€', ' '), '', (string)(isset($in['amount']) ? $in['amount'] : ''));
+	if ($amountTxt === '') { $amountTxt = '0'; }
+	if (!preg_match('/^\d{1,4}([.,]\d{1,2})?$/', $amountTxt)) { return array('ok' => false, 'error' => 'Der Betrag sieht nicht richtig aus (zum Beispiel 12,50).'); }
+	$amount = (int)round((float)str_replace(',', '.', $amountTxt) * 100);
+	$pay = (isset($in['payment']) && $in['payment'] === 'card_door') ? 'card_door' : 'cash';
+	$z = shop_find_zone($street, $zip, $city);
+	if (!$z['ok']) { return array('ok' => false, 'error' => isset($z['reason']) && $z['reason'] === 'ambiguous' ? 'Es passen mehrere Adressen. Bitte ergänze die Postleitzahl.' : $z['error']); }
+	if ($zip === '' && !empty($z['postcode'])) { $zip = (string)$z['postcode']; }
+	$today = date('Y-m-d'); $now = date('Y-m-d H:i:s'); $token = bin2hex(random_bytes(16)); $number = shop_order_number();
+	shop_dayno_lock();
+	$dayNo = (int)(fb_row("SELECT COALESCE(MAX(day_no), 0) + 1 AS n FROM ".fb_t('tp_shop_orders')." WHERE order_date = ?", 's', array($today))['n']);
+	$db = fb_db();
+	mysqli_begin_transaction($db);
+	$ok = fb_exec("INSERT INTO ".fb_t('tp_shop_orders')."
+		(token, number, day_no, order_date, type, status, customer_name, street, zip, city, phone, note, address_note, subtotal_cents, fee_cents, tip_cents, total_cents, discount_cents, surcharge_cents, adjust_note,
+		 payment_method, payment_status, lang, is_test, source, lat, lng, zone_id, created_at, updated_at, accepted_at, ready_at, eta_at)
+		VALUES (?, ?, ?, ?, 'delivery', 'ready', ?, ?, ?, ?, ?, '', ?, ?, 0, 0, ?, 0, 0, '', ?, ?, 'de', 0, 'courier', ?, ?, ?, ?, ?, ?, ?, ?)",
+		'ssis'.'sssss'.'s'.'ii'.'ss'.'ddi'.'sssss', array($token, $number, $dayNo, $today, $name, $street, $zip, $city, $phone, $addrNote, $amount, $amount, $pay, $amount > 0 ? 'open' : 'paid',
+			$z['lat'], $z['lng'], $z['zone']['id'], $now, $now, $now, $now, $now));
+	if (!$ok) { mysqli_rollback($db); shop_dayno_unlock(); return array('ok' => false, 'error' => 'Der Auftrag konnte nicht gespeichert werden.'); }
+	$id = (int)mysqli_insert_id($db);
+	fb_exec("INSERT INTO ".fb_t('tp_shop_order_items')." (order_id, product_id, title, variation, options, qty, unit_cents, line_cents, note) VALUES (?, NULL, ?, '', '[]', 1, ?, ?, '')", 'isii', array($id, $text, $amount, $amount));
+	mysqli_commit($db); shop_dayno_unlock();
+	shop_log($id, 'created', 'Fahrauftrag ('.$by.')'.($amount > 0 ? ', zu kassieren '.shop_money($amount) : ''));
+	return array('ok' => true, 'id' => $id, 'day_no' => $dayNo);
+}
+function shop_dispatch_edit_address($orderId, $in, $by) {
+	$o = shop_order($orderId);
+	if (!$o || $o['type'] !== 'delivery' || !in_array($o['status'], array('new', 'accepted', 'preparing', 'ready', 'delivering'), true)) { return array('ok' => false, 'error' => 'Die Adresse lässt sich bei dieser Bestellung gerade nicht ändern.'); }
+	$f = function ($k, $max) use ($in) { return trim(mb_substr((string)(isset($in[$k]) ? $in[$k] : ''), 0, $max)); };
+	$street = $f('street', 160); $zip = $f('zip', 10); $city = $f('city', 80); $note = $f('note', 200);
+	if ($street === '' || $city === '' || !preg_match('/\d/', $street)) { return array('ok' => false, 'error' => 'Bitte gib Straße mit Hausnummer und den Ort an.'); }
+	$changed = ($street !== (string)$o['street'] || $zip !== (string)$o['zip'] || $city !== (string)$o['city']);
+	$lat = $o['lat']; $lng = $o['lng']; $zone = $o['zone_id']; $feeNote = '';
+	if ($changed) {
+		$r = shop_find_zone($street, $zip, $city);
+		if (!$r['ok']) { return array('ok' => false, 'error' => isset($r['reason']) && $r['reason'] === 'ambiguous' ? 'Es passen mehrere Adressen. Bitte ergänze die Postleitzahl.' : $r['error']); }
+		$lat = $r['lat']; $lng = $r['lng']; $zone = $r['zone']['id'];
+		if ($zip === '' && !empty($r['postcode'])) { $zip = (string)$r['postcode']; }
+		if ((int)$r['zone']['fee_cents'] !== (int)$o['fee_cents']) { $feeNote = 'Liefergebühr der neuen Zone '.shop_money((int)$r['zone']['fee_cents']).' statt '.shop_money((int)$o['fee_cents']).', Betrag unverändert'; }
+	}
+	if (!$changed && $note === (string)$o['address_note']) { return array('ok' => true, 'fee_note' => ''); }
+	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET street = ?, zip = ?, city = ?, address_note = ?, lat = ?, lng = ?, zone_id = ?, updated_at = ? WHERE id = ?", 'ssssddisi', array($street, $zip, $city, $note, $lat, $lng, $zone, date('Y-m-d H:i:s'), (int)$orderId));
+	shop_log((int)$orderId, 'Adresse geändert', mb_substr($by.': '.trim((string)$o['street'].', '.$o['zip'].' '.$o['city']).' -> '.trim($street.', '.$zip.' '.$city).($note !== (string)$o['address_note'] ? ' | Hinweis: '.$note : '').($feeNote !== '' ? ' | '.$feeNote : ''), 0, 200));
+	return array('ok' => true, 'fee_note' => $feeNote);
+}
 function shop_dispatch_retry_order($orderId, $in, $by) {
 	$o = shop_order($orderId);
 	if (!$o || $o['type'] !== 'delivery' || $o['status'] !== 'failed') { return array('ok' => false, 'error' => 'Nur eine fehlgeschlagene Lieferung lässt sich zurückholen.'); }
@@ -2842,7 +2903,7 @@ function shop_sms_status($id, $status) {
 	if (!in_array($status, array('delivering', 'ready'), true)) { return; }
 	try {
 		$o = shop_order($id);
-		if (!$o || (int)$o['is_test'] || !shop_flag('sms_orders')) { return; }
+		if (!$o || (int)$o['is_test'] || $o['source'] === 'courier' || !shop_flag('sms_orders')) { return; }
 		if ($o['source'] === 'lieferando') { return; }   // Lieferando tells the guest itself; the guests of Uber Eats get our SMS (and the status page) like the others
 		$event = ($status === 'delivering' && $o['type'] === 'delivery') ? 'order_delivering' : (($status === 'ready' && $o['type'] === 'pickup') ? 'order_ready' : '');
 		if ($event === '' || !sms_enabled()) { return; }
