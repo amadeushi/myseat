@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-10 == mySeat v6.33.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Fahrer-App: Die Lieferungen "Noch in der Küche" stehen auch auf der Übersichtskarte (gestrichelter Kreis mit der Bestellnummer, Legende ergänzt); ein Tipp springt zur Karte der Lieferung.
+
 2026-10-10 == mySeat v6.33.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Fahrer-App: "Noch in der Küche": angenommene und gerade gekochte Lieferungen ohne Fahrer stehen schon unter den offenen Lieferungen (gestrichelte Karte, "fertig ca. HH:MM Uhr"), ohne Annehmen-Knopf, ohne Ton.

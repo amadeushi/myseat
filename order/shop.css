@@ -689,3 +689,4 @@
 .dv .dv-card--soon { border-style: dashed; border-color: var(--border); background: transparent; opacity: 0.88; }
 .dv .dv-tag--kitchen { border-color: var(--gold); color: var(--gold-strong, var(--gold)); }
 .dv .dv-soon-note { margin: 10px 0 0; color: var(--muted); font-size: 0.9rem; }
+.dv .dv-pin--soon span { background: var(--bg); color: var(--text-muted); border: 2px dashed var(--gold); opacity: 0.85; }

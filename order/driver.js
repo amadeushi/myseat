@@ -166,7 +166,7 @@
 		if (built) { return; }
 		root.innerHTML = '<div id="dv-current"></div>' +
 			'<details class="dv-mapbox" id="dv-mapbox"><summary>' + icon('map', 20) + '<span>Karte</span></summary><div class="dv-mapin"><div id="dv-map" class="st-map dv-map" role="img" aria-label="Karte der Lieferungen"></div>' +
-			'<p class="dv-legend">Leerer Kreis: Restaurant · Pulsierend: du · Gold gefüllt: offen · Gold umrandet: deine Warteliste · Grün: aktiv · Die Zahl ist die Bestellnummer.</p><button type="button" class="dv-textbtn" id="dv-fit">Alles zeigen</button></div></details>' +
+			'<p class="dv-legend">Leerer Kreis: Restaurant · Pulsierend: du · Gold gefüllt: offen · Gold umrandet: deine Warteliste · Gestrichelt: noch in der Küche · Grün: aktiv · Die Zahl ist die Bestellnummer.</p><button type="button" class="dv-textbtn" id="dv-fit">Alles zeigen</button></div></details>' +
 			'<h2 class="dv-section" id="dv-queue-h" hidden></h2><p class="dv-hint" id="dv-queue-hint" hidden>Reihenfolge nach kürzestem Weg: immer die nächste Adresse zuerst.</p><div class="dv-list" id="dv-queue"></div>' +
 			'<h2 class="dv-section" id="dv-open-h" hidden></h2>' +
 			'<div class="dv-sort" id="dv-sort" role="group" aria-label="Sortierung" hidden><button type="button" data-sort="time">Nach Zeit</button><button type="button" data-sort="near">Nach Nähe</button></div>' +
@@ -348,6 +348,7 @@
 		const pts = [];
 		(data.open || []).forEach(o => { if (o.lat != null) { pts.push({ k: 'open', o: o }); } });
 		(data.queued || []).forEach(o => { if (o.lat != null) { pts.push({ k: 'queue', o: o }); } });
+		(data.soon || []).forEach(o => { if (o.lat != null) { pts.push({ k: 'soon', o: o }); } });   // still in the kitchen: dashed, for orientation
 		if (data.current && data.current.lat != null) { pts.push({ k: 'cur', o: data.current }); }
 		const g = data.gps || {};
 		const sig = JSON.stringify([data.origin, g.lat, g.lng, pts.map(p => [p.k, p.o.id, p.o.lat, p.o.lng])]);
@@ -368,7 +369,7 @@
 		}
 	}
 	function flashCard(id) {
-		const el = nodes.queue[id] || nodes.open[id] || (currentId === id ? W.current : null); if (!el) { return; }
+		const el = nodes.queue[id] || nodes.open[id] || nodes.soon[id] || (currentId === id ? W.current : null); if (!el) { return; }
 		el.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 		el.classList.add('is-flash'); setTimeout(() => el.classList.remove('is-flash'), 1400);
 	}
