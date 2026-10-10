@@ -431,3 +431,4 @@ p.ksd-note { margin-top: 8px; }
 .ks-board.is-rows2 .ks-tmark { width: 30px; height: 30px; font-size: 20px; }
 .ks-board.is-rows2 .ks-tourin { padding: 6px; gap: 6px; }
 .ks-board.is-rows2 .ks-tourbox { border-width: 4px; border-radius: 14px; }
+.k-tourbar[hidden] { display: none; }

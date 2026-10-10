@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-10 == mySeat v6.35.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Behoben: Disposition: Die leere Leiste "Als Tour bilden" blieb als blauer Streifen unter der Kopfzeile stehen (ihr display überschrieb das Attribut hidden); sie ist jetzt wirklich versteckt, bis eine Lieferung gewählt ist.
+
 2026-10-10 == mySeat v6.35.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Küchenmonitor: Knopf "2 Zeilen" in der Leiste (merkt sich die Wahl): zwei Zeilen Bons übereinander (2 x Spalten pro Seite, also 10 bei 5 und 8 bei 4 Spalten) mit einer kompakten Karte (Kopf, Zeitzeile mit großer Zeit,
