@@ -111,10 +111,11 @@
 		const head = '<header class="dv-head"><div class="dv-ttl"><h3 class="dv-sub">' + esc(o.customer_name || place(o)) + '</h3>' + (o.customer_name ? '<p class="dv-place">' + esc(place(o)) + '</p>' : '') + '</div><span class="dv-no">' + (kind === 'queue' ? 'Stopp ' + step + ' · ' : '') + '#' + o.day_no + '</span></header>';
 		const tags = '<ul class="dv-tags"><li class="dv-tag dv-tag--pay">' + esc(payTag(o)) + '</li><li class="dv-tag">' + o.items + ' Pos.</li>' +
 			(o.when !== 'so schnell wie möglich' ? '<li class="dv-tag">Wunschzeit ' + esc(o.when) + '</li>' : '') +
-			(kind === 'open' ? '<li class="dv-tag dv-wait" data-dyn="wait"' + (waitText(o) ? '' : ' hidden') + '>' + esc(waitText(o)) + '</li>' : '') + '</ul>';
+			(kind === 'soon' ? '<li class="dv-tag dv-tag--kitchen">' + (o.cooking ? 'Wird gekocht' : 'Angenommen') + ' · fertig ca. ' + esc(o.ready_txt) + ' Uhr</li>' : '') + (kind === 'open' ? '<li class="dv-tag dv-wait" data-dyn="wait"' + (waitText(o) ? '' : ' hidden') + '>' + esc(waitText(o)) + '</li>' : '') + '</ul>';
 		const near = '<p class="dv-near" data-dyn="near"' + (nearText(o) ? '' : ' hidden') + '>' + icon('pin', 16) + '<span>' + esc(nearText(o)) + '</span></p>';
 		let act;
-		if (kind === 'open') { act = '<button type="button" class="cart-go dv-take" data-claim="' + o.id + '">Annehmen</button>'; }
+		if (kind === 'soon') { act = '<p class="dv-soon-note">Noch in der Küche. Du kannst sie annehmen, sobald sie fertig ist.</p>'; }
+		else if (kind === 'open') { act = '<button type="button" class="cart-go dv-take" data-claim="' + o.id + '">Annehmen</button>'; }
 		else {
 			act = '<details class="dv-check"><summary><span>Alles dabei?</span><span class="dv-check-n" aria-hidden="true"></span></summary><ul class="dv-checklist"></ul></details>' +
 				'<div class="dv-swipe-slot"></div>' + (locked ? '<p class="dv-locked-note">Erst die aktive Lieferung abschließen, pausieren oder zurückgeben.</p>' : '') +
@@ -158,7 +159,7 @@
 
 	/* ---- rendering without losing what is half done ---- */
 	let built = false, W = {}, currentId = null, currentSig = null;
-	const nodes = { queue: {}, open: {} }, sigs = { queue: {}, open: {} };
+	const nodes = { queue: {}, open: {}, soon: {} }, sigs = { queue: {}, open: {}, soon: {} };
 	const sigOf = o => JSON.stringify(o, (k, v) => VOLATILE.indexOf(k) >= 0 ? undefined : v);
 
 	function skeleton() {
@@ -171,8 +172,9 @@
 			'<div class="dv-sort" id="dv-sort" role="group" aria-label="Sortierung" hidden><button type="button" data-sort="time">Nach Zeit</button><button type="button" data-sort="near">Nach Nähe</button></div>' +
 			'<div class="dv-list" id="dv-open"></div>' +
 			'<p class="st-box cart-empty" id="dv-empty" hidden>Gerade keine offenen Lieferungen. Diese Seite aktualisiert sich von selbst.</p>' +
+			'<h2 class="dv-section dv-section--soon" id="dv-soon-h" hidden></h2><div class="dv-list" id="dv-soon"></div>' +
 			'<section class="dv-shift" id="dv-shift" hidden></section>';
-		W = { current: $('#dv-current'), queue: $('#dv-queue'), open: $('#dv-open'), qh: $('#dv-queue-h'), qhint: $('#dv-queue-hint'), oh: $('#dv-open-h'), sort: $('#dv-sort'), empty: $('#dv-empty'), shift: $('#dv-shift'), mapbox: $('#dv-mapbox') };
+		W = { current: $('#dv-current'), queue: $('#dv-queue'), open: $('#dv-open'), qh: $('#dv-queue-h'), qhint: $('#dv-queue-hint'), oh: $('#dv-open-h'), soon: $('#dv-soon'), sh: $('#dv-soon-h'), sort: $('#dv-sort'), empty: $('#dv-empty'), shift: $('#dv-shift'), mapbox: $('#dv-mapbox') };
 		const sort = store.get('dvSort', 'time');
 		$$('button', W.sort).forEach(b => {
 			b.setAttribute('aria-pressed', String(b.dataset.sort === sort));
@@ -255,7 +257,7 @@
 					render(r); toast('#' + o.day_no + ' ist deine Lieferung.', 'Rückgängig', () => post('driver_release', { order_id: o.id }).then(rr => { if (rr.ok) { render(rr); } }), 7000);
 				}).catch(() => { b.disabled = false; b.textContent = 'Annehmen'; toast('Keine Verbindung. Nochmal versuchen.'); });
 			});
-		} else {
+		} else if (kind === 'queue') {
 			checklist(el, o);
 			$('.dv-swipe-slot', el).appendChild(swipe('Zum Starten wischen', 'start', locked, reset =>
 				post('driver_start', { order_id: o.id }).then(r => { if (r.ok) { render(r); } else { toast(r.error); reset(); refresh(); } }).catch(() => { toast('Keine Verbindung. Bitte nochmal wischen.'); reset(); })));
@@ -297,6 +299,10 @@
 		W.oh.hidden = !r.open.length; W.sort.hidden = r.open.length < 2;
 		if (r.open.length) { W.oh.textContent = 'Offene Lieferungen (' + r.open.length + ')'; }
 		W.empty.hidden = !(!r.current && !r.queued.length && !r.open.length);
+		// announced: still in the kitchen, only to look at (so a driver can judge whether to come straight back)
+		const soon = r.soon || [];
+		diffList('soon', soon, false);
+		W.sh.hidden = !soon.length; if (soon.length) { W.sh.textContent = 'Noch in der Küche (' + soon.length + ')'; }
 	}
 
 	function shift(s) {

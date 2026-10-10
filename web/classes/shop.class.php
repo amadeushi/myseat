@@ -2574,6 +2574,25 @@ function shop_driver_pool_orders($driverId = null) {
 		$driverId === null ? '' : 'i', $driverId === null ? array() : array((int)$driverId));
 	return array_map('shop_driver_card', $rows);
 }
+// deliveries that are still in the kitchen (accepted / being cooked), announced to the drivers so that they can judge whether to come straight back: only a card to look at, nothing to take. 'ready_txt' is
+// when the food is expected to leave the kitchen (due time minus the drive time, as on the kitchen monitor); at most 6, the soonest first
+function shop_driver_soon_orders() {
+	shop_ensure_schema();
+	$rows = fb_rows("SELECT o.id, o.day_no, o.zip, o.street, o.city, o.address_note, o.note, o.lat, o.lng, o.suburb, o.route_m, o.route_s, o.customer_name, o.status,
+			o.subtotal_cents, o.fee_cents, o.total_cents, o.payment_method, o.payment_status, o.scheduled_at, o.eta_at, o.created_at, o.ready_at, z.name AS zone_name,
+			(SELECT COALESCE(SUM(qty), 0) FROM ".fb_t('tp_shop_order_items')." WHERE order_id = o.id) AS n_items
+		FROM ".fb_t('tp_shop_orders')." o LEFT JOIN ".fb_t('tp_shop_zones')." z ON z.id = o.zone_id
+		WHERE o.type = 'delivery' AND o.status IN ('accepted', 'preparing') AND o.driver_id IS NULL ORDER BY COALESCE(o.scheduled_at, o.eta_at, o.created_at) LIMIT 6");
+	$drive = max(0, min(60, (int)shop_setting('kitchen_drive_min')));
+	$out = array();
+	foreach ($rows as $r) {
+		$c = shop_driver_card($r);
+		$due = strtotime($r['scheduled_at'] ?: ($r['eta_at'] ?: $r['created_at']));
+		$c['cooking'] = ($r['status'] === 'preparing'); $c['ready_txt'] = date('H:i', $due - $drive * 60);
+		$out[] = $c;
+	}
+	return $out;
+}
 // one delivery as the card of the driver page; distance and district as far as they are known
 function shop_driver_card($r) {
 	static $origin = false;
@@ -2648,10 +2667,10 @@ function shop_driver_fail_order($driverId, $orderId, $reason) {
 function shop_driver_state($driverId) {
 	$driverId = (int)$driverId;
 	$cur = shop_driver_current_order($driverId);
-	$queued = shop_driver_queued_orders($driverId); $open = shop_driver_open_orders();
+	$queued = shop_driver_queued_orders($driverId); $open = shop_driver_open_orders(); $soon = shop_driver_soon_orders();
 	$ids = array(); if ($cur) { $ids[] = (int)$cur['id']; }
-	foreach (array_merge($queued, $open) as $c) { $ids[] = $c['id']; }
-	if (shop_order_geo_fill($ids)) { $cur = $cur ? shop_driver_current_order($driverId) : null; $queued = shop_driver_queued_orders($driverId); $open = shop_driver_open_orders(); }
+	foreach (array_merge($queued, $open, $soon) as $c) { $ids[] = $c['id']; }
+	if (shop_order_geo_fill($ids)) { $cur = $cur ? shop_driver_current_order($driverId) : null; $queued = shop_driver_queued_orders($driverId); $open = shop_driver_open_orders(); $soon = shop_driver_soon_orders(); }
 	$view = $cur ? shop_driver_order_view($cur) : null;
 	$origin = shop_origin();
 	$pos = fb_row("SELECT lat, lng, updated_at FROM ".fb_t('tp_shop_driver_positions')." WHERE driver_id = ?", 'i', array($driverId));
@@ -2687,7 +2706,7 @@ function shop_driver_state($driverId) {
 		}
 	}
 	if ($view) { $view['near'] = $near($view); }
-	return array('current' => $view, 'queued' => $queued, 'open' => $open, 'gps' => array('age' => $gpsAge, 'lat' => ($pos && $gpsAge <= 900) ? (float)$pos['lat'] : null, 'lng' => ($pos && $gpsAge <= 900) ? (float)$pos['lng'] : null),
+	return array('current' => $view, 'queued' => $queued, 'open' => $open, 'soon' => $soon, 'gps' => array('age' => $gpsAge, 'lat' => ($pos && $gpsAge <= 900) ? (float)$pos['lat'] : null, 'lng' => ($pos && $gpsAge <= 900) ? (float)$pos['lng'] : null),
 		'origin' => $origin ? array('lat' => $origin[0], 'lng' => $origin[1]) : null, 'shift' => shop_driver_shift($driverId));
 }
 // what this driver did since midnight: deliveries, kilometres from the restaurant, cash and card payments collected at the door

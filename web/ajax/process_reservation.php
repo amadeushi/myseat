@@ -202,8 +202,9 @@ if ($_SESSION['token'] == $_POST['token'] && $compare_pass > 0 ) {
 			$recurring_span = ($_POST['recurring_span']) ? $_POST['recurring_span'] : 1;
 			
 			//cut both " ' " from reservation_pax
-			$res_pax = substr($_SESSION['reservation_pax'], 0, -1);
-			$res_pax = substr($_SESSION['reservation_pax'], 1);
+			// a real number: the value comes from the form wrapped in quotes ('4'); with a trailing quote left on it ("4'") PHP 8 compares it with the free capacity as TEXT, so that 4 guests
+			// against 26 free seats counted as "too many" and the reservation went to the waiting list
+			$res_pax = (int)trim((string)$_SESSION['reservation_pax'], "' \t");
 			
 			// check if pax not '0'; prevent 'Christof Keller' bug
 			if ($res_pax < 1) {

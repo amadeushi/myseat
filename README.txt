@@ -52,6 +52,13 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-10 == mySeat v6.33.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Fahrer-App: "Noch in der Küche": angenommene und gerade gekochte Lieferungen ohne Fahrer stehen schon unter den offenen Lieferungen (gestrichelte Karte, "fertig ca. HH:MM Uhr"), ohne Annehmen-Knopf, ohne Ton.
+   Sobald die Küche "Fertig" drückt, rückt die Karte in die offenen Lieferungen (shop_driver_soon_orders).
+ * Behoben: Reservierung im Backend: Die Personenzahl behielt ein Anführungszeichen ("4'"); PHP 8 verglich sie als Text mit den freien Plätzen ("4'" > 26), sodass Reservierungen ohne Platzmangel auf der Warteliste landeten
+   (je nach erster Ziffer der freien Plätze). Die Zahl wird jetzt als ganze Zahl gelesen (ajax/process_reservation.php).
+
 2026-10-10 == mySeat v6.32.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Behoben: Lieferando: Der Pi schickt die PDF unverändert zum Auslesen und die auf Bonbreite zugeschnittene Fassung als zweite Datei (pdf_print) zum Drucken. Die zugeschnittene PDF hatte das "ä" beschädigt: die

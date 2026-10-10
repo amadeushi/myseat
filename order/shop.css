@@ -683,3 +683,9 @@
 
 /* sideways rows dragged with the mouse (dragscroll.js): the grabbing hand, no text selection, no snapping against the hand */
 .is-dragging { cursor: grabbing !important; user-select: none; -webkit-user-select: none; scroll-snap-type: none !important; scroll-behavior: auto !important; }
+
+/* driver page: deliveries announced while still in the kitchen: looked at, not taken */
+.dv .dv-section--soon { margin-top: 22px; color: var(--muted); }
+.dv .dv-card--soon { border-style: dashed; border-color: var(--border); background: transparent; opacity: 0.88; }
+.dv .dv-tag--kitchen { border-color: var(--gold); color: var(--gold-strong, var(--gold)); }
+.dv .dv-soon-note { margin: 10px 0 0; color: var(--muted); font-size: 0.9rem; }
