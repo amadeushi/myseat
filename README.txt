@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-11 == mySeat v6.36.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Bestell-Chat: "Wie letztes Mal" auf der ersten Frage für angemeldete Gäste mit früherer Bestellung (letzte Bestellung in den Warenkorb, Adresse, Name und Nummer mit einem Tipp bestätigen); Knopf "Anrufen" oben im Chat und in Nachrichten, bei denen ein Mensch gebraucht wird (Allergiehinweis, Fehler, keine Zahlungsart).
+ * Behoben: Bestell-Chat: Eine Chat-Bestellung wurde dem Kundenkonto nicht zugeordnet, wenn der Gast sich per E-Mail angemeldet hatte; die bestätigte E-Mail geht jetzt mit der Bestellung.
+
 2026-10-11 == mySeat v6.36.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Bestell-Chat (Test) unter /order/chat.php, Einstellung "Bestell-Chat (Test)" im Backend (standardmäßig aus, Mitarbeiter sehen die Seite zum Testen). Gäste bestellen in einem geführten Gespräch mit Antwortknöpfen: Gericht (zuerst Pflichtangaben, dann optionale Extras), Gratis-Extra, Handynummer oder E-Mail mit Code bestätigen (Kundenkonto), Adresse mit Liefergebiet, Zeit, Zahlung, Zusammenfassung zum Bestätigen; eine feste Warenkorb-Leiste ist immer sichtbar. Preise, Gebühren, Liefergebiet und die Bestellung kommen aus den vorhandenen Shop-Funktionen, der Server nimmt nur Knöpfe an, die er selbst angeboten hat. Allergie- und Beschwerdehinweise vermerken die Bestellung "bitte anrufen". Neue Bestellquelle "chat" mit violettem Marker in Küche und Disposition, neue Tabellen tp_shop_chats und tp_shop_chat_msgs (Gespräche werden nach 14 Tagen gelöscht).
