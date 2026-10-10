@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-11 == mySeat v6.36.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Bestellseite: fester Knopf "Per Chat bestellen" unten rechts (nur bei eingeschaltetem Bestell-Chat, auf dem Handy über der Warenkorb-Leiste); der Link in der Kopfzeile entfällt.
+ * Neu: Der Warenkorb wird zwischen Bestellseite und Bestell-Chat abgeglichen: der Knopf nimmt den Warenkorb mit in den Chat (Preise und Artikel werden neu geprüft, Lieferart wird übernommen), der Link "Speisekarte" im Chat nimmt den Chat-Warenkorb zurück, nach einer Chat-Bestellung wird der Warenkorb der Bestellseite geleert. Es gilt die Seite, die zuletzt verlassen wurde.
+
 2026-10-11 == mySeat v6.36.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Bestell-Chat: "Wie letztes Mal" auf der ersten Frage für angemeldete Gäste mit früherer Bestellung (letzte Bestellung in den Warenkorb, Adresse, Name und Nummer mit einem Tipp bestätigen); Knopf "Anrufen" oben im Chat und in Nachrichten, bei denen ein Mensch gebraucht wird (Allergiehinweis, Fehler, keine Zahlungsart).

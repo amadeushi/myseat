@@ -734,6 +734,14 @@
 	document.addEventListener('click', function (ev) {
 		var t = ev.target;
 		var mode = t.closest('.mode-btn'); if (mode) { setMode(mode.dataset.mode); return; }
+		// the chat button: the cart goes along (the chat takes it over), then the chat opens
+		var chatBtn = t.closest('.shop-chat-fab');
+		if (chatBtn && state.cart.length && TOKEN) {
+			ev.preventDefault();
+			var go = function () { location.href = chatBtn.href; };
+			fetch('chat_api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ op: 'import', token: TOKEN, mode: state.mode, lines: state.cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; }) }) }).then(go, go);
+			return;
+		}
 		if (!ACCEPT) { return; }
 		var item = t.closest('.shop-item');
 		if (item && (t.closest('.shop-add') || t.closest('.shop-item-text'))) {

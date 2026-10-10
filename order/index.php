@@ -50,7 +50,6 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 				<button type="button" class="mode-btn" data-mode="pickup" aria-pressed="false">Abholung</button>
 			</div>
 			<p class="shop-status" id="shop-status" role="status" aria-live="polite"></p>
-			<?php if ($shop_accepting && shop_flag('chat_on')): ?><a class="shop-chat-link" href="chat.php">Per Chat bestellen</a><?php endif; ?>
 			<?php if ($shop_accepting): ?><button type="button" class="shop-group-btn" id="gb-top" data-gb-new hidden>Gemeinsam bestellen</button><?php endif; ?>
 			<?php if ($acc_on): ?><button type="button" class="acc-btn" id="acc-btn" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="8.500" r="3.800" fill="none" stroke="currentColor" stroke-width="1.700"/><path d="M4.500 20c.7-3.700 3.700-5.700 7.500-5.700s6.800 2 7.500 5.700" fill="none" stroke="currentColor" stroke-width="1.700" stroke-linecap="round"/></svg><span id="acc-btn-label">Anmelden</span></button><?php endif; ?>
 			<div class="shop-zone" id="shop-zone">
@@ -154,6 +153,7 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 		<span class="cartbar-label">Warenkorb ansehen</span>
 		<span class="cartbar-total" id="cartbar-total"></span>
 	</button>
+	<?php if (shop_flag('chat_on')): ?><a class="shop-chat-fab" href="chat.php"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 5.500A2.500 2.500 0 0 1 6.500 3h11A2.500 2.500 0 0 1 20 5.500v8a2.500 2.500 0 0 1-2.500 2.500H10l-4.500 4v-4H6.500A2.500 2.500 0 0 1 4 13.500z" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linejoin="round"/><path d="M8.500 8.500h7M8.500 11.500h4.500" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round"/></svg><span>Per Chat bestellen</span></a><?php endif; ?>
 	<dialog class="shop-dialog" id="product-dialog" aria-labelledby="pd-title"></dialog>
 	<dialog class="gb-dialog" id="group-dialog" aria-label="Gemeinsam bestellen"></dialog>
 	<?php if ($has_conf): ?><dialog class="pz" id="pizza-dialog" aria-labelledby="pz-title"></dialog><?php endif; ?>

@@ -29,6 +29,8 @@ if ($op === 'reset') {
 	$_SESSION['shop_chat_token'] = $c['token'];
 	chat_out(array('ok' => true, 'messages' => shop_chat_transcript($c), 'cart' => shop_chat_cart_info($c)));
 }
+if ($op === 'import') { chat_out(array('ok' => true, 'taken' => shop_chat_import($c, isset($body['lines']) ? $body['lines'] : array(), isset($body['mode']) ? (string)$body['mode'] : ''))); }
+if ($op === 'export') { chat_out(array_merge(array('ok' => true), shop_chat_export($c))); }
 if ($op === 'send') {
 	$ev = array();
 	if (isset($body['btn']) && is_string($body['btn'])) { $ev['btn'] = mb_substr($body['btn'], 0, 60); }
@@ -36,6 +38,6 @@ if ($op === 'send') {
 	else { chat_out(array('ok' => false, 'error' => 'Leere Eingabe.')); }
 	list($c, $msgs) = shop_chat_handle($c, $ev);
 	foreach ($msgs as $i => $m) { $msgs[$i]['role'] = 'bot'; }
-	chat_out(array('ok' => true, 'messages' => $msgs, 'cart' => shop_chat_cart_info($c)));
+	chat_out(array('ok' => true, 'messages' => $msgs, 'cart' => shop_chat_cart_info($c), 'ordered' => $c['state'] === 'done'));
 }
 chat_out(array('ok' => false, 'error' => 'Unbekannte Anfrage.'), 400);

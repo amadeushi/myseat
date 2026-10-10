@@ -95,6 +95,7 @@
 		post(ev).then(function (r) {
 			lock(false);
 			if (!r.ok) { showError(r.error || 'Das hat nicht geklappt.'); return; }
+			if (r.ordered) { clearShopCart(); }
 			setCart(r.cart); showMessages(r.messages, true);
 		});
 	}
@@ -109,6 +110,21 @@
 		lock(true); showError('');
 		post({ op: 'reset' }).then(function (r) { lock(false); if (!r.ok) { showError(r.error); return; } log.textContent = ''; setCart(r.cart); showMessages(r.messages, false); });
 	});
+
+	// the way back to the menu takes the cart of the chat along (the cart of the order page is kept in the browser under this key)
+	var CART_KEY = 'amadeusCartV2';
+	function clearShopCart() { try { var d = JSON.parse(localStorage.getItem(CART_KEY) || '{}'); d.cart = []; localStorage.setItem(CART_KEY, JSON.stringify(d)); } catch (e) {} }
+	var menuLink = document.getElementById('chat-menu');
+	if (menuLink) {
+		menuLink.addEventListener('click', function (e) {
+			e.preventDefault();
+			var go = function () { location.href = menuLink.href; };
+			post({ op: 'export' }).then(function (r) {
+				if (r.ok && r.lines && r.lines.length) { try { var d = JSON.parse(localStorage.getItem(CART_KEY) || '{}'); localStorage.setItem(CART_KEY, JSON.stringify({ mode: r.mode, cart: r.lines, extra: d.extra || '' })); } catch (x) {} }
+				go();
+			});
+		});
+	}
 
 	lock(true);
 	post({ op: 'open' }).then(function (r) { lock(false); if (!r.ok) { showError(r.error || 'Der Chat ist gerade nicht erreichbar.'); return; } setCart(r.cart); showMessages(r.messages, false); });

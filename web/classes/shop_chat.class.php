@@ -590,6 +590,32 @@ function shop_chat_place(&$c, $out, $acc) {
 	return shop_chat_finish($c, $out);
 }
 
+// ---- cart exchange with the order page (the cart of the order page lives in the browser, the one of the chat on the server; the page one leaves overwrites the other)
+// the cart of the order page (lines pid, vid, opts, qty, note) becomes the cart of the chat; returns the number of lines taken over
+function shop_chat_import(&$c, $lines, $mode) {
+	$ctx = &$c['ctx']; $new = array(); $dropped = 0;
+	foreach (array_slice(is_array($lines) ? $lines : array(), 0, 60) as $l) {
+		if (!is_array($l)) { continue; }
+		$opts = array(); if (isset($l['opts']) && is_array($l['opts'])) { foreach ($l['opts'] as $id => $q) { if ((int)$q > 0) { $opts[(int)$id] = (int)$q; } } }
+		$line = array('pid' => (int)(isset($l['pid']) ? $l['pid'] : 0), 'vid' => (int)(isset($l['vid']) ? $l['vid'] : 0), 'opts' => $opts, 'qty' => max(1, min(20, (int)(isset($l['qty']) ? $l['qty'] : 1))), 'note' => mb_substr(trim((string)(isset($l['note']) ? $l['note'] : '')), 0, 200));
+		if (shop_price_line($line)['ok']) { $new[] = $line; } else { $dropped++; }
+	}
+	if (!$new) { return 0; }
+	if ((int)$c['events'] === 0) { fb_exec("DELETE FROM ".fb_t('tp_shop_chat_msgs')." WHERE chat_id = ?", 'i', array((int)$c['id'])); }   // nothing said yet: no greeting needed
+	$ctx['cart'] = $new; $ctx['type'] = $mode === 'pickup' ? 'pickup' : 'delivery'; $ctx['last'] = count($new) - 1;
+	unset($ctx['addr'], $ctx['when'], $ctx['extra'], $ctx['pend'], $ctx['offer_done']);
+	$c['state'] = 'cat';
+	$m = shop_chat_msg('Dein Warenkorb ist übernommen ('.($ctx['type'] === 'pickup' ? 'Abholung' : 'Lieferung')."):\n".shop_chat_cart_text($ctx).($dropped ? "\nEinige Artikel gibt es nicht mehr." : ''), array('co' => 'Zur Kasse', 'more' => 'Etwas dazu bestellen', 'edit' => 'Ändern'));
+	shop_chat_finish($c, array($m)); shop_chat_log($c, 'bot', $m); shop_chat_save($c);
+	return count($new);
+}
+// the cart of the chat in the form of the order page (what its cart keeps in the browser)
+function shop_chat_export($c) {
+	$out = array();
+	foreach ($c['ctx']['cart'] as $l) { $r = shop_acc_make_line($l); if ($r['ok']) { $out[] = $r['line']; } }
+	return array('mode' => $c['ctx']['type'] === 'pickup' ? 'pickup' : 'delivery', 'lines' => $out);
+}
+
 // ---- the entry points of the page (order/chat_api.php)
 // opens (or resumes) the conversation of this visitor
 function shop_chat_open($token, $ip) {

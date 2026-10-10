@@ -691,5 +691,12 @@
 .dv .dv-soon-note { margin: 10px 0 0; color: var(--muted); font-size: 0.9rem; }
 .dv .dv-pin--soon span { background: var(--bg); color: var(--text-muted); border: 2px dashed var(--gold); opacity: 0.85; }
 
-/* link to the order chat (order/chat.php) in the top bar, shown only while the chat is switched on */
-.shop-chat-link { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: var(--gold); text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+/* button to the order chat (order/chat.php), shown only while the chat is switched on: bottom right, above the cart bar on a phone while that is showing */
+.shop-chat-fab { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 35; display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 20px 0 16px; border-radius: var(--radius-pill);
+	background: var(--gold); color: #1a1408; font-size: 16px; font-weight: 700; text-decoration: none; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); transition: background 150ms ease, transform 150ms ease; }
+.shop-shell a.shop-chat-fab, .shop-shell a.shop-chat-fab:visited { color: #1a1408; }
+.shop-shell a.shop-chat-fab:hover { background: var(--gold-strong); color: #1a1408; }
+.shop-chat-fab:active { transform: scale(0.97); }
+.shop-cartbar:not([hidden]) ~ .shop-chat-fab { bottom: calc(84px + env(safe-area-inset-bottom)); }
+@media (min-width: 1024px) { .shop-chat-fab, .shop-cartbar:not([hidden]) ~ .shop-chat-fab { bottom: 24px; right: 24px; } }
+@media (prefers-reduced-motion: reduce) { .shop-chat-fab { transition: none; } }

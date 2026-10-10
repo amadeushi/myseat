@@ -39,7 +39,7 @@ if (!$ok) { http_response_code(404); }
 			<nav class="chat-nav" aria-label="Weitere Möglichkeiten">
 				<button type="button" class="chat-link" id="chat-reset">Neu anfangen</button>
 				<?php if ($phone !== ''): ?><a class="chat-link" href="tel:<?php echo shop_h(preg_replace('/[^0-9+]/', '', $phone)); ?>">Anrufen</a><?php endif; ?>
-				<a class="chat-link" href="./">Speisekarte</a>
+				<a class="chat-link" id="chat-menu" href="./">Speisekarte</a>
 			</nav>
 		</div>
 	</header>
