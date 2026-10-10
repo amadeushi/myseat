@@ -98,6 +98,9 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 			<input type="text" id="sh-sd" name="voucher_days" inputmode="numeric" value="<?php echo $sh_e($sh['voucher_days']); ?>"/>
 		</div>
 
+		<h4 class="sms-sub">Touren (Test)</h4>
+		<small class="offer-help">Die Disposition fasst Lieferungen, die zusammen aus der Küche gehen, zu einer Tour zusammen (Tour A und B). Der Küchenmonitor zeigt sie in einem gemeinsamen Rahmen mit einer gemeinsamen Zeit, auf dem Bon steht die Tour. Ausgeschaltet bleibt alles wie bisher.</small>
+		<label class="offer-check"><input type="checkbox" name="tours_on" value="1"<?php echo $sh_check('tours_on'); ?>/> Touren einschalten</label>
 		<h4 class="sms-sub">Angebote</h4>
 		<small class="offer-help">Angebote ohne Code, im Warenkorb. <b>Gratis-Extra:</b> Ab einem Warenwert, der mit der Zahl der Hauptgerichte wächst (Pizza, Pasta, Fleisch, Fisch ...; Desserts, Getränke, Vorspeisen und Wein zählen nicht), wählt der Gast ein Extra gratis. Darunter zeigt der Warenkorb, was fehlt, und schlägt Snacks, Beilagen und Getränke vor, deren Preis die Lücke schließt. Wer kein Extra will, bekommt (nur mit Kundenkonto) einen persönlichen Gutschein für die nächste Bestellung. <b>Pizza + Getränk:</b> Für jede Pizza (auch Calzone und Wunschpizza) kostet ein alkoholfreies Getränk oder ein Bier einen festen Betrag weniger, kein Wein. Gratis-Extras müssen Gerichte ohne Auswahl sein (keine Größen, keine Zutatengruppen).</small>
 		<label class="offer-check"><input type="checkbox" name="offers_on" value="1"<?php echo $sh_check('offers_on'); ?>/> Angebote anbieten</label>

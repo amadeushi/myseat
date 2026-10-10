@@ -28,7 +28,28 @@
 
 	// paging: a page holds as many orders as there are columns; the orders are sorted by when they have to leave the kitchen
 	var page = 0, lastAct = Date.now(), unseen = {}, IDLE_BACK_MS = 45000;
-	function visible() { return orders.slice(page * cols, page * cols + cols); }
+	// the pages: the bons of a tour (they stand together in `orders`, same common time) are one block that is never split across two pages; a block that does not fit in the rest of a page starts the next one
+	function layout() {
+		var pages = [[]], used = 0, i = 0;
+		while (i < orders.length) {
+			var o = orders[i], n = 1;
+			if (o.tour) { while (i + n < orders.length && orders[i + n].tour === o.tour) { n++; } }
+			if (used > 0 && used + n > cols) { pages.push([]); used = 0; }
+			for (var k = 0; k < n; k++) { pages[pages.length - 1].push(orders[i + k]); }
+			used += n; i += n;
+			if (used >= cols && i < orders.length) { pages.push([]); used = 0; }
+		}
+		var pageOf = {};
+		pages.forEach(function (p, pi) { p.forEach(function (o) { pageOf[o.id] = pi; }); });
+		return { pages: pages, pageOf: pageOf };
+	}
+	function visible() { return layout().pages[page] || []; }
+	// per tour: the bons the others are still waiting for ("wartet auf #14"), put on every order of the tour
+	function annotate() {
+		orders.forEach(function (o) {
+			o.wait_for = o.tour ? orders.filter(function (x) { return x.tour === o.tour && x.id !== o.id && !x.tour_wait; }).map(function (x) { return '#' + x.day_no; }).join(', ') : '';
+		});
+	}
 	// only the orders of the page on screen keep the sound going; an order on another page rings once and flashes in the bar
 	var sound = MonitorSound.create({ key: 'kitchen_screen', icons: true, mount: $('#k-tools'), pending: function () { return visible().filter(function (o) { return !acked[o.id]; }).length; } });
 
@@ -85,10 +106,13 @@
 		// never through the failure color alone, matching the fix already made on the dispatch board
 		// the buttons sit at the top of the column, directly under its head: the lower edge of a kitchen monitor is often hidden or hard to read
 		var actions = '<div class="ks-actions"><button type="button" class="k-go ks-done" data-done="' + o.id + '">Fertig</button><button type="button" class="k-icon ks-bon" data-bon="' + o.id + '" aria-label="Bon drucken" title="Bon drucken">' + ICON_PRINT + '</button><button type="button" class="k-icon ks-zoom" data-zoom="' + o.id + '" aria-pressed="' + (fit[o.id] ? 'true' : 'false') + '" aria-label="Ganze Bestellung zeigen" title="Ganze Bestellung zeigen">' + ICON_ZOOM + '</button></div>';
-		return '<article class="ks-card' + (acked[o.id] ? '' : ' is-fresh') + (late ? ' is-late' : '') + (o.arrived ? ' is-here' : '') + (fit[o.id] ? ' is-fit' : '') + '" data-id="' + o.id + '"><header class="ks-head"><span class="ks-no">#' + o.day_no + '</span><div class="ks-chips"><span class="k-type ' + esc(o.type) + '">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + '</span>' +
+		// a bon of a tour: the big time sits in the frame of the tour, here only the own time and the tour time; a bon already reported finished waits dimmed for the others
+		if (o.tour && o.tour_wait) { actions = '<div class="ks-actions"><button type="button" class="k-go ks-done" disabled>Fertig gemeldet</button><button type="button" class="k-icon ks-bon" data-bon="' + o.id + '" aria-label="Bon drucken" title="Bon drucken">' + ICON_PRINT + '</button></div>'; }
+		var tourInfo = o.tour ? '<p class="ks-was">' + (o.tour_wait ? 'wartet auf ' + esc(o.wait_for) : 'vorher raus ' + esc(o.was) + ' \u2192 Tour ' + esc(o.out)) + '</p>' : '';
+		return '<article class="ks-card' + (acked[o.id] ? '' : ' is-fresh') + (late ? ' is-late' : '') + (o.arrived ? ' is-here' : '') + (fit[o.id] ? ' is-fit' : '') + (o.tour_wait ? ' is-wait' : '') + '" data-id="' + o.id + '"><header class="ks-head"><span class="ks-no">#' + o.day_no + '</span><div class="ks-chips"><span class="k-type ' + esc(o.type) + '">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + '</span>' +
 			(o.source === 'lieferando' ? '<span class="k-badge lief">Lieferando</span>' : '') + (o.source === 'uber_eats' ? '<span class="k-badge uber">Uber Eats</span>' : '') +
 			(o.arrived ? '<span class="k-badge here">Gast ist da</span>' : '') + (o.status === 'preparing' ? '<span class="k-badge">Wird gekocht</span>' : '') + (o.test ? '<span class="k-badge">Test</span>' : '') + '</div></header>' + actions +
-			((o.name || o.zip) ? '<p class="ks-who" title="' + esc(o.name) + '"><span class="ks-wname">' + esc(o.name) + '</span>' + (o.zip ? '<span class="ks-zip">' + esc(o.zip) + '</span>' : '') + '</p>' : '') + timeBlock(o) +
+			((o.name || o.zip) ? '<p class="ks-who" title="' + esc(o.name) + '"><span class="ks-wname">' + esc(o.name) + '</span>' + (o.zip ? '<span class="ks-zip">' + esc(o.zip) + '</span>' : '') + '</p>' : '') + (o.tour ? tourInfo : timeBlock(o)) +
 			'<div class="ks-items"><ul class="ks-list">' + o.items.map(function (it, i) {
 				return '<li class="ks-item"><span class="ks-qty">' + it.qty + '×</span><span class="ks-pos">Pos ' + (i + 1) + '</span><span class="ks-title">' + esc(it.title) + '</span>' + (it.variation ? '<span class="ks-var">' + esc(it.variation) + '</span>' : '') +
 					it.options.map(function (op) { return '<span class="ks-opt">+ ' + esc(op) + '</span>'; }).join('') + (it.note ? '<span class="ks-note">' + esc(it.note) + '</span>' : '') + '</li>';
@@ -115,13 +139,29 @@
 		}
 	}
 	window.addEventListener('resize', function () { Object.keys(cardNodes).forEach(function (id) { fitCard(cardNodes[id]); }); });
+	// the frame of a tour: one element per letter that stays (so the cards inside keep their state), its head is drawn again every time
+	var boxes = {};
+	function tourBox(letter) {
+		if (!boxes[letter]) {
+			var el = document.createElement('section'); el.className = 'ks-tourbox tr-' + letter; el.setAttribute('aria-label', 'Tour ' + letter);
+			el.innerHTML = '<div class="ks-tourhead"></div><div class="ks-tourin"></div>'; boxes[letter] = el;
+		}
+		return boxes[letter];
+	}
+	function tourHead(letter, members) {
+		var o = members[0], st = outState(o), late = members.some(isLate), waits = members.filter(function (x) { return x.tour_wait; }).length;
+		return '<span class="lh"><span class="ks-tmark" aria-hidden="true">' + esc(letter) + '</span><span>Tour ' + esc(letter) + ' \u00b7 ' + members.length + ' Bons</span>' + (late ? '<span class="ks-tag is-late">Versp\u00e4tet</span>' : '') + '</span>' +
+			'<span class="rl">zusammen raus bis<small>' + esc(st.text) + (waits ? ' \u00b7 ' + waits + ' von ' + members.length + ' fertig' : '') + '</small></span><b>' + esc(o.out) + '</b>';
+	}
 	function render() {
-		var pages = Math.max(1, Math.ceil(orders.length / cols));
+		annotate();
+		var L = layout(), pages = L.pages.length;
 		if (page > pages - 1) { page = pages - 1; }
-		var shown = visible();
-		var liveIds = {};
+		var shown = L.pages[page] || [];
+		var liveIds = {}, desired = [];
 		if (!shown.length) {
 			board.innerHTML = '<p class="ks-empty">Keine offenen Bestellungen.<br><span>Alles fertig.</span></p>';
+			boxes = {};
 		} else {
 			if (board.firstElementChild && board.firstElementChild.classList.contains('ks-empty')) { board.innerHTML = ''; }
 			shown.forEach(function (o) {
@@ -137,16 +177,33 @@
 					if (ol) { ol.outerHTML = timeBlock(o); }
 					cardNodes[o.id].classList.toggle('is-late', isLate(o));
 				}
-				if (cardNodes[o.id].parentNode !== board) { board.appendChild(cardNodes[o.id]); }
-				if (fit[o.id] || cardNodes[o.id].classList.contains('is-fit')) { fitCard(cardNodes[o.id]); }
 			});
+			// place: a tour is one frame with its cards in it, everything else stands in the board as before
+			var i = 0;
+			while (i < shown.length) {
+				var o0 = shown[i], n = 1;
+				if (o0.tour) {
+					while (i + n < shown.length && shown[i + n].tour === o0.tour) { n++; }
+					var members = shown.slice(i, i + n), box = tourBox(o0.tour), inner = box.querySelector('.ks-tourin');
+					box.style.gridColumn = 'span ' + n; inner.style.gridTemplateColumns = 'repeat(' + n + ', minmax(0, 1fr))';
+					box.querySelector('.ks-tourhead').innerHTML = tourHead(o0.tour, members);
+					members.forEach(function (m, k) { if (inner.children[k] !== cardNodes[m.id]) { inner.insertBefore(cardNodes[m.id], inner.children[k] || null); } });
+					desired.push(box);
+				} else {
+					desired.push(cardNodes[o0.id]);
+				}
+				i += n;
+			}
+			Array.prototype.slice.call(board.children).forEach(function (c) { if (desired.indexOf(c) < 0) { c.remove(); } });
+			desired.forEach(function (node, k) { if (board.children[k] !== node) { board.insertBefore(node, board.children[k] || null); } });
+			shown.forEach(function (o) { if (fit[o.id] || cardNodes[o.id].classList.contains('is-fit')) { fitCard(cardNodes[o.id]); } });
 		}
 		Object.keys(cardNodes).forEach(function (id) {
 			if (!liveIds[id]) { if (cardNodes[id].parentNode) { cardNodes[id].remove(); } delete cardNodes[id]; delete cardSig[id]; }
 		});
 		renderNav(pages);
 		$('#k-counts').innerHTML = '<span class="k-count">Offen <b>' + orders.length + '</b></span>' + (pages > 1 ? '<span class="k-count">Seite <b>' + (page + 1) + '/' + pages + '</b></span>' : '');
-		document.title = (orders.length ? '(' + orders.length + ') ' : '') + 'Küchenbildschirm';
+		document.title = (orders.length ? '(' + orders.length + ') ' : '') + 'K\u00fcchenbildschirm';
 	}
 
 	// ---- Erledigt: the finished orders of the last two hours, newest first. A tap opens one: its dishes with the same "Pos n" as on the slips, and the slips again.
@@ -184,25 +241,26 @@
 	// Every target is big (a trackball is the only input) and nothing needs a swipe, a hover or the keyboard.
 	var CHEV_L = '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 	var CHEV_R = '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-	function chip(o, i) {
-		var st = outState(o), pg = Math.floor(i / cols);
+	function chip(o, pg) {
+		var st = outState(o);
 		var sub = st.cls === ' is-over' ? 'überfällig' : 'raus ' + (o.out || o.due);
-		return '<button type="button" class="ks-chip' + (o.asap ? ' is-asap' : '') + (st.cls === ' is-over' ? ' is-over' : (st.cls === ' is-soon' ? ' is-soon' : '')) + (unseen[o.id] ? ' is-new' : '') + '" data-goto="' + pg + '" aria-label="Bestellung ' + o.day_no + ' auf Seite ' + (pg + 1) + (o.asap ? ', sofort' : '') + ', ' + sub + '">' +
-			'<b>#' + o.day_no + '</b>' + (o.asap ? '<span>Sofort</span>' : '') + '<small>' + esc(sub) + '</small></button>';
+		return '<button type="button" class="ks-chip' + (o.tour ? ' tr-' + o.tour : '') + (o.asap ? ' is-asap' : '') + (st.cls === ' is-over' ? ' is-over' : (st.cls === ' is-soon' ? ' is-soon' : '')) + (unseen[o.id] ? ' is-new' : '') + '" data-goto="' + pg + '" aria-label="Bestellung ' + o.day_no + ' auf Seite ' + (pg + 1) + (o.asap ? ', sofort' : '') + (o.tour ? ', Tour ' + o.tour : '') + ', ' + sub + '">' +
+			(o.tour ? '<span class="ks-cm" aria-hidden="true">' + esc(o.tour) + '</span>' : '') + '<b>#' + o.day_no + '</b>' + (o.asap ? '<span>Sofort</span>' : '') + '<small>' + esc(sub) + '</small></button>';
 	}
 	function renderNav(pages) {
 		var nav = $('#ks-nav'); if (!nav) { return; }
 		nav.hidden = pages <= 1;
 		if (pages <= 1) { nav.innerHTML = ''; return; }
 		var chips = [];
-		orders.forEach(function (o, i) { if (Math.floor(i / cols) !== page) { chips.push(chip(o, i)); } });
+		var L = layout();
+		orders.forEach(function (o) { if (L.pageOf[o.id] !== page) { chips.push(chip(o, L.pageOf[o.id])); } });
 		nav.innerHTML = '<button type="button" class="ks-navbtn" data-page-prev' + (page === 0 ? ' disabled' : '') + '>' + CHEV_L + '<span>Zurück</span></button>' +
 			'<div class="ks-navmid"><span class="ks-pg" aria-live="polite">Seite ' + (page + 1) + ' von ' + pages + '</span><div class="ks-chips">' + chips.join('') + '</div></div>' +
 			'<button type="button" class="ks-navbtn" data-page-next' + (page >= pages - 1 ? ' disabled' : '') + '><span>Weiter</span>' + CHEV_R + '</button>';
 	}
 	// showing a page counts as hearing its orders: the sound stops, the flashing chips of that page stop
 	function goPage(n) {
-		var pages = Math.max(1, Math.ceil(orders.length / cols));
+		var pages = layout().pages.length;
 		page = Math.max(0, Math.min(pages - 1, n)); lastAct = Date.now();
 		visible().forEach(function (o) { acked[o.id] = true; delete unseen[o.id]; }); saveAcked();
 		render(); sound.ack();
@@ -232,7 +290,8 @@
 			var fresh = seen === null ? [] : r.orders.filter(function (o) { return seen.indexOf(o.id) < 0; });
 			orders = r.orders; seen = ids;
 			done = r.done || []; if (doneOpen && !done.some(function (d) { return d.id === doneOpen; })) { doneOpen = 0; } syncBar(); renderDone();
-			fresh.forEach(function (o) { var idx = orders.findIndex(function (x) { return x.id === o.id; }); if (idx >= 0 && Math.floor(idx / cols) !== page) { unseen[o.id] = 1; } });
+			annotate(); var LP = layout().pageOf;
+			fresh.forEach(function (o) { if (LP[o.id] !== undefined && LP[o.id] !== page) { unseen[o.id] = 1; } });
 			Object.keys(unseen).forEach(function (k) { if (ids.indexOf(+k) < 0) { delete unseen[k]; } });
 			Object.keys(acked).forEach(function (k) { if (ids.indexOf(+k) < 0) { delete acked[k]; } }); saveAcked();
 			Object.keys(fit).forEach(function (k) { if (ids.indexOf(+k) < 0) { delete fit[k]; } }); saveFit();

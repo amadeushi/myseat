@@ -28,7 +28,7 @@ shop_ensure_schema();
 $op = isset($_REQUEST['op']) ? (string)$_REQUEST['op'] : '';
 
 if ($op === 'board') {
-	so_out(array('ok' => true, 'now' => date('H:i'), 'orders' => shop_board(), 'drivers' => shop_dispatch_drivers(), 'pause' => shop_pause_state(), 'drive_min' => max(0, min(60, (int)shop_setting('kitchen_drive_min')))));
+	so_out(array('ok' => true, 'now' => date('H:i'), 'tours_on' => shop_tours_on(), 'orders' => shop_board(), 'drivers' => shop_dispatch_drivers(), 'pause' => shop_pause_state(), 'drive_min' => max(0, min(60, (int)shop_setting('kitchen_drive_min')))));
 }
 if ($op === 'kitchen') {
 	so_out(array('ok' => true, 'now' => date('H:i'), 'orders' => shop_kitchen_board(), 'done' => shop_kitchen_done()));
@@ -70,6 +70,28 @@ if ($op === 'report_print') {
 	if ($kind === 'online' || $kind === 'both') { shop_print_enqueue_report('online', $date); }
 	so_out(array('ok' => true, 'queued' => true));
 }
+if ($op === 'lieferando_upload') {
+	// a receipt of Lieferando (PDF) put in by hand in the dispatch: the same import as the Pi's printer and n8n (a receipt that is already in is reported, not made twice)
+	if (empty($_FILES['pdf']['tmp_name']) || !is_uploaded_file($_FILES['pdf']['tmp_name'])) { so_out(array('ok' => false, 'error' => 'Es kam keine Datei an.')); }
+	if ((int)$_FILES['pdf']['size'] > 5 * 1024 * 1024) { so_out(array('ok' => false, 'error' => 'Die Datei ist zu groß (höchstens 5 MB).')); }
+	$bytes = file_get_contents($_FILES['pdf']['tmp_name']);
+	if ($bytes === false || substr($bytes, 0, 4) !== '%PDF') { so_out(array('ok' => false, 'error' => 'Das ist keine PDF-Datei.')); }
+	require_once __DIR__.'/../classes/shop_lieferando.class.php';
+	so_out(lieferando_import($bytes));
+}
+if ($op === 'tour_create') {
+	// the dispatch puts deliveries that are in the kitchen into one tour (ids: comma separated)
+	$who1 = isset($_SESSION['valid_user']) && is_string($_SESSION['valid_user']) ? $_SESSION['valid_user'] : 'Disposition';
+	so_out(shop_tour_create(explode(',', isset($_POST['ids']) ? (string)$_POST['ids'] : ''), $who1));
+}
+if ($op === 'tour_time') {
+	$who1 = isset($_SESSION['valid_user']) && is_string($_SESSION['valid_user']) ? $_SESSION['valid_user'] : 'Disposition';
+	so_out(shop_tour_set_time(isset($_POST['letter']) ? (string)$_POST['letter'] : '', isset($_POST['time']) ? (string)$_POST['time'] : '', !empty($_POST['force']), $who1));
+}
+if ($op === 'tour_ready') {
+	$who1 = isset($_SESSION['valid_user']) && is_string($_SESSION['valid_user']) ? $_SESSION['valid_user'] : 'Disposition';
+	so_out(shop_tour_ready_all(isset($_POST['letter']) ? (string)$_POST['letter'] : '', $who1));
+}
 if ($op === 'courier_job') {
 	$who0 = isset($_SESSION['valid_user']) && is_string($_SESSION['valid_user']) ? $_SESSION['valid_user'] : 'Disposition';
 	$in = array(); foreach (array('name', 'phone', 'street', 'zip', 'city', 'address_note', 'text', 'amount', 'payment') as $k) { $in[$k] = isset($_POST[$k]) ? (string)$_POST[$k] : ''; }
@@ -96,12 +118,19 @@ if ($op === 'status') {
 	$allowed = array('new', 'accepted', 'preparing', 'ready', 'delivering', 'done', 'cancelled');
 	if (!in_array($to, $allowed, true)) { so_out(array('ok' => false, 'error' => 'Unbekannter Status.')); }
 	if ($order['status'] === 'pending') { so_out(array('ok' => false, 'error' => 'Diese Bestellung wartet noch auf die Zahlung.')); }
+	// a bon of a tour that the kitchen reports finished waits for the others (the dispatch can send the whole tour on: op tour_ready)
+	if ($to === 'ready' && empty($_POST['force']) && shop_tours_on() && !empty($order['tour']) && in_array($order['status'], array('accepted', 'preparing'), true)) {
+		$tr = shop_tour_member_done($id); so_out(array('ok' => true, 'waiting' => $tr['waiting']));
+	}
 	// cash and card orders count as paid when the order is finished
 	if ($to === 'done' && $order['payment_method'] !== 'mollie' && $order['payment_status'] !== 'paid') {
 		fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET payment_status = 'paid' WHERE id = ?", 'i', array($id));
 	}
 	shop_set_status($id, $to, $who, (int)(isset($_POST['eta']) ? $_POST['eta'] : 0));
 	so_out(array('ok' => true));
+}
+if ($op === 'tour_remove') {
+	so_out(shop_tour_remove($id, $who));
 }
 if ($op === 'address') {
 	so_out(shop_dispatch_edit_address($id, array('street' => isset($_POST['street']) ? $_POST['street'] : '', 'zip' => isset($_POST['zip']) ? $_POST['zip'] : '', 'city' => isset($_POST['city']) ? $_POST['city'] : '', 'note' => isset($_POST['note']) ? $_POST['note'] : ''), $who));

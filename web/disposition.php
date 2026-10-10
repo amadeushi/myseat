@@ -50,6 +50,7 @@ $dp_pause = shop_pause_state();
 		<a class="k-btn" href="fahrerkarte.php">Fahrerkarte</a>
 			<a class="k-btn" href="tagesbericht.php" target="_blank" rel="noopener">Tagesbericht</a>
 		<button type="button" class="k-btn" id="k-auto" aria-pressed="false" title="Druckt für jede angenommene Bestellung den Lieferschein, wenn sie angenommen wird. Der Browser druckt ohne Rückfrage, wenn er mit --kiosk-printing gestartet ist">Bon bei Annahme: aus</button>
+		<button type="button" class="k-btn" id="k-upload" title="Einen Lieferando-Bon (PDF) von diesem Rechner hochladen und als Bestellung anlegen">Lieferando-PDF</button><input type="file" id="k-upfile" accept="application/pdf,.pdf" multiple hidden/>
 		<button type="button" class="k-btn" id="k-full">Vollbild</button>
 		<a class="k-btn" href="kitchen_screen.php">Küchenbildschirm</a>
 		<a class="k-btn" href="main_page.php?p=9">Bestellungen</a>

@@ -358,3 +358,44 @@ p.ksd-note { margin-top: 8px; }
 .fk-job-hint { margin: 0 0 12px; color: var(--muted); font-size: 15px; }
 .fk-dialog textarea, .fk-dialog select { width: 100%; min-width: 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); color: var(--text); font: inherit; font-size: 19px; font-weight: 600; }
 .fk-dialog select { min-height: 52px; }
+
+/* tours (setting "Touren"): the bons that leave the kitchen together stand in one frame with the common time. Two tours at a time: A blue with a circle, B pink with a square and a hatched head -
+   the letter and the shape carry the meaning, the colour only helps (no gold, amber or red: those already mean "Gast ist da", "bald" and "überfällig") */
+:root { --tour-a: #62b6cb; --tour-b: #e58fc2; }
+.tr-A { --tour: var(--tour-a); } .tr-B { --tour: var(--tour-b); }
+.ks-tourbox { display: flex; flex-direction: column; min-height: 0; min-width: 0; border: 5px solid var(--tour); border-radius: 18px; overflow: hidden; background: #0c0b0a; }
+.ks-tourhead { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 14px; background: var(--tour); color: #0c0b0a; font-size: 21px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; }
+.tr-B > .ks-tourhead { background-image: repeating-linear-gradient(135deg, rgba(12, 11, 10, 0.2) 0 8px, transparent 8px 16px); }
+.ks-tourhead .lh > span:nth-child(2) { white-space: nowrap; }
+.ks-tourhead .lh { display: flex; align-items: center; gap: 10px; min-width: 0; flex-wrap: wrap; }
+.ks-tourhead .rl { margin-left: auto; font-size: 14px; line-height: 1.15; text-align: right; letter-spacing: 0.02em; }
+.ks-tourhead .rl small { display: block; font-size: 15px; font-weight: 800; color: #0c0b0a; white-space: nowrap; }
+.ks-tourhead b { font-size: 50px; line-height: 1; font-variant-numeric: tabular-nums; }
+.ks-tourhead .ks-tag.is-late { background: #0c0b0a; color: var(--danger); }
+.ks-tmark { display: grid; place-items: center; width: 38px; height: 38px; flex: none; border-radius: 50%; background: #0c0b0a; color: var(--tour); font-size: 26px; font-weight: 800; }
+.tr-B .ks-tmark { border-radius: 4px; }
+.ks-tourin { flex: 1; min-height: 0; display: grid; gap: 8px; padding: 8px; }
+.ks-tourin .ks-card { border-color: var(--border); min-width: 0; }
+.ks-was { margin: 8px 0 4px; font-size: 17px; font-weight: 700; color: var(--muted); }
+.ks-card.is-wait { opacity: 0.62; }
+.ks-card.is-wait .ks-done { background: transparent; color: var(--muted); border: 2px dashed var(--border); }
+.ks-chip[class*="tr-"] { border-color: var(--tour); }
+.ks-cm { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--tour); color: #0c0b0a; font-size: 15px; font-weight: 800; }
+.tr-B .ks-cm { border-radius: 3px; }
+@media (max-width: 1000px) { .ks-tourbox { grid-column: auto !important; } .ks-tourin { grid-template-columns: 1fr !important; } }
+
+/* tours in the dispatch: the tick box on a bon in the kitchen, the bar to form a tour, and the line of a tour on its bons */
+.k-tourpick { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 12px; border: 2px dashed var(--border); border-radius: 10px; font-size: 17px; font-weight: 700; cursor: pointer; }
+.k-tourpick input { width: 24px; height: 24px; accent-color: var(--tour-a); }
+.k-tourbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 10px 14px; background: rgba(98, 182, 203, 0.14); border-bottom: 3px solid var(--tour-a); font-size: 18px; }
+.k-tourbar b { font-size: 24px; }
+.k-tourmsg { color: var(--danger); font-weight: 700; }
+.k-tourline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 10px; padding: 8px 10px; border: 3px solid var(--tour); border-radius: 12px; background: rgba(255, 255, 255, 0.03); }
+.k-tourline b { font-size: 19px; }
+.k-tourline small { color: var(--muted); font-size: 15px; font-weight: 700; }
+.k-tmark { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--tour); color: #0c0b0a; font-size: 19px; font-weight: 800; }
+.tr-B .k-tmark { border-radius: 4px; }
+.k-tourbtns { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: auto; }
+.k-tourbtns .k-go { min-height: 44px; padding: 0 12px; font-size: 16px; }
+.k-tourtime { min-height: 44px; padding: 0 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); color: var(--text); font: inherit; font-size: 17px; font-weight: 700; }
+.k-tourbar .k-go { flex: none; padding: 0 22px; min-height: 48px; font-size: 18px; }

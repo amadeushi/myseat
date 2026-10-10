@@ -52,6 +52,14 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-10 == mySeat v6.34.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu (Test, Einstellung "Touren (Test)" im Backend, standardmäßig aus): Touren. Die Disposition fasst 2 bis 4 Lieferungen aus der Küche zu einer Tour zusammen (Tour A und B, "Zur Tour" an der Karte, Leiste "Als Tour bilden").
+   Der Küchenmonitor zeigt sie in einem gemeinsamen Rahmen mit Buchstabe (Kreis/Quadrat), Farbe (Blau/Rosa) und einer gemeinsamen großen Zeit; eine Tour wird nie über zwei Seiten verteilt, die Chips unten tragen den Buchstaben.
+   Zeit: früheste "Raus bis"-Zeit, änderbar mit -5/+5 Min oder freier Uhrzeit (Warnung bei später als zugesagt). Fertig: jeder Bon einzeln (gedimmt, "wartet auf #14"), die Tour geht für die Fahrer erst auf fertig,
+   wenn alle fertig sind ("Tour jetzt fertig" erzwingt es). Auf dem Küchenbon steht die Tour. Neue Spalten tour, tour_out_at, tour_wait (web/classes/shop_tours.class.php).
+ * Neu: Disposition: "Lieferando-PDF" lädt einen Lieferando-Bon (PDF) vom Rechner hoch und legt die Bestellung an (derselbe Import wie vom Pi, ein schon vorhandener Bon wird gemeldet, nicht doppelt angelegt).
+
 2026-10-10 == mySeat v6.33.2 == amadeushi - http://github.com/amadeushi/myseat
 
  * Behoben: Adresssuche: Der Google-Rückfall (shop_geocode_google) nimmt nur noch Treffer mit einer echten Straße. Eine falsch gelesene Straße ("Leunissstraße" statt "Leunisstraße") landete sonst mit einem geratenen

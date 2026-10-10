@@ -51,6 +51,11 @@ function shop_slip_escpos($o, $items, $full) {
 	// an order from Lieferando: a white-on-black bar on top (reverse print), so it is not mixed up with the own deliveries
 	if (isset($o['source']) && $o['source'] === 'lieferando') { $b .= "\x1ba\x01\x1dB\x01\x1d!\x11\x1bE\x01 LIEFERANDO \n\x1dB\x00\x1d!\x00\x1bE\x00\x1ba\x00\n"; }
 	if (isset($o['source']) && $o['source'] === 'uber_eats') { $b .= "\x1ba\x01\x1dB\x01\x1d!\x11\x1bE\x01 UBER EATS \n\x1dB\x00\x1d!\x00\x1bE\x00\x1ba\x00\n"; }
+	// a tour (test setting): a white-on-black bar with the letter and the common time the food has to leave the kitchen, big, above everything
+	if (function_exists('shop_tours_on') && shop_tours_on() && !empty($o['tour']) && !empty($o['tour_out_at'])) {
+		$b .= "\x1ba\x01\x1dB\x01\x1d!\x11\x1bE\x01 TOUR ".$o['tour']." \n\x1dB\x00\x1d!\x00\x1bE\x00\x1ba\x00";
+		$put('raus bis '.substr($o['tour_out_at'], 11, 5), 2, true, 1);
+	}
 	$put('#'.(int)$o['day_no'], 2, true);
 	$put($delivery ? 'LIEFERUNG' : 'ABHOLUNG', 1, true);
 	$platform = isset($o['source']) && in_array($o['source'], array('lieferando', 'uber_eats'), true);

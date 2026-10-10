@@ -125,6 +125,9 @@ function shop_ensure_schema() {
 	$mcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'pay_detail'"); // how the guest paid online at Mollie (creditcard, paypal ...), for the daily report
 	if (!$mcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `pay_detail` VARCHAR(30) NOT NULL DEFAULT ''"); }
 	// pickup: when the guest tapped "Ich bin da" on the status page; delivery: the one-tap rating (1-5) of the driver on the status page after the delivery
+	// tours (web/classes/shop_tours.class.php): the letter of the tour, the common time the food leaves the kitchen, and whether the kitchen has reported this bon finished while it waits for the tour
+	$tcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'tour'");
+	if (!$tcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `tour` CHAR(1) NULL, ADD `tour_out_at` DATETIME NULL, ADD `tour_wait` TINYINT NOT NULL DEFAULT 0"); }
 	$acol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'arrived_at'");
 	if (!$acol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `arrived_at` DATETIME NULL, ADD `driver_rating` TINYINT NULL, ADD `driver_rated_at` DATETIME NULL"); }
 	// diet marks of a dish, ticked in the menu editor: 'veg', 'vegan' (implies veg), 'spicy', comma separated; NULL = nobody has looked at this dish yet (nothing is shown to guests)
@@ -323,6 +326,7 @@ function shop_defaults() {
 		'notify_email' => '',       // sender of the order mails and address that gets a mail for every new order
 		'resmio_slug' => 'amadeus-cafe-restaurant-bar',
 		'sms_orders' => '1',        // SMS to the guest when the delivery is on its way / the pickup is ready (only with SMS sending set up)
+		'tours_on' => '0',          // tours (test): the dispatch groups deliveries that leave the kitchen together (web/classes/shop_tours.class.php)
 		'push_on' => '1',           // push messages for the status page of an order (web/classes/shop_push.class.php)
 		'offers_on' => '1',         // offers without a code: free extra above a threshold that grows with the main dishes, pizza + drink (web/classes/shop_offers.class.php)
 		'offer_t1' => '22', 'offer_t2' => '38', 'offer_t3' => '55', // threshold in euro for one / two / three or more main dishes
@@ -1862,6 +1866,7 @@ function shop_orders_with_items($rows) {
 			// for the dispatch screen: when it has to be there, since when it is ready, which driver (id) carries it
 			'due_ts' => strtotime($due), 'ready_ts' => $r['ready_at'] ? strtotime($r['ready_at']) : 0, 'updated_ts' => $r['updated_at'] ? strtotime($r['updated_at']) : 0, 'driver_id' => $r['driver_id'] ? (int)$r['driver_id'] : 0,
 		);
+		$out[count($out) - 1] = array_merge($out[count($out) - 1], shop_tour_fields($r));
 	}
 	return $out;
 }
@@ -1869,6 +1874,7 @@ function shop_orders_with_items($rows) {
 // what the kitchen has to do: everything from "new" to "delivering", by due time
 function shop_board() {
 	shop_ensure_schema();
+	shop_tour_tick();
 	shop_expire_pending();
 	$rows = fb_rows("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE status IN ('new', 'accepted', 'preparing', 'ready', 'delivering', 'failed') ORDER BY COALESCE(scheduled_at, created_at), id");
 	return shop_orders_with_items($rows);
@@ -1907,6 +1913,7 @@ function shop_delete_test_order($id) {
 // what the kitchen screen needs and nothing more: no name, phone, address or payment of the guest
 function shop_kitchen_board() {
 	shop_ensure_schema();
+	shop_tour_tick();
 	if (is_file(__DIR__.'/shop_feedback.class.php')) { require_once __DIR__.'/shop_feedback.class.php'; shop_fb_tick(); } // sends the feedback mails that are due (every ten minutes at most)
 	$rows = fb_rows("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE status IN ('accepted', 'preparing') ORDER BY COALESCE(scheduled_at, eta_at, created_at), id");
 	$accepted = array();
@@ -1921,10 +1928,19 @@ function shop_kitchen_board() {
 			'due' => $o['due'], 'scheduled' => $o['scheduled'], 'asap' => ($o['scheduled'] === ''), 'due_ts' => $dueTs, 'drive_min' => $min, 'out_ts' => $dueTs - $min * 60, 'out' => date('H:i', $dueTs - $min * 60),
 			// of a delivery only the name and the postcode: enough to talk the tours through with the kitchen, no street, no phone
 			'name' => $o['name'], 'zip' => $o['type'] === 'delivery' ? $o['zip'] : '',
-			'accepted_ts' => $accepted[$o['id']], 'arrived' => $o['arrived'], 'note' => $o['note'], 'items' => $o['items']);
+			'accepted_ts' => $accepted[$o['id']], 'arrived' => $o['arrived'], 'note' => $o['note'], 'items' => $o['items'],
+			'tour' => $o['tour'], 'tour_wait' => $o['tour_wait'], 'tour_out' => $o['tour_out'], 'tour_out_ts' => $o['tour_out_ts']);
 	}
-	// what has to leave the kitchen first stands first
-	usort($out, function ($a, $b) { return $a['out_ts'] === $b['out_ts'] ? $a['id'] - $b['id'] : $a['out_ts'] - $b['out_ts']; });
+	// a tour: all its bons carry the common time (it drives the countdown and the order), their own time stays as 'was'; the number of bons of the tour is counted for the frame
+	$tn = array();
+	foreach ($out as $x) { if ($x['tour'] !== '') { $tn[$x['tour']] = (isset($tn[$x['tour']]) ? $tn[$x['tour']] : 0) + 1; } }
+	foreach ($out as $i => $x) {
+		$out[$i]['was'] = $x['out'];
+		if ($x['tour'] !== '') { $out[$i]['out_ts'] = $x['tour_out_ts']; $out[$i]['out'] = $x['tour_out']; $out[$i]['tour_n'] = $tn[$x['tour']]; }
+		else { $out[$i]['tour_n'] = 0; }
+	}
+	// what has to leave the kitchen first stands first; the bons of a tour have the same time, so they stand together
+	usort($out, function ($a, $b) { return $a['out_ts'] === $b['out_ts'] ? (strcmp($a['tour'], $b['tour']) ?: $a['id'] - $b['id']) : $a['out_ts'] - $b['out_ts']; });
 	return $out;
 }
 
@@ -3571,5 +3587,6 @@ function shop_stamp_notify_voucher($phone, $email, $value, $until, $name = '', $
 	} catch (Throwable $e) { error_log('mySeat voucher notice: '.$e->getMessage()); }
 }
 
+require_once __DIR__.'/shop_tours.class.php';
 require_once __DIR__.'/shop_offers.class.php';
 require_once __DIR__.'/shop_push.class.php';

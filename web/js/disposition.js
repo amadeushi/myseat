@@ -114,6 +114,73 @@
 			'<div class="k-retry-grid">' + f('street', 'Straße und Hausnummer', o.street, true, 160) + f('zip', 'PLZ', o.zip, false, 10) + f('city', 'Ort', o.city, false, 80) + f('note', 'Hinweis für den Fahrer', o.address_note, true, 200) + '</div>' +
 			'<p class="k-retry-msg" role="status"></p><div class="k-assign-foot"><button type="button" class="k-go" data-addr-go="' + o.id + '">Adresse speichern</button><button type="button" class="k-go secondary" data-addr-close="' + o.id + '">Schließen</button></div></div>';
 	}
+	// ---- a Lieferando receipt (PDF) from this computer becomes an order, like the one the Pi sends from the tablet
+	(function () {
+		var btn = $('#k-upload'), inp = $('#k-upfile'); if (!btn || !inp) { return; }
+		btn.addEventListener('click', function () { inp.value = ''; inp.click(); });
+		inp.addEventListener('change', function () {
+			var files = Array.prototype.slice.call(inp.files || []); if (!files.length) { return; }
+			var results = [], i = 0; btn.disabled = true; var label = btn.textContent;
+			function next() {
+				if (i >= files.length) {
+					btn.disabled = false; btn.textContent = label; notify(results.join(' \u00b7 ')); load(); return;
+				}
+				var f = files[i++]; btn.textContent = 'Lade ' + i + ' von ' + files.length + ' ...';
+				var fd = new FormData(); fd.append('op', 'lieferando_upload'); fd.append('token', TOKEN); fd.append('pdf', f);
+				fetch('ajax/shop_orders.php', { method: 'POST', body: fd, credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) {
+					if (r.ok) { results.push(r.duplicate ? f.name + ': schon vorhanden (#' + r.day_no + ')' : 'Bestellung #' + r.day_no + ' angelegt'); } else { results.push(f.name + ': ' + (r.error || 'nicht gelesen')); }
+					next();
+				}).catch(function () { results.push(f.name + ': keine Verbindung'); next(); });
+			}
+			next();
+		});
+	})();
+
+	// ---- tours (setting "Touren", test): tick the deliveries that are in the kitchen, "Als Tour bilden"; a tour has its common time (-5 / +5 / a time), a bon can leave it, the whole tour can be sent on
+	var toursOn = false, tourSel = {}, tourTime = {};
+	function inKitchen(o) { return o.status === 'accepted' || o.status === 'preparing'; }
+	function tourPickable(o) { return toursOn && o.type === 'delivery' && !o.tour && inKitchen(o); }
+	function tourPick(o) { return tourPickable(o) ? '<label class="k-tourpick"><input type="checkbox" data-tour-pick="' + o.id + '"' + (tourSel[o.id] ? ' checked' : '') + '/> Zur Tour</label>' : ''; }
+	function tourCount(o) { return o.tour ? current.filter(function (x) { return x.tour === o.tour && inKitchen(x); }).length : 0; }
+	function tourSig(o) { return (tourSel[o.id] ? 'S' : '') + (o.tour ? 'T' + tourCount(o) + (tourTime[o.tour] || '') : ''); }
+	function tourLine(o) {
+		if (!toursOn || !o.tour || !inKitchen(o)) { return ''; }
+		var L = o.tour;
+		return '<div class="k-tourline tr-' + esc(L) + '" role="group" aria-label="Tour ' + esc(L) + '"><span class="k-tmark" aria-hidden="true">' + esc(L) + '</span><b>Tour ' + esc(L) + ' \u00b7 raus bis ' + esc(o.tour_out) + '</b><small>' + tourCount(o) + ' Bons' + (o.tour_wait ? ' \u00b7 K\u00fcche fertig' : '') + '</small>' +
+			'<span class="k-tourbtns"><button type="button" class="k-go secondary" data-tour-t="-5" data-tour-l="' + esc(L) + '">\u22125 Min</button><button type="button" class="k-go secondary" data-tour-t="+5" data-tour-l="' + esc(L) + '">+5 Min</button>' +
+			'<input type="time" class="k-tourtime" data-tour-time="' + esc(L) + '" value="' + esc(tourTime[L] !== undefined ? tourTime[L] : o.tour_out) + '" aria-label="Uhrzeit der Tour ' + esc(L) + '"/><button type="button" class="k-go secondary" data-tour-set="' + esc(L) + '">Setzen</button>' +
+			'<button type="button" class="k-go secondary" data-tour-out="' + o.id + '">Aus Tour l\u00f6sen</button><button type="button" class="k-go" data-tour-ready="' + esc(L) + '">Tour jetzt fertig</button></span></div>';
+	}
+	var tourBar = document.createElement('div'); tourBar.id = 'k-tourbar'; tourBar.className = 'k-tourbar'; tourBar.hidden = true; tourBar.setAttribute('role', 'region'); tourBar.setAttribute('aria-label', 'Tour bilden');
+	(function () { var top = document.querySelector('.k-top'); if (top && top.parentNode) { top.parentNode.insertBefore(tourBar, top.nextSibling); } })();
+	function tourBarSync() {
+		var ids = Object.keys(tourSel).filter(function (k) { var o = current.filter(function (x) { return String(x.id) === k; })[0]; return o && tourPickable(o); });
+		Object.keys(tourSel).forEach(function (k) { if (ids.indexOf(k) < 0) { delete tourSel[k]; } });
+		tourBar.hidden = !toursOn || !ids.length;
+		if (!tourBar.hidden) { tourBar.innerHTML = '<span><b>' + ids.length + '</b> ' + (ids.length === 1 ? 'Lieferung' : 'Lieferungen') + ' gew\u00e4hlt (Tour: 2 bis 4)</span><button type="button" class="k-go" data-tour-make>Als Tour bilden</button><button type="button" class="k-go secondary" data-tour-clear>Auswahl aufheben</button><span class="k-tourmsg" role="status"></span>'; }
+	}
+	function tourPost(f, force) {
+		return post(Object.assign({}, f, force ? { force: 1 } : {})).then(function (r) {
+			if (r.ok) { load(); return r; }
+			if (r.warn && !force && window.confirm(r.error + ' Trotzdem setzen?')) { return tourPost(f, true); }
+			notify(r.error || 'Das hat nicht geklappt.'); return r;
+		}).catch(function () { notify('Das hat nicht geklappt. Bitte versuche es noch einmal.'); });
+	}
+	document.addEventListener('change', function (ev) {
+		var pk = ev.target.closest && ev.target.closest('[data-tour-pick]');
+		if (pk) { if (pk.checked) { tourSel[pk.dataset.tourPick] = 1; } else { delete tourSel[pk.dataset.tourPick]; } tourBarSync(); render(); return; }
+		var tt = ev.target.closest && ev.target.closest('[data-tour-time]'); if (tt) { tourTime[tt.dataset.tourTime] = tt.value; }
+	});
+	document.addEventListener('click', function (ev) {
+		var mk = ev.target.closest('[data-tour-make]'), cl = ev.target.closest('[data-tour-clear]'), tt = ev.target.closest('[data-tour-t]'), st = ev.target.closest('[data-tour-set]'), ou = ev.target.closest('[data-tour-out]'), rd = ev.target.closest('[data-tour-ready]');
+		if (mk) { mk.disabled = true; post({ op: 'tour_create', ids: Object.keys(tourSel).join(',') }).then(function (r) { mk.disabled = false; if (r.ok) { tourSel = {}; load(); } else { notify(r.error || 'Das hat nicht geklappt.'); } }).catch(function () { mk.disabled = false; notify('Das hat nicht geklappt.'); }); return; }
+		if (cl) { tourSel = {}; tourBarSync(); render(); return; }
+		if (tt) { tourPost({ op: 'tour_time', letter: tt.dataset.tourL, time: tt.dataset.tourT }); return; }
+		if (st) { var inp = document.querySelector('[data-tour-time="' + st.dataset.tourSet + '"]'); if (inp && inp.value) { delete tourTime[st.dataset.tourSet]; tourPost({ op: 'tour_time', letter: st.dataset.tourSet, time: inp.value }); } return; }
+		if (ou) { post({ op: 'tour_remove', id: ou.dataset.tourOut }).then(function (r) { if (!r.ok) { notify(r.error || 'Das hat nicht geklappt.'); } load(); }).catch(function () { notify('Das hat nicht geklappt.'); }); return; }
+		if (rd) { if (window.confirm('Die ganze Tour ' + rd.dataset.tourReady + ' jetzt als fertig melden?')) { post({ op: 'tour_ready', letter: rd.dataset.tourReady }).then(function (r) { if (!r.ok) { notify(r.error || 'Das hat nicht geklappt.'); } load(); }).catch(function () { notify('Das hat nicht geklappt.'); }); } }
+	});
+
 	function moreHtml(o) {
 		return '<span class="k-icons">' + origBtn(o) + (addrEditable(o) ? '<button type="button" class="k-icon" data-addr-open="' + o.id + '" aria-label="Adresse bearbeiten" title="Adresse bearbeiten">' + ICON_PIN + '</button>' : '') + '<button type="button" class="k-icon" data-bon="' + o.id + '" aria-label="Lieferschein drucken" title="Lieferschein drucken">' + ICON_PRINT + '</button>' +
 			'<button type="button" class="k-icon" data-guestlink="' + esc(guestUrl(o)) + '" aria-label="Gast-Link kopieren" title="Gast-Link kopieren">' + ICON_LINK + '</button></span>';
@@ -142,8 +209,8 @@
 			h += o.scheduled
 				? '<span class="k-eta-l">Wunschzeit ' + esc(o.scheduled) + ' Uhr:</span><button type="button" class="k-go eta" data-act="accept">Annehmen</button><button type="button" class="k-go secondary" data-act="cancelled">Ablehnen</button>'
 				: '<span class="k-eta-l">Annehmen, fertig in:</span>' + [20, 30, 45, 60].map(function (m) { return '<button type="button" class="k-go eta" data-act="accept" data-eta="' + m + '">' + m + ' Min</button>'; }).join('') + '<button type="button" class="k-go secondary" data-act="cancelled">Ablehnen</button>';
-		} else if (o.status === 'accepted') { h += '<button type="button" class="k-go" data-act="preparing">Wird gekocht</button>'; }
-		else if (o.status === 'preparing') { h += '<button type="button" class="k-go" data-act="ready">Fertig</button>'; }
+		} else if (o.status === 'accepted') { h += '<button type="button" class="k-go" data-act="preparing">Wird gekocht</button>' + tourPick(o); }
+		else if (o.status === 'preparing') { h += '<button type="button" class="k-go" data-act="ready">Fertig</button>' + tourPick(o); }
 		else if (o.status === 'ready') {
 			// a driver may already have this one in his own, not-yet-started queue (order/driver.php) -
 			// dispatch sees who, and can still force it along or pull it back regardless
@@ -152,7 +219,7 @@
 		}
 		else if (o.status === 'delivering') { h += driverBadge(o) + '<button type="button" class="k-go secondary" data-release="' + o.id + '">Zurück in den Pool</button><button type="button" class="k-go" data-act="done">Geliefert</button>'; }
 		else if (o.status === 'failed') { h += driverBadge(o) + '<button type="button" class="k-go" data-retry-open="' + o.id + '">Nochmal zustellen</button><button type="button" class="k-go secondary" data-act="cancelled">Stornieren</button>'; }
-		return h + '</div>' + (side ? pay + '</div>' : '') + (o.status === 'failed' && retryOpen[o.id] ? retryPanel(o) : '') + addrPanel(o) + '</article>';
+		return h + '</div>' + (side ? pay + '</div>' : '') + (o.status === 'failed' && retryOpen[o.id] ? retryPanel(o) : '') + tourLine(o) + addrPanel(o) + '</article>';
 	}
 
 	// ---- portrait: rows of the lower bands
@@ -217,7 +284,7 @@
 		var d = new Date(outTs(o) * 1000), hhmm = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
 		return '<article class="k-row k-row-work' + lvl + '" data-id="' + o.id + '"><div class="k-row-main"><span class="k-no">#' + o.day_no + '</span><span class="k-type ' + esc(o.type) + '">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + '</span><span class="k-rwho">' + esc(sum) + '</span>' + (o.type === 'delivery' ? '<span class="k-raddr">' + shortAddr(o) + '</span>' : '') + '</div>' +
 			'<div class="k-row-wait"><b>raus bis ' + hhmm + '</b><span class="k-lvl">' + (m < 0 ? (-m) + ' Min überfällig' : 'in ' + m + ' Min') + '</span><small>' + (o.status === 'preparing' ? 'wird gekocht' : 'angenommen') + '</small></div>' +
-			'<div class="k-row-act">' + (o.status === 'accepted' ? '<button type="button" class="k-go secondary" data-act="preparing">Wird gekocht</button>' : '<button type="button" class="k-go secondary" data-act="ready">Fertig</button>') + moreHtml(o) + '</div>' + addrPanel(o) + '</article>';
+			'<div class="k-row-act">' + (o.status === 'accepted' ? '<button type="button" class="k-go secondary" data-act="preparing">Wird gekocht</button>' : '<button type="button" class="k-go secondary" data-act="ready">Fertig</button>') + tourPick(o) + moreHtml(o) + '</div>' + tourLine(o) + addrPanel(o) + '</article>';
 	}
 
 	// ---- diff-rendered by order id instead of a wholesale innerHTML replace every poll: a full rebuild used to wipe
@@ -267,7 +334,7 @@
 		if (!P) {
 			['new', 'work', 'ready'].forEach(function (k) {
 				var root = $('#col-' + k);
-				syncList(root, bandList(k), card, function (o) { return (k === 'ready' && retryOpen[o.id] ? 'r' : '') + (addrIsOpen(o) ? 'A' : ''); }, k === 'new' ? 'Alles erledigt' : 'Nichts hier', live);
+				syncList(root, bandList(k), card, function (o) { return (k === 'ready' && retryOpen[o.id] ? 'r' : '') + (addrIsOpen(o) ? 'A' : '') + tourSig(o); }, k === 'new' ? 'Alles erledigt' : 'Nichts hier', live);
 				$('#n-' + k).textContent = byCol[k];
 				// a column silently overflowing below the fold (a busy night queuing orders nobody is expected to
 				// scroll for) used to give zero signal - a persistent hint below the list fixes that
@@ -280,7 +347,7 @@
 			['new', 'ready', 'out'].forEach(function (k) {
 				var pages = pagesOf(k); if (page[k] > pages - 1) { page[k] = pages - 1; }
 				var rb = { 'new': card, ready: rowReady, out: rowOut }[k];
-				syncList($('#col-' + k), shown(k), rb, k === 'ready' ? function (o) { return (assignOpen[o.id] ? 'a' + (assignAll[o.id] ? 'x' : '') + JSON.stringify(drivers) : '') + (addrIsOpen(o) ? 'A' : Math.floor(nowS() / 60)); } : (k === 'out' ? function (o) { return addrIsOpen(o) ? 'A' : Math.floor(nowS() / 60); } : (k === 'new' ? function (o) { return addrIsOpen(o) ? 'A' : ''; } : null)),
+				syncList($('#col-' + k), shown(k), rb, k === 'ready' ? function (o) { return (assignOpen[o.id] ? 'a' + (assignAll[o.id] ? 'x' : '') + JSON.stringify(drivers) : '') + (addrIsOpen(o) ? 'A' : Math.floor(nowS() / 60)) + tourSig(o); } : (k === 'out' ? function (o) { return addrIsOpen(o) ? 'A' : Math.floor(nowS() / 60); } : (k === 'new' ? function (o) { return (addrIsOpen(o) ? 'A' : '') + tourSig(o); } : null)),
 					k === 'new' ? 'Alles erledigt' : (k === 'ready' ? 'Nichts wartet' : 'Niemand unterwegs'), live);
 				bandNav(k, pages); $('#n-' + k).textContent = byCol[k];
 			});
@@ -288,7 +355,7 @@
 			syncList($('#col-fail'), bandList('fail'), rowFail, function (o) { return retryOpen[o.id] ? 'r' : ''; }, '', live); $('#n-fail').textContent = byCol.fail;
 			$('#sec-fail').hidden = !byCol.fail;
 			// the kitchen is one line (the kitchen has its own monitor); one tap opens the list
-			var work = bandList('work'), wroot = $('#col-work'), wsig = JSON.stringify(work) + '|' + workOpen + '|' + work.map(function (o) { return addrIsOpen(o) ? o.id : ''; }).join(',') + '|' + (work.some(addrIsOpen) ? 0 : Math.floor(nowS() / 60));
+			var work = bandList('work'), wroot = $('#col-work'), wsig = JSON.stringify(work) + '|' + workOpen + '|' + work.map(function (o) { return addrIsOpen(o) ? o.id : ''; }).join(',') + '|' + (work.some(addrIsOpen) ? 0 : Math.floor(nowS() / 60)) + '|' + work.map(tourSig).join(',');
 			if (wroot.dataset.sig !== wsig) {
 				wroot.dataset.sig = wsig;
 				var worst = work[0], line = 'Nichts in der Küche';
@@ -378,7 +445,7 @@
 			$('#k-offline').hidden = true; lastOk = Date.now();
 			var ids = r.orders.filter(function (o) { return o.status === 'new'; }).map(function (o) { return o.id; });
 			autoPrintCheck(r.orders);
-			current = r.orders; drivers = r.drivers || []; pause = r.pause || pause; driveMin = r.drive_min !== undefined ? r.drive_min : driveMin;
+			current = r.orders; toursOn = !!r.tours_on; drivers = r.drivers || []; pause = r.pause || pause; driveMin = r.drive_min !== undefined ? r.drive_min : driveMin;
 			Object.keys(acked).forEach(function (k) { if (ids.indexOf(+k) < 0) { delete acked[k]; } });
 			var fresh = seen !== null && ids.some(function (id) { return seen.indexOf(id) < 0; });
 			if (fresh) {

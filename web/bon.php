@@ -60,6 +60,7 @@ $due = $o['scheduled_at'] ?: ($o['eta_at'] ?: $o['created_at']);
 <body>
 	<?php if (isset($o['source']) && $o['source'] === 'lieferando'): ?><div class="src">LIEFERANDO</div><?php endif; ?>
 	<?php if (isset($o['source']) && $o['source'] === 'uber_eats'): ?><div class="src">UBER EATS</div><?php endif; ?>
+	<?php if (function_exists('shop_tours_on') && shop_tours_on() && !empty($o['tour']) && !empty($o['tour_out_at'])): ?><div class="src">TOUR <?php echo $h($o['tour']); ?> &middot; raus bis <?php echo $h(substr($o['tour_out_at'], 11, 5)); ?></div><?php endif; ?>
 	<div class="row"><h1>#<?php echo (int)$o['day_no']; ?></h1><span class="type"><?php echo $delivery ? 'Lieferung' : 'Abholung'; ?></span></div>
 	<div class="row"><span class="time"><?php echo $o['scheduled_at'] ? 'geplant ' : ''; ?><?php echo $h(substr($due, 11, 5)); ?></span><span class="small"><?php echo $h($o['number']); ?><?php echo $o['is_test'] ? ' TEST' : ''; ?></span></div>
 	<?php if (!$full): ?>

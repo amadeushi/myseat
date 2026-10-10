@@ -29,7 +29,7 @@ shop_ensure_schema();
 $op = isset($_POST['op']) ? (string)$_POST['op'] : '';
 
 if ($op === 'save') {
-	foreach (array('public', 'accepting', 'test_mode', 'allow_cash', 'allow_card_door', 'allow_online', 'tip_enabled', 'sms_orders', 'stamp_on', 'offers_on', 'account_on', 'account_sms', 'feedback_on', 'places_suggest') as $flag) {
+	foreach (array('public', 'accepting', 'test_mode', 'allow_cash', 'allow_card_door', 'allow_online', 'tip_enabled', 'sms_orders', 'stamp_on', 'offers_on', 'tours_on', 'account_on', 'account_sms', 'feedback_on', 'places_suggest') as $flag) {
 		shop_setting_set($flag, !empty($_POST[$flag]) ? '1' : '0');
 	}
 	foreach (array('eta_delivery_min' => array(10, 240), 'kitchen_drive_min' => array(0, 60), 'lead_pickup_min' => array(0, 240), 'slot_min' => array(5, 60), 'days_ahead' => array(0, 14),
