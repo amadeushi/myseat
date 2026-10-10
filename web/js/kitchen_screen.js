@@ -3,14 +3,14 @@
 (function () {
 	'use strict';
 	var TOKEN = document.body.dataset.token, board = document.getElementById('ks-board'), lastOk = Date.now(), orders = [], acked = {}, seen = null, arrivedSeen = null, printed = {};
-	var cols = 5, autoPrint = false;
+	var cols = 5, rows = 1, autoPrint = false;
 	// the "Erledigt" column: what the kitchen has finished in the last two hours (so a printed slip can be traced after the order has left the board)
 	var done = [], doneOpen = 0, doneSig = '', showDone = true;
 	try { showDone = localStorage.getItem('ksDone') !== '0'; } catch (e) {}
 	// acked used to live only in memory: any reload (crash, nightly restart) wiped it, so every still-active
 	// order would pulse as "fresh" again even though none of them were new - persisted the same way `printed` is
 	try {
-		cols = parseInt(localStorage.getItem('ksCols'), 10) === 4 ? 4 : 5; autoPrint = localStorage.getItem('ksAutoPrint') === '1';
+		cols = parseInt(localStorage.getItem('ksCols'), 10) === 4 ? 4 : 5; rows = localStorage.getItem('ksRows') === '2' ? 2 : 1; autoPrint = localStorage.getItem('ksAutoPrint') === '1';
 		printed = JSON.parse(sessionStorage.getItem('ksPrinted') || '{}') || {};
 		acked = JSON.parse(sessionStorage.getItem('ksAcked') || '{}') || {};
 	} catch (e) {}
@@ -29,15 +29,18 @@
 	// paging: a page holds as many orders as there are columns; the orders are sorted by when they have to leave the kitchen
 	var page = 0, lastAct = Date.now(), unseen = {}, IDLE_BACK_MS = 45000;
 	// the pages: the bons of a tour (they stand together in `orders`, same common time) are one block that is never split across two pages; a block that does not fit in the rest of a page starts the next one
+	// two rows (button "2 Zeilen", not on a narrow screen): a page holds two rows of `cols` bons; a tour stays in one row, a block that does not fit in the rest of a row starts the next row (or the next page)
+	function effRows() { return (rows === 2 && window.innerWidth > 1000) ? 2 : 1; }
 	function layout() {
-		var pages = [[]], used = 0, i = 0;
+		var R = effRows(), pages = [[]], rowIdx = 0, used = 0, i = 0;
 		while (i < orders.length) {
 			var o = orders[i], n = 1;
 			if (o.tour) { while (i + n < orders.length && orders[i + n].tour === o.tour) { n++; } }
-			if (used > 0 && used + n > cols) { pages.push([]); used = 0; }
+			if (used > 0 && used + n > cols) { rowIdx++; used = 0; }
+			if (rowIdx >= R) { pages.push([]); rowIdx = 0; used = 0; }
 			for (var k = 0; k < n; k++) { pages[pages.length - 1].push(orders[i + k]); }
 			used += n; i += n;
-			if (used >= cols && i < orders.length) { pages.push([]); used = 0; }
+			if (used >= cols) { rowIdx++; used = 0; }
 		}
 		var pageOf = {};
 		pages.forEach(function (p, pi) { p.forEach(function (o) { pageOf[o.id] = pi; }); });
@@ -58,12 +61,14 @@
 	tick(); setInterval(tick, 10000);
 	function syncBar() {
 		$('#k-cols').textContent = cols + ' Spalten';
+		var rb = $('#k-rows'); rb.setAttribute('aria-pressed', rows === 2 ? 'true' : 'false'); rb.textContent = rows === 2 ? '2 Zeilen: an' : '2 Zeilen';
 		var a = $('#k-auto'); a.setAttribute('aria-pressed', autoPrint ? 'true' : 'false'); a.textContent = 'Bon bei Fertig: ' + (autoPrint ? 'an' : 'aus');
 		board.style.setProperty('--cols', cols);
 		var db = $('#k-done'); db.setAttribute('aria-pressed', showDone ? 'true' : 'false'); db.textContent = 'Erledigt' + (done.length ? ' (' + done.length + ')' : '');
 		$('#ks-done').hidden = !showDone;
 	}
 	$('#k-cols').addEventListener('click', function () { cols = cols === 5 ? 4 : 5; try { localStorage.setItem('ksCols', cols); } catch (e) {} syncBar(); render(); });
+	$('#k-rows').addEventListener('click', function () { rows = rows === 2 ? 1 : 2; try { localStorage.setItem('ksRows', rows); } catch (e) {} page = 0; syncBar(); render(); });
 	$('#k-auto').addEventListener('click', function () { autoPrint = !autoPrint; try { localStorage.setItem('ksAutoPrint', autoPrint ? '1' : '0'); } catch (e) {} syncBar(); });
 	$('#k-done').addEventListener('click', function () { showDone = !showDone; try { localStorage.setItem('ksDone', showDone ? '1' : '0'); } catch (e) {} doneSig = ''; syncBar(); renderDone(); });
 	// the kitchen monitor has no keyboard (no F5): a reload from the screen, e.g. after an update
@@ -156,6 +161,7 @@
 	function render() {
 		annotate();
 		var L = layout(), pages = L.pages.length;
+		board.classList.toggle('is-rows2', effRows() === 2); board.style.setProperty('--rows', effRows());
 		if (page > pages - 1) { page = pages - 1; }
 		var shown = L.pages[page] || [];
 		var liveIds = {}, desired = [];

@@ -52,6 +52,12 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-10 == mySeat v6.35.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Küchenmonitor: Knopf "2 Zeilen" in der Leiste (merkt sich die Wahl): zwei Zeilen Bons übereinander (2 x Spalten pro Seite, also 10 bei 5 und 8 bei 4 Spalten) mit einer kompakten Karte (Kopf, Zeitzeile mit großer Zeit,
+   Fertig und Symbole in einer Reihe, Gerichte in gewohnter Größe). Ein Tourrahmen bleibt in einer Zeile. Nicht auf schmalen Bildschirmen (unter 1000 Pixel).
+ * Behoben: Die Leiste "Als Tour bilden" nutzt einen Innenschatten statt eines dicken unteren Randes.
+
 2026-10-10 == mySeat v6.34.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu (Test, Einstellung "Touren (Test)" im Backend, standardmäßig aus): Touren. Die Disposition fasst 2 bis 4 Lieferungen aus der Küche zu einer Tour zusammen (Tour A und B, "Zur Tour" an der Karte, Leiste "Als Tour bilden").

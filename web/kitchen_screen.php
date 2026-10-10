@@ -43,6 +43,7 @@ $logoCss = preg_match('#^https?://[^\s\'"()\\\\]+$#', $logo) ? ' style="--ks-log
 		<span class="k-clock" id="k-clock"></span>
 		<div id="k-tools" class="k-tools"></div>
 		<button type="button" class="k-btn" id="k-cols" aria-label="Anzahl der Spalten">5 Spalten</button>
+		<button type="button" class="k-btn" id="k-rows" aria-pressed="false" title="Zeigt die Bons in zwei Zeilen übereinander (doppelt so viele auf einmal)">2 Zeilen</button>
 		<button type="button" class="k-btn" id="k-auto" aria-pressed="false" title="Druckt nach Fertig den Bon: bei Lieferungen den Lieferschein, bei Abholungen den Küchenbon">Bon bei Fertig: aus</button>
 		<button type="button" class="k-btn" id="k-done" aria-pressed="true" title="Zeigt die Bestellungen, die die Küche in den letzten 2 Stunden fertig gemeldet hat">Erledigt</button>
 		<button type="button" class="k-btn k-sq" id="k-full" aria-label="Vollbild" data-tip="Vollbild ein/aus"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
