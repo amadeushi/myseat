@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-11 == mySeat v6.36.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Bestell-Chat (Test) unter /order/chat.php, Einstellung "Bestell-Chat (Test)" im Backend (standardmäßig aus, Mitarbeiter sehen die Seite zum Testen). Gäste bestellen in einem geführten Gespräch mit Antwortknöpfen: Gericht (zuerst Pflichtangaben, dann optionale Extras), Gratis-Extra, Handynummer oder E-Mail mit Code bestätigen (Kundenkonto), Adresse mit Liefergebiet, Zeit, Zahlung, Zusammenfassung zum Bestätigen; eine feste Warenkorb-Leiste ist immer sichtbar. Preise, Gebühren, Liefergebiet und die Bestellung kommen aus den vorhandenen Shop-Funktionen, der Server nimmt nur Knöpfe an, die er selbst angeboten hat. Allergie- und Beschwerdehinweise vermerken die Bestellung "bitte anrufen". Neue Bestellquelle "chat" mit violettem Marker in Küche und Disposition, neue Tabellen tp_shop_chats und tp_shop_chat_msgs (Gespräche werden nach 14 Tagen gelöscht).
+ * Geändert: Disposition und Küchenmonitor: Überarbeitung nach dem Audit (lesbarere Schriften, Zeitblock der Zwei-Zeilen-Ansicht, Meldungsleiste, Symbolknöpfe, Sprunglink, Farbvariablen) und Abschnitt zur Küchen- und Dispositionspalette in DESIGN.md.
+
 2026-10-10 == mySeat v6.35.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Behoben: Disposition: Die leere Leiste "Als Tour bilden" blieb als blauer Streifen unter der Kopfzeile stehen (ihr display überschrieb das Attribut hidden); sie ist jetzt wirklich versteckt, bis eine Lieferung gewählt ist.

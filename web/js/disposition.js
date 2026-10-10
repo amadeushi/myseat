@@ -120,12 +120,12 @@
 		btn.addEventListener('click', function () { inp.value = ''; inp.click(); });
 		inp.addEventListener('change', function () {
 			var files = Array.prototype.slice.call(inp.files || []); if (!files.length) { return; }
-			var results = [], i = 0; btn.disabled = true; var label = btn.textContent;
+			var results = [], i = 0; btn.disabled = true; var label = btn.dataset.tip || 'Lieferando-PDF';
 			function next() {
 				if (i >= files.length) {
-					btn.disabled = false; btn.textContent = label; notify(results.join(' \u00b7 ')); load(); return;
+					btn.disabled = false; btn.classList.remove('is-wait'); btn.removeAttribute('aria-busy'); btn.dataset.tip = label; notify(results.join(' \u00b7 '), { kind: results.every(function (x) { return x.indexOf('Bestellung #') === 0 || x.indexOf('schon vorhanden') > 0; }) ? 'ok' : 'error' }); load(); return;
 				}
-				var f = files[i++]; btn.textContent = 'Lade ' + i + ' von ' + files.length + ' ...';
+				var f = files[i++]; btn.classList.add('is-wait'); btn.setAttribute('aria-busy', 'true'); btn.dataset.tip = 'Lade ' + i + ' von ' + files.length + ' ...';
 				var fd = new FormData(); fd.append('op', 'lieferando_upload'); fd.append('token', TOKEN); fd.append('pdf', f);
 				fetch('ajax/shop_orders.php', { method: 'POST', body: fd, credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) {
 					if (r.ok) { results.push(r.duplicate ? f.name + ': schon vorhanden (#' + r.day_no + ')' : 'Bestellung #' + r.day_no + ' angelegt'); } else { results.push(f.name + ': ' + (r.error || 'nicht gelesen')); }
@@ -138,18 +138,19 @@
 
 	// ---- tours (setting "Touren", test): tick the deliveries that are in the kitchen, "Als Tour bilden"; a tour has its common time (-5 / +5 / a time), a bon can leave it, the whole tour can be sent on
 	var toursOn = false, tourSel = {}, tourTime = {};
+	var ICON_UNLINK = '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.700 0l3-3M14 10a4 4 0 0 0-5.700 0l-3 3M4 4l16 16" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 	function inKitchen(o) { return o.status === 'accepted' || o.status === 'preparing'; }
 	function tourPickable(o) { return toursOn && o.type === 'delivery' && !o.tour && inKitchen(o); }
-	function tourPick(o) { return tourPickable(o) ? '<label class="k-tourpick"><input type="checkbox" data-tour-pick="' + o.id + '"' + (tourSel[o.id] ? ' checked' : '') + '/> Zur Tour</label>' : ''; }
+	function tourPick(o) { return tourPickable(o) ? '<label class="k-tourpick"><input type="checkbox" aria-label="Zur Tour" data-tour-pick="' + o.id + '"' + (tourSel[o.id] ? ' checked' : '') + '/> Zur Tour</label>' : ''; }
 	function tourCount(o) { return o.tour ? current.filter(function (x) { return x.tour === o.tour && inKitchen(x); }).length : 0; }
 	function tourSig(o) { return (tourSel[o.id] ? 'S' : '') + (o.tour ? 'T' + tourCount(o) + (tourTime[o.tour] || '') : ''); }
 	function tourLine(o) {
 		if (!toursOn || !o.tour || !inKitchen(o)) { return ''; }
 		var L = o.tour;
 		return '<div class="k-tourline tr-' + esc(L) + '" role="group" aria-label="Tour ' + esc(L) + '"><span class="k-tmark" aria-hidden="true">' + esc(L) + '</span><b>Tour ' + esc(L) + ' \u00b7 raus bis ' + esc(o.tour_out) + '</b><small>' + tourCount(o) + ' Bons' + (o.tour_wait ? ' \u00b7 K\u00fcche fertig' : '') + '</small>' +
-			'<span class="k-tourbtns"><button type="button" class="k-go secondary" data-tour-t="-5" data-tour-l="' + esc(L) + '">\u22125 Min</button><button type="button" class="k-go secondary" data-tour-t="+5" data-tour-l="' + esc(L) + '">+5 Min</button>' +
-			'<input type="time" class="k-tourtime" data-tour-time="' + esc(L) + '" value="' + esc(tourTime[L] !== undefined ? tourTime[L] : o.tour_out) + '" aria-label="Uhrzeit der Tour ' + esc(L) + '"/><button type="button" class="k-go secondary" data-tour-set="' + esc(L) + '">Setzen</button>' +
-			'<button type="button" class="k-go secondary" data-tour-out="' + o.id + '">Aus Tour l\u00f6sen</button><button type="button" class="k-go" data-tour-ready="' + esc(L) + '">Tour jetzt fertig</button></span></div>';
+			'<span class="k-tourbtns"><button type="button" class="k-go secondary" data-lab="1" data-tour-t="-5" data-tour-l="' + esc(L) + '" aria-label="Tour ' + esc(L) + ' 5 Minuten fr\u00fcher">\u22125 Min</button><button type="button" class="k-go secondary" data-lab="1" data-tour-t="+5" data-tour-l="' + esc(L) + '" aria-label="Tour ' + esc(L) + ' 5 Minuten sp\u00e4ter">+5 Min</button>' +
+			'<input type="time" class="k-tourtime" data-tour-time="' + esc(L) + '" value="' + esc(tourTime[L] !== undefined ? tourTime[L] : o.tour_out) + '" aria-label="Uhrzeit der Tour ' + esc(L) + '"/><button type="button" class="k-icon" data-lab="1" data-tour-set="' + esc(L) + '" aria-label="Tour ' + esc(L) + ' auf diese Uhrzeit setzen" title="Auf diese Uhrzeit setzen">' + ICON_CHECK + '</button>' +
+			'<button type="button" class="k-icon" data-lab="1" data-tour-out="' + o.id + '" aria-label="Bestellung ' + o.day_no + ' aus Tour ' + esc(L) + ' l\u00f6sen" title="Aus der Tour l\u00f6sen">' + ICON_UNLINK + '</button><button type="button" class="k-go" data-lab="1" data-tour-ready="' + esc(L) + '" aria-label="Tour ' + esc(L) + ' jetzt fertig melden">Tour jetzt fertig</button></span></div>';
 	}
 	var tourBar = document.createElement('div'); tourBar.id = 'k-tourbar'; tourBar.className = 'k-tourbar'; tourBar.hidden = true; tourBar.setAttribute('role', 'region'); tourBar.setAttribute('aria-label', 'Tour bilden');
 	(function () { var top = document.querySelector('.k-top'); if (top && top.parentNode) { top.parentNode.insertBefore(tourBar, top.nextSibling); } })();
@@ -157,12 +158,12 @@
 		var ids = Object.keys(tourSel).filter(function (k) { var o = current.filter(function (x) { return String(x.id) === k; })[0]; return o && tourPickable(o); });
 		Object.keys(tourSel).forEach(function (k) { if (ids.indexOf(k) < 0) { delete tourSel[k]; } });
 		tourBar.hidden = !toursOn || !ids.length;
-		if (!tourBar.hidden) { tourBar.innerHTML = '<span><b>' + ids.length + '</b> ' + (ids.length === 1 ? 'Lieferung' : 'Lieferungen') + ' gew\u00e4hlt (Tour: 2 bis 4)</span><button type="button" class="k-go" data-tour-make>Als Tour bilden</button><button type="button" class="k-go secondary" data-tour-clear>Auswahl aufheben</button><span class="k-tourmsg" role="status"></span>'; }
+		if (!tourBar.hidden) { tourBar.innerHTML = '<span><b>' + ids.length + '</b> ' + (ids.length === 1 ? 'Lieferung' : 'Lieferungen') + ' gew\u00e4hlt (Tour: 2 bis 4)</span><button type="button" class="k-go" data-tour-make>Als Tour bilden</button><button type="button" class="k-icon" data-tour-clear aria-label="Auswahl aufheben" title="Auswahl aufheben">' + ICON_X + '</button><span class="k-tourmsg" role="status"></span>'; }
 	}
 	function tourPost(f, force) {
 		return post(Object.assign({}, f, force ? { force: 1 } : {})).then(function (r) {
 			if (r.ok) { load(); return r; }
-			if (r.warn && !force && window.confirm(r.error + ' Trotzdem setzen?')) { return tourPost(f, true); }
+			if (r.warn && !force) { notify(r.error, { action: { label: 'Trotzdem setzen', fn: function () { tourPost(f, true); } } }); return r; }
 			notify(r.error || 'Das hat nicht geklappt.'); return r;
 		}).catch(function () { notify('Das hat nicht geklappt. Bitte versuche es noch einmal.'); });
 	}
@@ -178,7 +179,7 @@
 		if (tt) { tourPost({ op: 'tour_time', letter: tt.dataset.tourL, time: tt.dataset.tourT }); return; }
 		if (st) { var inp = document.querySelector('[data-tour-time="' + st.dataset.tourSet + '"]'); if (inp && inp.value) { delete tourTime[st.dataset.tourSet]; tourPost({ op: 'tour_time', letter: st.dataset.tourSet, time: inp.value }); } return; }
 		if (ou) { post({ op: 'tour_remove', id: ou.dataset.tourOut }).then(function (r) { if (!r.ok) { notify(r.error || 'Das hat nicht geklappt.'); } load(); }).catch(function () { notify('Das hat nicht geklappt.'); }); return; }
-		if (rd) { if (window.confirm('Die ganze Tour ' + rd.dataset.tourReady + ' jetzt als fertig melden?')) { post({ op: 'tour_ready', letter: rd.dataset.tourReady }).then(function (r) { if (!r.ok) { notify(r.error || 'Das hat nicht geklappt.'); } load(); }).catch(function () { notify('Das hat nicht geklappt.'); }); } }
+		if (rd) { if (!rd.dataset.armed) { var orig = rd.textContent; rd.dataset.armed = '1'; rd.textContent = 'Wirklich die ganze Tour?'; setTimeout(function () { rd.dataset.armed = ''; rd.textContent = orig; }, 4000); return; } { post({ op: 'tour_ready', letter: rd.dataset.tourReady }).then(function (r) { if (!r.ok) { notify(r.error || 'Das hat nicht geklappt.'); } load(); }).catch(function () { notify('Das hat nicht geklappt.'); }); } }
 	});
 
 	function moreHtml(o) {
@@ -192,7 +193,7 @@
 		// "late" (still just waiting) and "failed" (actually broken) used to share the same danger-red ring -
 		// late now escalates through amber plus this text label, never through the failure color alone
 		var h = '<article class="k-card' + (o.status === 'new' ? ' is-new' : '') + (late ? ' is-late' : '') + (o.status === 'failed' ? ' is-failed' : '') + (o.arrived ? ' is-here' : '') + '" data-id="' + o.id + '"><div class="k-head"><span class="k-no">#' + o.day_no + '</span><span class="k-type ' + esc(o.type) + '">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + '</span>' +
-			(o.source === 'lieferando' ? '<span class="k-badge lief">Lieferando</span>' : '') + (o.source === 'uber_eats' ? '<span class="k-badge uber">Uber Eats</span>' : '') +
+			(o.source === 'lieferando' ? '<span class="k-badge lief">Lieferando</span>' : '') + (o.source === 'uber_eats' ? '<span class="k-badge uber">Uber Eats</span>' : '') + (o.source === 'chat' ? '<span class="k-badge chat">Chat</span>' : '') +
 			(o.source === 'phone' ? '<span class="k-badge">Telefon</span>' : '') + (o.source === 'courier' ? '<span class="k-badge">Fahrauftrag</span>' : '') + (o.arrived ? '<span class="k-badge here">Gast ist da ' + esc(o.arrived) + '</span>' : '') +
 			(o.test ? '<span class="k-badge">Test</span>' : '') + '<span class="k-due' + (late ? ' k-late' : '') + '">' + esc(dueTxt) + '<small>' + sub + (o.status === 'new' ? ' · vor ' + ageMin + ' Min' : '') + (late ? ' · VERSPÄTET' : '') + '</small></span></div>' +
 			'<p class="k-who">' + esc(o.name) + (o.phone ? ' · ' + esc(o.phone) : '') + '</p>' + (o.address ? '<p class="k-addr">' + esc(o.address) + (o.address_note ? ' (' + esc(o.address_note) + ')' : '') + noBadge(o) + '</p>' : '') +
@@ -291,17 +292,47 @@
 	// out an in-progress "wirklich ablehnen?" confirm (its armed state lives on the button's own DOM node) and
 	// reset every column's scroll position, both every 6 seconds even when nothing about that order changed
 	var cardNodes = {}, cardSig = {};
+	// the serialised order is computed once per load (an order object does not change after it was read): a tick box or a draft does not make every card be serialised again
+	var sigCache = (typeof WeakMap === 'function') ? new WeakMap() : null;
+	function orderSig(o) { if (!sigCache) { return JSON.stringify(o); } var v = sigCache.get(o); if (v === undefined) { v = JSON.stringify(o); sigCache.set(o, v); } return v; }
+	// keyboard focus survives the rebuild of a card: the same control (by position and kind) gets it back
+	function focusKey(node) {
+		var a = document.activeElement; if (!a || !node || !node.contains(a)) { return null; }
+		var all = node.querySelectorAll('button, input, select, textarea, a[href]'), i = Array.prototype.indexOf.call(all, a);
+		return i < 0 ? null : { i: i, sig: a.tagName + '|' + (a.name || '') + '|' + (a.getAttribute('data-act') || a.getAttribute('aria-label') || a.textContent.trim().slice(0, 24)) };
+	}
+	function refocus(node, key) {
+		if (!key) { return; }
+		var all = Array.prototype.slice.call(node.querySelectorAll('button, input, select, textarea, a[href]')), t = all[key.i];
+		var same = function (a) { return a.tagName + '|' + (a.name || '') + '|' + (a.getAttribute('data-act') || a.getAttribute('aria-label') || a.textContent.trim().slice(0, 24)) === key.sig; };
+		if (!t || !same(t)) { t = all.filter(same)[0]; }
+		if (t) { t.focus({ preventScroll: true }); if (t.setSelectionRange && /^(text|search|tel)$/.test(t.type || '')) { try { t.setSelectionRange(t.value.length, t.value.length); } catch (e) {} } }
+	}
+	// every button of a card or row says which order it belongs to (the same "Fertig" or "Adresse bearbeiten" stands on every card): "Fertig, Bestellung 12"
+	function labelButtons(root) {
+		var cards = root.matches && root.matches('.k-card, .k-row') ? [root] : Array.prototype.slice.call(root.querySelectorAll('.k-card, .k-row'));
+		cards.forEach(function (c) {
+			var no = c.querySelector('.k-no'); if (!no) { return; }
+			var n = no.textContent.replace('#', '').trim();
+			Array.prototype.forEach.call(c.querySelectorAll('button, .k-tourpick input'), function (b) {
+				if (b.dataset.lab) { return; }
+				var base = b.getAttribute('aria-label') || b.textContent.trim(); if (!base || /Bestellung \d+/.test(base) || /^Tour [AB]/.test(base)) { return; }
+				b.setAttribute('aria-label', base + ', Bestellung ' + n); b.dataset.lab = '1';
+			});
+		});
+	}
 	function syncList(root, items, build, extra, emptyText, live) {
 		var scrollTop = root.scrollTop;
 		if (!items.length) { root.innerHTML = '<p class="k-empty">' + emptyText + '</p>'; return; }
 		if (root.firstElementChild && root.firstElementChild.classList.contains('k-empty')) { root.innerHTML = ''; }
 		items.forEach(function (o) {
 			live[o.id] = true;
-			var sig = JSON.stringify(o) + '|' + (extra ? extra(o) : '');
+			var sig = orderSig(o) + '|' + (extra ? extra(o) : '');
 			if (!cardNodes[o.id] || cardSig[o.id] !== sig) {
 				var tmp = document.createElement('div'); tmp.innerHTML = build(o);
-				var fresh = tmp.firstElementChild;
-				if (cardNodes[o.id] && cardNodes[o.id].parentNode) { cardNodes[o.id].replaceWith(fresh); }
+				var fresh = tmp.firstElementChild; labelButtons(fresh);
+				var fk = focusKey(cardNodes[o.id]);
+				if (cardNodes[o.id] && cardNodes[o.id].parentNode) { cardNodes[o.id].replaceWith(fresh); refocus(fresh, fk); }
 				cardNodes[o.id] = fresh; cardSig[o.id] = sig;
 			}
 		});
@@ -363,6 +394,7 @@
 				wroot.innerHTML = '<button type="button" class="k-worksum' + (worst && Math.floor((outTs(worst) - nowS()) / 60) < 0 ? ' is-over' : '') + '" data-worktoggle aria-expanded="' + workOpen + '"' + (worst ? '' : ' disabled') + '><span>' + esc(line) + '</span><span class="k-worksum-act">' + (workOpen ? 'Liste zuklappen' : 'Liste zeigen') + '</span></button>' +
 					(workOpen ? '<div class="k-worklist">' + work.map(rowWork).join('') + '</div>' : '');
 			}
+			labelButtons(wroot);
 			$('#n-work').textContent = byCol.work;
 			dropStale(live);
 			fitPages();
@@ -433,7 +465,17 @@
 	}
 
 	// a message in the red bar on top (works in full screen, unlike alert)
-	function notify(text) { var el = $('#k-offline'); el.textContent = text; el.hidden = false; setTimeout(function () { el.textContent = 'Keine Verbindung. Ich versuche es weiter ...'; el.hidden = true; }, 5000); }
+	// messages (results, hints, failures) in their own calm strip under the header (role status): they stay for a while, several can stand at once, an action can be offered; "Keine Verbindung" keeps its own bar
+	var ICON_X = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round"/></svg>';
+	function notify(text, opts) {
+		opts = opts || {}; var box = $('#k-msgs'); if (!box) { return; }
+		var row = document.createElement('div'); row.className = 'k-msg ' + (opts.kind === 'ok' ? 'is-ok' : 'is-error');
+		var t = document.createElement('span'); t.className = 'k-msg-t'; t.textContent = text; row.appendChild(t);
+		if (opts.action) { var ab = document.createElement('button'); ab.type = 'button'; ab.className = 'k-go secondary'; ab.textContent = opts.action.label; ab.addEventListener('click', function () { row.remove(); opts.action.fn(); }); row.appendChild(ab); }
+		var x = document.createElement('button'); x.type = 'button'; x.className = 'k-icon k-msg-x'; x.setAttribute('aria-label', 'Meldung schlie\u00dfen'); x.title = 'Schlie\u00dfen'; x.innerHTML = ICON_X; x.addEventListener('click', function () { row.remove(); }); row.appendChild(x);
+		box.appendChild(row); while (box.children.length > 4) { box.firstElementChild.remove(); }
+		setTimeout(function () { if (row.parentNode) { row.remove(); } }, opts.action ? 20000 : (opts.kind === 'ok' ? 9000 : 14000));
+	}
 
 	// ---- board loop
 	function load() {
@@ -497,7 +539,7 @@
 		var gl = ev.target.closest('[data-guestlink]');
 		if (gl) {
 			var url = gl.dataset.guestlink, done = function () { gl.innerHTML = ICON_CHECK; gl.classList.add('is-done'); gl.setAttribute('aria-label', 'Link kopiert'); gl.title = 'Link kopiert'; setTimeout(function () { gl.innerHTML = ICON_LINK; gl.classList.remove('is-done'); gl.setAttribute('aria-label', 'Gast-Link kopieren'); gl.title = 'Gast-Link kopieren'; }, 2500); };
-			if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(url).then(done, function () { notify(url); }); } else { notify(url); }
+			if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(url).then(done, function () { notify(url, { kind: 'ok' }); }); } else { notify(url); }
 			return;
 		}
 		var rel = ev.target.closest('[data-release]');
@@ -556,7 +598,7 @@
 			btn.disabled = false;
 			if (!r.ok) { msg.textContent = r.error || 'Das hat nicht geklappt.'; return; }
 			addrOpen[id] = false; delete addrDraft[id];
-			if (r.fee_note) { notify(r.fee_note); }
+			if (r.fee_note) { notify(r.fee_note, { kind: 'ok' }); }
 			load();
 		}).catch(function () { btn.disabled = false; msg.textContent = 'Das hat nicht geklappt. Bitte versuche es noch einmal.'; });
 	}

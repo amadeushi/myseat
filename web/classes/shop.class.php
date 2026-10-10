@@ -326,6 +326,7 @@ function shop_defaults() {
 		'notify_email' => '',       // sender of the order mails and address that gets a mail for every new order
 		'resmio_slug' => 'amadeus-cafe-restaurant-bar',
 		'sms_orders' => '1',        // SMS to the guest when the delivery is on its way / the pickup is ready (only with SMS sending set up)
+		'chat_on' => '0',           // order by chat (test): guided conversation at order/chat.php (web/classes/shop_chat.class.php)
 		'tours_on' => '0',          // tours (test): the dispatch groups deliveries that leave the kitchen together (web/classes/shop_tours.class.php)
 		'push_on' => '1',           // push messages for the status page of an order (web/classes/shop_push.class.php)
 		'offers_on' => '1',         // offers without a code: free extra above a threshold that grows with the main dishes, pizza + drink (web/classes/shop_offers.class.php)

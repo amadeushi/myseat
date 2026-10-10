@@ -37,6 +37,13 @@ colors:
   pizza-tomato-deep: "#a82f1e"
   pizza-line: "#cdb27f"
   pizza-focus: "#ffd27a"
+  kitchen-surface: "#161412"
+  kitchen-surface-2: "#1f1c19"
+  kitchen-ink: "#f6f1e6"
+  kitchen-ink-muted: "#b3a998"
+  kitchen-amber: "#e8b04a"
+  tour-a: "#62b6cb"
+  tour-b: "#e58fc2"
 typography:
   display:
     fontFamily: "Cormorant Garamond, Georgia, serif"
@@ -231,6 +238,16 @@ Kanten sind durchgehend weich gerundet, nie scharf — passend zur warmen, einla
 ### Navigation
 - **Style:** Flache Textlinks im Ruhezustand; aktiver Tab bekommt vollen Kerzengold-Hintergrund mit dunklem Text (nicht nur Unterstreichung). Datumsnavigation (Vor/Zurück) sind Kreis-Icon-Buttons mit SVG-Chevron, kein Unicode-Pfeil und kein `<<`/`>>`-Text.
 - **Mobile:** Touch-Ziele mindestens 44px hoch (mit `box-sizing: border-box` — ein früherer Fehler ließ sie durch `content-box` auf 65px anwachsen, siehe Do's and Don'ts).
+
+## Küchen- und Dispositionsmonitore (eigenes, helleres Kontrastset)
+Küchenmonitor (`kitchen_screen.php`), Disposition (`disposition.php`) und Fahrerkarte (`fahrerkarte.php`) teilen `web/css/kitchen.css` und laufen auf Wandbildschirmen, oft von Personen ab 50 gelesen. Sie nutzen deshalb dieselbe Familie wie das Backend, aber etwas hellere Werte für mehr Kontrast:
+- **Flächen:** `kitchen-surface` (#161412) und `kitchen-surface-2` (#1f1c19) statt Oberfläche und Oberfläche 2; **Tinte** `kitchen-ink` (#f6f1e6), **gedämpft** `kitchen-ink-muted` (#b3a998, 7,9:1 auf der Fläche).
+- **Bernstein** (`kitchen-amber`, #e8b04a): "bald dran", "neu eingetroffen", Hinweise des Küchenpersonals. Kein drittes Ampel-Signal, sondern das Zwischenstadium zwischen Gold ("Gast ist da") und Warnrot ("überfällig").
+- **Tonwerte aus der Palette:** Aufhellungen (Hintergründe und Ränder von Hinweisen) werden mit `color-mix(in srgb, var(--farbe) n%, transparent)` aus Gold, Bernstein, Salbeigrün, Warnrot und Tourblau gebildet, nicht als eigene Farbwerte.
+- **Touren (Test):** Genau zwei Touren gleichzeitig. **Tour A** `tour-a` (#62b6cb, Kreis) und **Tour B** `tour-b` (#e58fc2, Quadrat mit schräger Schraffur im Kopf). Die Bedeutung trägt der Buchstabe und die Form, die Farbe hilft nur. Gold, Bernstein und Rot sind nie Tourfarben. Kontrast beider Farben 8,5:1 auf Kohle.
+- **Schrift:** Mindestens 14 px auf allen Monitoren, auch in der Zwei-Zeilen-Ansicht. Uhrzeiten und Nummern sind groß (36 bis 60 px), die Gerichte 21 bis 34 px.
+- **Knöpfe:** Hauptaktionen (Annehmen, Fertig, Wird gekocht, Tour bilden) bleiben Textknöpfe in Gold. Nebenaktionen sind quadratische Symbolknöpfe (48 px) mit `aria-label` und Hinweistext bei Hover und Tastaturfokus (`data-tip`), Wiederholungen auf Karten nennen die Bestellnummer im Namen.
+- **Meldungen:** Ergebnisse und Fehler stehen in einem eigenen Streifen unter der Kopfzeile (`role=status`), nicht im roten Verbindungsbalken.
 
 ## Pizza-Konfigurator (eigene Oberfläche, bewusst abweichend)
 Der Wunschpizza-Konfigurator (`order/pizza.css`, `order/pizza.js`) hat auf Wunsch des Betreibers eine eigene, helle Optik, die an das Spiel Pizza Connection erinnert: Holztisch, Pergamentpapier, gemalte Zutaten. Sie gilt nur innerhalb des Konfigurator-Dialogs und löst das Kerzengold des übrigen Shops nicht ab.
