@@ -92,7 +92,7 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 		$diet_has = array();
 		foreach ($menu as $c0) { foreach ($c0['products'] as $p0) { foreach (array_filter(explode(',', (string)$p0['diet'])) as $f0) { $diet_has[$f0] = true; } } }
 		if (isset($diet_has['vegan'])) { $diet_has['veg'] = true; }
-		$diet_chips = array('veg' => 'Vegetarisch', 'vegan' => 'Vegan', 'spicy' => 'Scharf');
+		$diet_chips = array('veg' => 'Vegetarisch', 'vegan' => 'Vegan');   // 'spicy' => 'Scharf' is switched off until more than a few dishes carry the mark
 	?>
 	<div class="shop-layout">
 		<nav class="shop-cats" id="shop-cats" aria-label="Kategorien">

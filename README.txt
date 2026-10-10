@@ -52,6 +52,12 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-10 == mySeat v6.32.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Behoben: Lieferando: Der Pi schickt die PDF unverändert zum Auslesen und die auf Bonbreite zugeschnittene Fassung als zweite Datei (pdf_print) zum Drucken. Die zugeschnittene PDF hatte das "ä" beschädigt: die
+   bestätigte Uhrzeit wurde nicht gelesen und die Zeile "Bestätigte Uhrzeit" galt als Name (der Name landete im Straßenfeld). Das Auslesen erkennt die Zeile jetzt auch mit beschädigtem "ä" und nimmt eine Zeile mit "Uhrzeit" nie als Namen.
+ * Geändert: Bestellseite: der Filter "Scharf" ist vorerst abgeschaltet (zu wenige Gerichte gekennzeichnet); Vegetarisch und Vegan bleiben.
+
 2026-10-09 == mySeat v6.32.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Disposition: "Adresse bearbeiten" an jeder laufenden Lieferung (Straße mit Hausnummer, PLZ, Ort, Hinweis; gleicher Adress- und Zonencheck wie bei "Nochmal zustellen", Eintrag im Verlauf, Betrag bleibt,

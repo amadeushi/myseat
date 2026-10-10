@@ -144,7 +144,7 @@ function lieferando_parse_text($text) {
 	else { $out['warnings'][] = 'Art der Bestellung (Lieferung/Abholung) nicht erkannt, als Lieferung gespeichert'; }
 	// "Bestätigte Uhrzeit" ("Confirmed time" in English) is the time Lieferando promised the guest: that is when the order has to be there (or ready for pickup). The date is the day of
 	// the receipt; a time that lies clearly before the order time is after midnight.
-	if (preg_match('/(?:Bestätigte\s+Uhrzeit|Confirmed\s+time)\s*(\d{1,2}):(\d{2})/iu', $text, $m)) {
+	if (preg_match('/(?:Best.{1,3}tigte\s+Uhrzeit|Confirmed\s+time)\s*(\d{1,2}):(\d{2})/iu', $text, $m)) {
 		$base = $out['placed_at'] ? substr($out['placed_at'], 0, 10) : date('Y-m-d');
 		$ts = strtotime($base.' '.sprintf('%02d:%02d:00', (int)$m[1], (int)$m[2]));
 		if ($ts !== false && $out['placed_at'] && $ts < strtotime($out['placed_at']) - 1800) { $ts += 86400; }
@@ -161,7 +161,7 @@ function lieferando_parse_text($text) {
 		$gotName = false; $addr = array();
 		foreach ($lines as $i => $l) {
 			if ($i === 0) { continue; } // the type, already read above
-			if (stripos($l, 'Bestätigte') !== false || stripos($l, 'Confirmed') !== false || preg_match('/^\d{2}:\d{2}$/', $l)) { continue; }
+			if (stripos($l, 'Bestätigte') !== false || stripos($l, 'Uhrzeit') !== false || stripos($l, 'Confirmed') !== false || preg_match('/^\d{2}:\d{2}$/', $l)) { continue; }   // the label of the time (also with a damaged "ä") and the time itself are no name
 			if (!$gotName) { $out['customer_name'] = mb_substr($l, 0, 120); $gotName = true; continue; }
 			if (preg_match('/^(Tel\b|Telefon|Phone|Bestätigungscode|Verification code|Confirmation code)/iu', $l)) { continue; }
 			$addr[] = $l;
@@ -227,7 +227,7 @@ function lieferando_find_product($title) {
  * Parses $pdfBytes (the raw file content) and, unless this order code was already imported, creates the
  * tp_shop_orders row + items. Returns array('ok'=>true, 'id', 'day_no', 'number', 'duplicate') or array('ok'=>false, 'error').
  */
-function lieferando_import($pdfBytes) {
+function lieferando_import($pdfBytes, $storeBytes = null) {
 	shop_ensure_schema();
 	if (!class_exists('Smalot\\PdfParser\\Parser')) { return array('ok' => false, 'error' => 'PDF-Bibliothek (vendor/) fehlt auf dem Server.'); }
 	try {
@@ -282,7 +282,7 @@ function lieferando_import($pdfBytes) {
 	if ($p['street'] !== '') {
 		try { $g = shop_geocode($p['street'], $p['zip'], $p['city']); if ($g && $g[0] !== null && $g[1] !== null) { fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET lat = ?, lng = ? WHERE id = ?", 'ddi', array((float)$g[0], (float)$g[1], $id)); } } catch (Throwable $e) {}
 	}
-	shop_doc_save($id, 'pdf', $pdfBytes);   // the original receipt, for printing it again from the dispatch
+	shop_doc_save($id, 'pdf', (is_string($storeBytes) && substr($storeBytes, 0, 4) === '%PDF') ? $storeBytes : $pdfBytes);   // the receipt for printing it again from the dispatch (the Pi may send a copy cut to the width of the slip; the text is always read from the original)
 	shop_log($id, 'created', 'lieferando '.$p['external_id'].($p['warnings'] ? ' - prüfen: '.implode('; ', $p['warnings']) : ''));
 	return array('ok' => true, 'id' => $id, 'day_no' => $dayNo, 'number' => $number, 'type' => $p['type'], 'items' => count($p['items']));
 }

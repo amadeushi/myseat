@@ -33,5 +33,8 @@ if ($bytes === false || $bytes === '' || substr($bytes, 0, 4) !== '%PDF') {
 	li_out(array('ok' => false, 'error' => 'Keine gültige PDF-Datei erhalten.'), 400);
 }
 
-$res = lieferando_import($bytes);
+// the Pi sends the receipt as it came ('pdf', the text is read from it) and, cut to the width of the slip, a second copy ('pdf_print') that is kept for printing
+$print = null;
+if (!empty($_FILES['pdf_print']['tmp_name']) && is_uploaded_file($_FILES['pdf_print']['tmp_name'])) { $print = file_get_contents($_FILES['pdf_print']['tmp_name']); }
+$res = lieferando_import($bytes, $print);
 li_out($res, !empty($res['ok']) ? 200 : 422);

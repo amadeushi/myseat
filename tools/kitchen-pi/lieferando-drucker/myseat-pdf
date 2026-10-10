@@ -92,14 +92,22 @@ def main():
         log('job %s is not a PDF (%d bytes, starts with %r), cancelled' % (job, len(raw), raw[:16]))
         return 5
     keep(data, job)  # the original as it arrived
-    data = crop_pdf(data)
+    printable = crop_pdf(data)  # the original goes to the import (the text is read from it); the cut copy is only kept for printing
 
     c = conf()
     if not c.get('IMPORT_URL') or not c.get('IMPORT_KEY'):
         log('no IMPORT_URL / IMPORT_KEY in %s, will try again' % CONF)
         return 6
-    req = urllib.request.Request(c['IMPORT_URL'], data=data, method='POST',
-                                 headers={'X-Api-Key': c['IMPORT_KEY'], 'Content-Type': 'application/pdf'})
+    if printable is not data and printable != data:
+        boundary = 'myseat' + str(int(time.time() * 1000))
+        def part(name, payload):
+            return (('--%s\r\nContent-Disposition: form-data; name="%s"; filename="%s.pdf"\r\nContent-Type: application/pdf\r\n\r\n' % (boundary, name, name)).encode() + payload + b'\r\n')
+        body = part('pdf', data) + part('pdf_print', printable) + ('--%s--\r\n' % boundary).encode()
+        req = urllib.request.Request(c['IMPORT_URL'], data=body, method='POST',
+                                     headers={'X-Api-Key': c['IMPORT_KEY'], 'Content-Type': 'multipart/form-data; boundary=' + boundary})
+    else:
+        req = urllib.request.Request(c['IMPORT_URL'], data=data, method='POST',
+                                     headers={'X-Api-Key': c['IMPORT_KEY'], 'Content-Type': 'application/pdf'})
     try:
         with urllib.request.urlopen(req, timeout=30) as r:
             log('job %s imported: %s' % (job, r.read(400).decode('utf-8', 'replace')))
