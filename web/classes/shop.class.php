@@ -871,7 +871,9 @@ function shop_geocode_google($street, $zip, $city) {
 		if (!empty($c['types']) && in_array('route', $c['types'], true)) { $route = $c['long_name']; }
 		if (!empty($c['types']) && in_array('street_number', $c['types'], true)) { $number = $c['long_name']; }
 	}
-	$road = $route !== null ? trim($route.' '.($number !== null ? $number : shop_street_number($street))) : null;
+	// no street in the answer = Google only guessed (a misspelt street once landed in another district this way): the same rule as for Nominatim, only a street-level match counts
+	if ($route === null) { return null; }
+	$road = trim($route.' '.($number !== null ? $number : shop_street_number($street)));
 	return array((float)$loc['lat'], (float)$loc['lng'], $postcode, $road);
 }
 
