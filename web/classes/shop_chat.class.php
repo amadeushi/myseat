@@ -249,6 +249,8 @@ function shop_chat_run(&$c, $out, $st, $kind, $val) {
 		if ($btn !== null && strpos($btn, 'prod:') === 0) { return shop_chat_pick_product($c, $out, (int)substr($btn, 5)); }
 		if ($st === 'var' && $btn !== null && strpos($btn, 'var:') === 0) { $ctx['pend']['vid'] = (int)substr($btn, 4); $ctx['pend']['gi'] = 0; return shop_chat_next_group($c, $out); }
 		if ($st === 'grp' && $btn !== null) {
+			if ($btn === 'optno') { $ctx['pend']['gi'] = 99; return shop_chat_next_group($c, $out); }
+			if ($btn === 'optyes') { return shop_chat_next_group($c, $out); }
 			if ($btn === 'grpdone') { $ctx['pend']['gi']++; return shop_chat_next_group($c, $out); }
 			if (strpos($btn, 'opt:') === 0) { $id = (int)substr($btn, 4); $ctx['pend']['opts'][$id] = (isset($ctx['pend']['opts'][$id]) ? $ctx['pend']['opts'][$id] : 0) + 1; return shop_chat_next_group($c, $out); }
 		}
@@ -342,6 +344,14 @@ function shop_chat_next_group(&$c, $out) {
 		foreach ($g['items'] as $it) { $q = isset($pend['opts'][$it['id']]) ? (int)$pend['opts'][$it['id']] : 0; $sum += $q; if ($q < $it['max']) { $left[] = $it; } }
 		if (($g['max'] > 0 && $sum >= $g['max']) || !$left) { $pend['gi']++; continue; }   // full or nothing left: next group
 		if (!empty($pend['pre'][$g['id']]) && $sum >= $g['min']) { $pend['gi']++; continue; }   // the guest has already said it in the sentence
+		// the optional groups are asked about once before they are shown (most guests want nothing extra, a salad has several big groups)
+		if ($g['min'] == 0 && empty($pend['optask'])) {
+			$pend['optask'] = 1; $titles = array();
+			foreach (array_slice($groups, $pend['gi']) as $og) { if ($og['min'] == 0) { $titles[] = trim($og['title']); } }
+			$c['state'] = 'grp';
+			$out[] = shop_chat_msg('Noch Extras dazu ('.implode(', ', $titles).')?', array('optno' => 'Nein, so passt es', 'optyes' => 'Ja, Extras wählen'));
+			return shop_chat_finish($c, $out);
+		}
 		$b = array();
 		// the way on comes first for an optional group (most guests want nothing extra), a required group has none until the minimum is reached
 		if ($sum >= $g['min']) { $b['grpdone'] = $sum > 0 ? 'Weiter' : 'Ohne, weiter'; }

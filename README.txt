@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.38.5 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Bestell-Chat: optionale Auswahlgruppen eines Gerichts (zum Beispiel bei Salat oder Pizza) werden nicht mehr einzeln durchgefragt. Nach den Pflichtangaben kommt eine einzige Frage "Noch Extras dazu (Gruppen)?" mit "Nein, so passt es" (Gericht liegt sofort im Warenkorb) und "Ja, Extras wählen" (danach wie bisher Gruppe für Gruppe). Schon im Satz genannte Extras werden weiter übernommen.
+
 2026-10-12 == mySeat v6.38.4 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Bestell-Chat: Gerichte, die in einer Schaufenster-Kategorie (Bestseller, Beliebt, Empfehlung, Favoriten, Top 10, Aktion, Angebot) doppelt stehen und auch in einer normalen Kategorie vorkommen, erscheinen im Chat nur noch dort. Die KI fragt dadurch nicht mehr, aus welcher Kategorie ein Gericht sein soll. Gerichte, die nur im Bestseller stehen, bleiben; die Bestellseite ist unverändert.
