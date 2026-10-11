@@ -474,3 +474,7 @@ p.ksd-note { margin-top: 8px; }
 .k-due-quick { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
 .k-due-edit input[type=time] { min-height: 48px; font-size: 1.25rem; }
 .k-due-out { margin: 6px 0 0; color: var(--text-muted, inherit); }
+
+/* several addresses match: the candidates as buttons */
+.k-cands { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.k-cand { justify-content: flex-start; text-align: left; }

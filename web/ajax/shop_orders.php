@@ -146,11 +146,11 @@ if ($op === 'due') {
 	so_out(shop_dispatch_set_due($id, isset($_POST['time']) ? (string)$_POST['time'] : '', $who));
 }
 if ($op === 'address') {
-	so_out(shop_dispatch_edit_address($id, array('street' => isset($_POST['street']) ? $_POST['street'] : '', 'zip' => isset($_POST['zip']) ? $_POST['zip'] : '', 'city' => isset($_POST['city']) ? $_POST['city'] : '', 'note' => isset($_POST['note']) ? $_POST['note'] : ''), $who));
+	so_out(shop_dispatch_edit_address($id, array('street' => isset($_POST['street']) ? $_POST['street'] : '', 'zip' => isset($_POST['zip']) ? $_POST['zip'] : '', 'city' => isset($_POST['city']) ? $_POST['city'] : '', 'note' => isset($_POST['note']) ? $_POST['note'] : '', 'pick_lat' => isset($_POST['pick_lat']) ? $_POST['pick_lat'] : '', 'pick_lng' => isset($_POST['pick_lng']) ? $_POST['pick_lng'] : ''), $who));
 }
 if ($op === 'retry') {
 	so_out(shop_dispatch_retry_order($id, array('street' => isset($_POST['street']) ? $_POST['street'] : '', 'zip' => isset($_POST['zip']) ? $_POST['zip'] : '', 'city' => isset($_POST['city']) ? $_POST['city'] : '',
-		'note' => isset($_POST['note']) ? $_POST['note'] : '', 'phone' => isset($_POST['phone']) ? $_POST['phone'] : ''), $who));
+		'note' => isset($_POST['note']) ? $_POST['note'] : '', 'phone' => isset($_POST['phone']) ? $_POST['phone'] : '', 'pick_lat' => isset($_POST['pick_lat']) ? $_POST['pick_lat'] : '', 'pick_lng' => isset($_POST['pick_lng']) ? $_POST['pick_lng'] : ''), $who));
 }
 if ($op === 'assign') {
 	so_out(shop_dispatch_assign_order($id, (int)(isset($_POST['driver']) ? $_POST['driver'] : 0), $who));

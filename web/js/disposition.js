@@ -634,13 +634,29 @@
 			load();
 		}).catch(function () { notify('Das hat nicht geklappt. Bitte versuche es noch einmal.'); b.disabled = false; });
 	});
-	function retryGo(btn) {
+	// several addresses match (Lieferando often sends no postcode): the candidates are shown as buttons, a tap takes the postcode over and saves again
+	function showCandidates(box, msg, r, again) {
+		msg.textContent = 'Mehrere Treffer, bitte wählen:';
+		var wrap = document.createElement('div'); wrap.className = 'k-cands';
+		r.candidates.forEach(function (c) {
+			var b = document.createElement('button'); b.type = 'button'; b.className = 'k-go secondary k-cand'; b.textContent = [c.road, [c.postcode, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+			b.addEventListener('click', function () {
+				var z = $('input[name="zip"]', box), st = $('input[name="street"]', box);
+				z.value = c.postcode || z.value; st.value = c.road || st.value;   // the street as the geocoder names it (it may differ from what was typed), with its postcode
+				['zip', 'street'].forEach(function (n) { $('input[name="' + n + '"]', box).dispatchEvent(new Event('input', { bubbles: true })); });
+				again({ pick_lat: c.lat, pick_lng: c.lng });
+			});
+			wrap.appendChild(b);
+		});
+		msg.appendChild(wrap);
+	}
+	function retryGo(btn, pick) {
 		var box = btn.closest('.k-retry'), msg = $('.k-retry-msg', box), id = btn.dataset.retryGo;
-		var f = { op: 'retry', id: id }; ['street', 'zip', 'city', 'note', 'phone'].forEach(function (n) { f[n] = $('input[name="' + n + '"]', box).value; });
+		var f = { op: 'retry', id: id }; ['street', 'zip', 'city', 'note', 'phone'].forEach(function (n) { f[n] = $('input[name="' + n + '"]', box).value; }); if (pick) { f.pick_lat = pick.pick_lat; f.pick_lng = pick.pick_lng; }
 		btn.disabled = true; msg.textContent = 'Adresse wird geprüft ...';
 		post(f).then(function (r) {
 			btn.disabled = false;
-			if (!r.ok) { msg.textContent = r.error || 'Das hat nicht geklappt.'; return; }
+			if (!r.ok) { if (r.reason === 'ambiguous' && r.candidates) { showCandidates(box, msg, r, function (pick) { retryGo(btn, pick); }); } else { msg.textContent = r.error || 'Das hat nicht geklappt.'; } return; }
 			retryOpen[id] = false; load();
 		}).catch(function () { btn.disabled = false; msg.textContent = 'Das hat nicht geklappt. Bitte versuche es noch einmal.'; });
 	}
@@ -657,13 +673,13 @@
 		var id = box.dataset.order; addrDraft[id] = addrDraft[id] || {}; addrDraft[id][ev.target.name] = ev.target.value;
 	});
 	document.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' && ev.target.closest && ev.target.closest('.k-addr-edit input')) { var g = $('[data-addr-go]', ev.target.closest('.k-addr-edit')); if (g && !g.disabled) { addrGo(g); } } });
-	function addrGo(btn) {
+	function addrGo(btn, pick) {
 		var box = btn.closest('.k-addr-edit'), msg = $('.k-retry-msg', box), id = btn.dataset.addrGo;
-		var f = { op: 'address', id: id }; ['street', 'zip', 'city', 'note'].forEach(function (n) { f[n] = $('input[name="' + n + '"]', box).value; });
+		var f = { op: 'address', id: id }; ['street', 'zip', 'city', 'note'].forEach(function (n) { f[n] = $('input[name="' + n + '"]', box).value; }); if (pick) { f.pick_lat = pick.pick_lat; f.pick_lng = pick.pick_lng; }
 		btn.disabled = true; msg.textContent = 'Adresse wird geprüft ...';
 		post(f).then(function (r) {
 			btn.disabled = false;
-			if (!r.ok) { msg.textContent = r.error || 'Das hat nicht geklappt.'; return; }
+			if (!r.ok) { if (r.reason === 'ambiguous' && r.candidates) { showCandidates(box, msg, r, function (pick) { addrGo(btn, pick); }); } else { msg.textContent = r.error || 'Das hat nicht geklappt.'; } return; }
 			addrOpen[id] = false; delete addrDraft[id];
 			if (r.fee_note) { notify(r.fee_note, { kind: 'ok' }); }
 			load();

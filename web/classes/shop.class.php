@@ -2796,7 +2796,7 @@ function shop_create_courier_job($in, $by = 'Disposition') {
 	$amount = (int)round((float)str_replace(',', '.', $amountTxt) * 100);
 	$pay = (isset($in['payment']) && $in['payment'] === 'card_door') ? 'card_door' : 'cash';
 	$z = shop_find_zone($street, $zip, $city);
-	if (!$z['ok']) { return array('ok' => false, 'error' => isset($z['reason']) && $z['reason'] === 'ambiguous' ? 'Es passen mehrere Adressen. Bitte ergänze die Postleitzahl.' : $z['error']); }
+	if (!$z['ok']) { return shop_zone_fail($z); }
 	if ($zip === '' && !empty($z['postcode'])) { $zip = (string)$z['postcode']; }
 	$today = date('Y-m-d'); $now = date('Y-m-d H:i:s'); $token = bin2hex(random_bytes(16)); $number = shop_order_number();
 	shop_dayno_lock();
@@ -2850,6 +2850,23 @@ function shop_dispatch_set_due($orderId, $time, $by) {
 	return array('ok' => true, 'due' => substr($new, 11, 5));
 }
 
+// the failed zone lookup as an answer for the staff screens: with several matching addresses the candidates come along, so that one of them can be tapped (as in the phone order)
+function shop_zone_fail($r) {
+	if (isset($r['reason']) && $r['reason'] === 'ambiguous' && !empty($r['candidates'])) {
+		$c = array(); foreach ($r['candidates'] as $x) { $c[] = array('road' => (string)$x['road'], 'postcode' => (string)$x['postcode'], 'city' => (string)$x['city'], 'lat' => (float)$x['lat'], 'lng' => (float)$x['lng']); }
+		return array('ok' => false, 'reason' => 'ambiguous', 'error' => 'Es passen mehrere Adressen. Bitte wähle die richtige aus.', 'candidates' => $c);
+	}
+	return array('ok' => false, 'error' => isset($r['error']) ? $r['error'] : 'Die Adresse wurde nicht gefunden.');
+}
+
+// the staff tapped one of the suggested addresses: its point is taken as it is (the zone is looked up for it), no second guess by the geocoder
+function shop_pick_zone($in) {
+	if (!isset($in['pick_lat'], $in['pick_lng']) || $in['pick_lat'] === '' || !is_numeric($in['pick_lat']) || !is_numeric($in['pick_lng'])) { return null; }
+	$lat = (float)$in['pick_lat']; $lng = (float)$in['pick_lng'];
+	$z = shop_zone_for_point($lat, $lng);
+	return $z ? array('ok' => true, 'zone' => $z, 'lat' => $lat, 'lng' => $lng, 'postcode' => '') : null;
+}
+
 function shop_dispatch_edit_address($orderId, $in, $by) {
 	$o = shop_order($orderId);
 	if (!$o || $o['type'] !== 'delivery' || !in_array($o['status'], array('new', 'accepted', 'preparing', 'ready', 'delivering'), true)) { return array('ok' => false, 'error' => 'Die Adresse lässt sich bei dieser Bestellung gerade nicht ändern.'); }
@@ -2859,8 +2876,8 @@ function shop_dispatch_edit_address($orderId, $in, $by) {
 	$changed = ($street !== (string)$o['street'] || $zip !== (string)$o['zip'] || $city !== (string)$o['city']);
 	$lat = $o['lat']; $lng = $o['lng']; $zone = $o['zone_id']; $feeNote = '';
 	if ($changed) {
-		$r = shop_find_zone($street, $zip, $city);
-		if (!$r['ok']) { return array('ok' => false, 'error' => isset($r['reason']) && $r['reason'] === 'ambiguous' ? 'Es passen mehrere Adressen. Bitte ergänze die Postleitzahl.' : $r['error']); }
+		$r = shop_pick_zone($in) ?: shop_find_zone($street, $zip, $city);
+		if (!$r['ok']) { return shop_zone_fail($r); }
 		$lat = $r['lat']; $lng = $r['lng']; $zone = $r['zone']['id'];
 		if ($zip === '' && !empty($r['postcode'])) { $zip = (string)$r['postcode']; }
 		if ((int)$r['zone']['fee_cents'] !== (int)$o['fee_cents']) { $feeNote = 'Liefergebühr der neuen Zone '.shop_money((int)$r['zone']['fee_cents']).' statt '.shop_money((int)$o['fee_cents']).', Betrag unverändert'; }
@@ -2880,8 +2897,8 @@ function shop_dispatch_retry_order($orderId, $in, $by) {
 	$changed = ($street !== (string)$o['street'] || $zip !== (string)$o['zip'] || $city !== (string)$o['city']);
 	$lat = $o['lat']; $lng = $o['lng']; $zone = $o['zone_id']; $feeNote = '';
 	if ($changed) {
-		$r = shop_find_zone($street, $zip, $city);
-		if (!$r['ok']) { return array('ok' => false, 'error' => isset($r['reason']) && $r['reason'] === 'ambiguous' ? 'Es passen mehrere Adressen. Bitte ergänze die Postleitzahl.' : $r['error']); }
+		$r = shop_pick_zone($in) ?: shop_find_zone($street, $zip, $city);
+		if (!$r['ok']) { return shop_zone_fail($r); }
 		$lat = $r['lat']; $lng = $r['lng']; $zone = $r['zone']['id'];
 		if ($zip === '' && !empty($r['postcode'])) { $zip = (string)$r['postcode']; }
 		if ((int)$r['zone']['fee_cents'] !== (int)$o['fee_cents']) { $feeNote = 'Liefergebühr der neuen Zone '.shop_money((int)$r['zone']['fee_cents']).' statt '.shop_money((int)$o['fee_cents']).', Betrag unverändert'; }

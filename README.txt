@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.39.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: Disposition: Adresse bearbeiten und "Nochmal zustellen": passen mehrere Adressen (zum Beispiel bei Lieferando-Bestellungen ohne Postleitzahl; die Treffer unterscheiden sich oft im Straßennamen, eine ergänzte PLZ half deshalb nicht), erscheinen die Vorschläge als Knöpfe wie in der Telefonannahme. Ein Tipp übernimmt Straße und PLZ des Treffers und speichert sofort; die Position des gewählten Treffers wird direkt benutzt (neue Felder pick_lat/pick_lng, Zone wird dafür geprüft).
+
 2026-10-12 == mySeat v6.39.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Disposition: Zeit einer Bestellung ändern. Bei Bestellungen, die noch nicht fertig sind (neu, angenommen, wird gekocht; nicht in einer Tour), gibt es an der Karte und in der Küchenzeile ein Uhr-Symbol. Es öffnet ein Feld, in dem die Ankunftszeit beim Gast (bei Abholung die Abholzeit) mit -10/-5/+5/+10/+15 Minuten oder einer Uhrzeit geändert wird; darunter steht, wann die Küche ausgibt. Küchenmonitor und Disposition errechnen die Ausgabezeit daraus. Eine Bestellung mit Wunschzeit behält ihre Art (scheduled_at), die anderen bekommen eine neue eta_at. Jede Änderung steht im Bestell-Log (Ereignis "due").
