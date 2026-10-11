@@ -166,6 +166,9 @@ function shop_uber_check($d) {
 			elseif ((int)$total !== $exp) { $warnings[] = 'Fälliger Bargeldbetrag '.shop_uber_money((int)$total).' statt '.shop_uber_money($exp).': der Betrag von Uber gilt.'; }
 		} else {
 			$exp += $other;
+			// the tip is printed below "Gezahlter Betrag" on the newer receipts and is not part of that amount: both ways add up
+			$tipPart = (int)(isset($d['tip_cents']) ? $d['tip_cents'] : 0);
+			if ($tipPart > 0 && $exp - $tipPart === (int)$total) { $exp = (int)$total; $warnings[] = 'Das Trinkgeld steht unter dem Gezahlten Betrag (nicht darin enthalten).'; }
 			if ($exp !== (int)$total) { $problems[] = 'Zwischensumme, Gebühren und Rabatt ergeben '.shop_uber_money($exp).', der Endbetrag ist '.shop_uber_money((int)$total).'.'; }
 		}
 	}
@@ -330,6 +333,8 @@ function shop_uber_import($slipId, $auto = false) {
 	if (!$cash) { foreach ((isset($p['other_fees']) && is_array($p['other_fees'])) ? $p['other_fees'] : array() as $f) { $fee += (int)$f['cents']; } }   // paid online: the fee lines belong to what the guest paid
 	$tip = (int)(isset($p['tip_cents']) ? $p['tip_cents'] : 0); $disc = (int)(isset($p['discount_cents']) ? $p['discount_cents'] : 0); $total = (int)$p['total_cents'];
 	$sur = 0; $adjNote = '';
+	// paid online: the tip printed below "Gezahlter Betrag" is not in that amount, the total of the order (like our own orders) contains it
+	if (!$cash && $tip > 0 && $total === $sub + $fee - $disc) { $total += $tip; }
 	if ($cash) {   // the amount due on the receipt is what is collected: the difference to the account is a discount (or a surcharge) with its reason
 		$calc = $sub + $fee + $tip - $disc;
 		if ($total < $calc) { $disc += $calc - $total; $adjNote = 'Uber Eats: fälliger Bargeldbetrag '.shop_uber_money($total).' statt '.shop_uber_money($calc); }
