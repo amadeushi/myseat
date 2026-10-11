@@ -6,6 +6,7 @@
 	var TOKEN = document.body.dataset.token, seen = null, arrivedSeen = null, lastOk = Date.now();
 
 	function $(s, r) { return (r || document).querySelector(s); }
+	function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
 	function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 	function money(c) { return (c / 100).toFixed(2).replace('.', ',') + ' €'; }
 	function nowS() { return Date.now() / 1000; }
@@ -28,7 +29,7 @@
 	// What is on the board when the page is opened counts as printed already; the list is kept in the session, so a reload does not print again. The slips go out four seconds apart (a new print replaces the one before in the frame).
 	var autoPrint = false, printed = {}, printBase = false, printQueue = [], printBusy = false;
 	try { autoPrint = localStorage.getItem('dpAutoPrint') === '1'; var pj = sessionStorage.getItem('dpPrinted'); if (pj) { printed = JSON.parse(pj) || {}; printBase = true; } } catch (e) {}
-	function syncAuto() { var a = $('#k-auto'); if (!a) { return; } a.setAttribute('aria-pressed', autoPrint ? 'true' : 'false'); a.textContent = 'Bon bei Annahme: ' + (autoPrint ? 'an' : 'aus'); }
+	function syncAuto() { var a = $('#k-auto'); if (!a) { return; } var t = 'Bon bei Annahme drucken: ' + (autoPrint ? 'an' : 'aus'); a.setAttribute('aria-pressed', autoPrint ? 'true' : 'false'); a.setAttribute('aria-label', t); a.setAttribute('data-tip', t); }
 	function pumpPrint() {
 		if (printBusy || !printQueue.length) { return; }
 		printBusy = true; MonitorPrint.slip(printQueue.shift(), true);
@@ -62,7 +63,7 @@
 	function pagesOf(k) { return Math.max(1, Math.ceil(bandList(k).length / PAGE[k])); }
 
 	// ---- sound: shared module (choice of sounds, volume, repeat until somebody taps the order). Only the new orders on screen keep it going.
-	var sound = MonitorSound.create({ key: 'dispatch', mount: $('#k-tools'), pending: function () { return shown('new').filter(function (o) { return !acked[o.id]; }).length; } });
+	var sound = MonitorSound.create({ key: 'dispatch', icons: true, mount: $('#k-tools'), pending: function () { return shown('new').filter(function (o) { return !acked[o.id]; }).length; } });
 	syncAuto();
 	$('#k-auto').addEventListener('click', function () { autoPrint = !autoPrint; try { localStorage.setItem('dpAutoPrint', autoPrint ? '1' : '0'); } catch (e) {} syncAuto(); });
 	$('#k-full').addEventListener('click', function () { var d = document.documentElement; if (document.fullscreenElement) { document.exitFullscreen(); } else if (d.requestFullscreen) { d.requestFullscreen(); } });
@@ -513,23 +514,36 @@
 			var row = $('.k-pause-item[data-kind="' + k + '"]'), s = pause[k]; if (!row || !s) { return; }
 			row.classList.toggle('is-paused', !!s.paused);
 			$('[data-pause-switch]', row).checked = !s.paused;
-			$('[data-pause-for]', row).hidden = !!s.paused;
-			$('[data-pause-note]', row).textContent = s.paused ? 'pausiert' + (s.until ? ' bis ' + s.until : '') : '';
+			$('[data-pause-note]', row).textContent = s.paused ? 'bis ' + (s.until || 'Aufhebung') : '';
+			if (s.paused) { $('[data-pause-pop]', row).hidden = true; }
 		});
 	}
+	// the duration is asked only when the switch is turned off (a small menu under it); turning it on again takes the orders at once
 	var pauseBox = $('#k-pause');
+	function pauseSend(row, on, minutes) {
+		var sw = $('[data-pause-switch]', row), fd = new FormData();
+		fd.append('op', 'pause_set'); fd.append('token', TOKEN); fd.append('kind', row.dataset.kind); fd.append('on', on ? 1 : 0); fd.append('minutes', minutes);
+		sw.disabled = true;
+		fetch('ajax/shop_orders.php', { method: 'POST', body: fd, credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) {
+			sw.disabled = false;
+			if (!r.ok) { notify(r.error || 'Das hat nicht geklappt.'); drawPause(); return; }
+			pause = r.pause; drawPause();
+		}).catch(function () { sw.disabled = false; notify('Das hat nicht geklappt. Bitte versuche es noch einmal.'); drawPause(); });
+	}
+	function pauseClose() { $$('[data-pause-pop]').forEach(function (p) { p.hidden = true; }); }
 	if (pauseBox) {
 		pauseBox.addEventListener('change', function (ev) {
 			var sw = ev.target.closest('[data-pause-switch]'); if (!sw) { return; }
-			var row = sw.closest('.k-pause-item'), on = !sw.checked, fd = new FormData();
-			fd.append('op', 'pause_set'); fd.append('token', TOKEN); fd.append('kind', row.dataset.kind); fd.append('on', on ? 1 : 0); fd.append('minutes', $('[data-pause-for]', row).value);
-			sw.disabled = true;
-			fetch('ajax/shop_orders.php', { method: 'POST', body: fd, credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) {
-				sw.disabled = false;
-				if (!r.ok) { sw.checked = !sw.checked; notify(r.error || 'Das hat nicht geklappt.'); return; }
-				pause = r.pause; drawPause();
-			}).catch(function () { sw.disabled = false; sw.checked = !sw.checked; notify('Das hat nicht geklappt. Bitte versuche es noch einmal.'); });
+			var row = sw.closest('.k-pause-item');
+			if (!sw.checked) { sw.checked = true; pauseClose(); var pop = $('[data-pause-pop]', row); pop.hidden = false; var f = $('[data-pause-min]', pop); if (f) { f.focus(); } return; }   // pause: ask for the time first
+			pauseSend(row, false, 0);
 		});
+		pauseBox.addEventListener('click', function (ev) {
+			var b = ev.target.closest('[data-pause-min]'); if (!b) { return; }
+			var row = b.closest('.k-pause-item'); pauseClose(); pauseSend(row, true, b.dataset.pauseMin);
+		});
+		document.addEventListener('click', function (ev) { if (!ev.target.closest('.k-pause-item')) { pauseClose(); } });
+		document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') { pauseClose(); } });
 	}
 
 	// a message in the red bar on top (works in full screen, unlike alert)

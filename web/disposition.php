@@ -38,24 +38,31 @@ $dp_pause = shop_pause_state();
 		<h1>Disposition</h1>
 		<div class="k-counts" id="k-counts" aria-live="polite"></div>
 		<span class="k-clock" id="k-clock"></span>
-		<div id="k-tools" class="k-tools"></div>
-		<div class="k-pause" id="k-pause" role="group" aria-label="Neue Bestellungen annehmen">
+		<div class="k-pause k-grp" id="k-pause" role="group" aria-label="Neue Bestellungen annehmen">
 			<?php foreach (array('delivery' => 'Lieferung', 'pickup' => 'Abholung') as $dp_k => $dp_l): $dp_p = $dp_pause[$dp_k]; ?>
 			<div class="k-pause-item<?php echo $dp_p['paused'] ? ' is-paused' : ''; ?>" data-kind="<?php echo $dp_k; ?>">
-				<label class="k-pause-switch"><input type="checkbox" role="switch" data-pause-switch<?php echo $dp_p['paused'] ? '' : ' checked'; ?>/><span class="k-pause-track" aria-hidden="true"></span><span><?php echo $dp_l; ?><span class="k-pause-more"> annehmen</span></span></label>
-				<select data-pause-for aria-label="Wie lange die <?php echo $dp_l; ?> pausiert werden soll"<?php echo $dp_p['paused'] ? ' hidden' : ''; ?>><option value="15">15 Min</option><option value="30" selected>30 Min</option><option value="60">1 Std</option><option value="120">2 Std</option><option value="0">bis ich sie aufhebe</option></select>
-				<span class="k-pause-note" data-pause-note><?php echo $dp_p['paused'] ? 'pausiert'.($dp_p['until'] ? ' bis '.$dp_p['until'] : '') : ''; ?></span>
+				<label class="k-pause-switch"><input type="checkbox" role="switch" data-pause-switch<?php echo $dp_p['paused'] ? '' : ' checked'; ?>/><span class="k-pause-track" aria-hidden="true"></span><span><?php echo $dp_l; ?></span></label>
+				<span class="k-pause-note" data-pause-note><?php echo $dp_p['paused'] ? 'bis '.($dp_p['until'] ? $dp_p['until'] : 'Aufhebung') : ''; ?></span>
+				<div class="k-pause-pop" data-pause-pop role="group" aria-label="Wie lange die <?php echo $dp_l; ?> pausiert werden soll" hidden>
+					<p class="k-pause-q"><?php echo $dp_l; ?> pausieren für:</p>
+					<button type="button" class="k-btn" data-pause-min="15">15 Min</button><button type="button" class="k-btn" data-pause-min="30">30 Min</button><button type="button" class="k-btn" data-pause-min="60">1 Std</button><button type="button" class="k-btn" data-pause-min="120">2 Std</button><button type="button" class="k-btn" data-pause-min="0">Bis ich sie aufhebe</button>
+				</div>
 			</div>
 			<?php endforeach; ?>
 		</div>
-		<a class="k-btn k-sq" href="fahrerkarte.php" aria-label="Fahrerkarte" data-tip="Fahrerkarte (Karte der Fahrer)"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg></a>
+		<div class="k-grp k-grp-set">
+			<div id="k-tools" class="k-tools"></div>
+			<button type="button" class="k-btn k-sq" id="k-auto" aria-pressed="false" aria-label="Bon bei Annahme drucken: aus" data-tip="Bon bei Annahme drucken: aus"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9V4h10v5M7 17H5a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-2"/><path d="M7 14h10v6H7z"/><path d="M15.500 11.500h.01" stroke-width="2.400"/></svg></button>
+			<button type="button" class="k-btn k-sq" id="k-out" aria-haspopup="dialog" aria-label="Gerichte für heute ausverkauft melden" data-tip="Gerichte heute aus"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round"><circle cx="12" cy="12" r="8.500"/><circle cx="12" cy="12" r="4.500"/><path d="M5.500 18.500l13-13"/></svg><span class="k-out-n" id="k-out-n" hidden></span></button>
+			<button type="button" class="k-btn k-sq" id="k-upload" aria-label="Lieferando-PDF hochladen" data-tip="Lieferando-Bon (PDF) hochladen"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg></button><input type="file" id="k-upfile" accept="application/pdf,.pdf" multiple hidden/>
+		</div>
+		<div class="k-grp k-grp-nav">
+			<a class="k-btn k-sq" href="fahrerkarte.php" aria-label="Fahrerkarte" data-tip="Fahrerkarte (Karte der Fahrer)"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg></a>
+			<a class="k-btn k-sq" href="kitchen_screen.php" aria-label="Küchenbildschirm" data-tip="Küchenbildschirm"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18v11H3zM8 20h8M12 16v4"/></svg></a>
+			<a class="k-btn k-sq" href="main_page.php?p=9" aria-label="Bestellungen" data-tip="Bestellungen (Liste)"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg></a>
 			<a class="k-btn k-sq" href="tagesbericht.php" target="_blank" rel="noopener" aria-label="Tagesbericht (öffnet in neuem Fenster)" data-tip="Tagesbericht"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h6"/></svg></a>
-		<button type="button" class="k-btn" id="k-auto" aria-pressed="false" title="Druckt für jede angenommene Bestellung den Lieferschein, wenn sie angenommen wird. Der Browser druckt ohne Rückfrage, wenn er mit --kiosk-printing gestartet ist">Bon bei Annahme: aus</button>
-		<button type="button" class="k-btn k-sq" id="k-out" aria-haspopup="dialog" aria-label="Gerichte für heute ausverkauft melden" data-tip="Gerichte heute aus"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round"><circle cx="12" cy="12" r="8.500"/><circle cx="12" cy="12" r="4.500"/><path d="M5.500 18.500l13-13"/></svg><span class="k-out-n" id="k-out-n" hidden></span></button>
-		<button type="button" class="k-btn k-sq" id="k-upload" aria-label="Lieferando-PDF hochladen" data-tip="Lieferando-Bon (PDF) hochladen"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg></button><input type="file" id="k-upfile" accept="application/pdf,.pdf" multiple hidden/>
-		<button type="button" class="k-btn k-sq" id="k-full" aria-label="Vollbild" data-tip="Vollbild ein/aus"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
-		<a class="k-btn k-sq" href="kitchen_screen.php" aria-label="Küchenbildschirm" data-tip="Küchenbildschirm"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18v11H3zM8 20h8M12 16v4"/></svg></a>
-		<a class="k-btn k-sq" href="main_page.php?p=9" aria-label="Bestellungen" data-tip="Bestellungen (Liste)"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg></a>
+			<button type="button" class="k-btn k-sq" id="k-full" aria-label="Vollbild" data-tip="Vollbild ein/aus"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+		</div>
 	</header>
 	<p class="k-offline" id="k-offline" role="alert" hidden>Keine Verbindung. Ich versuche es weiter ...</p>
 	<div class="k-msgs" id="k-msgs" role="status" aria-live="polite"></div>
