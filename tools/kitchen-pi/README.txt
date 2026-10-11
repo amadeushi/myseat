@@ -2,6 +2,10 @@ Raspberry Pi in der Küche (Küchenmonitor und Bondrucker). Stand 2026-10-04, Pi
 
 kiosk.sh              Startskript des Küchenmonitors: Chromium im Vollbild auf web/kitchen_screen.php (nach Absturz neu gestartet).
 kitchen-kiosk.service systemd-Dienst dazu (startet X ohne Desktop mit kiosk.sh als Benutzer hamun).
+kitchen-wait.html      Startseite des Browsers (nach /home/hamun/ kopieren, neben kiosk.sh): kiosk.sh öffnet sie mit ?to=<Adresse des Monitors>. Sie fragt den Server alle 3 Sekunden ab und wechselt erst
+                       dann zum Küchenmonitor ("Warte auf das Netzwerk ..."). Hintergrund: NetworkManager-wait-online wartet höchstens 60 Sekunden; kommt das WLAN nach einem Stromausfall später
+                       (Router fährt noch hoch), startete der Browser früher ohne Netz und zeigte eine Fehlerseite. Fehlt die Datei, öffnet kiosk.sh die Adresse direkt wie vorher.
+                       Änderungen an kiosk.sh gelten nach: sudo systemctl restart kitchen-kiosk (der Monitor ist dann ein paar Sekunden dunkel).
 print-agent.py        Druckdienst: fragt web/ajax/print_agent.php alle 2 Sekunden nach dem nächsten Bon und druckt ihn (ESC/POS) über den Treiber des Rechners (io_edgeport, /dev/ttyUSB0). Seit 2026-10-05:
                       der Treiber bleibt an. Früher wurde er für jeden Bon gelöst (pyusb); danach startete sich der Drucker nach 5 bis 25 s selbst neu und schnitt den Rest des Bons ab.
 bon-agent.service     systemd-Dienst dazu; liest AGENT_URL und AGENT_KEY aus /etc/bon-agent.env (nicht im Projekt, Rechte 640 root:hamun).

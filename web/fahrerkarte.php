@@ -49,7 +49,7 @@ $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 		<button type="button" class="k-btn k-sq" id="fk-zones" aria-pressed="false" aria-label="Liefergebiete" data-tip="Liefergebiete ein/aus"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 5.500-3 10H7L4 8.500 12 3z"/></svg></button>
 		<button type="button" class="k-btn k-sq" id="fk-new" aria-haspopup="dialog" aria-label="Fahrauftrag anlegen" data-tip="Fahrauftrag anlegen"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
 		<button type="button" class="k-btn k-sq" id="k-full" aria-label="Vollbild" data-tip="Vollbild ein/aus"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
-		<a class="k-btn" href="disposition.php">Disposition</a>
+		<a class="k-btn k-sq" href="disposition.php" aria-label="Disposition" data-tip="Disposition"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="12" rx="1"/><rect x="9.500" y="4" width="5" height="16" rx="1"/><rect x="16" y="4" width="5" height="9" rx="1"/></svg></a>
 	</header>
 	<p class="k-offline" id="k-offline" role="alert" hidden>Keine Verbindung. Ich versuche es weiter ...</p>
 	<main class="fk">

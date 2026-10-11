@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.39.9 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Küchenmonitor und Fahrerkarte: der Link "Disposition" ist das Symbol der Bestellübersicht (Tafel mit drei Spalten, aria-label und Tooltip).
+ * Fix: Küchen-Pi (tools/kitchen-pi): Kommt das WLAN nach dem Start später (Router fährt nach einem Stromausfall noch hoch; NetworkManager-wait-online wartet höchstens 60 Sekunden), zeigte der Browser eine Fehlerseite. kiosk.sh öffnet jetzt zuerst die lokale Seite kitchen-wait.html ("Warte auf das Netzwerk ..."), die den Server alle 3 Sekunden abfragt und erst bei Antwort zum Küchenmonitor wechselt. Die Datei kommt neben kiosk.sh nach /home/hamun/; fehlt sie, startet der Browser direkt wie vorher.
+
 2026-10-12 == mySeat v6.39.8 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix: Das Pause-Menü von Lieferung und Abholung (Disposition und Bestellungen) schließt jetzt auch, wenn man den Schalter noch einmal antippt; der Schalter bleibt dabei an und die Pause startet nicht. Ein weiterer Tipp öffnet das Menü wieder.

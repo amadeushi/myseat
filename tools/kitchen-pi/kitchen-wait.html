@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Küchenmonitor startet</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+	html, body { height: 100%; margin: 0; }
+	body { display: grid; place-items: center; background: #0c0b0a; color: #f5f0e6; font: 28px/1.4 system-ui, sans-serif; text-align: center; }
+	h1 { margin: 0 0 12px; font-size: 44px; font-weight: 500; color: #e2c07f; }
+	p { margin: 6px 0; color: #b9b2a3; }
+	.dots i { display: inline-block; width: 12px; height: 12px; margin: 0 5px; border-radius: 50%; background: #c9a259; animation: d 1.2s ease-in-out infinite; }
+	.dots i:nth-child(2) { animation-delay: .18s; } .dots i:nth-child(3) { animation-delay: .36s; }
+	@keyframes d { 0%, 80%, 100% { opacity: .25; transform: scale(.8); } 40% { opacity: 1; transform: scale(1); } }
+	@media (prefers-reduced-motion: reduce) { .dots i { animation: none; opacity: .8; } }
+	#hint { min-height: 1.4em; color: #e2c07f; }
+</style>
+</head>
+<body>
+<main>
+	<h1>Küche</h1>
+	<p class="dots" aria-hidden="true"><i></i><i></i><i></i></p>
+	<p id="msg" role="status">Warte auf das Netzwerk …</p>
+	<p id="hint"></p>
+</main>
+<script>
+/* The kitchen browser opens this page first (kiosk.sh): it asks the server until it answers, then goes on to the kitchen monitor.
+   So a WLAN that comes up late (router still starting after a power cut) does not leave an error page: the monitor appears by itself. */
+(function () {
+	var to = new URLSearchParams(location.search).get('to') || '';
+	if (!/^https?:\/\//.test(to)) { document.getElementById('msg').textContent = 'Keine Adresse angegeben.'; return; }
+	var t0 = Date.now(), msg = document.getElementById('msg'), hint = document.getElementById('hint');
+	function go() { msg.textContent = 'Verbunden, der Monitor startet …'; location.replace(to); }
+	function tick() {
+		var s = Math.round((Date.now() - t0) / 1000);
+		if (s >= 20) { msg.textContent = 'Warte auf das Netzwerk … (' + s + ' s)'; }
+		if (s >= 90) { hint.textContent = 'Noch kein Netzwerk: bitte WLAN und Router prüfen. Ich versuche es weiter.'; }
+		var c = new AbortController(), timer = setTimeout(function () { c.abort(); }, 6000);
+		fetch(to, { mode: 'no-cors', cache: 'no-store', signal: c.signal }).then(function () { clearTimeout(timer); go(); }).catch(function () { clearTimeout(timer); setTimeout(tick, 3000); });
+	}
+	tick();
+})();
+</script>
+</body>
+</html>
