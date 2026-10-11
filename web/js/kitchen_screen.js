@@ -60,11 +60,12 @@
 	function tick() { var d = new Date(); $('#k-clock').textContent = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
 	tick(); setInterval(tick, 10000);
 	function syncBar() {
-		$('#k-cols').textContent = cols + ' Spalten';
-		var rb = $('#k-rows'); rb.setAttribute('aria-pressed', rows === 2 ? 'true' : 'false'); rb.textContent = rows === 2 ? '2 Zeilen: an' : '2 Zeilen';
-		var a = $('#k-auto'); a.setAttribute('aria-pressed', autoPrint ? 'true' : 'false'); a.textContent = 'Bon bei Fertig: ' + (autoPrint ? 'an' : 'aus');
+		var cb = $('#k-cols'); $('#k-cols-n').textContent = cols; cb.setAttribute('aria-label', 'Anzahl der Spalten: ' + cols); cb.setAttribute('data-tip', 'Spalten: ' + cols + ' (tippen zum Wechseln)');
+		var rb = $('#k-rows'), rt = 'Zwei Zeilen übereinander: ' + (rows === 2 ? 'an' : 'aus'); rb.setAttribute('aria-pressed', rows === 2 ? 'true' : 'false'); rb.setAttribute('aria-label', rt); rb.setAttribute('data-tip', rt);
+		var a = $('#k-auto'), at = 'Bon bei Fertig drucken: ' + (autoPrint ? 'an' : 'aus'); a.setAttribute('aria-pressed', autoPrint ? 'true' : 'false'); a.setAttribute('aria-label', at); a.setAttribute('data-tip', at);
 		board.style.setProperty('--cols', cols);
-		var db = $('#k-done'); db.setAttribute('aria-pressed', showDone ? 'true' : 'false'); db.textContent = 'Erledigt' + (done.length ? ' (' + done.length + ')' : '');
+		var db = $('#k-done'), dn = $('#k-done-n'); db.setAttribute('aria-pressed', showDone ? 'true' : 'false'); dn.hidden = !done.length; dn.textContent = done.length;
+		db.setAttribute('aria-label', 'Erledigt' + (done.length ? ', ' + done.length + ' Bestellungen' : '')); db.setAttribute('data-tip', 'Erledigt' + (done.length ? ' (' + done.length + ')' : '') + ': was die Küche in den letzten 2 Stunden fertig gemeldet hat');
 		$('#ks-done').hidden = !showDone;
 	}
 	$('#k-cols').addEventListener('click', function () { cols = cols === 5 ? 4 : 5; try { localStorage.setItem('ksCols', cols); } catch (e) {} syncBar(); render(); });

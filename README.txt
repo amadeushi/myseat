@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.39.6 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Küchenmonitor, Kopfleiste nach dem Muster der Disposition: Spalten (mit Zahl), Zwei Zeilen, Erledigt (mit Zähler der erledigten Bestellungen) und Bon bei Fertig sind Symbol-Buttons mit Tooltip (Zustand) und aria-label; die Leiste ist in Ansicht (Spalten, Zeilen, Erledigt), Einstellungen (Ton, Bon bei Fertig) und System (Neu laden, Vollbild, Disposition) gruppiert. "Disposition" und die Ablauf-Buttons der Karten (Fertig, Lieferzettel, Küchenbon) bleiben mit Text.
+
 2026-10-12 == mySeat v6.39.5 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix: Uber Eats Import: Ein Bon, auf dem das Trinkgeld unter "Gezahlter Betrag" gedruckt ist (und nicht darin enthalten), wurde nicht übernommen, weil die Summenprüfung das Trinkgeld zur Summe addiert hat (34,90 statt 32,90 EUR) und den Bon zur manuellen Prüfung zurückhielt. Die Prüfung akzeptiert jetzt beide Varianten (Trinkgeld im Betrag enthalten oder darunter gedruckt; ein falscher Endbetrag wird weiter abgelehnt). Steht das Trinkgeld darunter, zählt es beim Import zur Bestellsumme, wie bei den eigenen Bestellungen.

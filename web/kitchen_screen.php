@@ -41,14 +41,20 @@ $logoCss = preg_match('#^https?://[^\s\'"()\\\\]+$#', $logo) ? ' style="--ks-log
 		<h1>Küche</h1>
 		<div class="k-counts" id="k-counts" aria-live="polite"></div>
 		<span class="k-clock" id="k-clock"></span>
-		<div id="k-tools" class="k-tools"></div>
-		<button type="button" class="k-btn" id="k-cols" aria-label="Anzahl der Spalten">5 Spalten</button>
-		<button type="button" class="k-btn" id="k-rows" aria-pressed="false" title="Zeigt die Bons in zwei Zeilen übereinander (doppelt so viele auf einmal)">2 Zeilen</button>
-		<button type="button" class="k-btn" id="k-auto" aria-pressed="false" title="Druckt nach Fertig den Bon: bei Lieferungen den Lieferschein, bei Abholungen den Küchenbon">Bon bei Fertig: aus</button>
-		<button type="button" class="k-btn" id="k-done" aria-pressed="true" title="Zeigt die Bestellungen, die die Küche in den letzten 2 Stunden fertig gemeldet hat">Erledigt</button>
-		<button type="button" class="k-btn k-sq" id="k-full" aria-label="Vollbild" data-tip="Vollbild ein/aus"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
-		<button type="button" class="k-btn k-sq" id="k-reload" aria-label="Neu laden" data-tip="Seite neu laden (wie F5)"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.500-5.800M20 4v5h-5"/></svg></button>
-		<a class="k-btn" href="disposition.php">Disposition</a>
+		<div class="k-grp">
+			<button type="button" class="k-btn k-sq" id="k-cols" aria-label="Anzahl der Spalten: 5" data-tip="Spalten: 5 (tippen zum Wechseln)"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/></svg><span class="k-num" id="k-cols-n" aria-hidden="true">5</span></button>
+			<button type="button" class="k-btn k-sq" id="k-rows" aria-pressed="false" aria-label="Zwei Zeilen: aus" data-tip="Zwei Zeilen übereinander: aus"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 12h18"/></svg></button>
+			<button type="button" class="k-btn k-sq" id="k-done" aria-pressed="true" aria-label="Erledigt" data-tip="Erledigt: was die Küche in den letzten 2 Stunden fertig gemeldet hat"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l1.500 1.500L8 5M4 12l1.500 1.500L8 11M4 18l1.500 1.500L8 17M11 6.500h9M11 12.500h9M11 18.500h9"/></svg><span class="k-num" id="k-done-n" aria-hidden="true" hidden></span></button>
+		</div>
+		<div class="k-grp">
+			<div id="k-tools" class="k-tools"></div>
+			<button type="button" class="k-btn k-sq" id="k-auto" aria-pressed="false" aria-label="Bon bei Fertig drucken: aus" data-tip="Bon bei Fertig drucken: aus"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9V4h10v5M7 17H5a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-2"/><path d="M7 14h10v6H7z"/><path d="M15.500 11.500h.01" stroke-width="2.400"/></svg></button>
+		</div>
+		<div class="k-grp k-grp-nav">
+			<button type="button" class="k-btn k-sq" id="k-reload" aria-label="Neu laden" data-tip="Seite neu laden (wie F5)"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.500-5.800M20 4v5h-5"/></svg></button>
+			<button type="button" class="k-btn k-sq" id="k-full" aria-label="Vollbild" data-tip="Vollbild ein/aus"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+			<a class="k-btn" href="disposition.php">Disposition</a>
+		</div>
 	</header>
 	<p class="k-offline" id="k-offline" role="alert" hidden>Keine Verbindung. Ich versuche es weiter ...</p>
 	<div class="ks-main">

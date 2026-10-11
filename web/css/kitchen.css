@@ -498,3 +498,8 @@ p.ksd-note { margin-top: 8px; }
 .k-pause-pop[hidden] { display: none; }
 .k-pause-q { font-size: 14px; font-weight: 700; color: var(--muted); }
 .k-pause-pop .k-btn { justify-content: center; }
+
+/* a number on a symbol button (kitchen monitor: columns, finished orders) */
+.k-btn.k-sq .k-num { position: absolute; right: 4px; bottom: 2px; min-width: 18px; padding: 0 3px; border-radius: 9px; background: var(--surface); color: var(--text); font-size: 13px; font-weight: 800; line-height: 18px; text-align: center; }
+.k-btn.k-sq[aria-pressed="true"] .k-num { background: #1a1408; color: var(--gold-strong); }
+.k-btn.k-sq .k-num[hidden] { display: none; }
