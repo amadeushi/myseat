@@ -52,6 +52,13 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-11 == mySeat v6.37.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Bestell-Chat: Freie Sätze mit KI. Im Chat darf der Gast schreiben, was er möchte ("zwei Salami und eine Cola"); Claude Haiku (Anthropic) versteht den Satz und darf nur feste Werkzeuge nutzen (Gericht ansehen, in den Warenkorb legen, ändern, entfernen, Knopfauswahl für fehlende Pflichtangaben starten, Team rufen). Preise, Liefergebiet und die Bestellung bleiben beim Server, bestellt wird nur mit dem Tipp des Gastes auf "Verbindlich bestellen"; Name, Adresse und Nummer gehen nicht an den Dienst. Ohne Schlüssel, bei Störung oder über dem Tageslimit sucht der Chat wie bisher nur in der Speisekarte. Einstellungen im Backend (Lieferservice > Bestell-Chat): Schalter, Schlüssel (verschlüsselt gespeichert), Arbeitsbereich (Workspace-ID), Aufrufe pro Tag. Die KI fragt bei Unsicherheit kurz nach, statt zu raten.
+ * Neu: Bestell-Chat: Chat-Blase auf dem Desktop (Bestellseite, ab 1024 px Breite) mit abgeglichenem Warenkorb in beide Richtungen; Zusammenfassung der Auswahl in kompakten Pillen, lange Gerichtelisten mit "Mehr anzeigen"; die Ansicht beginnt nach einer Bestellung oder "Neue Bestellung" neu; Warteanimation während der Antwort.
+ * Neu: Backend: Liste "Chat-Gespräche zum Ansehen" (Anruf-Bitten bei Allergien oder Beschwerden, mögliche Missverständnisse der KI).
+ * Barrierefreiheit und Robustheit (Audit): Antwortknöpfe kommen nach einem Verbindungsfehler zurück, Tastaturbedienung und Esc in der Chat-Blase, Sprecher für Screenreader, einzeilige Kopfleiste auf schmalen Handys, Schrift in rem, seitliche Sicherheitsabstände, weniger doppelte Berechnungen auf dem Server.
+
 2026-10-11 == mySeat v6.36.2 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Bestellseite: fester Knopf "Per Chat bestellen" unten rechts (nur bei eingeschaltetem Bestell-Chat, auf dem Handy über der Warenkorb-Leiste); der Link in der Kopfzeile entfällt.

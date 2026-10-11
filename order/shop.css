@@ -693,10 +693,26 @@
 
 /* button to the order chat (order/chat.php), shown only while the chat is switched on: bottom right, above the cart bar on a phone while that is showing */
 .shop-chat-fab { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 35; display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 20px 0 16px; border-radius: var(--radius-pill);
-	background: var(--gold); color: #1a1408; font-size: 16px; font-weight: 700; text-decoration: none; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); transition: background 150ms ease, transform 150ms ease; }
+	background: var(--gold); color: #1a1408; font-size: 1rem; font-weight: 700; text-decoration: none; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); transition: background 150ms ease, transform 150ms ease; }
 .shop-shell a.shop-chat-fab, .shop-shell a.shop-chat-fab:visited { color: #1a1408; }
 .shop-shell a.shop-chat-fab:hover { background: var(--gold-strong); color: #1a1408; }
 .shop-chat-fab:active { transform: scale(0.97); }
 .shop-cartbar:not([hidden]) ~ .shop-chat-fab { bottom: calc(84px + env(safe-area-inset-bottom)); }
 @media (min-width: 1024px) { .shop-chat-fab, .shop-cartbar:not([hidden]) ~ .shop-chat-fab { bottom: 24px; right: 24px; } }
 @media (prefers-reduced-motion: reduce) { .shop-chat-fab { transition: none; } }
+
+/* chat bubble (desktop only): the order chat in a window at the bottom right of the order page; below 1024px the button leads to the chat page instead */
+.shop-chat-panel { display: none; }
+@media (min-width: 1024px) {
+	.shop-chat-panel { position: fixed; right: 24px; bottom: 24px; z-index: 36; display: flex; flex-direction: column; width: 400px; height: min(700px, calc(100vh - 48px)); background: var(--bg); border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+		box-shadow: 0 14px 44px rgba(0, 0, 0, 0.6); transform-origin: bottom right; animation: scp-in 240ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+	.shop-chat-panel[hidden] { display: none; }
+	.chat-open .shop-chat-fab { display: none; }
+	.scp-head { flex: none; display: flex; align-items: center; justify-content: space-between; min-height: 52px; padding: 0 8px 0 18px; background: var(--surface); border-bottom: 1px solid var(--border-soft); }
+	.scp-title { font-family: var(--font-display); font-size: 1.5rem; font-weight: 500; color: var(--gold-strong); }
+	.scp-close { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--text); }
+	.scp-close:hover { background: var(--surface-3); color: var(--gold-strong); }
+	.scp-frame { flex: 1; width: 100%; border: 0; background: var(--bg); color-scheme: dark; }
+}
+@keyframes scp-in { from { opacity: 0; transform: translateY(12px) scale(0.97); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .shop-chat-panel { animation: none; } }

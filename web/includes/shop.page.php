@@ -104,6 +104,25 @@ $sh_check = function ($k) use ($sh) { return $sh[$k] === '1' ? ' checked' : ''; 
 		<h4 class="sms-sub">Bestell-Chat (Test)</h4>
 		<small class="offer-help">Gäste bestellen in einem Gespräch mit Antwortknöpfen unter <code>/order/chat.php</code>: Gericht wählen, Adresse prüfen, Zeit und Zahlung, am Ende eine Zusammenfassung zum Bestätigen. Preise und Liefergebiet kommen immer aus dem Shop. Die Handynummer wird mit einem SMS-Code bestätigt, dafür muss das Kundenkonto eingeschaltet sein. Bei Allergien oder Beschwerden wird der Gast zum Anruf gebeten. Ausgeschaltet gibt es die Seite für Gäste nicht, du selbst siehst sie als Mitarbeiter trotzdem (zum Testen).</small>
 		<label class="offer-check"><input type="checkbox" name="chat_on" value="1"<?php echo $sh_check('chat_on'); ?>/> Bestell-Chat einschalten</label>
+		<small class="offer-help"><b>Freie Sätze mit KI:</b> Im Chat darf der Gast schreiben, was er möchte („zwei Salami, eine ohne Zwiebeln, dazu eine Cola“). Ein Sprachmodell (Claude Haiku von Anthropic) versteht den Satz und legt die Gerichte in den Warenkorb. Preise, Liefergebiet und die Bestellung bleiben beim Server, bestellt wird nur mit dem Tipp des Gastes auf „Verbindlich bestellen“. Name, Adresse und Telefonnummer gehen nicht an den Dienst. Ohne Schlüssel oder bei einer Störung sucht der Chat wie bisher nur in der Speisekarte. Jeder Aufruf kostet etwas, das Tageslimit begrenzt die Kosten.</small>
+		<label class="offer-check"><input type="checkbox" name="chat_ai_on" value="1"<?php echo $sh_check('chat_ai_on'); ?>/> Freie Sätze mit KI erlauben</label>
+		<?php require_once __DIR__.'/../classes/shop_chat_ai.class.php'; $ck_info = shop_chat_ai_key_info(); ?>
+		<div class="shop-grid">
+			<label class="offer-label" for="sh-aikey">Schlüssel von Anthropic <?php echo $ck_info['source'] !== null ? '(hinterlegt: '.$sh_e($ck_info['masked']).($ck_info['source'] === 'config' ? ', aus der Konfiguration' : '').')' : '(noch keiner hinterlegt)'; ?></label>
+			<input type="password" id="sh-aikey" name="chat_ai_key" autocomplete="new-password" spellcheck="false" placeholder="<?php echo $ck_info['source'] !== null ? 'Neuen Schlüssel einfügen, leer lassen = unverändert' : 'Schlüssel einfügen'; ?>"/>
+			<label class="offer-label" for="sh-aiws">Arbeitsbereich (Workspace-ID), nur nötig, wenn der Schlüssel keinem Arbeitsbereich zugeordnet ist</label>
+			<input type="text" id="sh-aiws" name="chat_ai_workspace" autocomplete="off" spellcheck="false" value="<?php echo $sh_e($sh['chat_ai_workspace']); ?>"/>
+			<label class="offer-label" for="sh-aidaily">Aufrufe pro Tag höchstens</label>
+			<input type="text" id="sh-aidaily" name="chat_ai_daily" inputmode="numeric" value="<?php echo $sh_e($sh['chat_ai_daily']); ?>"/>
+		</div>
+		<?php if ($ck_info['source'] === 'settings'): ?><label class="offer-check"><input type="checkbox" name="chat_ai_key_clear" value="1"/> Hinterlegten Schlüssel beim Speichern löschen</label><?php endif; ?>
+		<?php require_once __DIR__.'/../classes/shop_chat.class.php'; $ch_list = shop_chat_review_list(12); ?>
+		<h5 class="sms-sub">Chat-Gespräche zum Ansehen</h5>
+		<small class="offer-help">Gespräche, in denen ein Gast zum Anruf gebeten wurde (Allergie, Beschwerde) oder in denen die KI etwas wahrscheinlich nicht richtig verstanden hat (ein Werkzeug hat abgelehnt, der Gast hat den Warenkorb gleich danach geändert oder korrigiert). Sie bleiben 14 Tage erhalten.</small>
+		<?php if (!$ch_list): ?><p class="offer-help">Zurzeit gibt es keine.</p><?php endif; ?>
+		<?php foreach ($ch_list as $cl): ?>
+			<details class="chat-review"><summary><b><?php echo $sh_e(date('d.m. H:i', strtotime($cl['at']))); ?></b> · <?php echo $sh_e(implode(' · ', $cl['why'])); ?><?php echo $cl['ordered'] ? ' · bestellt' : ''; ?></summary><pre style="white-space:pre-wrap;margin:8px 0 0;font:inherit"><?php echo $sh_e($cl['transcript']); ?></pre></details>
+		<?php endforeach; ?>
 		<h4 class="sms-sub">Angebote</h4>
 		<small class="offer-help">Angebote ohne Code, im Warenkorb. <b>Gratis-Extra:</b> Ab einem Warenwert, der mit der Zahl der Hauptgerichte wächst (Pizza, Pasta, Fleisch, Fisch ...; Desserts, Getränke, Vorspeisen und Wein zählen nicht), wählt der Gast ein Extra gratis. Darunter zeigt der Warenkorb, was fehlt, und schlägt Snacks, Beilagen und Getränke vor, deren Preis die Lücke schließt. Wer kein Extra will, bekommt (nur mit Kundenkonto) einen persönlichen Gutschein für die nächste Bestellung. <b>Pizza + Getränk:</b> Für jede Pizza (auch Calzone und Wunschpizza) kostet ein alkoholfreies Getränk oder ein Bier einen festen Betrag weniger, kein Wein. Gratis-Extras müssen Gerichte ohne Auswahl sein (keine Größen, keine Zutatengruppen).</small>
 		<label class="offer-check"><input type="checkbox" name="offers_on" value="1"<?php echo $sh_check('offers_on'); ?>/> Angebote anbieten</label>

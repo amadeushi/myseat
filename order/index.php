@@ -153,7 +153,11 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 		<span class="cartbar-label">Warenkorb ansehen</span>
 		<span class="cartbar-total" id="cartbar-total"></span>
 	</button>
-	<?php if (shop_flag('chat_on')): ?><a class="shop-chat-fab" href="chat.php"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 5.500A2.500 2.500 0 0 1 6.500 3h11A2.500 2.500 0 0 1 20 5.500v8a2.500 2.500 0 0 1-2.500 2.500H10l-4.500 4v-4H6.500A2.500 2.500 0 0 1 4 13.500z" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linejoin="round"/><path d="M8.500 8.500h7M8.500 11.500h4.500" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round"/></svg><span>Per Chat bestellen</span></a><?php endif; ?>
+	<?php if (shop_flag('chat_on')): ?><a class="shop-chat-fab" href="chat.php"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 5.500A2.500 2.500 0 0 1 6.500 3h11A2.500 2.500 0 0 1 20 5.500v8a2.500 2.500 0 0 1-2.500 2.500H10l-4.500 4v-4H6.500A2.500 2.500 0 0 1 4 13.500z" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linejoin="round"/><path d="M8.500 8.500h7M8.500 11.500h4.500" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round"/></svg><span>Per Chat bestellen</span></a>
+	<section class="shop-chat-panel" id="chat-panel" role="dialog" aria-modal="false" aria-label="Bestellen im Chat" hidden>
+		<div class="scp-head"><span class="scp-title">Bestellen im Chat</span><button type="button" class="scp-close" id="chat-panel-close" aria-label="Chat schließen"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round"/></svg></button></div>
+		<iframe class="scp-frame" id="chat-frame" title="Bestell-Chat" data-src="chat.php?embed=1"></iframe>
+	</section><?php endif; ?>
 	<dialog class="shop-dialog" id="product-dialog" aria-labelledby="pd-title"></dialog>
 	<dialog class="gb-dialog" id="group-dialog" aria-label="Gemeinsam bestellen"></dialog>
 	<?php if ($has_conf): ?><dialog class="pz" id="pizza-dialog" aria-labelledby="pz-title"></dialog><?php endif; ?>

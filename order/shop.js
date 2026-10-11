@@ -16,7 +16,7 @@
 	function load() {
 		try { var d = JSON.parse(localStorage.getItem(KEY) || '{}'); if (d && Array.isArray(d.cart)) { state.cart = d.cart; } if (d && (d.mode === 'pickup' || d.mode === 'delivery')) { state.mode = d.mode; } if (d && (d.extra === 'voucher' || +d.extra > 0)) { state.extra = d.extra; } } catch (e) {}
 	}
-	function save() { try { localStorage.setItem(KEY, JSON.stringify({ mode: state.mode, cart: state.cart, extra: state.extra })); } catch (e) {} }
+	function save() { try { localStorage.setItem(KEY, JSON.stringify({ mode: state.mode, cart: state.cart, extra: state.extra })); } catch (e) {} chatPush(); }
 
 	// ---- opening state text under the mode switch
 	function renderStatus() {
@@ -730,18 +730,60 @@
 		if (typeof dlg.showModal === 'function') { dlg.showModal(); } else { dlg.setAttribute('open', ''); }
 	}
 
+	// ---- chat bubble (desktop): the order chat in a window of this page; the cart is kept equal on both sides
+	var chatSig = '', chatTimer = null;
+	function chatBubble() { return !!$('#chat-panel') && window.matchMedia('(min-width: 1024px)').matches; }
+	function chatLines() { return state.cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; }); }
+	function cartSig2() { return JSON.stringify(state.cart.map(function (l) { return [l.pid, l.vid, Object.keys(l.opts).sort().map(function (k) { return k + ':' + l.opts[k]; }).join(','), l.qty, l.note]; })); }
+	function chatOpen(reload) {
+		var panel = $('#chat-panel'), frame = $('#chat-frame');
+		panel.hidden = false; document.body.classList.add('chat-open');
+		// the keyboard follows into the bubble: once the chat is there it takes the focus (input or last question)
+		var focusIn = function () { try { frame.contentWindow.postMessage({ type: 'myseat-chat-focus' }, location.origin); } catch (e) {} };
+		if (!frame.getAttribute('src')) { frame.addEventListener('load', focusIn, { once: true }); frame.setAttribute('src', frame.dataset.src); }
+		else if (reload) { frame.addEventListener('load', focusIn, { once: true }); try { frame.contentWindow.location.reload(); } catch (e) { frame.setAttribute('src', frame.dataset.src); } }
+		else { focusIn(); }
+	}
+	function chatShut() { $('#chat-panel').hidden = true; document.body.classList.remove('chat-open'); var f = $('.shop-chat-fab'); if (f) { f.focus(); } }
+	// the cart of this page changed while the bubble is open: the chat gets it (it says so in the conversation) and shows it
+	function chatPush() {
+		var panel = $('#chat-panel'); if (!panel || panel.hidden || !TOKEN) { return; }
+		clearTimeout(chatTimer);
+		chatTimer = setTimeout(function () {
+			var sig = cartSig2(); if (sig === chatSig) { return; }
+			chatSig = sig;
+			fetch('chat_api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ op: 'import', token: TOKEN, mode: state.mode, clear: 1, lines: chatLines() }) })
+				.then(function () { chatOpen(true); }, function () {});
+		}, 700);
+	}
+	// Escape closes the bubble (when no dialog of the page is open on top)
+	document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') { var p = $('#chat-panel'); if (p && !p.hidden && !document.querySelector('dialog[open]')) { chatShut(); } } });
+	// the chat in the bubble reports its cart after every answer: this page takes it over (and clears it after an order)
+	window.addEventListener('message', function (ev) {
+		var d = ev.data; if (ev.origin !== location.origin || !d) { return; }
+		if (d.type === 'myseat-chat-close') { chatShut(); return; }
+		if (d.type !== 'myseat-chat-cart' || !Array.isArray(d.lines)) { return; }
+		state.cart = d.ordered ? [] : d.lines; chatSig = cartSig2();
+		if (d.mode === 'pickup' || d.mode === 'delivery') { if (d.mode !== state.mode && !d.ordered) { setMode(d.mode); return; } }
+		save(); renderCart();
+	});
+
 	// ---- events
 	document.addEventListener('click', function (ev) {
 		var t = ev.target;
 		var mode = t.closest('.mode-btn'); if (mode) { setMode(mode.dataset.mode); return; }
-		// the chat button: the cart goes along (the chat takes it over), then the chat opens
+		// the chat button: the cart goes along (the chat takes it over); on a wide screen the chat opens in the bubble, else as a page
 		var chatBtn = t.closest('.shop-chat-fab');
-		if (chatBtn && state.cart.length && TOKEN) {
+		if (chatBtn && (state.cart.length || chatBubble())) {
 			ev.preventDefault();
-			var go = function () { location.href = chatBtn.href; };
-			fetch('chat_api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ op: 'import', token: TOKEN, mode: state.mode, lines: state.cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; }) }) }).then(go, go);
+			var bubble = chatBubble();
+			var go = function () { if (bubble) { chatOpen(true); } else { location.href = chatBtn.href; } };
+			if (!state.cart.length) { go(); return; }
+			chatSig = cartSig2();
+			fetch('chat_api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ op: 'import', token: TOKEN, mode: state.mode, lines: chatLines() }) }).then(go, go);
 			return;
 		}
+		var chatClose = t.closest('#chat-panel-close'); if (chatClose) { chatShut(); return; }
 		if (!ACCEPT) { return; }
 		var item = t.closest('.shop-item');
 		if (item && (t.closest('.shop-add') || t.closest('.shop-item-text'))) {

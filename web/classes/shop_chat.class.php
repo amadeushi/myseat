@@ -11,11 +11,15 @@
  * A message of the bot: array(text, buttons => array(array(v, l)), input => '' | 'text' | 'code' | 'number', links => array(array(url, l))).
  */
 
+require_once __DIR__.'/shop_chat_ai.class.php';
+
 const SHOP_CHAT_MAX_EVENTS = 400;       // per conversation: anything beyond is a robot or a prank
 const SHOP_CHAT_MAX_NEW_PER_HOUR = 20;  // new conversations per visitor and hour
-const SHOP_CHAT_HANDOVER = '/allerg|unvertr|intoleran|gluten|laktose|nuss|zöliak|zoeliak|beschwer|reklam|erstattung|geld zurück|falsch geliefert/iu';
+const SHOP_CHAT_HANDOVER = '/allerg|unvertr|intoleran|gluten|laktose|nuss|nüss|zöliak|zoeliak|beschwer|reklam|erstattung|geld zurück|falsch geliefert/iu';
 
 function shop_chat_on() { return shop_flag('chat_on'); }
+// the kind of the input bar where the guest may write what he wants: free sentences with the AI, else a search of the menu
+function shop_chat_free_kind() { return shop_chat_ai_ready() ? 'ask' : 'search'; }
 
 function shop_chat_ensure_schema() {
 	static $done = false;
@@ -26,6 +30,7 @@ function shop_chat_ensure_schema() {
 		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `token` CHAR(32) NOT NULL, `channel` VARCHAR(10) NOT NULL DEFAULT 'web', `state` VARCHAR(16) NOT NULL DEFAULT 'type',
 		`ctx` MEDIUMTEXT NULL, `ip_hash` CHAR(16) NOT NULL DEFAULT '', `events` INT NOT NULL DEFAULT 0, `handover` TINYINT NOT NULL DEFAULT 0, `order_id` INT UNSIGNED NULL,
 		`created_at` DATETIME NOT NULL, `updated_at` DATETIME NOT NULL, UNIQUE KEY `tok` (`token`), KEY `upd` (`updated_at`)) $opts");
+	if (!fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_chats')." LIKE 'review'")) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_chats')." ADD `review` TINYINT NOT NULL DEFAULT 0"); }   // 1: worth a look (the AI may have misunderstood)
 	mysqli_query($db, "CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_chat_msgs')." (
 		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `chat_id` INT UNSIGNED NOT NULL, `role` VARCHAR(6) NOT NULL, `body` MEDIUMTEXT NOT NULL, `created_at` DATETIME NOT NULL, KEY `chat` (`chat_id`, `id`)) $opts");
 }
@@ -52,8 +57,8 @@ function shop_chat_load($token) {
 	return $c;
 }
 function shop_chat_save($c) {
-	fb_exec("UPDATE ".fb_t('tp_shop_chats')." SET state = ?, ctx = ?, events = ?, handover = ?, order_id = ?, updated_at = ? WHERE id = ?", 'ssiiisi',
-		array($c['state'], json_encode($c['ctx'], JSON_UNESCAPED_UNICODE), (int)$c['events'], (int)$c['handover'], empty($c['order_id']) ? null : (int)$c['order_id'], date('Y-m-d H:i:s'), (int)$c['id']));
+	fb_exec("UPDATE ".fb_t('tp_shop_chats')." SET state = ?, ctx = ?, events = ?, handover = ?, review = ?, order_id = ?, updated_at = ? WHERE id = ?", 'ssiiiisi',
+		array($c['state'], json_encode($c['ctx'], JSON_UNESCAPED_UNICODE), (int)$c['events'], (int)$c['handover'], !empty($c['review']) ? 1 : 0, empty($c['order_id']) ? null : (int)$c['order_id'], date('Y-m-d H:i:s'), (int)$c['id']));
 }
 // conversations nobody touched for 14 days are deleted with their transcript (data minimisation)
 function shop_chat_purge() {
@@ -62,11 +67,13 @@ function shop_chat_purge() {
 	fb_exec("DELETE FROM ".fb_t('tp_shop_chats')." WHERE updated_at < ?", 's', array($old));
 }
 function shop_chat_log($c, $role, $body) {
-	fb_exec("INSERT INTO ".fb_t('tp_shop_chat_msgs')." (chat_id, role, body, created_at) VALUES (?, ?, ?, ?)", 'isss', array((int)$c['id'], $role, is_array($body) ? json_encode($body, JSON_UNESCAPED_UNICODE) : (string)$body, date('Y-m-d H:i:s')));
+	$st = fb_exec("INSERT INTO ".fb_t('tp_shop_chat_msgs')." (chat_id, role, body, created_at) VALUES (?, ?, ?, ?)", 'isss', array((int)$c['id'], $role, is_array($body) ? json_encode($body, JSON_UNESCAPED_UNICODE) : (string)$body, date('Y-m-d H:i:s')));
+	return (int)mysqli_insert_id(fb_db());
 }
 // the transcript for the page: array(role, text, buttons, links) - the buttons only of the last bot message (the others are answered)
 function shop_chat_transcript($c) {
-	$rows = fb_rows("SELECT role, body FROM ".fb_t('tp_shop_chat_msgs')." WHERE chat_id = ? ORDER BY id", 'i', array((int)$c['id']));
+	// a finished order or a new start begins a clean view: what came before stays in the database for the staff but is no longer shown
+	$rows = fb_rows("SELECT role, body FROM ".fb_t('tp_shop_chat_msgs')." WHERE chat_id = ? AND id >= ? ORDER BY id", 'ii', array((int)$c['id'], (int)(isset($c['ctx']['view_from']) ? $c['ctx']['view_from'] : 0)));
 	$out = array(); $last = count($rows) - 1;
 	foreach ($rows as $i => $r) {
 		if ($r['role'] === 'bot') { $m = json_decode($r['body'], true); if (!is_array($m)) { continue; } if ($i !== $last) { $m['buttons'] = array(); $m['input'] = ''; } $m['role'] = 'bot'; $out[] = $m; }
@@ -81,7 +88,16 @@ function shop_chat_msg($text, $buttons = array(), $input = '', $links = array())
 	$k = array(); foreach ($links as $url => $l) { $k[] = array('url' => (string)$url, 'l' => (string)$l); }
 	return array('text' => $text, 'buttons' => $b, 'input' => $input, 'links' => $k);
 }
+// the menu does not change within one request: read it once
+function shop_chat_menu() { static $m = null; if ($m === null) { $m = shop_menu(); } return $m; }
 function shop_chat_priced($ctx) {
+	// the same cart is priced several times in one request (bar, summary, totals): once is enough
+	static $memo = array();
+	$key = md5(json_encode($ctx['cart']));
+	if (isset($memo[$key])) { return $memo[$key]; }
+	return $memo[$key] = shop_chat_priced_now($ctx);
+}
+function shop_chat_priced_now($ctx) {
 	$items = array(); $sub = 0;
 	foreach ($ctx['cart'] as $l) {
 		$r = shop_price_line($l);
@@ -105,7 +121,7 @@ function shop_chat_city() { $c = trim((string)shop_setting('origin_city')); retu
 
 function shop_chat_menu_buttons() {
 	$b = array();
-	foreach (shop_menu() as $cat) { $b['cat:'.(int)$cat['id']] = trim($cat['name']); }
+	foreach (shop_chat_menu() as $cat) { $b['cat:'.(int)$cat['id']] = trim($cat['name']); }
 	return $b;
 }
 
@@ -128,7 +144,7 @@ function shop_chat_call_links() { global $settings; $p = !empty($settings['mailP
 function shop_chat_ask_category($ctx, $lead = '') {
 	$b = shop_chat_menu_buttons();
 	if ($ctx['cart']) { $b['co'] = 'Zur Kasse'; $b['cart'] = 'Warenkorb ansehen'; }
-	return shop_chat_msg(($lead !== '' ? $lead."\n" : '').'Was darf es sein?', $b, 'search');
+	return shop_chat_msg(($lead !== '' ? $lead."\n" : '').'Was darf es sein?', $b, shop_chat_free_kind());
 }
 
 /*
@@ -153,7 +169,7 @@ function shop_chat_step(&$c, $ev) {
 	}
 	// buttons that work in every state
 	if ($btn === 'cart') { $say(shop_chat_msg(shop_chat_cart_text($ctx), $ctx['cart'] ? array('co' => 'Zur Kasse', 'more' => 'Weiter bestellen', 'edit' => 'Ändern') : array('more' => 'Speisekarte ansehen'))); return shop_chat_finish($c, $out); }
-	if ($btn === 'restart') { $ctx = array('type' => 'delivery', 'cart' => array(), 'offered' => array()); $c['state'] = 'type'; $say(shop_chat_ask_type($ctx)); return shop_chat_finish($c, $out); }
+	if ($btn === 'restart') { $ctx = array('type' => 'delivery', 'cart' => array(), 'offered' => array(), 'fresh' => 1); $c['state'] = 'type'; $say(shop_chat_ask_type($ctx)); return shop_chat_finish($c, $out); }
 	if ($btn === 'more') { $c['state'] = 'cat'; $say(shop_chat_ask_category($ctx)); return shop_chat_finish($c, $out); }
 	if ($btn === 'edit') { return shop_chat_edit($c, $out); }
 	if ($btn !== null && strpos($btn, 'del:') === 0) {
@@ -201,11 +217,11 @@ function shop_chat_run(&$c, $out, $st, $kind, $val) {
 	if (in_array($st, array('cat', 'prod', 'var', 'grp', 'qty'), true)) {
 		if ($btn !== null && strpos($btn, 'cat:') === 0) {
 			$cid = (int)substr($btn, 4);
-			foreach (shop_menu() as $cat) {
+			foreach (shop_chat_menu() as $cat) {
 				if ((int)$cat['id'] !== $cid) { continue; }
 				$b = array();
 				foreach ($cat['products'] as $p) { $b['prod:'.(int)$p['id']] = shop_chat_product_label($p); }
-				$out[] = shop_chat_msg(trim($cat['name']), $b + array('more' => 'Andere Kategorie'));
+				$out[] = shop_chat_msg('Das gibt es bei „'.trim($cat['name']).'“:', $b + array('more' => 'Andere Kategorie'));
 			}
 			$c['state'] = 'prod'; return shop_chat_finish($c, $out);
 		}
@@ -216,7 +232,10 @@ function shop_chat_run(&$c, $out, $st, $kind, $val) {
 			if (strpos($btn, 'opt:') === 0) { $id = (int)substr($btn, 4); $ctx['pend']['opts'][$id] = (isset($ctx['pend']['opts'][$id]) ? $ctx['pend']['opts'][$id] : 0) + 1; return shop_chat_next_group($c, $out); }
 		}
 		if ($st === 'qty' && isset($ctx['pend'])) { return shop_chat_add_line($c, $out, 1); }   // a conversation from before the quantity step was dropped
-		if ($text !== null && $text !== '' && in_array($st, array('cat', 'prod'), true)) { return shop_chat_search($c, $out, $text); }
+		if ($text !== null && $text !== '' && in_array($st, array('cat', 'prod'), true)) {
+			$ai = shop_chat_ai_turn($c, $out, $text);   // free sentences: null when the AI is off or does not answer, then the plain word search
+			return $ai !== null ? $ai : shop_chat_search($c, $out, $text);
+		}
 		$c['state'] = 'cat'; $out[] = shop_chat_ask_category($ctx); return shop_chat_finish($c, $out);
 	}
 
@@ -251,7 +270,7 @@ function shop_chat_search(&$c, $out, $text) {
 	$words = array_filter(preg_split('/\s+/u', mb_strtolower($text, 'UTF-8')), function ($w) { return mb_strlen($w) >= 2; });
 	$hits = array();
 	if ($words) {
-		foreach (shop_menu() as $cat) { foreach ($cat['products'] as $p) {
+		foreach (shop_chat_menu() as $cat) { foreach ($cat['products'] as $p) {
 			$hay = mb_strtolower($p['title'].' '.$p['description'], 'UTF-8'); $ok = true;
 			foreach ($words as $w) { if (mb_strpos($hay, $w) === false) { $ok = false; break; } }
 			if ($ok) { $hits[] = $p; }
@@ -323,7 +342,7 @@ function shop_chat_added(&$c, $out) {
 	$r = $l ? shop_price_line($l) : null;
 	$c['state'] = 'cat';
 	$out[] = shop_chat_msg($r && $r['ok'] ? $r['line']['qty'].'× '.$r['line']['title'].($r['line']['variation'] !== '' ? ' ('.$r['line']['variation'].')' : '').' im Warenkorb.' : 'Im Warenkorb.',
-		array('co' => 'Zur Kasse', 'plus' => 'Noch eine davon', 'more' => 'Weiter bestellen'), 'search');
+		array('co' => 'Zur Kasse', 'plus' => 'Noch eine davon', 'more' => 'Weiter bestellen'), shop_chat_free_kind());
 	return shop_chat_finish($c, $out);
 }
 
@@ -524,7 +543,7 @@ function shop_chat_checkout(&$c, $out, $st, $btn, $text, $enter = false) {
 
 	// ---- summary and the last word of the guest
 	if ($st === 'confirm' && $btn === 'confirm') { return shop_chat_place($c, $out, $acc); }
-	if ($st === 'confirm' && $btn === 'cancel') { $ctx = array('type' => 'delivery', 'cart' => array(), 'offered' => array()); $c['state'] = 'type'; $out[] = shop_chat_msg('Alles klar, ich habe die Bestellung verworfen.'); $out[] = shop_chat_ask_type($ctx); return shop_chat_finish($c, $out); }
+	if ($st === 'confirm' && $btn === 'cancel') { $ctx = array('type' => 'delivery', 'cart' => array(), 'offered' => array(), 'fresh' => 1); $c['state'] = 'type'; $out[] = shop_chat_msg('Alles klar, ich habe die Bestellung verworfen.'); $out[] = shop_chat_ask_type($ctx); return shop_chat_finish($c, $out); }
 	return $ask('confirm', shop_chat_summary($ctx));
 }
 
@@ -592,20 +611,28 @@ function shop_chat_place(&$c, $out, $acc) {
 
 // ---- cart exchange with the order page (the cart of the order page lives in the browser, the one of the chat on the server; the page one leaves overwrites the other)
 // the cart of the order page (lines pid, vid, opts, qty, note) becomes the cart of the chat; returns the number of lines taken over
-function shop_chat_import(&$c, $lines, $mode) {
-	$ctx = &$c['ctx']; $new = array(); $dropped = 0;
+function shop_chat_import(&$c, $lines, $mode, $clear = false) {
+	$ctx = &$c['ctx']; $new = array(); $dropped = 0; $had = !empty($ctx['cart']);
 	foreach (array_slice(is_array($lines) ? $lines : array(), 0, 60) as $l) {
 		if (!is_array($l)) { continue; }
 		$opts = array(); if (isset($l['opts']) && is_array($l['opts'])) { foreach ($l['opts'] as $id => $q) { if ((int)$q > 0) { $opts[(int)$id] = (int)$q; } } }
 		$line = array('pid' => (int)(isset($l['pid']) ? $l['pid'] : 0), 'vid' => (int)(isset($l['vid']) ? $l['vid'] : 0), 'opts' => $opts, 'qty' => max(1, min(20, (int)(isset($l['qty']) ? $l['qty'] : 1))), 'note' => mb_substr(trim((string)(isset($l['note']) ? $l['note'] : '')), 0, 200));
 		if (shop_price_line($line)['ok']) { $new[] = $line; } else { $dropped++; }
 	}
-	if (!$new) { return 0; }
+	if (!$new) {
+		// the page emptied its cart while the chat is open: the chat's cart is emptied too (never an order from a cart the guest no longer sees)
+		if ($clear && $had) {
+			$ctx['cart'] = array(); unset($ctx['addr'], $ctx['when'], $ctx['extra'], $ctx['pend'], $ctx['offer_done']); $c['state'] = 'cat';
+			$m = shop_chat_msg('Dein Warenkorb ist jetzt leer.', shop_chat_menu_buttons(), shop_chat_free_kind());
+			shop_chat_finish($c, array($m)); shop_chat_log($c, 'bot', $m); shop_chat_save($c);
+		}
+		return 0;
+	}
 	if ((int)$c['events'] === 0) { fb_exec("DELETE FROM ".fb_t('tp_shop_chat_msgs')." WHERE chat_id = ?", 'i', array((int)$c['id'])); }   // nothing said yet: no greeting needed
 	$ctx['cart'] = $new; $ctx['type'] = $mode === 'pickup' ? 'pickup' : 'delivery'; $ctx['last'] = count($new) - 1;
 	unset($ctx['addr'], $ctx['when'], $ctx['extra'], $ctx['pend'], $ctx['offer_done']);
 	$c['state'] = 'cat';
-	$m = shop_chat_msg('Dein Warenkorb ist übernommen ('.($ctx['type'] === 'pickup' ? 'Abholung' : 'Lieferung')."):\n".shop_chat_cart_text($ctx).($dropped ? "\nEinige Artikel gibt es nicht mehr." : ''), array('co' => 'Zur Kasse', 'more' => 'Etwas dazu bestellen', 'edit' => 'Ändern'));
+	$m = shop_chat_msg(($had ? 'Dein Warenkorb wurde aktualisiert (' : 'Dein Warenkorb ist übernommen (').($ctx['type'] === 'pickup' ? 'Abholung' : 'Lieferung')."):\n".shop_chat_cart_text($ctx).($dropped ? "\nEinige Artikel gibt es nicht mehr." : ''), array('co' => 'Zur Kasse', 'more' => 'Etwas dazu bestellen', 'edit' => 'Ändern'));
 	shop_chat_finish($c, array($m)); shop_chat_log($c, 'bot', $m); shop_chat_save($c);
 	return count($new);
 }
@@ -620,6 +647,11 @@ function shop_chat_export($c) {
 // opens (or resumes) the conversation of this visitor
 function shop_chat_open($token, $ip) {
 	$c = $token !== '' ? shop_chat_load($token) : null;
+	// an order that was placed a while ago: whoever comes back starts with a clean window
+	if ($c && $c['state'] === 'done' && strtotime($c['updated_at']) < time() - 600) {
+		$c['ctx'] = array('type' => 'delivery', 'cart' => array(), 'offered' => array()); $c['state'] = 'type';
+		$m = shop_chat_ask_type($c['ctx']); shop_chat_finish($c, array($m)); $c['ctx']['view_from'] = shop_chat_log($c, 'bot', $m); shop_chat_save($c);
+	}
 	if (!$c) {
 		$c = shop_chat_new($ip);
 		if (!$c) { return null; }
@@ -637,16 +669,52 @@ function shop_chat_handle($c, $ev) {
 		$m = shop_chat_last_message($c);
 		return array($c, $m ? array($m) : array(shop_chat_ask_type($c['ctx'])));
 	}
+	shop_chat_note_correction($c, $ev);
 	// the guest's line in the transcript: the label of the button, or the typed text (a code is not kept)
 	$label = '';
 	if (isset($ev['btn'])) { foreach (shop_chat_last_buttons($c) as $b) { if ($b['v'] === (string)$ev['btn']) { $label = $b['l']; } } }
 	elseif (isset($ev['text'])) { $label = $c['state'] === 'code' ? '••••••' : mb_substr((string)$ev['text'], 0, 300); }
 	shop_chat_log($c, 'guest', $label);
 	$msgs = shop_chat_step($c, $ev);
-	foreach ($msgs as $m) { shop_chat_log($c, 'bot', $m); }
+	$first = 0;
+	foreach ($msgs as $m) { $id = shop_chat_log($c, 'bot', $m); $first = $first ?: $id; }
+	// a new start: the view begins with the first new message (the page empties its window, a reload shows only this)
+	$c['reset_view'] = !empty($c['ctx']['fresh']) && $first > 0;
+	if ($c['reset_view']) { $c['ctx']['view_from'] = $first; }
+	unset($c['ctx']['fresh']);
 	shop_chat_save($c);
 	return array($c, $msgs);
 }
+// a reason to look at this conversation later (backend list): at most five short notes
+function shop_chat_review(&$c, $why) {
+	$c['review'] = 1; $c['ctx']['review_why'] = isset($c['ctx']['review_why']) ? $c['ctx']['review_why'] : array();
+	if (count($c['ctx']['review_why']) < 5) { $c['ctx']['review_why'][] = mb_substr($why, 0, 140); }
+}
+// the guest corrects what the AI has just put into the cart (within two moves): the AI probably understood something wrong
+function shop_chat_note_correction(&$c, $ev) {
+	if (empty($c['ctx']['ai_last'])) { return; }
+	if ((int)$c['events'] - (int)$c['ctx']['ai_last'] > 2) { unset($c['ctx']['ai_last']); return; }
+	$btn = isset($ev['btn']) ? (string)$ev['btn'] : ''; $text = isset($ev['text']) ? (string)$ev['text'] : '';
+	if ($btn === 'edit' || strpos($btn, 'del:') === 0) { shop_chat_review($c, 'Gast ändert den Warenkorb direkt nach der KI'); unset($c['ctx']['ai_last']); }
+	elseif ($text !== '' && preg_match('/\b(nein|nicht|falsch|doch|stattdessen|statt|anders|lieber|vergiss|rückgängig|zurück)\b/iu', $text)) { shop_chat_review($c, 'Gast korrigiert: '.$text); unset($c['ctx']['ai_last']); }
+}
+// the conversations the backend should show: the guest was sent to the phone (allergy, complaint) or the AI may have misunderstood
+function shop_chat_review_list($limit = 12) {
+	shop_chat_ensure_schema();
+	$out = array();
+	foreach (fb_rows("SELECT id, ctx, handover, review, order_id, updated_at FROM ".fb_t('tp_shop_chats')." WHERE handover = 1 OR review = 1 ORDER BY updated_at DESC LIMIT ".(int)$limit) as $r) {
+		$ctx = json_decode((string)$r['ctx'], true); $ctx = is_array($ctx) ? $ctx : array();
+		$msgs = array();
+		foreach (fb_rows("SELECT role, body FROM ".fb_t('tp_shop_chat_msgs')." WHERE chat_id = ? ORDER BY id", 'i', array((int)$r['id'])) as $m) {
+			if ($m['role'] === 'bot') { $b = json_decode($m['body'], true); $msgs[] = 'Assistent: '.(is_array($b) && isset($b['text']) ? $b['text'] : ''); }
+			else { $msgs[] = 'Gast: '.$m['body']; }
+		}
+		$why = array_merge(!empty($r['handover']) ? array('Gast zum Anruf gebeten (Allergie oder Beschwerde)') : array(), isset($ctx['review_why']) ? $ctx['review_why'] : array(), isset($ctx['flag']) ? array_map(function ($f) { return 'Hinweis: '.$f; }, $ctx['flag']) : array());
+		$out[] = array('id' => (int)$r['id'], 'at' => $r['updated_at'], 'ordered' => !empty($r['order_id']), 'why' => $why, 'transcript' => implode("\n", $msgs));
+	}
+	return $out;
+}
+
 function shop_chat_last_message($c) {
 	$r = fb_row("SELECT body FROM ".fb_t('tp_shop_chat_msgs')." WHERE chat_id = ? AND role = 'bot' ORDER BY id DESC LIMIT 1", 'i', array((int)$c['id']));
 	$m = $r ? json_decode($r['body'], true) : null;

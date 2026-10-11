@@ -4,7 +4,7 @@
 	var body = document.body, token = body.getAttribute('data-token');
 	var log = document.getElementById('chat-log'), form = document.getElementById('chat-form'), input = document.getElementById('chat-text'), label = document.getElementById('chat-text-label');
 	var err = document.getElementById('chat-error'), sendBtn = form.querySelector('.chat-send'), busy = false;
-	var PLACEHOLDER = { text: 'Deine Antwort', search: 'Gericht suchen', code: 'Code eingeben', number: 'Zahl eingeben' };
+	var PLACEHOLDER = { text: 'Deine Antwort', search: 'Gericht suchen', ask: 'Schreib, was du möchtest', code: 'Code eingeben', number: 'Zahl eingeben' };
 	var cartBar = document.getElementById('chat-cart');
 
 	function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) { e.className = cls; } if (txt != null) { e.textContent = txt; } return e; }
@@ -26,7 +26,10 @@
 
 	function render(m, fresh) {
 		var wrap = el('div', 'chat-msg ' + (m.role === 'guest' ? 'is-guest' : 'is-bot') + (fresh ? ' is-new' : ''));
-		wrap.appendChild(el('p', 'chat-text', m.text));
+		var line = el('p', 'chat-text');
+		line.appendChild(el('span', 'sr-only', m.role === 'guest' ? 'Du: ' : 'Assistent: '));   // who speaks (the side and the colour tell it only to the eye)
+		line.appendChild(document.createTextNode(m.text));
+		wrap.appendChild(line);
 		if (m.role === 'bot') {
 			if (m.links && m.links.length) {
 				var ls = el('div', 'chat-links');
@@ -34,13 +37,22 @@
 				wrap.appendChild(ls);
 			}
 			if (m.buttons && m.buttons.length) {
-				var box = el('div', 'chat-answers'); box.setAttribute('role', 'group'); box.setAttribute('aria-label', 'Antworten');
+				// short labels without a price sit side by side as chips; a long list of dishes shows its first six and "Mehr anzeigen", so a menu never fills the window
+				var chips = m.buttons.every(function (b) { return b.v === 'confirm' || b.v === 'co' || b.v === 'last' || (b.l.length <= 24 && b.l.indexOf(' · ') < 0); });
+				var box = el('div', 'chat-answers' + (chips ? ' is-chips' : '')); box.setAttribute('role', 'group'); box.setAttribute('aria-label', 'Antworten');
+				var longList = m.buttons.filter(function (b) { return /^(prod|opt|cand|fill):/.test(b.v); }).length > 7, shown = 0, hiddenBtns = [];
 				m.buttons.forEach(function (b) {
-					var btn = el('button', 'chat-btn' + ((b.v === 'confirm' || b.v === 'co') ? ' is-primary' : '')); btn.type = 'button'; btn.setAttribute('data-v', b.v);
+					var btn = el('button', 'chat-btn' + ((b.v === 'confirm' || b.v === 'co' || b.v === 'last') ? ' is-primary' : '')); btn.type = 'button'; btn.setAttribute('data-v', b.v);
 					buttonLabel(btn, b.l);
 					btn.addEventListener('click', function () { answer({ btn: b.v }); });
+					if (longList && /^(prod|opt|cand|fill):/.test(b.v)) { if (++shown > 6) { btn.hidden = true; hiddenBtns.push(btn); } }
 					box.appendChild(btn);
 				});
+				if (hiddenBtns.length) {
+					var more = el('button', 'chat-btn is-more'); more.type = 'button'; more.appendChild(el('span', 'chat-btn-name', 'Mehr anzeigen (' + hiddenBtns.length + ')'));
+					more.addEventListener('click', function () { hiddenBtns.forEach(function (h) { h.hidden = false; }); more.parentNode.removeChild(more); hiddenBtns[0].focus(); });
+					var firstHidden = hiddenBtns[0]; box.insertBefore(more, firstHidden);
+				}
 				wrap.appendChild(box);
 			}
 		}
@@ -76,9 +88,47 @@
 	}
 	cartBar.addEventListener('click', function () { answer({ btn: 'cart' }); });
 
+	// inside the chat bubble of the order page: after every answer the page gets the cart of the chat, so both show the same
+	var EMBED = document.body.classList.contains('is-embed') && window.parent !== window;
+	function tellParent(r) {
+		if (!EMBED || !r.export) { return; }
+		parent.postMessage({ type: 'myseat-chat-cart', mode: r.export.mode, lines: r.export.lines, ordered: !!r.ordered }, location.origin);
+	}
+	// the page asks for the focus when the bubble opens, Escape asks the page to close it
+	var wantFocus = false, ready = false;
+	function focusChat() {
+		if (!ready) { wantFocus = true; return; }
+		var lastBot = log.querySelector('.chat-msg.is-bot:last-of-type');
+		if (!form.hidden) { input.focus({ preventScroll: true }); } else if (lastBot) { lastBot.setAttribute('tabindex', '-1'); lastBot.focus({ preventScroll: true }); }
+	}
+	if (EMBED) {
+		window.addEventListener('message', function (ev) { if (ev.origin === location.origin && ev.data && ev.data.type === 'myseat-chat-focus') { focusChat(); } });
+		document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') { parent.postMessage({ type: 'myseat-chat-close' }, location.origin); } });
+	}
+
 	function lock(on) {
 		busy = on; sendBtn.disabled = on;
 		Array.prototype.forEach.call(log.querySelectorAll('.chat-btn'), function (b) { b.disabled = on; }); cartBar.disabled = on;
+	}
+
+	// while the server thinks (the AI may take several seconds): three moving dots on the side of the bot, after a short delay so that a quick answer does not flicker;
+	// after a while the text says that it takes longer, so nobody believes the chat hung
+	var waitEl = null, waitT1 = null, waitT2 = null, waitSlot = document.getElementById('chat-wait-slot');
+	function waitStart() {
+		waitStop();
+		waitT1 = setTimeout(function () {
+			waitEl = el('div', 'chat-wait');
+			var dots = el('span', 'chat-dots'); dots.setAttribute('aria-hidden', 'true'); dots.appendChild(el('i')); dots.appendChild(el('i')); dots.appendChild(el('i'));
+			var txt = el('span', 'chat-wait-text', 'Einen Moment …');
+			waitEl.appendChild(dots); waitEl.appendChild(txt); waitSlot.appendChild(waitEl);   // the slot is a status region of its own, next to the log
+			waitEl.scrollIntoView({ block: 'end', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+			waitT2 = setTimeout(function () { txt.textContent = 'Das dauert einen Augenblick länger …'; }, 7000);
+		}, 350);
+	}
+	function waitStop() {
+		clearTimeout(waitT1); clearTimeout(waitT2);
+		if (waitEl && waitEl.parentNode) { waitEl.parentNode.removeChild(waitEl); }
+		waitEl = null;
 	}
 
 	function answer(ev, isCode) {
@@ -88,14 +138,26 @@
 		var nameEl = btnEl && btnEl.querySelector('.chat-btn-name'), priceEl = btnEl && btnEl.querySelector('.chat-btn-price');
 		var shown = ev.btn === 'cart' ? 'Warenkorb' : ev.text != null ? (isCode ? '••••••' : ev.text) : ((nameEl ? nameEl.textContent : '') + (priceEl ? ' · ' + priceEl.textContent : ''));
 		lock(true);
-		// the answered buttons go away at once, the guest's line stays
-		Array.prototype.forEach.call(log.querySelectorAll('.chat-answers'), function (a) { a.parentNode.removeChild(a); });
-		render({ role: 'guest', text: shown }, true);
-		ev.op = 'send';
+		// the answered buttons go away at once and the guest's line stays; they are kept aside so that they come back when the answer does not get through
+		var removed = [];
+		Array.prototype.forEach.call(log.querySelectorAll('.chat-answers'), function (a) { removed.push({ parent: a.parentNode, node: a, next: a.nextSibling }); a.parentNode.removeChild(a); });
+		var echo = render({ role: 'guest', text: shown }, true);
+		ev.op = 'send'; if (EMBED) { ev.embed = true; }
+		waitStart();
 		post(ev).then(function (r) {
+			waitStop();
+			if (!r.ok) {
+				if (echo.parentNode) { echo.parentNode.removeChild(echo); }
+				removed.forEach(function (x) { x.parent.insertBefore(x.node, x.next && x.next.parentNode === x.parent ? x.next : null); });
+				lock(false);
+				showError(r.error || 'Das hat nicht geklappt.');
+				var again = log.querySelector('.chat-answers .chat-btn:not([hidden])'); if (again) { again.focus({ preventScroll: true }); } else if (!form.hidden) { input.focus({ preventScroll: true }); }
+				return;
+			}
 			lock(false);
-			if (!r.ok) { showError(r.error || 'Das hat nicht geklappt.'); return; }
-			if (r.ordered) { clearShopCart(); }
+			if (r.ordered && !EMBED) { clearShopCart(); }
+			tellParent(r);
+			if (r.reset) { log.textContent = ''; }   // a finished order or a new start: the window begins again
 			setCart(r.cart); showMessages(r.messages, true);
 		});
 	}
@@ -127,5 +189,5 @@
 	}
 
 	lock(true);
-	post({ op: 'open' }).then(function (r) { lock(false); if (!r.ok) { showError(r.error || 'Der Chat ist gerade nicht erreichbar.'); return; } setCart(r.cart); showMessages(r.messages, false); });
+	post({ op: 'open' }).then(function (r) { lock(false); if (!r.ok) { showError(r.error || 'Der Chat ist gerade nicht erreichbar.'); return; } setCart(r.cart); showMessages(r.messages, false); ready = true; if (wantFocus) { focusChat(); } });
 })();

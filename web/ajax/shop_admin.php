@@ -29,11 +29,11 @@ shop_ensure_schema();
 $op = isset($_POST['op']) ? (string)$_POST['op'] : '';
 
 if ($op === 'save') {
-	foreach (array('public', 'accepting', 'test_mode', 'allow_cash', 'allow_card_door', 'allow_online', 'tip_enabled', 'sms_orders', 'stamp_on', 'offers_on', 'tours_on', 'chat_on', 'account_on', 'account_sms', 'feedback_on', 'places_suggest') as $flag) {
+	foreach (array('public', 'accepting', 'test_mode', 'allow_cash', 'allow_card_door', 'allow_online', 'tip_enabled', 'sms_orders', 'stamp_on', 'offers_on', 'tours_on', 'chat_on', 'chat_ai_on', 'account_on', 'account_sms', 'feedback_on', 'places_suggest') as $flag) {
 		shop_setting_set($flag, !empty($_POST[$flag]) ? '1' : '0');
 	}
 	foreach (array('eta_delivery_min' => array(10, 240), 'kitchen_drive_min' => array(0, 60), 'lead_pickup_min' => array(0, 240), 'slot_min' => array(5, 60), 'days_ahead' => array(0, 14),
-		'stamp_percent' => array(1, 100), 'stamp_goal' => array(2, 12), 'stamp_months' => array(1, 60), 'voucher_days' => array(7, 730), 'account_sms_daily' => array(1, 5000), 'track_days' => array(0, 30), 'last_order_min' => array(0, 240)) as $k => $range) {
+		'stamp_percent' => array(1, 100), 'stamp_goal' => array(2, 12), 'stamp_months' => array(1, 60), 'voucher_days' => array(7, 730), 'account_sms_daily' => array(1, 5000), 'track_days' => array(0, 30), 'last_order_min' => array(0, 240), 'chat_ai_daily' => array(10, 5000)) as $k => $range) {
 		if (isset($_POST[$k])) { shop_setting_set($k, (string)max($range[0], min($range[1], (int)$_POST[$k]))); }
 	}
 	// offers: amounts in euro, the days, and up to three free extras (products without choices)
@@ -55,6 +55,17 @@ if ($op === 'save') {
 	if (isset($_POST['notify_email'])) { $ne = trim((string)$_POST['notify_email']); shop_setting_set('notify_email', ($ne === '' || filter_var($ne, FILTER_VALIDATE_EMAIL)) ? $ne : (string)shop_setting('notify_email')); }
 	foreach (array('origin_street' => 120, 'origin_zip' => 10, 'origin_city' => 80) as $k => $len) { if (isset($_POST[$k])) { shop_setting_set($k, mb_substr(trim((string)$_POST[$k]), 0, $len)); } }
 	if (isset($_POST['notice'])) { shop_setting_set('notice', mb_substr(trim((string)$_POST['notice']), 0, 200)); }
+	if (isset($_POST['chat_ai_workspace'])) { $ws = trim((string)$_POST['chat_ai_workspace']); shop_setting_set('chat_ai_workspace', ($ws === '' || preg_match('/^[A-Za-z0-9_\-]{4,80}$/', $ws)) ? $ws : (string)shop_setting('chat_ai_workspace')); }
+	// key of the language model for the order chat: stored encrypted, never sent back (only its last 4 characters are shown); empty field = unchanged
+	$ck = isset($_POST['chat_ai_key']) ? trim((string)$_POST['chat_ai_key']) : '';
+	if ($ck !== '') {
+		if (strlen($ck) < 16 || strlen($ck) > 300 || preg_match('/[\s\x00-\x1f]/', $ck)) { sa_out(array('ok' => false, 'error' => 'Der Schlüssel sieht nicht richtig aus (16 bis 300 Zeichen, ohne Leerzeichen).')); }
+		require_once('../classes/shop_chat_ai.class.php');
+		$enc = sms_encrypt($ck);
+		if ($enc === null) { sa_out(array('ok' => false, 'error' => 'Der Schlüssel konnte nicht verschlüsselt werden.')); }
+		shop_setting_set('chat_ai_key', $enc);
+	}
+	if (!empty($_POST['chat_ai_key_clear'])) { shop_setting_set('chat_ai_key', ''); }
 	sa_out(array('ok' => true, 'message' => 'Gespeichert.'));
 }
 
