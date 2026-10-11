@@ -348,13 +348,13 @@
 		var out = [];
 		$$('.shop-cat').forEach(function (sec) {
 			if (out.length >= 3 || !/getr(ä|ae)nk|drink|bier|dessert|s(ü|ue)(ß|ss)|nachspeise|nachtisch|kuchen|snack|vorspeise|brot|beilage|dip|so(ß|ss)e|eis\b/i.test($('h2', sec).textContent)) { return; }
-			var li = $$('.shop-item', sec).filter(function (x) { return !inCart[x.dataset.id]; }).sort(function (a, b) { return (a.dataset.choices === '1') - (b.dataset.choices === '1'); })[0];
+			var li = $$('.shop-item', sec).filter(function (x) { return !inCart[x.dataset.id] && !x.classList.contains('is-out'); }).sort(function (a, b) { return (a.dataset.choices === '1') - (b.dataset.choices === '1'); })[0];
 			if (li) { out.push(li); }
 		});
 		return out;
 	}
 	function upsell() {
-		if (upsellCache.items.length) { return upsellCache.items.map(function (it) { return $('.shop-item[data-id="' + it.id + '"]'); }).filter(Boolean); }
+		if (upsellCache.items.length) { return upsellCache.items.map(function (it) { return $('.shop-item[data-id="' + it.id + '"]'); }).filter(function (x) { return x && !x.classList.contains('is-out'); }); }
 		return guessUpsell();
 	}
 	// a note for the kitchen on any cart line (dishes without choices have no product dialog, so this is their only place for it)
@@ -786,7 +786,7 @@
 		var chatClose = t.closest('#chat-panel-close'); if (chatClose) { chatShut(); return; }
 		if (!ACCEPT) { return; }
 		var item = t.closest('.shop-item');
-		if (item && (t.closest('.shop-add') || t.closest('.shop-item-text'))) {
+		if (item && !item.classList.contains('is-out') && (t.closest('.shop-add') || t.closest('.shop-item-text'))) {
 			if (item.dataset.choices === '1' || !t.closest('.shop-add')) { openProduct(item.dataset.id); }
 			else { addLine({ pid: +item.dataset.id, title: item.dataset.title, vid: 0, vtitle: '', opts: {}, optText: '', unit: +item.dataset.price, qty: 1, note: '' }); }
 			return;

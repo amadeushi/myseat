@@ -62,7 +62,7 @@ function shop_chat_ai_system() {
 		$menu .= "\n".trim($cat['name']).":\n";
 		foreach ($cat['products'] as $p) {
 			$d = array_filter(explode(',', (string)$p['diet']));
-			$menu .= '  '.(int)$p['id'].': '.trim($p['title']).(in_array('vegan', $d, true) ? ' [vegan]' : (in_array('veg', $d, true) ? ' [vegetarisch]' : '')).((int)$p['nvar'] > 0 ? ' (mit Größen)' : '')."\n";
+			$menu .= '  '.(int)$p['id'].': '.trim($p['title']).(!empty($p['out']) ? ' [heute aus]' : '').(!empty($p['popular']) ? ' [beliebt]' : '').(!empty($p['isnew']) ? ' [neu]' : '').(in_array('vegan', $d, true) ? ' [vegan]' : (in_array('veg', $d, true) ? ' [vegetarisch]' : '')).((int)$p['nvar'] > 0 ? ' (mit Größen)' : '')."\n";
 		}
 	}
 	$rules = 'Du bist der Bestell-Assistent von '.$brand.' in Hildesheim und nimmst Bestellungen für Lieferung und Abholung auf. Du schreibst Deutsch, duzt den Gast, bist freundlich und antwortest kurz (höchstens zwei Sätze).
@@ -73,6 +73,7 @@ Regeln:
 - Fehlt bei einem Gericht eine Pflichtangabe (Größe oder eine Pflichtauswahl), die der Gast nicht genannt hat, rufe start_guided auf: dann wählt der Gast mit Knöpfen. Füge zuerst alle vollständigen Gerichte hinzu und rufe start_guided zuletzt für höchstens ein unvollständiges Gericht auf.
 - Lieber nachfragen als raten: Passt ein Wort auf mehrere Gerichte, ist ein Name nicht eindeutig (auch bei Tippfehlern), oder bist du bei Gericht, Größe oder Anzahl unsicher, stelle genau eine kurze Rückfrage mit höchstens zwei Möglichkeiten und lege vorerst nichts in den Warenkorb. Passt der Name wörtlich auf genau ein Gericht, frag nicht nach. Fehlt die Anzahl, nimm 1; eine Anzahl nennst du nur, wenn der Gast sie gesagt hat.
 - Sag nach dem Hinzufügen in einem kurzen Satz, was du in den Warenkorb gelegt hast (Anzahl, Gericht, Größe), damit der Gast es prüfen kann.
+- Gerichte mit [heute aus] gibt es heute nicht: sag das freundlich und nenne bis zu zwei Alternativen. [beliebt] und [neu] darfst du als Empfehlung nennen.
 - Optionale Extras setzt du nur, wenn der Gast sie nennt und es sie als Auswahl gibt (get_product zeigt sie). Wünsche, die keine Auswahl sind (zum Beispiel "ohne Pfeffer"), kommen als note.
 - Zu Allergien, Unverträglichkeiten, Inhaltsstoffen, Zubereitung und Beschwerden sagst du nichts Verbindliches: rufe request_staff auf und sag, dass das Team Bescheid weiß und der Gast bitte anruft. Die Marken [vegan] und [vegetarisch] der Karte darfst du nennen, Genaueres klärt das Team.
 - Adresse, Zeit, Bezahlung und das Absenden passieren danach mit Knöpfen. Ist der Gast fertig, sag ihm, dass er unten auf "Zur Kasse" tippen kann. Du gibst selbst keine Bestellung auf und fragst nicht nach Name, Adresse oder Telefonnummer.
@@ -118,6 +119,7 @@ function shop_chat_ai_tool(&$c, $name, $in, &$guided, &$staff) {
 	if ($name === 'get_product') {
 		$p = shop_catalog_product($pid);
 		if (!$p) { return array('error' => 'Dieses Gericht gibt es nicht.'); }
+		if (!empty($p['out'])) { return array('error' => 'Dieses Gericht ist heute aus.'); }
 		$g = array(); foreach ($p['groups'] as $x) { $g[] = array('group_id' => $x['id'], 'title' => $x['title'], 'required' => $x['min'] > 0, 'min' => $x['min'], 'max' => $x['max'], 'items' => array_map(function ($i) { return array('item_id' => $i['id'], 'title' => $i['title']); }, $x['items'])); }
 		return array('id' => $p['id'], 'title' => $p['title'], 'description' => $p['description'], 'variations' => array_map(function ($v) { return array('variation_id' => $v['id'], 'title' => $v['title']); }, $p['variations']), 'groups' => $g);
 	}
@@ -145,7 +147,9 @@ function shop_chat_ai_tool(&$c, $name, $in, &$guided, &$staff) {
 	}
 	if ($name === 'view_cart') { return array('cart' => shop_chat_ai_cart_lines($ctx)); }
 	if ($name === 'start_guided') {
-		if (!shop_catalog_product($pid)) { return array('error' => 'Dieses Gericht gibt es nicht.'); }
+		$gp = shop_catalog_product($pid);
+		if (!$gp) { return array('error' => 'Dieses Gericht gibt es nicht.'); }
+		if (!empty($gp['out'])) { return array('error' => 'Dieses Gericht ist heute aus.'); }
 		$guided = $pid;
 		return array('ok' => true, 'hinweis' => 'Der Gast wählt jetzt mit Knöpfen. Schreibe höchstens einen kurzen Satz.');
 	}

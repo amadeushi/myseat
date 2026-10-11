@@ -52,6 +52,13 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.38.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Disposition: Knopf "Gerichte heute aus" (durchgestrichener Teller, roter Zähler): Liste aller Gerichte mit Suchfeld und einem Schalter pro Gericht; ein ausgeschaltetes Gericht zeigt die Bestellseite als "Heute leider aus", es lässt sich nicht bestellen (auch nicht aus einem vollen Warenkorb, Favoriten oder dem Chat), am nächsten Tag ist es von selbst wieder da (neue Spalte sold_out_on).
+ * Neu: Bestellseite und Chat: Marken "Beliebt" (die sechs am häufigsten bestellten Gerichte der letzten 30 Tage, mindestens fünf Bestellungen, ohne Getränke, höchstens stündlich neu berechnet) und "Neu" (im Menü-Editor in den letzten 21 Tagen angelegt, neue Spalte added_at); im Chat als "(beliebt)" und "(neu)", die KI darf beides empfehlen.
+ * Neu: Bestell-Chat: Gutscheincode in der Zusammenfassung (prüfen, ändern, entfernen; Rabatt in der Summe und auf der Bestellung; höchstens acht Versuche pro Gespräch).
+ * Geändert: Bestellseite (Desktop): Der Chat-Knopf endet bündig mit der rechten Kante der Warenkorb-Spalte, ebenso das Chat-Fenster.
+
 2026-10-11 == mySeat v6.37.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Bestell-Chat: Freie Sätze mit KI. Im Chat darf der Gast schreiben, was er möchte ("zwei Salami und eine Cola"); Claude Haiku (Anthropic) versteht den Satz und darf nur feste Werkzeuge nutzen (Gericht ansehen, in den Warenkorb legen, ändern, entfernen, Knopfauswahl für fehlende Pflichtangaben starten, Team rufen). Preise, Liefergebiet und die Bestellung bleiben beim Server, bestellt wird nur mit dem Tipp des Gastes auf "Verbindlich bestellen"; Name, Adresse und Nummer gehen nicht an den Dienst. Ohne Schlüssel, bei Störung oder über dem Tageslimit sucht der Chat wie bisher nur in der Speisekarte. Einstellungen im Backend (Lieferservice > Bestell-Chat): Schalter, Schlüssel (verschlüsselt gespeichert), Arbeitsbereich (Workspace-ID), Aufrufe pro Tag. Die KI fragt bei Unsicherheit kurz nach, statt zu raten.

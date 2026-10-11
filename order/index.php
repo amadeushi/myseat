@@ -114,9 +114,9 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 						$choices = ((int)$p['nvar'] > 0 || (int)$p['nmod'] > 0);
 						$from = ((int)$p['nvar'] > 0) ? min((int)$p['price_cents'], (int)$p['vmin']) : (int)$p['price_cents'];
 					?>
-					<li class="shop-item" data-diet="<?php echo shop_h((string)$p['diet']); ?>" data-id="<?php echo (int)$p['id']; ?>" data-choices="<?php echo $choices ? '1' : '0'; ?>" data-title="<?php echo shop_h($p['title']); ?>" data-price="<?php echo (int)$p['price_cents']; ?>">
+					<li class="shop-item<?php echo !empty($p['out']) ? ' is-out' : ''; ?>" data-diet="<?php echo shop_h((string)$p['diet']); ?>" data-id="<?php echo (int)$p['id']; ?>" data-choices="<?php echo $choices ? '1' : '0'; ?>" data-title="<?php echo shop_h($p['title']); ?>" data-price="<?php echo (int)$p['price_cents']; ?>">
 						<div class="shop-item-text">
-							<h3><?php echo shop_h($p['title']); ?></h3>
+							<h3><?php echo shop_h($p['title']); ?><?php if (!empty($p['out'])): ?> <span class="shop-mark is-out">heute aus</span><?php else: ?><?php if (!empty($p['isnew'])): ?> <span class="shop-mark is-new">Neu</span><?php endif; ?><?php if (!empty($p['popular'])): ?> <span class="shop-mark is-pop">Beliebt</span><?php endif; ?><?php endif; ?></h3>
 							<?php if (trim($p['description']) !== ''): ?><p><?php echo shop_h($p['description']); ?></p><?php endif; ?>
 							<?php $dm = array_filter(explode(',', (string)$p['diet'])); if ($dm): ?><p class="shop-diet"><?php if (in_array('vegan', $dm, true)): ?><span>vegan</span><?php elseif (in_array('veg', $dm, true)): ?><span>vegetarisch</span><?php endif; ?><?php if (in_array('spicy', $dm, true)): ?><span class="is-spicy">scharf</span><?php endif; ?></p><?php endif; ?>
 						</div>
@@ -124,7 +124,7 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 						<div class="shop-item-buy">
 							<span class="shop-price"><?php echo ($choices && (int)$p['nvar'] > 0) ? 'ab ' : ''; ?><?php echo shop_money($from); ?></span>
 							<?php $conf = !empty($p['configurator']); ?>
-							<?php if ($shop_accepting): ?><button type="button" class="shop-add" aria-label="<?php echo shop_h($p['title']); ?> <?php echo $conf ? 'selbst belegen' : ($choices ? 'auswählen' : 'hinzufügen'); ?>"><?php echo $conf ? 'Belegen' : ($choices ? 'Wählen' : '+'); ?></button><?php endif; ?>
+							<?php if (!empty($p['out'])): ?><span class="shop-out-note">Heute leider aus</span><?php elseif ($shop_accepting): ?><button type="button" class="shop-add" aria-label="<?php echo shop_h($p['title']); ?> <?php echo $conf ? 'selbst belegen' : ($choices ? 'auswählen' : 'hinzufügen'); ?>"><?php echo $conf ? 'Belegen' : ($choices ? 'Wählen' : '+'); ?></button><?php endif; ?>
 						</div>
 					</li>
 					<?php endforeach; ?>

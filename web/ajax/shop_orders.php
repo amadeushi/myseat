@@ -28,7 +28,7 @@ shop_ensure_schema();
 $op = isset($_REQUEST['op']) ? (string)$_REQUEST['op'] : '';
 
 if ($op === 'board') {
-	so_out(array('ok' => true, 'now' => date('H:i'), 'tours_on' => shop_tours_on(), 'orders' => shop_board(), 'drivers' => shop_dispatch_drivers(), 'pause' => shop_pause_state(), 'drive_min' => max(0, min(60, (int)shop_setting('kitchen_drive_min')))));
+	so_out(array('ok' => true, 'out_n' => shop_out_count(), 'now' => date('H:i'), 'tours_on' => shop_tours_on(), 'orders' => shop_board(), 'drivers' => shop_dispatch_drivers(), 'pause' => shop_pause_state(), 'drive_min' => max(0, min(60, (int)shop_setting('kitchen_drive_min')))));
 }
 if ($op === 'kitchen') {
 	so_out(array('ok' => true, 'now' => date('H:i'), 'orders' => shop_kitchen_board(), 'done' => shop_kitchen_done()));
@@ -38,6 +38,8 @@ if ($op === 'day') {
 	$filter = (isset($_REQUEST['filter']) && in_array($_REQUEST['filter'], array('open', 'closed'), true)) ? $_REQUEST['filter'] : 'all';
 	so_out(array('ok' => true, 'date' => $date, 'orders' => shop_day_orders($date, $filter), 'stats' => shop_day_stats($date), 'pause' => shop_pause_state()));
 }
+// the dishes that can be switched off for today (the dispatch list "Heute aus")
+if ($op === 'out_list') { so_out(array('ok' => true, 'products' => shop_out_list())); }
 // the driver map of the dispatch (web/fahrerkarte.php): drivers, deliveries, who to ask; the zones (rarely change); the track of one driver
 if ($op === 'dispatch_map') { so_out(array_merge(array('ok' => true), shop_dispatch_map())); }
 if ($op === 'zones') {
@@ -91,6 +93,11 @@ if ($op === 'tour_time') {
 if ($op === 'tour_ready') {
 	$who1 = isset($_SESSION['valid_user']) && is_string($_SESSION['valid_user']) ? $_SESSION['valid_user'] : 'Disposition';
 	so_out(shop_tour_ready_all(isset($_POST['letter']) ? (string)$_POST['letter'] : '', $who1));
+}
+if ($op === 'out_set') {
+	$who2 = isset($_SESSION['valid_user']) && is_string($_SESSION['valid_user']) ? $_SESSION['valid_user'] : 'Disposition';
+	$r = shop_out_set((int)(isset($_POST['id']) ? $_POST['id'] : 0), !empty($_POST['out']), $who2);
+	so_out($r['ok'] ? array('ok' => true, 'out' => $r['out'], 'title' => $r['title'], 'out_n' => shop_out_count()) : $r);
 }
 if ($op === 'courier_job') {
 	$who0 = isset($_SESSION['valid_user']) && is_string($_SESSION['valid_user']) ? $_SESSION['valid_user'] : 'Disposition';

@@ -219,9 +219,9 @@ function shop_chat_run(&$c, $out, $st, $kind, $val) {
 			$cid = (int)substr($btn, 4);
 			foreach (shop_chat_menu() as $cat) {
 				if ((int)$cat['id'] !== $cid) { continue; }
-				$b = array();
-				foreach ($cat['products'] as $p) { $b['prod:'.(int)$p['id']] = shop_chat_product_label($p); }
-				$out[] = shop_chat_msg('Das gibt es bei „'.trim($cat['name']).'“:', $b + array('more' => 'Andere Kategorie'));
+				$b = array(); $gone = array();
+				foreach ($cat['products'] as $p) { if (!empty($p['out'])) { $gone[] = $p['title']; } else { $b['prod:'.(int)$p['id']] = shop_chat_product_label($p); } }
+				$out[] = shop_chat_msg('Das gibt es bei „'.trim($cat['name']).'“:'.($gone ? "\nHeute leider aus: ".implode(', ', $gone).'.' : ''), $b + array('more' => 'Andere Kategorie'));
 			}
 			$c['state'] = 'prod'; return shop_chat_finish($c, $out);
 		}
@@ -241,7 +241,7 @@ function shop_chat_run(&$c, $out, $st, $kind, $val) {
 
 	if ($st === 'offer') { return shop_chat_offer($c, $out, $btn); }
 	if ($st === 'auth' || $st === 'code') { return shop_chat_auth($c, $out, $st, $btn, $text); }
-	if (in_array($st, array('addr', 'name', 'phone', 'when', 'pay', 'note', 'confirm'), true)) { return shop_chat_checkout($c, $out, $st, $btn, $text); }
+	if (in_array($st, array('addr', 'name', 'phone', 'when', 'pay', 'note', 'coupon', 'confirm'), true)) { return shop_chat_checkout($c, $out, $st, $btn, $text); }
 	if ($st === 'done') { $out[] = shop_chat_msg('Deine Bestellung ist aufgegeben. Möchtest du eine neue beginnen?', array('restart' => 'Neue Bestellung')); return shop_chat_finish($c, $out); }
 	$c['state'] = 'type'; $out[] = shop_chat_ask_type($ctx); return shop_chat_finish($c, $out);
 }
@@ -262,7 +262,8 @@ function shop_chat_reorder(&$c, $out, $acc, $orderId) {
 
 function shop_chat_product_label($p) {
 	$from = ((int)$p['nvar'] > 0) ? min((int)$p['price_cents'], (int)$p['vmin']) : (int)$p['price_cents'];
-	return $p['title'].' · '.((int)$p['nvar'] > 0 ? 'ab ' : '').shop_money($from);
+	$mark = !empty($p['isnew']) ? ' (neu)' : (!empty($p['popular']) ? ' (beliebt)' : '');   // the marks of the order page, as words
+	return $p['title'].$mark.' · '.((int)$p['nvar'] > 0 ? 'ab ' : '').shop_money($from);
 }
 
 // free text instead of a button: dishes whose name or description contains all the words
@@ -277,16 +278,19 @@ function shop_chat_search(&$c, $out, $text) {
 		} }
 	}
 	$c['state'] = 'prod';
+	$gone = array(); $hits = array_values(array_filter($hits, function ($p) use (&$gone) { if (!empty($p['out'])) { $gone[] = $p['title']; return false; } return true; }));
+	if (!$hits && $gone) { $out[] = shop_chat_msg('„'.$gone[0].'“ ist heute leider aus. Etwas anderes?', shop_chat_menu_buttons(), shop_chat_free_kind()); return shop_chat_finish($c, $out); }
 	if (!$hits) { $out[] = shop_chat_msg('Dazu finde ich nichts. Anderer Begriff oder eine Kategorie?', shop_chat_menu_buttons(), 'text'); return shop_chat_finish($c, $out); }
 	$b = array();
 	foreach (array_slice($hits, 0, 8) as $p) { $b['prod:'.(int)$p['id']] = shop_chat_product_label($p); }
-	$out[] = shop_chat_msg(count($hits) > 8 ? 'Die ersten acht Treffer:' : 'Meinst du eins davon?', $b + array('more' => 'Andere Kategorie'), 'text');
+	$out[] = shop_chat_msg((count($hits) > 8 ? 'Die ersten acht Treffer:' : 'Meinst du eins davon?').($gone ? "\nHeute leider aus: ".implode(', ', $gone).'.' : ''), $b + array('more' => 'Andere Kategorie'), 'text');
 	return shop_chat_finish($c, $out);
 }
 
 function shop_chat_pick_product(&$c, $out, $pid) {
 	$p = shop_catalog_product($pid);
 	if (!$p) { $c['state'] = 'cat'; $out[] = shop_chat_ask_category($c['ctx'], 'Das Gericht gibt es leider nicht mehr.'); return shop_chat_finish($c, $out); }
+	if (!empty($p['out'])) { $c['state'] = 'cat'; $out[] = shop_chat_ask_category($c['ctx'], '„'.$p['title'].'“ ist heute leider aus.'); return shop_chat_finish($c, $out); }
 	$c['ctx']['pend'] = array('pid' => $pid, 'vid' => 0, 'opts' => array(), 'gi' => 0);
 	if ($p['variations']) {
 		$b = array(); foreach ($p['variations'] as $v) { $b['var:'.$v['id']] = $v['title'].' · '.shop_money($v['price']); }
@@ -424,7 +428,13 @@ function shop_chat_totals($ctx) {
 	$e = shop_offers_eval($p['items'], isset($ctx['extra']) ? $ctx['extra'] : null);
 	$combo = $e['on'] ? (int)$e['combo_cents'] : 0;
 	$fee = ($ctx['type'] === 'delivery' && isset($ctx['addr'])) ? (int)$ctx['addr']['fee'] : 0;
-	return array('ok' => true, 'items' => $p['items'], 'sub' => $p['sub'], 'combo' => $combo, 'combo_text' => $e['combo_text'], 'fee' => $fee, 'total' => max(0, $p['sub'] - $combo + $fee), 'eval' => $e);
+	// a coupon code the guest typed: checked again here, the discount is the one the order will take off (shop_create_order checks it a last time)
+	$disc = 0; $code = '';
+	if (!empty($ctx['coupon'])) {
+		$acc = shop_acc_current(); $r = shop_coupon_check($ctx['coupon'], $ctx['type'], $p['sub'], $acc ? shop_acc_keys($acc) : array('', ''));
+		if ($r['ok']) { $disc = (int)$r['discount']; $code = $r['coupon']['code']; }
+	}
+	return array('ok' => true, 'items' => $p['items'], 'sub' => $p['sub'], 'combo' => $combo, 'combo_text' => $e['combo_text'], 'fee' => $fee, 'discount' => $disc, 'coupon' => $code, 'total' => max(0, $p['sub'] - $disc - $combo + $fee), 'eval' => $e);
 }
 
 // the steps after the proof of the contact; each one that is already answered is skipped, the first open one asks
@@ -537,6 +547,21 @@ function shop_chat_checkout(&$c, $out, $st, $btn, $text, $enter = false) {
 		}
 	}
 
+	// ---- the coupon code is no step of its own either: the summary offers it
+	if ($btn === 'coupon') { return $ask('coupon', shop_chat_msg('Dein Gutscheincode?', array('coupon:back' => 'Zurück'), 'text')); }
+	if ($btn === 'couponx') { unset($ctx['coupon']); }
+	if ($st === 'coupon' && $text !== null && $text !== '') {
+		$ctx['coupon_tries'] = (isset($ctx['coupon_tries']) ? (int)$ctx['coupon_tries'] : 0) + 1;
+		if ($ctx['coupon_tries'] > 8) { return $ask('confirm', shop_chat_summary($ctx, 'Zu viele Versuche mit Gutscheincodes.')); }
+		$code = shop_coupon_normalize($text);
+		$r = shop_coupon_check($code, $ctx['type'], $t['sub'], shop_acc_keys($acc));
+		if (!$r['ok']) { return $ask('coupon', shop_chat_msg($r['error'], array('coupon:back' => 'Zurück'), 'text')); }
+		$ctx['coupon'] = $r['coupon']['code'];
+	}
+	// a code that does not fit any more (the cart changed, the minimum is not reached): it goes, and the guest is told
+	$couponNote = '';
+	if (!empty($ctx['coupon'])) { $r = shop_coupon_check($ctx['coupon'], $ctx['type'], $t['sub'], shop_acc_keys($acc)); if (!$r['ok']) { $couponNote = 'Der Gutschein passt nicht mehr: '.$r['error']; unset($ctx['coupon']); } }
+
 	// ---- the note is no step of its own: the summary offers it
 	if ($btn === 'addnote') { return $ask('note', shop_chat_msg('Was möchtest du anmerken?', array('note:none' => 'Zurück'), 'text')); }
 	if ($st === 'note' && $text !== null && $text !== '') { $ctx['note'] = trim((isset($ctx['note']) ? $ctx['note'].' ' : '').$text); }
@@ -544,7 +569,7 @@ function shop_chat_checkout(&$c, $out, $st, $btn, $text, $enter = false) {
 	// ---- summary and the last word of the guest
 	if ($st === 'confirm' && $btn === 'confirm') { return shop_chat_place($c, $out, $acc); }
 	if ($st === 'confirm' && $btn === 'cancel') { $ctx = array('type' => 'delivery', 'cart' => array(), 'offered' => array(), 'fresh' => 1); $c['state'] = 'type'; $out[] = shop_chat_msg('Alles klar, ich habe die Bestellung verworfen.'); $out[] = shop_chat_ask_type($ctx); return shop_chat_finish($c, $out); }
-	return $ask('confirm', shop_chat_summary($ctx));
+	return $ask('confirm', shop_chat_summary($ctx, $couponNote));
 }
 
 // the guest picked one of several matching addresses: that choice is remembered as the answer of the geocoder for exactly the text the order will be checked with (shop_create_order looks
@@ -559,21 +584,22 @@ function shop_chat_after_address(&$c, $out) {
 	return shop_chat_checkout($c, $out, '', null, null, true);
 }
 
-function shop_chat_summary($ctx) {
+function shop_chat_summary($ctx, $lead = '') {
 	$t = shop_chat_totals($ctx);
-	$lines = array('Deine Bestellung');
+	$lines = array(($lead !== '' ? $lead."\n\n" : '').'Deine Bestellung');
 	foreach ($t['items'] as $it) { $lines[] = shop_chat_line_text($it); }
 	if ($t['combo'] > 0) { $lines[] = $t['combo_text'].' – −'.shop_money($t['combo']); }
 	if (isset($ctx['extra']) && $ctx['extra'] !== 'voucher' && $t['eval']['on'] && $t['eval']['reached']) { foreach ($t['eval']['extras'] as $x) { if ((int)$x['id'] === (int)$ctx['extra']) { $lines[] = $x['title'].' – gratis'; } } }
+	if ($t['discount'] > 0) { $lines[] = 'Gutschein '.$t['coupon'].' – −'.shop_money($t['discount']); }
 	if ($ctx['type'] === 'delivery') { $lines[] = 'Lieferung – '.shop_money($t['fee']); }
-	$acc = shop_acc_current(); $voucher = $acc ? shop_stamp_voucher(shop_acc_keys($acc)) : null;
+	$acc = shop_acc_current(); $voucher = ($acc && $t['discount'] <= 0) ? shop_stamp_voucher(shop_acc_keys($acc)) : null;
 	$lines[] = 'Gesamt '.shop_money($t['total']).($voucher ? ', dein Gutschein wird noch abgezogen' : '');
 	$lines[] = '';
 	$pay = array('mollie' => 'online bezahlt', 'cash' => 'bar', 'card_door' => 'mit Karte');
 	$lines[] = ($ctx['type'] === 'delivery' ? $ctx['addr']['street'].', '.$ctx['addr']['zip'].' '.$ctx['addr']['city'] : 'Abholung').' · '.($ctx['when'] === 'asap' ? 'so schnell wie möglich' : date('d.m. H:i', strtotime($ctx['when'])).' Uhr');
 	$lines[] = $ctx['name'].', '.$ctx['phone'].' · '.$pay[$ctx['pay']];
 	if (!empty($ctx['note'])) { $lines[] = 'Anmerkung: '.$ctx['note']; }
-	return shop_chat_msg(implode("\n", $lines), array('confirm' => 'Verbindlich bestellen', 'addnote' => empty($ctx['note']) ? 'Anmerkung hinzufügen' : 'Anmerkung ändern', 'edit' => 'Warenkorb ändern', 'cancel' => 'Abbrechen'));
+	return shop_chat_msg(implode("\n", $lines), array('confirm' => 'Verbindlich bestellen', 'addnote' => empty($ctx['note']) ? 'Anmerkung hinzufügen' : 'Anmerkung ändern', 'coupon' => empty($ctx['coupon']) ? 'Gutscheincode eingeben' : 'Gutschein ändern') + (empty($ctx['coupon']) ? array() : array('couponx' => 'Gutschein entfernen')) + array('edit' => 'Warenkorb ändern', 'cancel' => 'Abbrechen'));
 }
 
 // the little summary the page shows in the cart bar: array(count, total text); empty when nothing is in the cart
@@ -590,7 +616,7 @@ function shop_chat_place(&$c, $out, $acc) {
 	$ctx = &$c['ctx'];
 	$in = array('type' => $ctx['type'], 'lines' => $ctx['cart'], 'name' => $ctx['name'], 'phone' => $ctx['phone'], 'email' => trim((string)$acc['contact_mail']), 'when' => $ctx['when'], 'payment' => $ctx['pay'],
 		'note' => 'Bestellt über den Chat'.(!empty($ctx['note']) ? ': '.$ctx['note'] : '').(!empty($ctx['flag']) ? ' | ACHTUNG Hinweis des Gastes (Allergie/Beschwerde), bitte anrufen: '.implode(' / ', $ctx['flag']) : ''),
-		'extra' => isset($ctx['extra']) ? $ctx['extra'] : null, 'ip' => isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '', 'acc_id' => (int)$acc['id'], 'acc_keys' => shop_acc_keys($acc));
+		'extra' => isset($ctx['extra']) ? $ctx['extra'] : null, 'coupon' => isset($ctx['coupon']) ? $ctx['coupon'] : '', 'ip' => isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '', 'acc_id' => (int)$acc['id'], 'acc_keys' => shop_acc_keys($acc));
 	if ($ctx['type'] === 'delivery') { $in['street'] = $ctx['addr']['street']; $in['zip'] = $ctx['addr']['zip']; $in['city'] = $ctx['addr']['city']; $in['address_note'] = isset($ctx['addr_note']) ? $ctx['addr_note'] : ''; }
 	$r = shop_create_order($in);
 	if (!$r['ok']) { $c['state'] = 'confirm'; $out[] = shop_chat_msg($r['error'], array('edit' => 'Warenkorb ändern', 'cancel' => 'Abbrechen'), '', shop_chat_call_links()); return shop_chat_finish($c, $out); }

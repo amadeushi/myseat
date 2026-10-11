@@ -698,13 +698,14 @@
 .shop-shell a.shop-chat-fab:hover { background: var(--gold-strong); color: #1a1408; }
 .shop-chat-fab:active { transform: scale(0.97); }
 .shop-cartbar:not([hidden]) ~ .shop-chat-fab { bottom: calc(84px + env(safe-area-inset-bottom)); }
-@media (min-width: 1024px) { .shop-chat-fab, .shop-cartbar:not([hidden]) ~ .shop-chat-fab { bottom: 24px; right: 24px; } }
+/* wide screens: the button keeps its own width and ends on the right edge of the cart column (the layout is 1240px wide with 16px padding), so it does not hang out over the column */
+@media (min-width: 1024px) { .shop-chat-fab, .shop-cartbar:not([hidden]) ~ .shop-chat-fab { bottom: 24px; right: max(16px, calc((100% - 1240px) / 2 + 16px)); } }
 @media (prefers-reduced-motion: reduce) { .shop-chat-fab { transition: none; } }
 
 /* chat bubble (desktop only): the order chat in a window at the bottom right of the order page; below 1024px the button leads to the chat page instead */
 .shop-chat-panel { display: none; }
 @media (min-width: 1024px) {
-	.shop-chat-panel { position: fixed; right: 24px; bottom: 24px; z-index: 36; display: flex; flex-direction: column; width: 400px; height: min(700px, calc(100vh - 48px)); background: var(--bg); border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+	.shop-chat-panel { position: fixed; right: max(16px, calc((100% - 1240px) / 2 + 16px)); bottom: 24px; z-index: 36; display: flex; flex-direction: column; width: 400px; height: min(700px, calc(100vh - 48px)); background: var(--bg); border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
 		box-shadow: 0 14px 44px rgba(0, 0, 0, 0.6); transform-origin: bottom right; animation: scp-in 240ms cubic-bezier(0.16, 1, 0.3, 1) both; }
 	.shop-chat-panel[hidden] { display: none; }
 	.chat-open .shop-chat-fab { display: none; }
@@ -716,3 +717,12 @@
 }
 @keyframes scp-in { from { opacity: 0; transform: translateY(12px) scale(0.97); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .shop-chat-panel { animation: none; } }
+
+/* marks next to a dish: "Neu", "Beliebt" (text, not only colour) and the dish that is sold out for today */
+.shop-mark { display: inline-block; margin-left: 6px; padding: 1px 9px; border-radius: var(--radius-pill); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.03em; vertical-align: 2px; white-space: nowrap; }
+.shop-mark.is-new { background: var(--success); color: #10200a; }
+.shop-mark.is-pop { border: 1px solid var(--gold); color: var(--gold-strong); }
+.shop-mark.is-out { border: 1px solid var(--danger); color: var(--danger); }
+.shop-item.is-out h3, .shop-item.is-out .shop-price { color: var(--text-muted); }
+.shop-item.is-out .shop-item-img { opacity: 0.45; filter: grayscale(0.7); }
+.shop-out-note { font-size: 0.875rem; font-weight: 600; color: var(--danger); }

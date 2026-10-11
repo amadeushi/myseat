@@ -114,6 +114,48 @@
 			'<div class="k-retry-grid">' + f('street', 'Straße und Hausnummer', o.street, true, 160) + f('zip', 'PLZ', o.zip, false, 10) + f('city', 'Ort', o.city, false, 80) + f('note', 'Hinweis für den Fahrer', o.address_note, true, 200) + '</div>' +
 			'<p class="k-retry-msg" role="status"></p><div class="k-assign-foot"><button type="button" class="k-go" data-addr-go="' + o.id + '">Adresse speichern</button><button type="button" class="k-go secondary" data-addr-close="' + o.id + '">Schließen</button></div></div>';
 	}
+	// ---- "Heute aus": dishes the kitchen cannot make any more today; the guests and the chat see "heute aus", tomorrow everything is back by itself
+	var outProducts = [];
+	function setOutN(n) {
+		var b = $('#k-out'), badge = $('#k-out-n'); if (!b || !badge) { return; }
+		n = +n || 0; badge.hidden = !n; badge.textContent = n;
+		b.setAttribute('aria-label', n ? 'Gerichte für heute ausverkauft melden, ' + n + (n === 1 ? ' Gericht ist aus' : ' Gerichte sind aus') : 'Gerichte für heute ausverkauft melden');
+		b.classList.toggle('has-out', n > 0);
+	}
+	function drawOut() {
+		var list = $('#k-outlist'), q = ($('#k-outq').value || '').trim().toLowerCase(); if (!list) { return; }
+		var rows = outProducts.filter(function (p) { return !q || p.title.toLowerCase().indexOf(q) >= 0 || p.cat.toLowerCase().indexOf(q) >= 0; });
+		var outs = rows.filter(function (p) { return p.out; }), rest = rows.filter(function (p) { return !p.out; }), cat = null;
+		function row(p) { return '<label class="k-outrow' + (p.out ? ' is-out' : '') + '"><span class="k-outname">' + esc(p.title) + '</span><span class="k-pause-switch"><input type="checkbox" role="switch" data-out="' + p.id + '" aria-label="' + esc(p.title) + ' heute aus"' + (p.out ? ' checked' : '') + '/><span class="k-pause-track" aria-hidden="true"></span><span class="k-outstate">' + (p.out ? 'heute aus' : 'da') + '</span></span></label>'; }
+		var h = '';
+		if (outs.length) { h += '<h3 class="k-outh">Heute aus (' + outs.length + ')</h3>' + outs.map(row).join(''); }
+		rest.forEach(function (p) { if (p.cat !== cat) { cat = p.cat; h += '<h3 class="k-outh">' + esc(cat || 'Sonstiges') + '</h3>'; } h += row(p); });
+		list.innerHTML = h || '<p class="k-outempty">Kein Gericht gefunden.</p>';
+	}
+	(function () {
+		var btn = $('#k-out'), dlg = $('#k-outdlg'); if (!btn || !dlg || typeof dlg.showModal !== 'function') { return; }
+		btn.addEventListener('click', function () {
+			btn.disabled = true;
+			fetch('ajax/shop_orders.php?op=out_list', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) {
+				btn.disabled = false;
+				if (!r.ok) { notify(r.error || 'Die Liste konnte nicht geladen werden.'); return; }
+				outProducts = r.products; $('#k-outq').value = ''; drawOut(); dlg.showModal(); $('#k-outq').focus();
+			}).catch(function () { btn.disabled = false; notify('Keine Verbindung.'); });
+		});
+		$('#k-outq').addEventListener('input', drawOut);
+		$('#k-outclose').addEventListener('click', function () { dlg.close(); btn.focus(); });
+		$('#k-outlist').addEventListener('change', function (ev) {
+			var inp = ev.target.closest('[data-out]'); if (!inp) { return; }
+			var id = +inp.dataset.out, want = inp.checked; inp.disabled = true;
+			post({ op: 'out_set', id: id, out: want ? 1 : 0 }).then(function (r) {
+				if (!r.ok) { inp.checked = !want; inp.disabled = false; notify(r.error || 'Das hat nicht geklappt.'); return; }
+				outProducts.forEach(function (p) { if (p.id === id) { p.out = want; } });
+				setOutN(r.out_n); var keep = $('#k-outlist').scrollTop; drawOut(); $('#k-outlist').scrollTop = keep;
+				var again = $('#k-outlist [data-out="' + id + '"]'); if (again) { again.focus(); }
+				notify('\u201e' + r.title + '\u201c ist ' + (want ? 'heute aus' : 'wieder da') + '.', { kind: 'ok' });
+			}).catch(function () { inp.checked = !want; inp.disabled = false; notify('Keine Verbindung.'); });
+		});
+	})();
 	// ---- a Lieferando receipt (PDF) from this computer becomes an order, like the one the Pi sends from the tablet
 	(function () {
 		var btn = $('#k-upload'), inp = $('#k-upfile'); if (!btn || !inp) { return; }
@@ -505,7 +547,7 @@
 			var arr = r.orders.filter(function (o) { return o.type !== 'delivery' && o.arrived; }).map(function (o) { return o.id; });
 			if (arrivedSeen !== null && arr.some(function (id) { return arrivedSeen.indexOf(id) < 0; })) { sound.notify(); }
 			arrivedSeen = arr;
-			drawPause(); render(); sound.ack();
+			setOutN(r.out_n); drawPause(); render(); sound.ack();
 		}).catch(function (e) { if (e.message !== 'login' && Date.now() - lastOk > 20000) { $('#k-offline').hidden = false; } });
 	}
 	function post(fields) {

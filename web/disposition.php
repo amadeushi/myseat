@@ -51,6 +51,7 @@ $dp_pause = shop_pause_state();
 		<a class="k-btn k-sq" href="fahrerkarte.php" aria-label="Fahrerkarte" data-tip="Fahrerkarte (Karte der Fahrer)"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg></a>
 			<a class="k-btn k-sq" href="tagesbericht.php" target="_blank" rel="noopener" aria-label="Tagesbericht (öffnet in neuem Fenster)" data-tip="Tagesbericht"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h6"/></svg></a>
 		<button type="button" class="k-btn" id="k-auto" aria-pressed="false" title="Druckt für jede angenommene Bestellung den Lieferschein, wenn sie angenommen wird. Der Browser druckt ohne Rückfrage, wenn er mit --kiosk-printing gestartet ist">Bon bei Annahme: aus</button>
+		<button type="button" class="k-btn k-sq" id="k-out" aria-haspopup="dialog" aria-label="Gerichte für heute ausverkauft melden" data-tip="Gerichte heute aus"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round"><circle cx="12" cy="12" r="8.500"/><circle cx="12" cy="12" r="4.500"/><path d="M5.500 18.500l13-13"/></svg><span class="k-out-n" id="k-out-n" hidden></span></button>
 		<button type="button" class="k-btn k-sq" id="k-upload" aria-label="Lieferando-PDF hochladen" data-tip="Lieferando-Bon (PDF) hochladen"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg></button><input type="file" id="k-upfile" accept="application/pdf,.pdf" multiple hidden/>
 		<button type="button" class="k-btn k-sq" id="k-full" aria-label="Vollbild" data-tip="Vollbild ein/aus"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
 		<a class="k-btn k-sq" href="kitchen_screen.php" aria-label="Küchenbildschirm" data-tip="Küchenbildschirm"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18v11H3zM8 20h8M12 16v4"/></svg></a>
@@ -65,6 +66,13 @@ $dp_pause = shop_pause_state();
 		<section class="k-col" data-col="ready" id="sec-ready" aria-labelledby="kc-ready"><h2 id="kc-ready">Fertig <span class="k-n" id="n-ready">0</span></h2><div class="k-list" id="col-ready"></div><div class="k-bandnav" id="nav-ready" hidden></div><p class="k-overflow" id="of-ready" role="status" hidden></p></section>
 		<section class="k-col" data-col="out" id="sec-out" aria-labelledby="kc-out"><h2 id="kc-out">Unterwegs <span class="k-n" id="n-out">0</span></h2><div class="k-list" id="col-out"></div><div class="k-bandnav" id="nav-out" hidden></div></section>
 	</main>
+	<dialog class="fk-dialog k-outdlg" id="k-outdlg" aria-labelledby="k-outdlg-t">
+		<h2 id="k-outdlg-t">Heute aus</h2>
+		<p class="fk-job-hint">Was heute nicht mehr geht. Gäste sehen "heute aus" und können es nicht bestellen, morgen ist alles wieder da.</p>
+		<input type="search" id="k-outq" class="k-outq" placeholder="Gericht suchen" aria-label="Gericht suchen" autocomplete="off"/>
+		<div class="k-outlist" id="k-outlist" role="group" aria-label="Gerichte"></div>
+		<div class="k-outfoot"><button type="button" class="k-go secondary" id="k-outclose">Schließen</button></div>
+	</dialog>
 	<script src="js/monitor_sound.js?v=<?php echo @filemtime(__DIR__.'/js/monitor_sound.js'); ?>"></script>
 	<script src="js/monitor_print.js?v=<?php echo @filemtime(__DIR__.'/js/monitor_print.js'); ?>"></script>
 	<script src="js/disposition.js?v=<?php echo @filemtime(__DIR__.'/js/disposition.js'); ?>"></script>

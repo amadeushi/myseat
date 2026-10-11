@@ -157,6 +157,8 @@ function shop_ensure_schema() {
 	$col = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'ip_hash'");
 	if (!$col) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `ip_hash` CHAR(16) NOT NULL DEFAULT ''"); }
 	// pizza configurator: a dish can offer the guest "build it yourself"; an option can carry the symbol it shows on the pizza
+	$socol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_products')." LIKE 'sold_out_on'");   // the date a dish is sold out for (today = out), and when it was put on the menu (marks "Neu")
+	if (!$socol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_products')." ADD `sold_out_on` DATE NULL DEFAULT NULL, ADD `added_at` DATE NULL DEFAULT NULL"); }
 	$cfcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_products')." LIKE 'configurator'");
 	if (!$cfcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_products')." ADD `configurator` TINYINT NOT NULL DEFAULT 0"); }
 	$iccol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_group_items')." LIKE 'icon'");
@@ -548,9 +550,10 @@ function shop_item_icon($title, $icon = '') {
 }
 
 function shop_catalog_product($id) {
-	$p = fb_row("SELECT id, category_id, title, description, image_url, price_cents, allergens, configurator FROM ".fb_t('tp_shop_products')." WHERE id = ? AND active = 1", 'i', array((int)$id));
+	$p = fb_row("SELECT id, category_id, title, description, image_url, price_cents, allergens, configurator, sold_out_on FROM ".fb_t('tp_shop_products')." WHERE id = ? AND active = 1", 'i', array((int)$id));
 	if (!$p) { return null; }
 	$p['configurator'] = (int)$p['configurator'];
+	$p['out'] = shop_out_today($p['sold_out_on']); unset($p['sold_out_on']);
 	$p['variations'] = array();
 	foreach (fb_rows("SELECT id, title, price_cents, multiplier FROM ".fb_t('tp_shop_variations')." WHERE product_id = ? ORDER BY sort, id", 'i', array((int)$id)) as $v) {
 		$p['variations'][] = array('id' => (int)$v['id'], 'title' => $v['title'], 'price' => (int)$v['price_cents'], 'mult' => (float)$v['multiplier']);
@@ -574,6 +577,7 @@ function shop_price_line($l) {
 	$qty = max(1, min(50, (int)(isset($l['qty']) ? $l['qty'] : 1)));
 	$p = shop_catalog_product($pid);
 	if (!$p) { return array('ok' => false, 'error' => 'Ein Gericht im Warenkorb ist nicht mehr verfügbar.'); }
+	if (!empty($p['out'])) { return array('ok' => false, 'error' => '„'.$p['title'].'“ ist heute leider aus. Bitte nimm es aus dem Warenkorb.'); }
 	$base = $p['price']; $mult = 1.0; $vtitle = '';
 	if ($p['variations']) {
 		$vid = (int)(isset($l['vid']) ? $l['vid'] : 0); $found = null;
@@ -1175,13 +1179,16 @@ function shop_find_zone_w3w($words) {
 function shop_menu() {
 	shop_ensure_schema();
 	$cats = fb_rows("SELECT id, name, description FROM ".fb_t('tp_shop_categories')." WHERE active = 1 ORDER BY sort, id");
-	$prods = fb_rows("SELECT p.id, p.category_id, p.title, p.description, p.image_url, p.price_cents, p.configurator, p.diet,
+	$prods = fb_rows("SELECT p.id, p.category_id, p.title, p.description, p.image_url, p.price_cents, p.configurator, p.diet, p.sold_out_on, p.added_at,
 			(SELECT COUNT(*) FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id) AS nvar,
 			(SELECT MIN(v.price_cents) FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id) AS vmin,
 			(SELECT COUNT(*) FROM ".fb_t('tp_shop_product_groups')." pg WHERE pg.product_id = p.id) AS nmod
 		FROM ".fb_t('tp_shop_products')." p WHERE p.active = 1 ORDER BY p.sort, p.id");
-	$by = array();
-	foreach ($prods as $p) { $by[(int)$p['category_id']][] = $p; }
+	$by = array(); $pop = shop_popular_ids();
+	foreach ($prods as $p) {
+		$p['out'] = shop_out_today($p['sold_out_on']); $p['popular'] = in_array((int)$p['id'], $pop, true); $p['isnew'] = shop_is_new($p['added_at']);   // marks of the order page and the chat
+		$by[(int)$p['category_id']][] = $p;
+	}
 	$out = array();
 	foreach ($cats as $c) { if (!empty($by[(int)$c['id']])) { $c['products'] = $by[(int)$c['id']]; $out[] = $c; } }
 	return $out;
@@ -2099,7 +2106,7 @@ function shop_me_save_product($d) {
 		fb_exec("UPDATE ".fb_t('tp_shop_products')." SET category_id = ?, title = ?, description = ?, image_url = ?, price_cents = ?, allergens = ?, active = ?, configurator = ? WHERE id = ?", 'isssisiii', array($cat, $title, $desc, $image, $price, $all, $active, $conf, $id));
 	} else {
 		$max = fb_row("SELECT COALESCE(MAX(sort), 0) AS m FROM ".fb_t('tp_shop_products')." WHERE category_id = ?", 'i', array($cat));
-		fb_exec("INSERT INTO ".fb_t('tp_shop_products')." (category_id, title, description, image_url, price_cents, allergens, active, configurator, sort) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", 'isssisiid', array($cat, $title, $desc, $image, $price, $all, $active, $conf, (float)$max['m'] + 1));
+		fb_exec("INSERT INTO ".fb_t('tp_shop_products')." (category_id, title, description, image_url, price_cents, allergens, active, configurator, sort, added_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())", 'isssisiid', array($cat, $title, $desc, $image, $price, $all, $active, $conf, (float)$max['m'] + 1));
 		$id = (int)mysqli_insert_id(fb_db());
 	}
 	// the diet marks the owner ticked: saving a dish marks it as looked at (an empty tick list is an answer, too)
@@ -3591,5 +3598,6 @@ function shop_stamp_notify_voucher($phone, $email, $value, $until, $name = '', $
 }
 
 require_once __DIR__.'/shop_tours.class.php';
+require_once __DIR__.'/shop_flags.class.php';
 require_once __DIR__.'/shop_offers.class.php';
 require_once __DIR__.'/shop_push.class.php';
