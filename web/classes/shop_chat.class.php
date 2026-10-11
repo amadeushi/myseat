@@ -89,7 +89,22 @@ function shop_chat_msg($text, $buttons = array(), $input = '', $links = array())
 	return array('text' => $text, 'buttons' => $b, 'input' => $input, 'links' => $k);
 }
 // the menu does not change within one request: read it once
-function shop_chat_menu() { static $m = null; if ($m === null) { $m = shop_menu(); } return $m; }
+// the menu of the chat: a showcase category ("Bestseller" ...) only repeats dishes of the normal categories, so what is also found elsewhere is left out there (else the guest is asked which category "Salat" should come from)
+function shop_chat_menu() {
+	static $m = null;
+	if ($m !== null) { return $m; }
+	$m = shop_menu();
+	$norm = function ($t) { return preg_replace('/\s+/u', ' ', mb_strtolower(trim((string)$t), 'UTF-8')); };
+	$show = function ($cat) { return (bool)preg_match('/best\s*seller|beliebt|empfehl|favorit|top\s*\d|aktion|angebot/iu', (string)$cat['name']); };
+	$elsewhere = array();
+	foreach ($m as $cat) { if (!$show($cat)) { foreach ($cat['products'] as $p) { $elsewhere[$norm($p['title'])] = 1; } } }
+	foreach ($m as $i => $cat) {
+		if (!$show($cat)) { continue; }
+		$m[$i]['products'] = array_values(array_filter($cat['products'], function ($p) use ($elsewhere, $norm) { return !isset($elsewhere[$norm($p['title'])]); }));
+		if (!$m[$i]['products']) { unset($m[$i]); }
+	}
+	return $m = array_values($m);
+}
 function shop_chat_priced($ctx) {
 	// the same cart is priced several times in one request (bar, summary, totals): once is enough
 	static $memo = array();
