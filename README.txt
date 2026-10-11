@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.38.6 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: Bestellseite: die Hervorhebung der Kategorie springt beim Zurückscrollen wieder auf die erste Kategorie (vorher blieb zum Beispiel "Salate" markiert, weil oben auf der Seite keine Kategorie im Beobachtungsband lag). Aktiv ist die letzte Kategorie, deren Oberkante die Leiste erreicht hat; am Seitenende die letzte.
+ * Fix: Bestell-Chat: die Warteanimation rutscht in der Chatblase nicht mehr unter die Eingabeleiste und verschiebt die Ansicht nicht mehr; der Chat scrollt ans Seitenende, wo die Animation direkt über der Leiste steht.
+
 2026-10-12 == mySeat v6.38.5 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Bestell-Chat: optionale Auswahlgruppen eines Gerichts (zum Beispiel bei Salat oder Pizza) werden nicht mehr einzeln durchgefragt. Nach den Pflichtangaben kommt eine einzige Frage "Noch Extras dazu (Gruppen)?" mit "Nein, so passt es" (Gericht liegt sofort im Warenkorb) und "Ja, Extras wählen" (danach wie bisher Gruppe für Gruppe). Schon im Satz genannte Extras werden weiter übernommen.

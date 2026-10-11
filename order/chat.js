@@ -121,7 +121,7 @@
 			var dots = el('span', 'chat-dots'); dots.setAttribute('aria-hidden', 'true'); dots.appendChild(el('i')); dots.appendChild(el('i')); dots.appendChild(el('i'));
 			var txt = el('span', 'chat-wait-text', 'Einen Moment …');
 			waitEl.appendChild(dots); waitEl.appendChild(txt); waitSlot.appendChild(waitEl);   // the slot is a status region of its own, next to the log
-			waitEl.scrollIntoView({ block: 'end', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+			window.scrollTo({ top: document.documentElement.scrollHeight, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });   // the end of the page: the slot sits right above the dock (scrollIntoView would put it under the dock and could move the page around the bubble)
 			waitT2 = setTimeout(function () { txt.textContent = 'Das dauert einen Augenblick länger …'; }, 7000);
 		}, 350);
 	}

@@ -257,14 +257,25 @@
 	}
 
 	function watchCategories() {
-		var links = $$('#shop-cats a'); if (!links.length || !('IntersectionObserver' in window)) { return; }
-		var io = new IntersectionObserver(function (entries) {
-			entries.forEach(function (e) {
-				if (!e.isIntersecting) { return; }
-				links.forEach(function (a) { var on = a.dataset.cat === e.target.id.replace('cat-', ''); a.classList.toggle('is-active', on); if (on) { a.setAttribute('aria-current', 'true'); } else { a.removeAttribute('aria-current'); } if (on && window.innerWidth < 1024) { a.scrollIntoView({ inline: 'center', block: 'nearest' }); } });
-			});
-		}, { rootMargin: '-130px 0px -70% 0px' });
-		$$('.shop-cat').forEach(function (s) { io.observe(s); });
+		var links = $$('#shop-cats a'); if (!links.length) { return; }
+		var current = null, queued = false;
+		// the active category is the last one whose top has passed the bar; at the very top (or above the first one) it is the first one
+		function update() {
+			queued = false;
+			var secs = $$('.shop-cat').filter(function (s) { return s.offsetParent !== null; }), id = null;
+			if (!secs.length) { return; }
+			id = secs[0].id;
+			secs.forEach(function (s) { if (s.getBoundingClientRect().top <= 150) { id = s.id; } });
+			if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) { id = secs[secs.length - 1].id; }   // the end of the page: the last one, even if it is short
+			id = id.replace('cat-', '');
+			if (id === current) { return; }
+			current = id;
+			links.forEach(function (a) { var on = a.dataset.cat === id; a.classList.toggle('is-active', on); if (on) { a.setAttribute('aria-current', 'true'); } else { a.removeAttribute('aria-current'); } if (on && window.innerWidth < 1024) { a.scrollIntoView({ inline: 'center', block: 'nearest' }); } });
+		}
+		function queue() { if (!queued) { queued = true; requestAnimationFrame(update); } }
+		window.addEventListener('scroll', queue, { passive: true });
+		window.addEventListener('resize', queue);
+		update();
 	}
 
 	// ---- cart
