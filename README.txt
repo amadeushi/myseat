@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.39.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Disposition: Zeit einer Bestellung ändern. Bei Bestellungen, die noch nicht fertig sind (neu, angenommen, wird gekocht; nicht in einer Tour), gibt es an der Karte und in der Küchenzeile ein Uhr-Symbol. Es öffnet ein Feld, in dem die Ankunftszeit beim Gast (bei Abholung die Abholzeit) mit -10/-5/+5/+10/+15 Minuten oder einer Uhrzeit geändert wird; darunter steht, wann die Küche ausgibt. Küchenmonitor und Disposition errechnen die Ausgabezeit daraus. Eine Bestellung mit Wunschzeit behält ihre Art (scheduled_at), die anderen bekommen eine neue eta_at. Jede Änderung steht im Bestell-Log (Ereignis "due").
+ * Neu: Fahrzeit pro Lieferung. Im selben Feld lässt sich die Fahrzeit zum Gast (5 bis 30 Minuten, "Standard" setzt zurück) für diese eine Bestellung setzen, wenn die pauschale Fahrzeit der Einstellungen (kitchen_drive_min) nicht passt, zum Beispiel bei nahen Zielen. Die Ankunftszeit bleibt, nur die Ausgabezeit der Küche verschiebt sich. Gilt auf dem Küchenmonitor, in der Disposition, in der Fahrer-Ansicht "bald fertig" und in der Tourplanung. Neue Spalte tp_shop_orders.drive_min (NULL = Standard, wird beim ersten Aufruf angelegt); Log-Ereignis "drive".
+
 2026-10-12 == mySeat v6.38.7 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix: Bestellseite: die Hervorhebung der Kategorie war um eine Stelle verschoben (ein angeklickter Eintrag wurde erst markiert, wenn man den nächsten anklickte). Die Schwelle kommt jetzt aus dem scroll-margin-top der Kategorie (dort landet ein Klick), und ein Klick markiert sofort und bleibt markiert, bis der Gast selbst scrollt (auch wenn die Seite zu Ende ist, bevor die Kategorie oben ankommt).

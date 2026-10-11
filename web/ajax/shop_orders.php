@@ -139,6 +139,12 @@ if ($op === 'status') {
 if ($op === 'tour_remove') {
 	so_out(shop_tour_remove($id, $who));
 }
+if ($op === 'drive') {
+	so_out(shop_dispatch_set_drive($id, isset($_POST['min']) ? (string)$_POST['min'] : '', $who));
+}
+if ($op === 'due') {
+	so_out(shop_dispatch_set_due($id, isset($_POST['time']) ? (string)$_POST['time'] : '', $who));
+}
 if ($op === 'address') {
 	so_out(shop_dispatch_edit_address($id, array('street' => isset($_POST['street']) ? $_POST['street'] : '', 'zip' => isset($_POST['zip']) ? $_POST['zip'] : '', 'city' => isset($_POST['city']) ? $_POST['city'] : '', 'note' => isset($_POST['note']) ? $_POST['note'] : ''), $who));
 }

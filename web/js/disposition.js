@@ -22,7 +22,7 @@
 	// ---- state
 	var acked = {}, current = [], drivers = [], pause = null, driveMin = 15;
 	var MAXPAGE = { 'new': 3, ready: 4, out: 4 }, PAGE = { 'new': 3, ready: 4, out: 4 }, page = { 'new': 0, ready: 0, out: 0 }, lastAct = Date.now(), IDLE_BACK_MS = 45000;
-	var workOpen = false, assignOpen = {}, assignAll = {}, retryOpen = {}, newFlash = false, addrOpen = {}, addrDraft = {};
+	var workOpen = false, assignOpen = {}, assignAll = {}, retryOpen = {}, newFlash = false, addrOpen = {}, addrDraft = {}, dueOpen = {}, dueDraft = {};
 
 	// ---- automatic slip: "Bon bei Annahme". Every order that is accepted (by the dispatcher here, or at once when it comes from the till, Lieferando or Uber Eats) prints its delivery slip through the browser, once.
 	// What is on the board when the page is opened counts as printed already; the list is kept in the session, so a reload does not print again. The slips go out four seconds apart (a new print replaces the one before in the frame).
@@ -49,7 +49,8 @@
 		if (P) { return o.status === 'new' ? 'new' : (o.status === 'accepted' || o.status === 'preparing' ? 'work' : (o.status === 'ready' ? 'ready' : (o.status === 'delivering' ? 'out' : 'fail'))); }
 		return o.status === 'new' ? 'new' : (o.status === 'accepted' || o.status === 'preparing' ? 'work' : 'ready');
 	}
-	function outTs(o) { return o.due_ts - (o.type === 'delivery' ? driveMin * 60 : 0); }
+	function driveOf(o) { return o.type !== 'delivery' ? 0 : (o.drive_own !== null && o.drive_own !== undefined ? o.drive_own : driveMin); }   // own drive time of the order, else the standard
+	function outTs(o) { return o.due_ts - driveOf(o) * 60; }
 	function bandList(k) {
 		var l = current.filter(function (o) { return column(o) === k; });
 		if (k === 'ready') { l.sort(function (a, b) { return outTs(a) - outTs(b) || (a.ready_ts || a.created_ts) - (b.ready_ts || b.created_ts) || a.id - b.id; }); } // what is most overdue stands first
@@ -113,6 +114,30 @@
 		return '<div class="k-assign k-retry k-addr-edit" data-order="' + o.id + '" role="group" aria-label="Adresse von Lieferung ' + o.day_no + '"><p class="k-assign-t">' + (missingNo(o) ? 'Hausnummer eintragen (steht auf dem Tablet)' : 'Adresse bearbeiten') + '</p>' +
 			'<div class="k-retry-grid">' + f('street', 'Straße und Hausnummer', o.street, true, 160) + f('zip', 'PLZ', o.zip, false, 10) + f('city', 'Ort', o.city, false, 80) + f('note', 'Hinweis für den Fahrer', o.address_note, true, 200) + '</div>' +
 			'<p class="k-retry-msg" role="status"></p><div class="k-assign-foot"><button type="button" class="k-go" data-addr-go="' + o.id + '">Adresse speichern</button><button type="button" class="k-go secondary" data-addr-close="' + o.id + '">Schließen</button></div></div>';
+	}
+	// the due time of an order that is not yet cooked can be moved (the food would be out too early otherwise); the kitchen monitor takes its out time from it
+	var ICON_CLOCK = '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="12" r="8.500" fill="none" stroke="currentColor" stroke-width="1.800"/><path d="M12 7.500V12l3 2" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+	function dueEditable(o) { return ['new', 'accepted', 'preparing'].indexOf(o.status) >= 0 && !o.tour; }
+	function dueIsOpen(o) { return dueEditable(o) && !!dueOpen[o.id]; }
+	function hhmm(ts) { var d = new Date(ts * 1000); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+	function dueOutText(o, time) {
+		var m = /^(\d{1,2}):(\d{2})$/.exec(time || ''); if (!m) { return ''; }
+		var d = new Date(o.due_ts * 1000); d.setHours(+m[1], +m[2], 0, 0);
+		var out = d.getTime() / 1000 - driveOf(o) * 60;
+		return (o.type === 'delivery' ? 'Die Küche gibt um ' + hhmm(out) + ' aus (Fahrzeit ' + driveOf(o) + ' Min).' : 'Fertig um ' + hhmm(out) + '.');
+	}
+	function duePanel(o) {
+		if (!dueIsOpen(o)) { return ''; }
+		var t = dueDraft[o.id] !== undefined ? dueDraft[o.id] : o.due;
+		return '<div class="k-assign k-due-edit" data-order="' + o.id + '" role="group" aria-label="Zeit von Bestellung ' + o.day_no + '"><p class="k-assign-t">' + (o.type === 'delivery' ? 'Lieferzeit' : 'Abholzeit') + ' ändern (jetzt ' + esc(o.due) + ' Uhr)</p>' +
+			'<div class="k-due-quick">' + [-10, -5, 5, 10, 15].map(function (d) { return '<button type="button" class="k-go secondary" data-due-add="' + d + '" data-order="' + o.id + '">' + (d > 0 ? '+' : '−') + Math.abs(d) + ' Min</button>'; }).join('') + '</div>' +
+			'<label class="k-retry-f"><span>Neue Zeit</span><input type="time" name="due" value="' + esc(t) + '" step="60"/></label>' +
+			'<p class="k-due-out" role="status">' + esc(dueOutText(o, t)) + '</p>' +
+			(o.type === 'delivery' ? '<p class="k-assign-t k-drive-t">Fahrzeit zum Gast (Standard ' + driveMin + ' Min): ' + driveOf(o) + ' Min' + (o.drive_own !== null && o.drive_own !== undefined ? '' : ' (Standard)') + '</p><div class="k-due-quick">' +
+				[5, 10, 15, 20, 25, 30].map(function (m) { return '<button type="button" class="k-go secondary' + (driveOf(o) === m ? ' is-current' : '') + '" data-drive-set="' + m + '" data-order="' + o.id + '">' + m + ' Min</button>'; }).join('') +
+				(o.drive_own !== null && o.drive_own !== undefined ? '<button type="button" class="k-go secondary" data-drive-set="" data-order="' + o.id + '">Standard</button>' : '') + '</div>' : '') +
+			'<p class="k-retry-msg" role="status"></p>' +
+			'<div class="k-assign-foot"><button type="button" class="k-go" data-due-go="' + o.id + '">Zeit übernehmen</button><button type="button" class="k-go secondary" data-due-close="' + o.id + '">Schließen</button></div></div>';
 	}
 	// ---- "Heute aus": dishes the kitchen cannot make any more today; the guests and the chat see "heute aus", tomorrow everything is back by itself
 	var outProducts = [];
@@ -225,7 +250,7 @@
 	});
 
 	function moreHtml(o) {
-		return '<span class="k-icons">' + origBtn(o) + (addrEditable(o) ? '<button type="button" class="k-icon" data-addr-open="' + o.id + '" aria-label="Adresse bearbeiten" title="Adresse bearbeiten">' + ICON_PIN + '</button>' : '') + '<button type="button" class="k-icon" data-bon="' + o.id + '" aria-label="Lieferschein drucken" title="Lieferschein drucken">' + ICON_PRINT + '</button>' +
+		return '<span class="k-icons">' + origBtn(o) + (dueEditable(o) ? '<button type="button" class="k-icon" data-due-open="' + o.id + '" aria-label="' + (o.type === 'delivery' ? 'Lieferzeit' : 'Abholzeit') + ' ändern" title="' + (o.type === 'delivery' ? 'Lieferzeit' : 'Abholzeit') + ' ändern">' + ICON_CLOCK + '</button>' : '') + (addrEditable(o) ? '<button type="button" class="k-icon" data-addr-open="' + o.id + '" aria-label="Adresse bearbeiten" title="Adresse bearbeiten">' + ICON_PIN + '</button>' : '') + '<button type="button" class="k-icon" data-bon="' + o.id + '" aria-label="Lieferschein drucken" title="Lieferschein drucken">' + ICON_PRINT + '</button>' +
 			'<button type="button" class="k-icon" data-guestlink="' + esc(guestUrl(o)) + '" aria-label="Gast-Link kopieren" title="Gast-Link kopieren">' + ICON_LINK + '</button></span>';
 	}
 	function card(o) {
@@ -262,7 +287,7 @@
 		}
 		else if (o.status === 'delivering') { h += driverBadge(o) + '<button type="button" class="k-go secondary" data-release="' + o.id + '">Zurück in den Pool</button><button type="button" class="k-go" data-act="done">Geliefert</button>'; }
 		else if (o.status === 'failed') { h += driverBadge(o) + '<button type="button" class="k-go" data-retry-open="' + o.id + '">Nochmal zustellen</button><button type="button" class="k-go secondary" data-act="cancelled">Stornieren</button>'; }
-		return h + '</div>' + (side ? pay + '</div>' : '') + (o.status === 'failed' && retryOpen[o.id] ? retryPanel(o) : '') + tourLine(o) + addrPanel(o) + '</article>';
+		return h + '</div>' + (side ? pay + '</div>' : '') + (o.status === 'failed' && retryOpen[o.id] ? retryPanel(o) : '') + tourLine(o) + duePanel(o) + addrPanel(o) + '</article>';
 	}
 
 	// ---- portrait: rows of the lower bands
@@ -327,7 +352,7 @@
 		var d = new Date(outTs(o) * 1000), hhmm = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
 		return '<article class="k-row k-row-work' + lvl + '" data-id="' + o.id + '"><div class="k-row-main"><span class="k-no">#' + o.day_no + '</span><span class="k-type ' + esc(o.type) + '">' + (o.type === 'delivery' ? 'Lieferung' : 'Abholung') + '</span><span class="k-rwho">' + esc(sum) + '</span>' + (o.type === 'delivery' ? '<span class="k-raddr">' + shortAddr(o) + '</span>' : '') + '</div>' +
 			'<div class="k-row-wait"><b>raus bis ' + hhmm + '</b><span class="k-lvl">' + (m < 0 ? (-m) + ' Min überfällig' : 'in ' + m + ' Min') + '</span><small>' + (o.status === 'preparing' ? 'wird gekocht' : 'angenommen') + '</small></div>' +
-			'<div class="k-row-act">' + (o.status === 'accepted' ? '<button type="button" class="k-go secondary" data-act="preparing">Wird gekocht</button>' : '<button type="button" class="k-go secondary" data-act="ready">Fertig</button>') + tourPick(o) + moreHtml(o) + '</div>' + tourLine(o) + addrPanel(o) + '</article>';
+			'<div class="k-row-act">' + (o.status === 'accepted' ? '<button type="button" class="k-go secondary" data-act="preparing">Wird gekocht</button>' : '<button type="button" class="k-go secondary" data-act="ready">Fertig</button>') + tourPick(o) + moreHtml(o) + '</div>' + tourLine(o) + duePanel(o) + addrPanel(o) + '</article>';
 	}
 
 	// ---- diff-rendered by order id instead of a wholesale innerHTML replace every poll: a full rebuild used to wipe
@@ -407,7 +432,7 @@
 		if (!P) {
 			['new', 'work', 'ready'].forEach(function (k) {
 				var root = $('#col-' + k);
-				syncList(root, bandList(k), card, function (o) { return (k === 'ready' && retryOpen[o.id] ? 'r' : '') + (addrIsOpen(o) ? 'A' : '') + tourSig(o); }, k === 'new' ? 'Alles erledigt' : 'Nichts hier', live);
+				syncList(root, bandList(k), card, function (o) { return (k === 'ready' && retryOpen[o.id] ? 'r' : '') + (addrIsOpen(o) ? 'A' : '') + (dueIsOpen(o) ? 'T' : '') + tourSig(o); }, k === 'new' ? 'Alles erledigt' : 'Nichts hier', live);
 				$('#n-' + k).textContent = byCol[k];
 				// a column silently overflowing below the fold (a busy night queuing orders nobody is expected to
 				// scroll for) used to give zero signal - a persistent hint below the list fixes that
@@ -420,7 +445,7 @@
 			['new', 'ready', 'out'].forEach(function (k) {
 				var pages = pagesOf(k); if (page[k] > pages - 1) { page[k] = pages - 1; }
 				var rb = { 'new': card, ready: rowReady, out: rowOut }[k];
-				syncList($('#col-' + k), shown(k), rb, k === 'ready' ? function (o) { return (assignOpen[o.id] ? 'a' + (assignAll[o.id] ? 'x' : '') + JSON.stringify(drivers) : '') + (addrIsOpen(o) ? 'A' : Math.floor(nowS() / 60)) + tourSig(o); } : (k === 'out' ? function (o) { return addrIsOpen(o) ? 'A' : Math.floor(nowS() / 60); } : (k === 'new' ? function (o) { return (addrIsOpen(o) ? 'A' : '') + tourSig(o); } : null)),
+				syncList($('#col-' + k), shown(k), rb, k === 'ready' ? function (o) { return (assignOpen[o.id] ? 'a' + (assignAll[o.id] ? 'x' : '') + JSON.stringify(drivers) : '') + (addrIsOpen(o) ? 'A' : Math.floor(nowS() / 60)) + tourSig(o); } : (k === 'out' ? function (o) { return addrIsOpen(o) ? 'A' : Math.floor(nowS() / 60); } : (k === 'new' ? function (o) { return (addrIsOpen(o) ? 'A' : '') + (dueIsOpen(o) ? 'T' : '') + tourSig(o); } : null)),
 					k === 'new' ? 'Alles erledigt' : (k === 'ready' ? 'Nichts wartet' : 'Niemand unterwegs'), live);
 				bandNav(k, pages); $('#n-' + k).textContent = byCol[k];
 			});
@@ -428,7 +453,7 @@
 			syncList($('#col-fail'), bandList('fail'), rowFail, function (o) { return retryOpen[o.id] ? 'r' : ''; }, '', live); $('#n-fail').textContent = byCol.fail;
 			$('#sec-fail').hidden = !byCol.fail;
 			// the kitchen is one line (the kitchen has its own monitor); one tap opens the list
-			var work = bandList('work'), wroot = $('#col-work'), wsig = JSON.stringify(work) + '|' + workOpen + '|' + work.map(function (o) { return addrIsOpen(o) ? o.id : ''; }).join(',') + '|' + (work.some(addrIsOpen) ? 0 : Math.floor(nowS() / 60)) + '|' + work.map(tourSig).join(',');
+			var work = bandList('work'), wroot = $('#col-work'), wsig = JSON.stringify(work) + '|' + workOpen + '|' + JSON.stringify(dueOpen) + '|' + work.map(function (o) { return addrIsOpen(o) ? o.id : ''; }).join(',') + '|' + (work.some(addrIsOpen) ? 0 : Math.floor(nowS() / 60)) + '|' + work.map(tourSig).join(',');
 			if (wroot.dataset.sig !== wsig) {
 				wroot.dataset.sig = wsig;
 				var worst = work[0], line = 'Nichts in der Küche';
@@ -641,6 +666,48 @@
 			if (!r.ok) { msg.textContent = r.error || 'Das hat nicht geklappt.'; return; }
 			addrOpen[id] = false; delete addrDraft[id];
 			if (r.fee_note) { notify(r.fee_note, { kind: 'ok' }); }
+			load();
+		}).catch(function () { btn.disabled = false; msg.textContent = 'Das hat nicht geklappt. Bitte versuche es noch einmal.'; });
+	}
+	// due time: open/close, quick steps, save
+	document.addEventListener('click', function (ev) {
+		var op = ev.target.closest('[data-due-open]'), cl = ev.target.closest('[data-due-close]'), go = ev.target.closest('[data-due-go]'), ad = ev.target.closest('[data-due-add]');
+		if (op) { var id = op.dataset.dueOpen; dueOpen[id] = !dueOpen[id]; delete dueDraft[id]; render(); return; }
+		if (cl) { dueOpen[cl.dataset.dueClose] = false; delete dueDraft[cl.dataset.dueClose]; render(); return; }
+		if (ad) {
+			var box = ad.closest('.k-due-edit'), inp = $('input[name="due"]', box), o = current.filter(function (x) { return String(x.id) === ad.dataset.order; })[0];
+			var m = /^(\d{1,2}):(\d{2})$/.exec(inp.value || (o ? o.due : '')); if (!m) { return; }
+			var mins = (+m[1]) * 60 + (+m[2]) + (+ad.dataset.dueAdd); mins = ((mins % 1440) + 1440) % 1440;
+			inp.value = ('0' + Math.floor(mins / 60)).slice(-2) + ':' + ('0' + (mins % 60)).slice(-2); dueDraft[ad.dataset.order] = inp.value;
+			if (o) { $('.k-due-out', box).textContent = dueOutText(o, inp.value); }
+			return;
+		}
+		var dr = ev.target.closest('[data-drive-set]');
+		if (dr) {
+			var b2 = dr.closest('.k-due-edit'), m2 = $('.k-retry-msg', b2); m2.textContent = '';
+			post({ op: 'drive', id: dr.dataset.order, min: dr.dataset.driveSet }).then(function (r) {
+				if (!r.ok) { m2.textContent = r.error || 'Das hat nicht geklappt.'; return; }
+				notify(r.own ? 'Fahrzeit: ' + r.drive + ' Min' : 'Fahrzeit wieder wie üblich (' + r.drive + ' Min)', { kind: 'ok' }); load();
+			}).catch(function () { m2.textContent = 'Das hat nicht geklappt. Bitte versuche es noch einmal.'; });
+			return;
+		}
+		if (go) { dueGo(go); }
+	});
+	document.addEventListener('input', function (ev) {
+		var box = ev.target.closest && ev.target.closest('.k-due-edit'); if (!box || ev.target.name !== 'due') { return; }
+		var id = box.dataset.order, o = current.filter(function (x) { return String(x.id) === id; })[0]; dueDraft[id] = ev.target.value;
+		if (o) { $('.k-due-out', box).textContent = dueOutText(o, ev.target.value); }
+	});
+	document.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' && ev.target.closest && ev.target.closest('.k-due-edit input')) { var g = $('[data-due-go]', ev.target.closest('.k-due-edit')); if (g && !g.disabled) { dueGo(g); } } });
+	function dueGo(btn) {
+		var box = btn.closest('.k-due-edit'), msg = $('.k-retry-msg', box), id = btn.dataset.dueGo, v = $('input[name="due"]', box).value;
+		if (!v) { msg.textContent = 'Bitte eine Uhrzeit angeben.'; return; }
+		btn.disabled = true; msg.textContent = '';
+		post({ op: 'due', id: id, time: v }).then(function (r) {
+			btn.disabled = false;
+			if (!r.ok) { msg.textContent = r.error || 'Das hat nicht geklappt.'; return; }
+			dueOpen[id] = false; delete dueDraft[id];
+			notify('Zeit geändert auf ' + r.due + ' Uhr', { kind: 'ok' });
 			load();
 		}).catch(function () { btn.disabled = false; msg.textContent = 'Das hat nicht geklappt. Bitte versuche es noch einmal.'; });
 	}

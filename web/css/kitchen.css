@@ -468,3 +468,9 @@ p.ksd-note { margin-top: 8px; }
 .k-outrow.is-out .k-pause-switch input:checked + .k-pause-track { background: var(--danger); border-color: var(--danger); }
 .k-outempty { margin: 14px 6px; color: var(--muted); }
 .k-outfoot { display: flex; justify-content: flex-end; }
+
+/* moving the due time of an order */
+.k-due-edit { margin-top: 10px; }
+.k-due-quick { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.k-due-edit input[type=time] { min-height: 48px; font-size: 1.25rem; }
+.k-due-out { margin: 6px 0 0; color: var(--text-muted, inherit); }

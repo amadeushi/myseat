@@ -128,6 +128,9 @@ function shop_ensure_schema() {
 	// tours (web/classes/shop_tours.class.php): the letter of the tour, the common time the food leaves the kitchen, and whether the kitchen has reported this bon finished while it waits for the tour
 	$tcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'tour'");
 	if (!$tcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `tour` CHAR(1) NULL, ADD `tour_out_at` DATETIME NULL, ADD `tour_wait` TINYINT NOT NULL DEFAULT 0"); }
+	// the drive time of this one order (minutes), set by the dispatch when the standard (setting kitchen_drive_min) does not fit: NULL = standard
+	$dcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'drive_min'");
+	if (!$dcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `drive_min` TINYINT UNSIGNED NULL"); }
 	$acol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'arrived_at'");
 	if (!$acol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `arrived_at` DATETIME NULL, ADD `driver_rating` TINYINT NULL, ADD `driver_rated_at` DATETIME NULL"); }
 	// diet marks of a dish, ticked in the menu editor: 'veg', 'vegan' (implies veg), 'spicy', comma separated; NULL = nobody has looked at this dish yet (nothing is shown to guests)
@@ -1874,7 +1877,7 @@ function shop_orders_with_items($rows) {
 			'driver_age' => ($dp = shop_driver_position($r)) ? $dp['age'] : null,
 			'fail_reason' => (string)$r['fail_reason'],
 			// for the dispatch screen: when it has to be there, since when it is ready, which driver (id) carries it
-			'due_ts' => strtotime($due), 'ready_ts' => $r['ready_at'] ? strtotime($r['ready_at']) : 0, 'updated_ts' => $r['updated_at'] ? strtotime($r['updated_at']) : 0, 'driver_id' => $r['driver_id'] ? (int)$r['driver_id'] : 0,
+			'drive_own' => ($r['drive_min'] !== null && $r['drive_min'] !== '') ? (int)$r['drive_min'] : null, 'due_ts' => strtotime($due), 'ready_ts' => $r['ready_at'] ? strtotime($r['ready_at']) : 0, 'updated_ts' => $r['updated_at'] ? strtotime($r['updated_at']) : 0, 'driver_id' => $r['driver_id'] ? (int)$r['driver_id'] : 0,
 		);
 		$out[count($out) - 1] = array_merge($out[count($out) - 1], shop_tour_fields($r));
 	}
@@ -1930,10 +1933,10 @@ function shop_kitchen_board() {
 	foreach ($rows as $r) { $accepted[(int)$r['id']] = $r['accepted_at'] ? strtotime($r['accepted_at']) : strtotime($r['created_at']); }
 	$out = array();
 	// the drive of a delivery is taken off the due time: out_ts is when the food has to leave the kitchen (pickup: the due time itself)
-	$drive = max(0, min(60, (int)shop_setting('kitchen_drive_min')));
+	$ownDrive = array(); foreach ($rows as $r) { $ownDrive[(int)$r['id']] = $r; }
 	foreach (shop_orders_with_items($rows) as $o) {
 		$dueTs = strtotime($o['due_date'].' '.$o['due']);
-		$min = ($o['type'] === 'delivery') ? $drive : 0;
+		$min = shop_order_drive_min($ownDrive[(int)$o['id']]);
 		$out[] = array('id' => $o['id'], 'day_no' => $o['day_no'], 'number' => $o['number'], 'type' => $o['type'], 'status' => $o['status'], 'test' => $o['test'], 'source' => $o['source'],
 			'due' => $o['due'], 'scheduled' => $o['scheduled'], 'asap' => ($o['scheduled'] === ''), 'due_ts' => $dueTs, 'drive_min' => $min, 'out_ts' => $dueTs - $min * 60, 'out' => date('H:i', $dueTs - $min * 60),
 			// of a delivery only the name and the postcode: enough to talk the tours through with the kitchen, no street, no phone
@@ -2607,16 +2610,15 @@ function shop_driver_pool_orders($driverId = null) {
 function shop_driver_soon_orders() {
 	shop_ensure_schema();
 	$rows = fb_rows("SELECT o.id, o.day_no, o.zip, o.street, o.city, o.address_note, o.note, o.lat, o.lng, o.suburb, o.route_m, o.route_s, o.customer_name, o.status,
-			o.subtotal_cents, o.fee_cents, o.total_cents, o.payment_method, o.payment_status, o.scheduled_at, o.eta_at, o.created_at, o.ready_at, z.name AS zone_name,
+			o.subtotal_cents, o.fee_cents, o.total_cents, o.payment_method, o.payment_status, o.scheduled_at, o.eta_at, o.created_at, o.ready_at, o.drive_min, z.name AS zone_name,
 			(SELECT COALESCE(SUM(qty), 0) FROM ".fb_t('tp_shop_order_items')." WHERE order_id = o.id) AS n_items
 		FROM ".fb_t('tp_shop_orders')." o LEFT JOIN ".fb_t('tp_shop_zones')." z ON z.id = o.zone_id
 		WHERE o.type = 'delivery' AND o.status IN ('accepted', 'preparing') AND o.driver_id IS NULL ORDER BY COALESCE(o.scheduled_at, o.eta_at, o.created_at) LIMIT 6");
-	$drive = max(0, min(60, (int)shop_setting('kitchen_drive_min')));
 	$out = array();
 	foreach ($rows as $r) {
 		$c = shop_driver_card($r);
 		$due = strtotime($r['scheduled_at'] ?: ($r['eta_at'] ?: $r['created_at']));
-		$c['cooking'] = ($r['status'] === 'preparing'); $c['ready_txt'] = date('H:i', $due - $drive * 60);
+		$c['cooking'] = ($r['status'] === 'preparing'); $c['ready_txt'] = date('H:i', $due - shop_order_drive_min(array('type' => 'delivery', 'drive_min' => $r['drive_min'])) * 60);
 		$out[] = $c;
 	}
 	return $out;
@@ -2814,6 +2816,40 @@ function shop_create_courier_job($in, $by = 'Disposition') {
 	shop_log($id, 'created', 'Fahrauftrag ('.$by.')'.($amount > 0 ? ', zu kassieren '.shop_money($amount) : ''));
 	return array('ok' => true, 'id' => $id, 'day_no' => $dayNo);
 }
+// the dispatch moves the due time of an order that is not yet cooked (the food would be out too early otherwise): the kitchen monitor and the dispatch take the out time from it
+// (delivery: due time minus the drive). An order for a wish time keeps its kind (scheduled_at), the others get a new eta_at. $time is "HH:MM" of the order's day.
+// minutes the food of a delivery needs to the guest: the own value of the order, else the standard of the settings (pickup: 0)
+function shop_order_drive_min($r) {
+	if (isset($r['type']) && $r['type'] !== 'delivery') { return 0; }
+	if (isset($r['drive_min']) && $r['drive_min'] !== null && $r['drive_min'] !== '') { return max(0, min(60, (int)$r['drive_min'])); }
+	return max(0, min(60, (int)shop_setting('kitchen_drive_min')));
+}
+// the dispatch sets the drive time of one delivery (near destinations need less than the standard); $min '' = back to the standard. The time of the guest stays, only the out time of the kitchen moves.
+function shop_dispatch_set_drive($orderId, $min, $by) {
+	$o = shop_order($orderId);
+	if (!$o || $o['type'] !== 'delivery' || !in_array($o['status'], array('new', 'accepted', 'preparing'), true)) { return array('ok' => false, 'error' => 'Die Fahrzeit lässt sich nur bei Lieferungen ändern, die noch nicht fertig sind.'); }
+	if (!empty($o['tour']) && shop_tours_on()) { return array('ok' => false, 'error' => 'Die Bestellung gehört zu einer Tour. Ändere die Zeit der Tour.'); }
+	$min = trim((string)$min);
+	if ($min !== '' && (!ctype_digit($min) || (int)$min > 60)) { return array('ok' => false, 'error' => 'Die Fahrzeit muss zwischen 0 und 60 Minuten liegen.'); }
+	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET drive_min = ?, updated_at = ? WHERE id = ?", 'isi', array($min === '' ? null : (int)$min, date('Y-m-d H:i:s'), (int)$orderId));
+	shop_log($orderId, 'drive', ($min === '' ? 'Standard' : $min.' Min').($by !== '' ? ' ('.$by.')' : ''));
+	$o['drive_min'] = $min === '' ? null : (int)$min;
+	return array('ok' => true, 'drive' => shop_order_drive_min($o), 'own' => $min !== '');
+}
+function shop_dispatch_set_due($orderId, $time, $by) {
+	$o = shop_order($orderId);
+	if (!$o || !in_array($o['status'], array('new', 'accepted', 'preparing'), true)) { return array('ok' => false, 'error' => 'Die Zeit lässt sich nur ändern, solange die Bestellung noch nicht fertig ist.'); }
+	if (!empty($o['tour']) && shop_tours_on()) { return array('ok' => false, 'error' => 'Die Bestellung gehört zu einer Tour. Ändere die Zeit der Tour.'); }
+	if (!preg_match('/^([01]?\d|2[0-3]):([0-5]\d)$/', trim((string)$time), $m)) { return array('ok' => false, 'error' => 'Bitte eine Uhrzeit wie 19:30 angeben.'); }
+	$old = $o['scheduled_at'] ?: ($o['eta_at'] ?: $o['created_at']);
+	$new = substr($old, 0, 10).' '.sprintf('%02d:%02d', (int)$m[1], (int)$m[2]).':00';
+	if (strtotime($new) < time() - 3600 || strtotime($new) > time() + 12 * 3600) { return array('ok' => false, 'error' => 'Diese Zeit liegt zu weit weg von jetzt.'); }
+	$col = $o['scheduled_at'] ? 'scheduled_at' : 'eta_at';
+	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET $col = ?, updated_at = ? WHERE id = ?", 'ssi', array($new, date('Y-m-d H:i:s'), (int)$orderId));
+	shop_log($orderId, 'due', substr($old, 11, 5).' -> '.substr($new, 11, 5).($by !== '' ? ' ('.$by.')' : ''));
+	return array('ok' => true, 'due' => substr($new, 11, 5));
+}
+
 function shop_dispatch_edit_address($orderId, $in, $by) {
 	$o = shop_order($orderId);
 	if (!$o || $o['type'] !== 'delivery' || !in_array($o['status'], array('new', 'accepted', 'preparing', 'ready', 'delivering'), true)) { return array('ok' => false, 'error' => 'Die Adresse lässt sich bei dieser Bestellung gerade nicht ändern.'); }

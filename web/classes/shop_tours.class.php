@@ -13,8 +13,7 @@ function shop_tours_on() { return shop_setting('tours_on') === '1'; }
 // when the food of an order has to leave the kitchen: due time, minus the drive for a delivery (the same rule as the kitchen monitor)
 function shop_order_out_ts($r) {
 	$due = strtotime($r['scheduled_at'] ?: ($r['eta_at'] ?: $r['created_at']));
-	$drive = ($r['type'] === 'delivery') ? max(0, min(60, (int)shop_setting('kitchen_drive_min'))) : 0;
-	return $due - $drive * 60;
+	return $due - shop_order_drive_min($r) * 60;
 }
 
 // the orders of a tour that are still in the kitchen
