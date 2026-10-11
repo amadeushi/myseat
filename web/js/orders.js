@@ -122,7 +122,7 @@
 	page.addEventListener('change', function (ev) {
 		var sw = ev.target.closest && ev.target.closest('[data-pause-switch]'); if (!sw) { return; }
 		var row = sw.closest('.pause-item');
-		if (!sw.checked) { sw.checked = true; pauseClose(); var pop = $('[data-pause-pop]', row); pop.hidden = false; var f = $('[data-pause-min]', pop); if (f) { f.focus(); } return; }   // pause: ask for the time first
+		if (!sw.checked) { sw.checked = true; var pop = $('[data-pause-pop]', row), wasOpen = !pop.hidden; pauseClose(); if (wasOpen) { return; } pop.hidden = false; var f = $('[data-pause-min]', pop); if (f) { f.focus(); } return; }   // pause: ask for the time first; a second tap on the switch closes the menu again
 		pauseSend(row, false, 0);
 	});
 	page.addEventListener('click', function (ev) {
