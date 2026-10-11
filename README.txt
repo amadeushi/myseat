@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.39.7 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Bestellungen (Backend, p=9) nach dem Muster der Disposition: Die Links der Leiste sind Symbole mit aria-label und Tooltip (Bestellung erfassen, Disposition, Küchenbildschirm, Tagesbericht, Bestellseite ansehen, Werkzeuge); Disposition und Küchenbildschirm stehen jetzt direkt in der Leiste statt im Werkzeuge-Menü (dort bleiben Test-Bestellungen und Speisekarte). Die Pause-Schalter für Lieferung und Abholung sind schmaler; die Dauer wird erst beim Ausschalten in einem kleinen Menü gefragt (15 Min, 30 Min, 1 Std, 2 Std, bis ich sie aufhebe), wieder einschalten nimmt sofort an. "Abbrechen" im Dialog ist ein Kreuz.
+
 2026-10-12 == mySeat v6.39.6 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Küchenmonitor, Kopfleiste nach dem Muster der Disposition: Spalten (mit Zahl), Zwei Zeilen, Erledigt (mit Zähler der erledigten Bestellungen) und Bon bei Fertig sind Symbol-Buttons mit Tooltip (Zustand) und aria-label; die Leiste ist in Ansicht (Spalten, Zeilen, Erledigt), Einstellungen (Ton, Bon bei Fertig) und System (Neu laden, Vollbild, Disposition) gruppiert. "Disposition" und die Ablauf-Buttons der Karten (Fertig, Lieferzettel, Küchenbon) bleiben mit Text.
