@@ -71,8 +71,9 @@ Regeln:
 - Du arbeitest nur mit den Gerichten der Speisekarte unten und erfindest nichts. Gibt es ein Gericht nicht, sag das und nenne bis zu drei ähnliche von der Karte.
 - Lege Gerichte mit add_to_cart in den Warenkorb, sobald klar ist, was der Gast möchte. Nenne in deinen Antworten keine Preise und keine Summen, die zeigt der Server an.
 - Fehlt bei einem Gericht eine Pflichtangabe (Größe oder eine Pflichtauswahl), die der Gast nicht genannt hat, rufe start_guided auf: dann wählt der Gast mit Knöpfen. Füge zuerst alle vollständigen Gerichte hinzu und rufe start_guided zuletzt für höchstens ein unvollständiges Gericht auf.
-- Lieber nachfragen als raten: Passt ein Wort auf mehrere Gerichte, ist ein Name nicht eindeutig (auch bei Tippfehlern), oder bist du bei Gericht, Größe oder Anzahl unsicher, stelle genau eine kurze Rückfrage mit höchstens zwei Möglichkeiten und lege vorerst nichts in den Warenkorb. Passt der Name wörtlich auf genau ein Gericht, frag nicht nach. Fehlt die Anzahl, nimm 1; eine Anzahl nennst du nur, wenn der Gast sie gesagt hat.
-- Sag nach dem Hinzufügen in einem kurzen Satz, was du in den Warenkorb gelegt hast (Anzahl, Gericht, Größe), damit der Gast es prüfen kann.
+- Lieber nachfragen als raten: Passt ein Wort auf mehrere Gerichte, ist ein Name nicht eindeutig (auch bei Tippfehlern), oder bist du bei Gericht, Größe oder Anzahl unsicher, stelle genau eine kurze Rückfrage mit höchstens zwei Möglichkeiten und lege vorerst nichts in den Warenkorb. Passt der Name wörtlich auf genau ein Gericht, frag nicht nach. Eindeutige Gerichte legst du sofort in den Warenkorb, auch wenn du bei einem anderen Gericht derselben Nachricht nachfragst. Fehlt die Anzahl, nimm 1; eine Anzahl nennst du nur, wenn der Gast sie gesagt hat.
+- Der Server zeigt dem Gast selbst, was neu im Warenkorb ist ("Dazugekommen: ..."). Wiederhole diese Liste nicht und nenne keine Gerichte doppelt: bestätige höchstens kurz ("Gern!", "Erledigt.") oder stelle deine Rückfrage. Behaupte nie, etwas liege im Warenkorb, wenn das Werkzeug einen Fehler gemeldet hat.
+- Schreib reinen Text ohne Markdown (keine Sternchen, keine Aufzählungszeichen, keine Überschriften).
 - Gerichte mit [heute aus] gibt es heute nicht: sag das freundlich und nenne bis zu zwei Alternativen. [beliebt] und [neu] darfst du als Empfehlung nennen.
 - Optionale Extras setzt du nur, wenn der Gast sie nennt und es sie als Auswahl gibt (get_product zeigt sie). Wünsche, die keine Auswahl sind (zum Beispiel "ohne Pfeffer"), kommen als note.
 - Zu Allergien, Unverträglichkeiten, Inhaltsstoffen, Zubereitung und Beschwerden sagst du nichts Verbindliches: rufe request_staff auf und sag, dass das Team Bescheid weiß und der Gast bitte anruft. Die Marken [vegan] und [vegetarisch] der Karte darfst du nennen, Genaueres klärt das Team.
@@ -167,14 +168,14 @@ function shop_chat_ai_turn(&$c, $out, $text) {
 	$ctx = &$c['ctx'];
 	@set_time_limit(100);   // up to six calls of the service, each may take a while
 	if (!shop_chat_ai_ready() || (int)(isset($ctx['ai_calls']) ? $ctx['ai_calls'] : 0) >= SHOP_CHAT_AI_PER_CHAT) { return null; }
-	$cart = shop_chat_ai_cart_lines($ctx);
+	$cart = shop_chat_ai_cart_lines($ctx); $before = shop_chat_ai_snapshot($ctx);
 	$user = 'Warenkorb jetzt: '.($cart ? "\n".implode("\n", $cart) : 'leer')."\nLieferart: ".($ctx['type'] === 'pickup' ? 'Abholung' : 'Lieferung')."\n\nNachricht des Gastes:\n".$text;
 	$messages = array();
 	foreach ((isset($ctx['ai_hist']) && is_array($ctx['ai_hist'])) ? $ctx['ai_hist'] : array() as $h) { $messages[] = array('role' => $h[0], 'content' => $h[1]); }
 	$messages[] = array('role' => 'user', 'content' => $user);
-	$guided = null; $staff = false; $final = ''; $lead = ''; $ok = false; $toolErr = array(); $changed = false;
+	$guided = null; $staff = false; $final = ''; $lead = ''; $ok = false; $toolErr = array();
 	for ($round = 0; $round < SHOP_CHAT_AI_ROUNDS; $round++) {
-		$r = shop_chat_ai_request(array('model' => (string)(shop_setting('chat_ai_model') ?: SHOP_CHAT_AI_MODEL), 'max_tokens' => 700, 'system' => shop_chat_ai_system(), 'tools' => shop_chat_ai_tools(), 'messages' => $messages));
+		$r = shop_chat_ai_request(array('model' => (string)(shop_setting('chat_ai_model') ?: SHOP_CHAT_AI_MODEL), 'max_tokens' => 1500, 'output_config' => array('effort' => (string)(shop_setting('chat_ai_effort') ?: 'low')), 'system' => shop_chat_ai_system(), 'tools' => shop_chat_ai_tools(), 'messages' => $messages));
 		$ctx['ai_calls'] = (int)(isset($ctx['ai_calls']) ? $ctx['ai_calls'] : 0) + 1; shop_chat_ai_count();
 		if (!$r || empty($r['content']) || !is_array($r['content'])) { break; }
 		// a tool call without arguments comes back as an empty list after decoding: the API wants an object there
@@ -182,30 +183,59 @@ function shop_chat_ai_turn(&$c, $out, $text) {
 		$messages[] = array('role' => 'assistant', 'content' => $r['content']);
 		$uses = array(); $txt = '';
 		foreach ($r['content'] as $b) { if (isset($b['type']) && $b['type'] === 'tool_use') { $uses[] = $b; } elseif (isset($b['type']) && $b['type'] === 'text') { $txt .= $b['text']; } }
-		if ((isset($r['stop_reason']) ? $r['stop_reason'] : '') !== 'tool_use' || !$uses) { $final = trim($txt); $ok = true; break; }
+		$stop = isset($r['stop_reason']) ? $r['stop_reason'] : '';
+		if ($stop === 'max_tokens' || $stop === 'refusal') { error_log('mySeat chat AI: stop_reason '.$stop); shop_chat_review($c, 'KI: Antwort '.($stop === 'max_tokens' ? 'abgeschnitten' : 'abgelehnt').' (Satz: '.mb_substr($text, 0, 80).')'); break; }   // cut off in its thinking or declined: no answer, the caller falls back
+		if ($stop !== 'tool_use' || !$uses) { $final = trim($txt); $ok = true; break; }
 		$res = array();
 		foreach ($uses as $u) {
 			$tr = shop_chat_ai_tool($c, (string)$u['name'], isset($u['input']) ? $u['input'] : array(), $guided, $staff);
 			if (isset($tr['error'])) { $toolErr[] = (string)$u['name'].': '.$tr['error']; }   // a tool that refused: the sentence was probably not understood
-			if (!empty($tr['added'])) { $changed = true; }
 			$res[] = array('type' => 'tool_result', 'tool_use_id' => $u['id'], 'content' => json_encode($tr, JSON_UNESCAPED_UNICODE));
 		}
 		$messages[] = array('role' => 'user', 'content' => $res);
 		if ($guided !== null) { $lead = trim($txt); $ok = true; break; }
 	}
 	if (!$ok) { return null; }
+	// what the cart really got is told by the server (the model's own words may leave it out or be wrong)
+	$report = shop_chat_ai_report($before, shop_chat_ai_snapshot($ctx));
+	$final = shop_chat_ai_plain($final); $lead = shop_chat_ai_plain($lead);
 	// for the review list in the backend: a refused tool, and the moment the AI changed the cart (a correction of the guest right after counts)
 	if ($toolErr) { shop_chat_review($c, 'KI: '.implode(' | ', array_slice($toolErr, 0, 2)).' (Satz: '.mb_substr($text, 0, 80).')'); }
-	if ($changed) { $ctx['ai_last'] = (int)$c['events']; }
-	// the thread of the sentences: the words only, not the tool traffic (the cart is the state)
-	$said = $guided !== null ? $lead : $final;
-	$ctx['ai_hist'] = array_slice(array_merge(isset($ctx['ai_hist']) && is_array($ctx['ai_hist']) ? $ctx['ai_hist'] : array(), array(array('user', mb_substr($text, 0, 300)), array('assistant', mb_substr($said !== '' ? $said : 'Okay.', 0, 400)))), -SHOP_CHAT_AI_HIST);
+	if ($report !== '') { $ctx['ai_last'] = (int)$c['events']; }
+	// no words and nothing done: not understood, say so instead of a hollow "Okay"
+	if ($guided === null && $final === '' && $report === '') { shop_chat_review($c, 'KI: leere Antwort (Satz: '.mb_substr($text, 0, 80).')'); return null; }
+	// the thread of the sentences: the words only, with what the server told, so the model knows what has happened
+	$said = trim(($guided !== null ? $lead : $final).($report !== '' ? ' ['.$report.']' : ''));
+	$ctx['ai_hist'] = array_slice(array_merge(isset($ctx['ai_hist']) && is_array($ctx['ai_hist']) ? $ctx['ai_hist'] : array(), array(array('user', mb_substr($text, 0, 300)), array('assistant', mb_substr($said !== '' ? $said : 'Erledigt.', 0, 500)))), -SHOP_CHAT_AI_HIST);
 	if ($guided !== null) {
-		if ($lead !== '') { $out[] = shop_chat_msg($lead); }
+		$lines = trim($lead.($report !== '' ? "\n".$report : ''));
+		if ($lines !== '') { $out[] = shop_chat_msg($lines); }
 		return shop_chat_pick_product($c, $out, $guided);
 	}
 	$c['state'] = 'cat';
-	$buttons = $ctx['cart'] ? array('co' => 'Zur Kasse', 'edit' => 'Warenkorb ändern', 'more' => 'Speisekarte') : shop_chat_menu_buttons();
-	$out[] = shop_chat_msg($final !== '' ? $final : 'Okay.', $buttons, 'ask', $staff ? shop_chat_call_links() : array());
+	$buttons = $ctx['cart'] ? array('co' => 'Zur Kasse', 'edit' => 'Warenkorb ändern', 'cats' => 'Speisekarte') : shop_chat_browse_buttons();
+	$out[] = shop_chat_msg(trim($final.($report !== '' ? "\n".$report : '')), $buttons, 'ask', $staff ? shop_chat_call_links() : array());
 	return shop_chat_finish($c, $out);
+}
+
+// the cart as a map: line key -> array(qty, priced line)
+function shop_chat_ai_snapshot($ctx) {
+	$snap = array(); $p = shop_chat_priced($ctx);
+	if (!$p['ok']) { return $snap; }
+	foreach ($ctx['cart'] as $i => $l) { $o = $l['opts']; ksort($o); $snap[$l['pid'].'|'.$l['vid'].'|'.json_encode($o).'|'.$l['note']] = array((int)$l['qty'], $p['items'][$i]); }
+	return $snap;
+}
+// "Dazugekommen: 2× Pizza Salami (groß). Entfernt: 1× Cola." from two snapshots; empty when nothing changed
+function shop_chat_ai_report($before, $after) {
+	$add = array(); $del = array();
+	foreach ($after as $k => $a) { $d = $a[0] - (isset($before[$k]) ? $before[$k][0] : 0); if ($d > 0) { $it = $a[1]; $it['qty'] = $d; $add[] = shop_chat_ai_line_name($it); } }
+	foreach ($before as $k => $b) { $d = $b[0] - (isset($after[$k]) ? $after[$k][0] : 0); if ($d > 0) { $it = $b[1]; $it['qty'] = $d; $del[] = shop_chat_ai_line_name($it); } }
+	return trim(($add ? 'Dazugekommen: '.implode(', ', $add).'.' : '').($del ? ($add ? ' ' : '').'Entfernt: '.implode(', ', $del).'.' : ''));
+}
+// the chat shows plain text: markdown marks of the model are taken out
+function shop_chat_ai_plain($t) {
+	$t = preg_replace('/(\*\*|__|`)/u', '', (string)$t);
+	$t = preg_replace('/^\s{0,3}#{1,6}\s+/mu', '', $t);
+	$t = preg_replace('/^\s*[-*]\s+/mu', '', $t);
+	return trim($t);
 }

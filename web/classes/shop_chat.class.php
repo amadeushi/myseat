@@ -141,7 +141,13 @@ function shop_chat_ask_type(&$ctx) {
 // the phone of the house as a button of a message that needs a human (a tel: link)
 function shop_chat_call_links() { global $settings; $p = !empty($settings['mailPhone']) ? trim($settings['mailPhone']) : ''; return $p !== '' ? array('tel:'.preg_replace('/[^0-9+]/', '', $p) => 'Anrufen') : array(); }
 
-function shop_chat_ask_category($ctx, $lead = '') {
+// with the AI the guest is invited to write; the menu opens only when he asks for it (one chip "Speisekarte ansehen"), so it does not unfold after every message
+function shop_chat_browse_buttons() { return shop_chat_ai_ready() ? array('cats' => 'Speisekarte ansehen') : shop_chat_menu_buttons(); }
+function shop_chat_ask_category($ctx, $lead = '', $expand = false) {
+	if (shop_chat_ai_ready() && !$expand) {
+		$b = $ctx['cart'] ? array('co' => 'Zur Kasse', 'cart' => 'Warenkorb ansehen') : array();
+		return shop_chat_msg(($lead !== '' ? $lead."\n" : '').'Schreib mir einfach, was du möchtest.', $b + array('cats' => 'Speisekarte ansehen'), 'ask');
+	}
 	$b = shop_chat_menu_buttons();
 	if ($ctx['cart']) { $b['co'] = 'Zur Kasse'; $b['cart'] = 'Warenkorb ansehen'; }
 	return shop_chat_msg(($lead !== '' ? $lead."\n" : '').'Was darf es sein?', $b, shop_chat_free_kind());
@@ -170,7 +176,7 @@ function shop_chat_step(&$c, $ev) {
 	// buttons that work in every state
 	if ($btn === 'cart') { $say(shop_chat_msg(shop_chat_cart_text($ctx), $ctx['cart'] ? array('co' => 'Zur Kasse', 'more' => 'Weiter bestellen', 'edit' => 'Ändern') : array('more' => 'Speisekarte ansehen'))); return shop_chat_finish($c, $out); }
 	if ($btn === 'restart') { $ctx = array('type' => 'delivery', 'cart' => array(), 'offered' => array(), 'fresh' => 1); $c['state'] = 'type'; $say(shop_chat_ask_type($ctx)); return shop_chat_finish($c, $out); }
-	if ($btn === 'more') { $c['state'] = 'cat'; $say(shop_chat_ask_category($ctx)); return shop_chat_finish($c, $out); }
+	if ($btn === 'more' || $btn === 'cats') { $c['state'] = 'cat'; $say(shop_chat_ask_category($ctx, '', true)); return shop_chat_finish($c, $out); }
 	if ($btn === 'edit') { return shop_chat_edit($c, $out); }
 	if ($btn !== null && strpos($btn, 'del:') === 0) {
 		$i = (int)substr($btn, 4); if (isset($ctx['cart'][$i])) { array_splice($ctx['cart'], $i, 1); }
@@ -279,8 +285,8 @@ function shop_chat_search(&$c, $out, $text) {
 	}
 	$c['state'] = 'prod';
 	$gone = array(); $hits = array_values(array_filter($hits, function ($p) use (&$gone) { if (!empty($p['out'])) { $gone[] = $p['title']; return false; } return true; }));
-	if (!$hits && $gone) { $out[] = shop_chat_msg('„'.$gone[0].'“ ist heute leider aus. Etwas anderes?', shop_chat_menu_buttons(), shop_chat_free_kind()); return shop_chat_finish($c, $out); }
-	if (!$hits) { $out[] = shop_chat_msg('Dazu finde ich nichts. Anderer Begriff oder eine Kategorie?', shop_chat_menu_buttons(), 'text'); return shop_chat_finish($c, $out); }
+	if (!$hits && $gone) { $out[] = shop_chat_msg('„'.$gone[0].'“ ist heute leider aus. Etwas anderes?', shop_chat_browse_buttons(), shop_chat_free_kind()); return shop_chat_finish($c, $out); }
+	if (!$hits) { $out[] = shop_chat_msg('Dazu finde ich nichts. Anderer Begriff oder eine Kategorie?', shop_chat_browse_buttons(), 'text'); return shop_chat_finish($c, $out); }
 	$b = array();
 	foreach (array_slice($hits, 0, 8) as $p) { $b['prod:'.(int)$p['id']] = shop_chat_product_label($p); }
 	$out[] = shop_chat_msg((count($hits) > 8 ? 'Die ersten acht Treffer:' : 'Meinst du eins davon?').($gone ? "\nHeute leider aus: ".implode(', ', $gone).'.' : ''), $b + array('more' => 'Andere Kategorie'), 'text');
@@ -649,7 +655,7 @@ function shop_chat_import(&$c, $lines, $mode, $clear = false) {
 		// the page emptied its cart while the chat is open: the chat's cart is emptied too (never an order from a cart the guest no longer sees)
 		if ($clear && $had) {
 			$ctx['cart'] = array(); unset($ctx['addr'], $ctx['when'], $ctx['extra'], $ctx['pend'], $ctx['offer_done']); $c['state'] = 'cat';
-			$m = shop_chat_msg('Dein Warenkorb ist jetzt leer.', shop_chat_menu_buttons(), shop_chat_free_kind());
+			$m = shop_chat_msg('Dein Warenkorb ist jetzt leer.', shop_chat_browse_buttons(), shop_chat_free_kind());
 			shop_chat_finish($c, array($m)); shop_chat_log($c, 'bot', $m); shop_chat_save($c);
 		}
 		return 0;

@@ -52,6 +52,12 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.38.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Behoben: Bestell-Chat mit KI: Haiku 5.5 denkt standardmäßig, das Denken verbrauchte das ganze Limit (stop_reason max_tokens), es kam weder Text noch Werkzeugaufruf, und der Chat zeigte ein leeres "Okay." und schrieb es in den Verlauf. Jetzt: niedriger Denkaufwand (output_config effort low), 1500 statt 700 Tokens, eine abgeschnittene, abgelehnte oder leere Antwort fällt auf die Wortsuche zurück und erscheint in der Liste "Chat-Gespräche zum Ansehen".
+ * Neu: Bestell-Chat: Was im Warenkorb gelandet ist, schreibt immer der Server dazu ("Dazugekommen: ...", "Entfernt: ..."), unabhängig vom Text des Modells; die Zeile steht auch im Verlauf der KI. Markdown des Modells (Sternchen, Überschriften) wird entfernt, eindeutige Gerichte legt die KI sofort hinein.
+ * Geändert: Bestell-Chat mit KI: Die Speisekarte klappt nicht mehr nach jeder Nachricht auf; nach der Wahl Lieferung oder Abholung und nach jeder KI-Antwort steht nur noch ein Knopf "Speisekarte ansehen" (mit "Zur Kasse" und "Warenkorb ändern", wenn etwas im Warenkorb liegt). Ohne KI bleibt der Ablauf mit Kategorien.
+
 2026-10-12 == mySeat v6.38.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Disposition: Knopf "Gerichte heute aus" (durchgestrichener Teller, roter Zähler): Liste aller Gerichte mit Suchfeld und einem Schalter pro Gericht; ein ausgeschaltetes Gericht zeigt die Bestellseite als "Heute leider aus", es lässt sich nicht bestellen (auch nicht aus einem vollen Warenkorb, Favoriten oder dem Chat), am nächsten Tag ist es von selbst wieder da (neue Spalte sold_out_on).
