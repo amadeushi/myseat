@@ -52,6 +52,12 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.40.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Einstellungen > Lieferservice (p=6&q=10) nach einem UI-Audit neu geordnet und lesbarer gemacht. Sieben Gruppen (Allgemein, Zeiten, Zahlung, Gebiete und Adressen, Fahrer, Gäste, Anbindungen) mit klebender Navigation, die dem Scrollen folgt. Zusammengehöriges steht zusammen: alle Zeiten in einer Gruppe, Mollie bei der Zahlung, Google und what3words bei den Adressen; Feedback-Mail und Straßenvorschläge nicht mehr unter Stempelkarte; der veraltete Uber-Text ("Auslesen folgt") ist erneuert; aus "(Test)" wurde der Chip "in Erprobung".
+ * Neu: Ein "Einstellungen speichern"-Knopf klebt unten am Bildschirm und sichert alle Felder des Hauptformulars (technisch ein leeres Formular shop-form, die Felder tragen form="shop-form", dieselben 50 Felder wie vorher). Daneben steht die Zahl der ungespeicherten Änderungen, beim Verlassen mit offenen Änderungen fragt der Browser nach. Bereiche mit eigenem Speichern (Mollie, Google, what3words, Uber, Zeiten, Ausnahmen, Gebiete, Fahrer, Stadtteile) sind abgesetzt und nennen im Knopf, was sie speichern.
+ * Neu: Hilfetexte mindestens 14 px, eine Zeile sichtbar und der Rest hinter "Mehr dazu"; kurze Labels, Einheiten neben dem Feld (Min., EUR, Tage), breite Felder für Schlüssel, Status des Anthropic-Schlüssels als Chip. Pi-Schlüssel, n8n-Geheimnis und Sipgate-URL sind verdeckt mit "Anzeigen" und "Kopieren". Alle Knöpfe und Felder mindestens 40 px hoch, lange Schlüssel brechen um.
+
 2026-10-12 == mySeat v6.39.9 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Küchenmonitor und Fahrerkarte: der Link "Disposition" ist das Symbol der Bestellübersicht (Tafel mit drei Spalten, aria-label und Tooltip).
