@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.38.7 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Fix: Bestellseite: die Hervorhebung der Kategorie war um eine Stelle verschoben (ein angeklickter Eintrag wurde erst markiert, wenn man den nächsten anklickte). Die Schwelle kommt jetzt aus dem scroll-margin-top der Kategorie (dort landet ein Klick), und ein Klick markiert sofort und bleibt markiert, bis der Gast selbst scrollt (auch wenn die Seite zu Ende ist, bevor die Kategorie oben ankommt).
+
 2026-10-12 == mySeat v6.38.6 == amadeushi - http://github.com/amadeushi/myseat
 
  * Fix: Bestellseite: die Hervorhebung der Kategorie springt beim Zurückscrollen wieder auf die erste Kategorie (vorher blieb zum Beispiel "Salate" markiert, weil oben auf der Seite keine Kategorie im Beobachtungsband lag). Aktiv ist die letzte Kategorie, deren Oberkante die Leiste erreicht hat; am Seitenende die letzte.

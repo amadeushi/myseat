@@ -258,21 +258,28 @@
 
 	function watchCategories() {
 		var links = $$('#shop-cats a'); if (!links.length) { return; }
-		var current = null, queued = false;
-		// the active category is the last one whose top has passed the bar; at the very top (or above the first one) it is the first one
-		function update() {
-			queued = false;
-			var secs = $$('.shop-cat').filter(function (s) { return s.offsetParent !== null; }), id = null;
-			if (!secs.length) { return; }
-			id = secs[0].id;
-			secs.forEach(function (s) { if (s.getBoundingClientRect().top <= 150) { id = s.id; } });
-			if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) { id = secs[secs.length - 1].id; }   // the end of the page: the last one, even if it is short
-			id = id.replace('cat-', '');
+		var current = null, queued = false, locked = false;
+		function setActive(id) {
 			if (id === current) { return; }
 			current = id;
 			links.forEach(function (a) { var on = a.dataset.cat === id; a.classList.toggle('is-active', on); if (on) { a.setAttribute('aria-current', 'true'); } else { a.removeAttribute('aria-current'); } if (on && window.innerWidth < 1024) { a.scrollIntoView({ inline: 'center', block: 'nearest' }); } });
 		}
+		// the active category is the last one whose top has reached the place a clicked category lands at (its scroll margin); at the very top it is the first one, at the end of the page the last one
+		function update() {
+			queued = false;
+			if (locked) { return; }
+			var secs = $$('.shop-cat').filter(function (s) { return s.offsetParent !== null; }), id;
+			if (!secs.length) { return; }
+			id = secs[0].id;
+			secs.forEach(function (s) { if (s.getBoundingClientRect().top <= (parseFloat(getComputedStyle(s).scrollMarginTop) || 150) + 8) { id = s.id; } });
+			if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) { id = secs[secs.length - 1].id; }
+			setActive(id.replace('cat-', ''));
+		}
 		function queue() { if (!queued) { queued = true; requestAnimationFrame(update); } }
+		// a click on a category: it stays the active one (even when the page ends before it can reach the top) until the guest scrolls by himself
+		function release() { if (locked) { locked = false; queue(); } }
+		links.forEach(function (a) { a.addEventListener('click', function () { setActive(a.dataset.cat); locked = true; }); });
+		['wheel', 'touchmove', 'keydown'].forEach(function (t) { window.addEventListener(t, release, { passive: true }); });
 		window.addEventListener('scroll', queue, { passive: true });
 		window.addEventListener('resize', queue);
 		update();
