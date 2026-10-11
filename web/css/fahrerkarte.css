@@ -82,7 +82,7 @@
 .fk-dh { display: flex; align-items: flex-start; gap: 12px; }
 .fk-dh h3 { flex: 1; min-width: 0; font-size: 28px; line-height: 1.15; font-weight: 800; }
 .fk-dh h3 small { display: block; margin-top: 2px; color: var(--muted); font-size: 18px; font-weight: 600; }
-.fk-x { flex: none; min-height: 48px; min-width: 48px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); color: var(--text); font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
+.fk-x { display: inline-flex; align-items: center; justify-content: center; flex: none; min-height: 48px; min-width: 48px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); color: var(--text); font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
 .fk-x:hover { border-color: var(--gold); }
 .fk-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 12px; }
 .fk-big { font-size: 22px; font-weight: 800; color: var(--gold-strong); font-variant-numeric: tabular-nums; }

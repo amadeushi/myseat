@@ -113,10 +113,11 @@
 		function f(name, label, val, wide, max) { return '<label class="k-retry-f' + (wide ? ' wide' : '') + '"><span>' + label + '</span><input type="text" name="' + name + '" value="' + esc(d[name] !== undefined ? d[name] : (val || '')) + '" maxlength="' + max + '" autocomplete="off"/></label>'; }
 		return '<div class="k-assign k-retry k-addr-edit" data-order="' + o.id + '" role="group" aria-label="Adresse von Lieferung ' + o.day_no + '"><p class="k-assign-t">' + (missingNo(o) ? 'Hausnummer eintragen (steht auf dem Tablet)' : 'Adresse bearbeiten') + '</p>' +
 			'<div class="k-retry-grid">' + f('street', 'Straße und Hausnummer', o.street, true, 160) + f('zip', 'PLZ', o.zip, false, 10) + f('city', 'Ort', o.city, false, 80) + f('note', 'Hinweis für den Fahrer', o.address_note, true, 200) + '</div>' +
-			'<p class="k-retry-msg" role="status"></p><div class="k-assign-foot"><button type="button" class="k-go" data-addr-go="' + o.id + '">Adresse speichern</button><button type="button" class="k-go secondary" data-addr-close="' + o.id + '">Schließen</button></div></div>';
+			'<p class="k-retry-msg" role="status"></p><div class="k-assign-foot"><button type="button" class="k-go" data-addr-go="' + o.id + '">Adresse speichern</button><button type="button" class="k-go secondary k-icbtn" data-addr-close="' + o.id + '" aria-label="Schließen" title="Schließen">' + ICON_X + '</button></div></div>';
 	}
 	// the due time of an order that is not yet cooked can be moved (the food would be out too early otherwise); the kitchen monitor takes its out time from it
 	var ICON_CLOCK = '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="12" r="8.500" fill="none" stroke="currentColor" stroke-width="1.800"/><path d="M12 7.500V12l3 2" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+	var ICON_MAP = '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4L3.500 6v14L9 18l6 2 5.500-2V4L15 6 9 4zM9 4v14M15 6v14"/></svg>';
 	function dueEditable(o) { return ['new', 'accepted', 'preparing'].indexOf(o.status) >= 0 && !o.tour; }
 	function dueIsOpen(o) { return dueEditable(o) && !!dueOpen[o.id]; }
 	function hhmm(ts) { var d = new Date(ts * 1000); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
@@ -137,7 +138,7 @@
 				[5, 10, 15, 20, 25, 30].map(function (m) { return '<button type="button" class="k-go secondary' + (driveOf(o) === m ? ' is-current' : '') + '" data-drive-set="' + m + '" data-order="' + o.id + '">' + m + ' Min</button>'; }).join('') +
 				(o.drive_own !== null && o.drive_own !== undefined ? '<button type="button" class="k-go secondary" data-drive-set="" data-order="' + o.id + '">Standard</button>' : '') + '</div>' : '') +
 			'<p class="k-retry-msg" role="status"></p>' +
-			'<div class="k-assign-foot"><button type="button" class="k-go" data-due-go="' + o.id + '">Zeit übernehmen</button><button type="button" class="k-go secondary" data-due-close="' + o.id + '">Schließen</button></div></div>';
+			'<div class="k-assign-foot"><button type="button" class="k-go" data-due-go="' + o.id + '">Zeit übernehmen</button><button type="button" class="k-go secondary k-icbtn" data-due-close="' + o.id + '" aria-label="Schließen" title="Schließen">' + ICON_X + '</button></div></div>';
 	}
 	// ---- "Heute aus": dishes the kitchen cannot make any more today; the guests and the chat see "heute aus", tomorrow everything is back by itself
 	var outProducts = [];
@@ -307,7 +308,7 @@
 		h += '<div class="k-assign-list">' + list.map(function (d) {
 			return '<button type="button" class="k-go k-assign-btn' + (o.driver_id === d.id ? ' is-current' : '') + '" data-assign-driver="' + d.id + '" data-order="' + o.id + '"><b>' + esc(d.name) + '</b><small>' + esc(driverInfo(d)) + '</small></button>';
 		}).join('') + '</div><div class="k-assign-foot">' + (!all && drivers.length > list.length ? '<button type="button" class="k-linkbtn" data-assign-all="' + o.id + '">Auch Fahrer ohne Standort zeigen</button>' : '') +
-			'<button type="button" class="k-go secondary" data-assign-close="' + o.id + '">Abbrechen</button></div></div>';
+			'<button type="button" class="k-go secondary k-icbtn" data-assign-close="' + o.id + '" aria-label="Abbrechen" title="Abbrechen">' + ICON_X + '</button></div></div>';
 		return h;
 	}
 	function rowReady(o) {
@@ -332,14 +333,14 @@
 			(o.test ? '<span class="k-badge">Test</span>' : '') + '<span class="k-raddr">' + shortAddr(o) + '</span></div>' +
 			'<div class="k-row-wait"><b>Lieferzeit ' + esc(o.due) + '</b><span class="k-lvl">' + (m < 0 ? (-m) + ' Min zu spät' : 'in ' + m + ' Min') + '</span><small>unterwegs seit ' + since + ' Min</small></div>' +
 			'<div class="k-row-act"><button type="button" class="k-go" data-act="done">Geliefert</button><button type="button" class="k-go secondary" data-release="' + o.id + '">Zurück in den Pool</button>' +
-			'<button type="button" class="k-go secondary" data-mapopen>Karte</button>' + moreHtml(o) + '</div>' + addrPanel(o) + '</article>';
+			'<button type="button" class="k-go secondary k-icbtn" data-mapopen aria-label="Karte" title="Karte">' + ICON_MAP + '</button>' + moreHtml(o) + '</div>' + addrPanel(o) + '</article>';
 	}
 	// a failed delivery is fetched back: check and correct the address details, then it goes into the pool again
 	function retryPanel(o) {
 		function f(name, label, val, wide, max) { return '<label class="k-retry-f' + (wide ? ' wide' : '') + '"><span>' + label + '</span><input type="text" name="' + name + '" value="' + esc(val || '') + '" maxlength="' + max + '" autocomplete="off"/></label>'; }
 		return '<div class="k-assign k-retry" role="group" aria-label="Lieferung ' + o.day_no + ' nochmal zustellen"><p class="k-assign-t">Nochmal zustellen · Grund: ' + esc(o.fail_reason || 'kein Grund angegeben') + '</p>' +
 			'<div class="k-retry-grid">' + f('street', 'Straße und Hausnummer', o.street, true, 160) + f('zip', 'PLZ', o.zip, false, 10) + f('city', 'Ort', o.city, false, 80) + f('note', 'Hinweis für den Fahrer', o.address_note, true, 200) + f('phone', 'Telefon des Gastes', o.phone, true, 40) + '</div>' +
-			'<p class="k-retry-msg" role="status"></p><div class="k-assign-foot"><button type="button" class="k-go" data-retry-go="' + o.id + '">Zurückholen und neu zustellen</button><button type="button" class="k-go secondary" data-retry-close="' + o.id + '">Abbrechen</button></div></div>';
+			'<p class="k-retry-msg" role="status"></p><div class="k-assign-foot"><button type="button" class="k-go" data-retry-go="' + o.id + '">Zurückholen und neu zustellen</button><button type="button" class="k-go secondary k-icbtn" data-retry-close="' + o.id + '" aria-label="Abbrechen" title="Abbrechen">' + ICON_X + '</button></div></div>';
 	}
 	function rowFail(o) {
 		return '<article class="k-row k-row-fail is-over" data-id="' + o.id + '"><div class="k-row-main"><span class="k-no">#' + o.day_no + '</span><span class="k-rwho">' + esc(o.name) + '</span>' + (o.test ? '<span class="k-badge">Test</span>' : '') + '<span class="k-raddr">' + shortAddr(o) + '</span></div>' +

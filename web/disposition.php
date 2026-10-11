@@ -71,7 +71,7 @@ $dp_pause = shop_pause_state();
 		<p class="fk-job-hint">Was heute nicht mehr geht. Gäste sehen "heute aus" und können es nicht bestellen, morgen ist alles wieder da.</p>
 		<input type="search" id="k-outq" class="k-outq" placeholder="Gericht suchen" aria-label="Gericht suchen" autocomplete="off"/>
 		<div class="k-outlist" id="k-outlist" role="group" aria-label="Gerichte"></div>
-		<div class="k-outfoot"><button type="button" class="k-go secondary" id="k-outclose">Schließen</button></div>
+		<div class="k-outfoot"><button type="button" class="k-go secondary k-icbtn" id="k-outclose" aria-label="Schließen" title="Schließen"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round"/></svg></button></div>
 	</dialog>
 	<script src="js/monitor_sound.js?v=<?php echo @filemtime(__DIR__.'/js/monitor_sound.js'); ?>"></script>
 	<script src="js/monitor_print.js?v=<?php echo @filemtime(__DIR__.'/js/monitor_print.js'); ?>"></script>

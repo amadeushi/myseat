@@ -115,7 +115,7 @@
 	}
 	function orderBody(o, withCands) {
 		const d = o.driver_id ? findD(o.driver_id) : null, k = kindOf(o);
-		let h = '<div class="fk-dh"><h3>#' + o.day_no + ' · ' + esc(o.customer_name || place(o)) + (o.source === 'lieferando' ? ' <span class="fk-flag fk-flag--lief">Lieferando</span>' : '') + (o.source === 'uber_eats' ? ' <span class="fk-flag fk-flag--uber">Uber Eats</span>' : '') + '<small>' + (o.customer_name ? esc(place(o)) + ' · ' : '') + esc(o.street) + ', ' + esc(o.zip) + '</small></h3><button type="button" class="fk-x" data-close aria-label="Schließen">Schließen</button></div>' +
+		let h = '<div class="fk-dh"><h3>#' + o.day_no + ' · ' + esc(o.customer_name || place(o)) + (o.source === 'lieferando' ? ' <span class="fk-flag fk-flag--lief">Lieferando</span>' : '') + (o.source === 'uber_eats' ? ' <span class="fk-flag fk-flag--uber">Uber Eats</span>' : '') + '<small>' + (o.customer_name ? esc(place(o)) + ' · ' : '') + esc(o.street) + ', ' + esc(o.zip) + '</small></h3><button type="button" class="fk-x" data-close aria-label="Schließen" title="Schließen"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round"/></svg></button></div>' +
 			'<div class="fk-row"><span class="fk-big">' + esc(way(o)) + '</span><span class="fk-txt">' + (o.scheduled ? 'Wunschzeit ' : 'Ziel ') + esc(o.due) + ' Uhr</span>' + (o.late_min > 0 ? '<span class="fk-flag fk-flag--late">' + esc(lateText(o)) + '</span>' : '') + '</div>' +
 			(o.door ? '<p class="fk-door">Hinweis: ' + esc(o.door) + '</p>' : '') +
 			'<div class="fk-row"><span class="fk-txt">' + esc(o.customer_name) + ' · ' + esc(payText(o)) + '</span>' + (o.phone ? '<a class="fk-act" href="tel:' + esc(String(o.phone).replace(/[^0-9+]/g, '')) + '">Gast anrufen</a>' : '') + '</div>' +
@@ -146,7 +146,7 @@
 			'<button type="button" class="fk-act" data-live>Zurück zu jetzt</button></div><input type="range" id="fk-sc" min="0" max="' + (p.length - 1) + '" value="' + i + '" aria-label="Zeitpunkt im Weg des Fahrers"/></div>';
 	}
 	function driverBody(d, compact) {
-		let h = compact ? '<h4 class="fk-sub">Fahrer ' + esc(d.name) + '</h4>' : '<div class="fk-dh"><h3>' + esc(d.name) + '<small>' + stateText(d) + ' · ' + (d.state === 'offline' ? esc(ageText(d)) : 'GPS ' + esc(ageText(d))) + '</small></h3><button type="button" class="fk-x" data-close aria-label="Schließen">Schließen</button></div>';
+		let h = compact ? '<h4 class="fk-sub">Fahrer ' + esc(d.name) + '</h4>' : '<div class="fk-dh"><h3>' + esc(d.name) + '<small>' + stateText(d) + ' · ' + (d.state === 'offline' ? esc(ageText(d)) : 'GPS ' + esc(ageText(d))) + '</small></h3><button type="button" class="fk-x" data-close aria-label="Schließen" title="Schließen"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round"/></svg></button></div>';
 		h += '<div class="fk-row">' + (d.phone ? '<a class="fk-act" href="tel:' + esc(String(d.phone).replace(/[^0-9+]/g, '')) + '">' + esc(d.name) + ' anrufen</a>' : '<span class="fk-txt">Keine Telefonnummer hinterlegt</span>') +
 			(d.eta_min ? '<span class="fk-big">Ankunft beim Gast ca. ' + d.eta_min + ' Min</span>' : '') + (stale(d) ? '<span class="fk-flag fk-flag--warn">Position ' + esc(ageText(d)) + ': Traccar-App prüfen</span>' : '') + '</div>';
 		h += '<h4 class="fk-sub">Aufträge (' + d.stops.length + ')</h4>' + (d.stops.length ? '<div class="fk-stops">' + d.stops.map(id => {
@@ -165,7 +165,7 @@
 		const st = box.scrollTop; let h = '';
 		if (d && o) {
 			const can = o.status === 'ready' && o.driver_id !== d.id;
-			h = '<div class="fk-dh"><h3>' + esc(d.name) + ' und #' + o.day_no + (o.customer_name ? ' ' + esc(o.customer_name) : '') + '<small>' + esc(place(o)) + ' · ' + esc(o.street) + '</small></h3><button type="button" class="fk-x" data-close aria-label="Schließen">Schließen</button></div>' +
+			h = '<div class="fk-dh"><h3>' + esc(d.name) + ' und #' + o.day_no + (o.customer_name ? ' ' + esc(o.customer_name) : '') + '<small>' + esc(place(o)) + ' · ' + esc(o.street) + '</small></h3><button type="button" class="fk-x" data-close aria-label="Schließen" title="Schließen"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round"/></svg></button></div>' +
 				'<div class="fk-link"><span>' + (can ? 'Zuteilen: #' + o.day_no + ' an ' + esc(d.name) + (d.state === 'offline' ? ' (ohne Standort)' : '') : (o.driver_id === d.id ? '#' + o.day_no + ' gehört schon zu ' + esc(d.name) : (o.status === 'delivering' ? '#' + o.day_no + ' ist schon unterwegs' : 'Noch in der Küche: Zuteilen geht bei Fertig'))) + '</span>' +
 				(can ? '<button type="button" class="fk-act fk-act--go" data-assign="' + o.id + ':' + d.id + '">Zuteilen</button>' : '') + '</div>' +
 				orderBody(o, false).replace(/<div class="fk-dh">.*?<\/div>(?=<div class="fk-row">)/, '') + driverBody(d, true);

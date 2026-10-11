@@ -478,3 +478,8 @@ p.ksd-note { margin-top: 8px; }
 /* several addresses match: the candidates as buttons */
 .k-cands { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .k-cand { justify-content: flex-start; text-align: left; }
+
+/* a secondary button that is only a symbol (close, map): fixed square, the name is in aria-label */
+.k-go.k-icbtn { flex: none; min-width: 56px; width: 56px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.k-row .k-go.k-icbtn { min-width: 56px; padding: 0; }
+.k-btn.k-sq svg { display: block; }

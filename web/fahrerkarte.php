@@ -45,10 +45,10 @@ $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 			<button type="button" class="k-btn" data-filter="open">Offen</button>
 			<button type="button" class="k-btn" data-filter="late">Überfällig</button>
 		</div>
-		<button type="button" class="k-btn" id="fk-trails" aria-pressed="true">Spuren</button>
-		<button type="button" class="k-btn" id="fk-zones" aria-pressed="false">Liefergebiete</button>
-		<button type="button" class="k-btn" id="fk-new">Fahrauftrag</button>
-		<button type="button" class="k-btn" id="k-full">Vollbild</button>
+		<button type="button" class="k-btn k-sq" id="fk-trails" aria-pressed="true" aria-label="Spuren" data-tip="Spuren der Fahrer ein/aus"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h6a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h6"/></svg></button>
+		<button type="button" class="k-btn k-sq" id="fk-zones" aria-pressed="false" aria-label="Liefergebiete" data-tip="Liefergebiete ein/aus"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 5.500-3 10H7L4 8.500 12 3z"/></svg></button>
+		<button type="button" class="k-btn k-sq" id="fk-new" aria-haspopup="dialog" aria-label="Fahrauftrag anlegen" data-tip="Fahrauftrag anlegen"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
+		<button type="button" class="k-btn k-sq" id="k-full" aria-label="Vollbild" data-tip="Vollbild ein/aus"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
 		<a class="k-btn" href="disposition.php">Disposition</a>
 	</header>
 	<p class="k-offline" id="k-offline" role="alert" hidden>Keine Verbindung. Ich versuche es weiter ...</p>
@@ -56,7 +56,7 @@ $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 		<section class="fk-map" aria-label="Karte">
 			<div id="fk-map"></div>
 			<div class="fk-mapbar">
-				<button type="button" class="k-btn" id="fk-fit">Alles zeigen</button>
+				<button type="button" class="k-btn k-sq" id="fk-fit" aria-label="Alles zeigen" data-tip="Alle Fahrer und Aufträge zeigen"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg></button>
 				<span class="fk-upd" id="fk-upd" role="status"></span>
 			</div>
 			<p class="fk-legend">Zahl: Auftrag &middot; Gold: offen &middot; mit Fahrerfarbe: zugeteilt &middot; Grün: unterwegs &middot; Grau: noch in der Küche &middot; Bernstein: überfällig</p>
@@ -85,7 +85,7 @@ $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 				<label class="k-retry-f wide"><span>Hinweis für den Fahrer</span><input type="text" name="address_note" maxlength="200"/></label>
 			</div>
 			<p class="k-retry-msg" id="fk-job-msg" role="status"></p>
-			<div class="k-assign-foot"><button type="submit" class="k-go" id="fk-job-go" value="go">Auftrag anlegen</button><button type="button" class="k-go secondary" id="fk-job-close">Abbrechen</button></div>
+			<div class="k-assign-foot"><button type="submit" class="k-go" id="fk-job-go" value="go">Auftrag anlegen</button><button type="button" class="k-go secondary k-icbtn" id="fk-job-close" aria-label="Abbrechen" title="Abbrechen"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round"/></svg></button></div>
 		</form>
 	</dialog>
 	<div class="fk-toast" id="fk-toast" role="status" hidden></div>

@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.39.3 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Fahrerkarte und Disposition: Buttons, die nur ein Werkzeug oder ein Schließen sind, sind jetzt Symbole (aria-label und Tooltip bleiben). Fahrerkarte: Spuren, Liefergebiete, Fahrauftrag, Vollbild und "Alles zeigen" sowie die Schließen-Kreuze der Detailkarten und des Fahrauftrag-Dialogs. Disposition: Schließen/Abbrechen in den Panels (Adresse, Zeit, Fahrer, Nochmal zustellen) und im Dialog "Heute aus", dazu "Karte" in der Zeile "Unterwegs". Die Buttons des Ablaufs (Annehmen, Ablehnen, Fertig, Abgeholt, Geliefert, Stornieren, Zuteilen, Zurück in den Pool ...) bleiben mit Text.
+
 2026-10-12 == mySeat v6.39.2 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Druckdienst (Pi, tools/kitchen-pi/print-agent.py): Wird ein Bon mittendrin abgeschnitten (ein Gericht fehlt auf dem Zettel), liefert er jetzt die Spuren dazu. Vor und nach jedem Bon auf dem USB-Drucker (Epson TM-m30II) wird der Druckerstatus abgefragt (offline, Papierende, Fehler, dazu die Rohwerte s1/s2/s4) und gewartet, bis der Drucker fertig ist; das Protokoll nennt außerdem eine Kurzprüfsumme (sha1) jedes Bons. Die zuletzt gesendeten 40 Bons liegen als Dateien unter /var/tmp/bon-agent/job-<Nr>.bin, so lässt sich mit dem Papier vergleichen, was ankam. Der Bon selbst und der Transport sind unverändert. (Bei dem gemeldeten Fall war der Bon vollständig erzeugt und wurde ohne Fehler übertragen; die Ursache liegt im Drucker.)
