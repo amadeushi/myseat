@@ -70,7 +70,8 @@ function shop_chat_ai_system() {
 Regeln:
 - Du arbeitest nur mit den Gerichten der Speisekarte unten und erfindest nichts. Gibt es ein Gericht nicht, sag das und nenne bis zu drei ähnliche von der Karte.
 - Lege Gerichte mit add_to_cart in den Warenkorb, sobald klar ist, was der Gast möchte. Nenne in deinen Antworten keine Preise und keine Summen, die zeigt der Server an.
-- Fehlt bei einem Gericht eine Pflichtangabe (Größe oder eine Pflichtauswahl), die der Gast nicht genannt hat, rufe start_guided auf: dann wählt der Gast mit Knöpfen. Füge zuerst alle vollständigen Gerichte hinzu und rufe start_guided zuletzt für höchstens ein unvollständiges Gericht auf.
+- Prüfe bei jedem Gericht mit get_product, welche Größen und Pflichtgruppen es hat, und ordne alles zu, was der Gast im Satz schon gesagt hat (zum Beispiel "Schnitzel mit Pommes und Zigeunersauce", "große Salami"). Sind dann alle Pflichtangaben da, nimm add_to_cart.
+- Fehlt bei einem Gericht noch eine Pflichtangabe (Größe oder eine Pflichtauswahl, zum Beispiel die Fleischsorte), die der Gast nicht genannt hat, rufe start_guided auf und gib die schon genannten Angaben mit (variation_id, options): der Gast wird dann nur noch nach dem Fehlenden gefragt, mit Knöpfen. Frag nie selbst per Text nach einer Pflichtangabe, das übernehmen die Knöpfe. Füge zuerst alle vollständigen Gerichte hinzu und rufe start_guided zuletzt für höchstens ein unvollständiges Gericht auf.
 - Lieber nachfragen als raten: Passt ein Wort auf mehrere Gerichte, ist ein Name nicht eindeutig (auch bei Tippfehlern), oder bist du bei Gericht, Größe oder Anzahl unsicher, stelle genau eine kurze Rückfrage mit höchstens zwei Möglichkeiten und lege vorerst nichts in den Warenkorb. Passt der Name wörtlich auf genau ein Gericht, frag nicht nach. Eindeutige Gerichte legst du sofort in den Warenkorb, auch wenn du bei einem anderen Gericht derselben Nachricht nachfragst. Fehlt die Anzahl, nimm 1; eine Anzahl nennst du nur, wenn der Gast sie gesagt hat.
 - Der Server zeigt dem Gast selbst, was neu im Warenkorb ist ("Dazugekommen: ..."). Wiederhole diese Liste nicht und nenne keine Gerichte doppelt: bestätige höchstens kurz ("Gern!", "Erledigt.") oder stelle deine Rückfrage. Behaupte nie, etwas liege im Warenkorb, wenn das Werkzeug einen Fehler gemeldet hat.
 - Schreib reinen Text ohne Markdown (keine Sternchen, keine Aufzählungszeichen, keine Überschriften).
@@ -99,7 +100,9 @@ function shop_chat_ai_tools() {
 		array('name' => 'set_quantity', 'description' => 'Ändert die Anzahl einer Zeile des Warenkorbs.', 'input_schema' => array('type' => 'object', 'properties' => array('line_number' => $int, 'quantity' => $int), 'required' => array('line_number', 'quantity'))),
 		array('name' => 'view_cart', 'description' => 'Zeigt den Warenkorb (ohne Preise).', 'input_schema' => array('type' => 'object', 'properties' => new stdClass())),
 		array('name' => 'set_note', 'description' => 'Setzt oder ändert den Wunsch einer Zeile des Warenkorbs (zum Beispiel "ohne Zwiebeln", "gut durch"), wenn es keine Auswahl im Gericht dafür gibt.', 'input_schema' => array('type' => 'object', 'properties' => array('line_number' => $int, 'note' => array('type' => 'string')), 'required' => array('line_number', 'note'))),
-		array('name' => 'start_guided', 'description' => 'Startet für ein Gericht die Auswahl mit Knöpfen (Größe und Pflichtangaben). Danach ist deine Antwort zu Ende.', 'input_schema' => array('type' => 'object', 'properties' => array('product_id' => $int), 'required' => array('product_id'))),
+		array('name' => 'start_guided', 'description' => 'Startet für ein Gericht die Auswahl mit Knöpfen, aber nur für das, was noch fehlt. Gib mit, was der Gast schon gesagt hat (Größe, Auswahlpunkte). Danach ist deine Antwort zu Ende.',
+			'input_schema' => array('type' => 'object', 'properties' => array('product_id' => $int, 'variation_id' => array('type' => 'integer', 'description' => 'Größe, falls der Gast sie genannt hat'),
+				'options' => array('type' => 'array', 'description' => 'schon genannte Auswahlpunkte', 'items' => array('type' => 'object', 'properties' => array('item_id' => $int, 'quantity' => $int), 'required' => array('item_id')))), 'required' => array('product_id'))),
 		array('name' => 'request_staff', 'description' => 'Markiert das Gespräch für das Team (Allergie, Unverträglichkeit, Beschwerde, etwas, das du nicht kannst).', 'input_schema' => array('type' => 'object', 'properties' => array('reason' => array('type' => 'string')), 'required' => array('reason'))),
 	);
 }
@@ -131,7 +134,7 @@ function shop_chat_ai_tool(&$c, $name, $in, &$guided, &$staff) {
 		foreach (is_array(isset($in['options']) ? $in['options'] : null) ? $in['options'] : array() as $o) { if (is_array($o) && !empty($o['item_id'])) { $opts[(int)$o['item_id']] = max(1, min(9, (int)(isset($o['quantity']) ? $o['quantity'] : 1))); } }
 		$line = array('pid' => $pid, 'vid' => (int)(isset($in['variation_id']) ? $in['variation_id'] : 0), 'opts' => $opts, 'qty' => max(1, min(20, (int)(isset($in['quantity']) ? $in['quantity'] : 1))), 'note' => mb_substr(trim((string)(isset($in['note']) ? $in['note'] : '')), 0, 200));
 		$r = shop_price_line($line);
-		if (!$r['ok']) { return array('error' => $r['error'], 'hint' => 'Fehlt eine Pflichtangabe, nutze start_guided.'); }
+		if (!$r['ok']) { return array('error' => $r['error'], 'hint' => 'Fehlt eine Pflichtangabe, nutze start_guided und gib die schon genannten Angaben mit.'); }
 		// an option of another dish is dropped silently by the pricing: say so instead of adding the dish without it
 		if (count($r['line']['options']) !== count($opts)) { return array('error' => 'Mindestens eine gewählte Option gibt es bei diesem Gericht nicht (oder öfter als erlaubt). Prüfe get_product.'); }
 		$at = -1;
@@ -163,6 +166,9 @@ function shop_chat_ai_tool(&$c, $name, $in, &$guided, &$staff) {
 		if (!$gp) { return array('error' => 'Dieses Gericht gibt es nicht.'); }
 		if (!empty($gp['out'])) { return array('error' => 'Dieses Gericht ist heute aus.'); }
 		$guided = $pid;
+		$gopts = array();
+		foreach (is_array(isset($in['options']) ? $in['options'] : null) ? $in['options'] : array() as $o) { if (is_array($o) && !empty($o['item_id'])) { $gopts[(int)$o['item_id']] = max(1, min(9, (int)(isset($o['quantity']) ? $o['quantity'] : 1))); } }
+		$c['ctx']['guided_pre'] = array('vid' => (int)(isset($in['variation_id']) ? $in['variation_id'] : 0), 'opts' => $gopts);
 		return array('ok' => true, 'hinweis' => 'Der Gast wählt jetzt mit Knöpfen. Schreibe höchstens einen kurzen Satz.');
 	}
 	if ($name === 'request_staff') {
@@ -221,7 +227,8 @@ function shop_chat_ai_turn(&$c, $out, $text, $toSummary = false) {
 	if ($guided !== null) {
 		$lines = trim($lead.($report !== '' ? "\n".$report : ''));
 		if ($lines !== '') { $out[] = shop_chat_msg($lines); }
-		return shop_chat_pick_product($c, $out, $guided);
+		$pre = isset($ctx['guided_pre']) ? $ctx['guided_pre'] : null; unset($ctx['guided_pre']);
+		return shop_chat_pick_product($c, $out, $guided, $pre);
 	}
 	// at the end of the checkout (the guest remembered something): the answer, then the summary again with the changed sums
 	if ($toSummary && !empty($ctx['name']) && !empty($ctx['phone']) && !empty($ctx['pay']) && !empty($ctx['when']) && ($ctx['type'] !== 'delivery' || !empty($ctx['addr'])) && $ctx['cart']) {

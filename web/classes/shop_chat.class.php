@@ -293,12 +293,20 @@ function shop_chat_search(&$c, $out, $text) {
 	return shop_chat_finish($c, $out);
 }
 
-function shop_chat_pick_product(&$c, $out, $pid) {
+// $pre (from the AI): what the guest already said, array(vid => size, opts => array(item id => quantity)); those answers are taken over and not asked again
+function shop_chat_pick_product(&$c, $out, $pid, $pre = null) {
 	$p = shop_catalog_product($pid);
 	if (!$p) { $c['state'] = 'cat'; $out[] = shop_chat_ask_category($c['ctx'], 'Das Gericht gibt es leider nicht mehr.'); return shop_chat_finish($c, $out); }
 	if (!empty($p['out'])) { $c['state'] = 'cat'; $out[] = shop_chat_ask_category($c['ctx'], '„'.$p['title'].'“ ist heute leider aus.'); return shop_chat_finish($c, $out); }
-	$c['ctx']['pend'] = array('pid' => $pid, 'vid' => 0, 'opts' => array(), 'gi' => 0);
-	if ($p['variations']) {
+	$c['ctx']['pend'] = array('pid' => $pid, 'vid' => 0, 'opts' => array(), 'gi' => 0, 'pre' => array());
+	if (is_array($pre)) {
+		foreach ($p['variations'] as $v) { if ((int)$v['id'] === (int)(isset($pre['vid']) ? $pre['vid'] : 0)) { $c['ctx']['pend']['vid'] = (int)$v['id']; } }
+		foreach ($p['groups'] as $g) { foreach ($g['items'] as $it) {
+			$q = (int)(isset($pre['opts'][$it['id']]) ? $pre['opts'][$it['id']] : 0);
+			if ($q > 0 && $q <= $it['max']) { $c['ctx']['pend']['opts'][$it['id']] = $q; $c['ctx']['pend']['pre'][$g['id']] = 1; }
+		} }
+	}
+	if ($p['variations'] && !$c['ctx']['pend']['vid']) {
 		$b = array(); foreach ($p['variations'] as $v) { $b['var:'.$v['id']] = $v['title'].' · '.shop_money($v['price']); }
 		$c['state'] = 'var'; $out[] = shop_chat_msg($p['title'].' – bitte wählen', $b);
 		return shop_chat_finish($c, $out);
@@ -318,6 +326,7 @@ function shop_chat_next_group(&$c, $out) {
 		$g = $groups[$pend['gi']]; $sum = 0; $left = array();
 		foreach ($g['items'] as $it) { $q = isset($pend['opts'][$it['id']]) ? (int)$pend['opts'][$it['id']] : 0; $sum += $q; if ($q < $it['max']) { $left[] = $it; } }
 		if (($g['max'] > 0 && $sum >= $g['max']) || !$left) { $pend['gi']++; continue; }   // full or nothing left: next group
+		if (!empty($pend['pre'][$g['id']]) && $sum >= $g['min']) { $pend['gi']++; continue; }   // the guest has already said it in the sentence
 		$b = array();
 		// the way on comes first for an optional group (most guests want nothing extra), a required group has none until the minimum is reached
 		if ($sum >= $g['min']) { $b['grpdone'] = $sum > 0 ? 'Weiter' : 'Ohne, weiter'; }

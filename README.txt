@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.38.3 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Bestell-Chat mit KI: Pflichtangaben, die der Gast schon im Satz genannt hat (zum Beispiel "Schnitzel mit Pommes und Zigeunersauce"), werden übernommen und nicht noch einmal abgefragt. Die KI prüft die Gerichte mit get_product und gibt Größe und genannte Auswahl an start_guided mit; die Knöpfe fragen nur noch, was wirklich fehlt (zum Beispiel die Fleischsorte). Sind alle Pflichtangaben genannt, kommt das Gericht sofort in den Warenkorb.
+
 2026-10-12 == mySeat v6.38.2 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Bestell-Chat: Etwas vergessen, kurz vor dem Bestellen: in der Zusammenfassung gibt es "Etwas ergänzen"; danach führt "Zur Kasse" sofort zur Zusammenfassung zurück (Name, Nummer, Adresse, Zahlung, Gutschein und die Zeit, solange sie noch möglich ist, bleiben; ein gewähltes Gratis-Extra wird nicht noch einmal gefragt). Mit KI steht unter der Zusammenfassung ein Eingabefeld "Noch etwas vergessen?": ein Satz legt Gerichte nach oder setzt einen Wunsch auf ein Gericht im Warenkorb (neues Werkzeug set_note), danach erscheint die Zusammenfassung erneut mit der neuen Summe. Wünsche stehen in der Zeile des Chats und auf dem Küchenbon; die Rückmeldung des Servers nennt auch "Geändert: ...".
