@@ -75,6 +75,7 @@ Regeln:
 - Der Server zeigt dem Gast selbst, was neu im Warenkorb ist ("Dazugekommen: ..."). Wiederhole diese Liste nicht und nenne keine Gerichte doppelt: bestätige höchstens kurz ("Gern!", "Erledigt.") oder stelle deine Rückfrage. Behaupte nie, etwas liege im Warenkorb, wenn das Werkzeug einen Fehler gemeldet hat.
 - Schreib reinen Text ohne Markdown (keine Sternchen, keine Aufzählungszeichen, keine Überschriften).
 - Gerichte mit [heute aus] gibt es heute nicht: sag das freundlich und nenne bis zu zwei Alternativen. [beliebt] und [neu] darfst du als Empfehlung nennen.
+- Wünsche zu einem Gericht, das schon im Warenkorb liegt (zum Beispiel "bei der Salami ohne Zwiebeln"), setzt du mit set_note auf die richtige Zeile, statt es neu hinzuzufügen.
 - Optionale Extras setzt du nur, wenn der Gast sie nennt und es sie als Auswahl gibt (get_product zeigt sie). Wünsche, die keine Auswahl sind (zum Beispiel "ohne Pfeffer"), kommen als note.
 - Zu Allergien, Unverträglichkeiten, Inhaltsstoffen, Zubereitung und Beschwerden sagst du nichts Verbindliches: rufe request_staff auf und sag, dass das Team Bescheid weiß und der Gast bitte anruft. Die Marken [vegan] und [vegetarisch] der Karte darfst du nennen, Genaueres klärt das Team.
 - Adresse, Zeit, Bezahlung und das Absenden passieren danach mit Knöpfen. Ist der Gast fertig, sag ihm, dass er unten auf "Zur Kasse" tippen kann. Du gibst selbst keine Bestellung auf und fragst nicht nach Name, Adresse oder Telefonnummer.
@@ -97,6 +98,7 @@ function shop_chat_ai_tools() {
 		array('name' => 'remove_from_cart', 'description' => 'Entfernt eine Zeile des Warenkorbs (Nummer wie in view_cart).', 'input_schema' => array('type' => 'object', 'properties' => array('line_number' => $int), 'required' => array('line_number'))),
 		array('name' => 'set_quantity', 'description' => 'Ändert die Anzahl einer Zeile des Warenkorbs.', 'input_schema' => array('type' => 'object', 'properties' => array('line_number' => $int, 'quantity' => $int), 'required' => array('line_number', 'quantity'))),
 		array('name' => 'view_cart', 'description' => 'Zeigt den Warenkorb (ohne Preise).', 'input_schema' => array('type' => 'object', 'properties' => new stdClass())),
+		array('name' => 'set_note', 'description' => 'Setzt oder ändert den Wunsch einer Zeile des Warenkorbs (zum Beispiel "ohne Zwiebeln", "gut durch"), wenn es keine Auswahl im Gericht dafür gibt.', 'input_schema' => array('type' => 'object', 'properties' => array('line_number' => $int, 'note' => array('type' => 'string')), 'required' => array('line_number', 'note'))),
 		array('name' => 'start_guided', 'description' => 'Startet für ein Gericht die Auswahl mit Knöpfen (Größe und Pflichtangaben). Danach ist deine Antwort zu Ende.', 'input_schema' => array('type' => 'object', 'properties' => array('product_id' => $int), 'required' => array('product_id'))),
 		array('name' => 'request_staff', 'description' => 'Markiert das Gespräch für das Team (Allergie, Unverträglichkeit, Beschwerde, etwas, das du nicht kannst).', 'input_schema' => array('type' => 'object', 'properties' => array('reason' => array('type' => 'string')), 'required' => array('reason'))),
 	);
@@ -146,6 +148,15 @@ function shop_chat_ai_tool(&$c, $name, $in, &$guided, &$staff) {
 		$ctx['last'] = max(0, count($ctx['cart']) - 1);
 		return array('ok' => true, 'cart' => shop_chat_ai_cart_lines($ctx));
 	}
+	if ($name === 'set_note') {
+		$i = (int)(isset($in['line_number']) ? $in['line_number'] : 0) - 1;
+		if (!isset($ctx['cart'][$i])) { return array('error' => 'Diese Zeile gibt es nicht.', 'cart' => shop_chat_ai_cart_lines($ctx)); }
+		$note = mb_substr(trim((string)(isset($in['note']) ? $in['note'] : '')), 0, 200);
+		// the line may now equal another one (same dish, same wish): they become one
+		$ctx['cart'][$i]['note'] = $note;
+		foreach ($ctx['cart'] as $j => $l) { if ($j !== $i && $l['pid'] === $ctx['cart'][$i]['pid'] && $l['vid'] === $ctx['cart'][$i]['vid'] && $l['opts'] == $ctx['cart'][$i]['opts'] && $l['note'] === $note) { $ctx['cart'][$j]['qty'] = min(20, $l['qty'] + $ctx['cart'][$i]['qty']); array_splice($ctx['cart'], $i, 1); break; } }
+		return array('ok' => true, 'cart' => shop_chat_ai_cart_lines($ctx));
+	}
 	if ($name === 'view_cart') { return array('cart' => shop_chat_ai_cart_lines($ctx)); }
 	if ($name === 'start_guided') {
 		$gp = shop_catalog_product($pid);
@@ -164,7 +175,7 @@ function shop_chat_ai_tool(&$c, $name, $in, &$guided, &$staff) {
 /*
  * One message of the guest in the free-text state. Returns the bot messages, or null when the AI cannot answer (the caller falls back to the word search).
  */
-function shop_chat_ai_turn(&$c, $out, $text) {
+function shop_chat_ai_turn(&$c, $out, $text, $toSummary = false) {
 	$ctx = &$c['ctx'];
 	@set_time_limit(100);   // up to six calls of the service, each may take a while
 	if (!shop_chat_ai_ready() || (int)(isset($ctx['ai_calls']) ? $ctx['ai_calls'] : 0) >= SHOP_CHAT_AI_PER_CHAT) { return null; }
@@ -212,6 +223,12 @@ function shop_chat_ai_turn(&$c, $out, $text) {
 		if ($lines !== '') { $out[] = shop_chat_msg($lines); }
 		return shop_chat_pick_product($c, $out, $guided);
 	}
+	// at the end of the checkout (the guest remembered something): the answer, then the summary again with the changed sums
+	if ($toSummary && !empty($ctx['name']) && !empty($ctx['phone']) && !empty($ctx['pay']) && !empty($ctx['when']) && ($ctx['type'] !== 'delivery' || !empty($ctx['addr'])) && $ctx['cart']) {
+		$say = trim($final.($report !== '' ? "\n".$report : ''));
+		if ($say !== '') { $out[] = shop_chat_msg($say, array(), '', $staff ? shop_chat_call_links() : array()); }
+		return shop_chat_checkout($c, $out, '', null, null, true);
+	}
 	$c['state'] = 'cat';
 	$buttons = $ctx['cart'] ? array('co' => 'Zur Kasse', 'edit' => 'Warenkorb ändern', 'cats' => 'Speisekarte') : shop_chat_browse_buttons();
 	$out[] = shop_chat_msg(trim($final.($report !== '' ? "\n".$report : '')), $buttons, 'ask', $staff ? shop_chat_call_links() : array());
@@ -222,15 +239,25 @@ function shop_chat_ai_turn(&$c, $out, $text) {
 function shop_chat_ai_snapshot($ctx) {
 	$snap = array(); $p = shop_chat_priced($ctx);
 	if (!$p['ok']) { return $snap; }
-	foreach ($ctx['cart'] as $i => $l) { $o = $l['opts']; ksort($o); $snap[$l['pid'].'|'.$l['vid'].'|'.json_encode($o).'|'.$l['note']] = array((int)$l['qty'], $p['items'][$i]); }
+	foreach ($ctx['cart'] as $i => $l) { $o = $l['opts']; ksort($o); $snap[$l['pid'].'|'.$l['vid'].'|'.json_encode($o).'|'.rawurlencode($l['note'])] = array((int)$l['qty'], $p['items'][$i]); }
 	return $snap;
 }
 // "Dazugekommen: 2× Pizza Salami (groß). Entfernt: 1× Cola." from two snapshots; empty when nothing changed
 function shop_chat_ai_report($before, $after) {
-	$add = array(); $del = array();
-	foreach ($after as $k => $a) { $d = $a[0] - (isset($before[$k]) ? $before[$k][0] : 0); if ($d > 0) { $it = $a[1]; $it['qty'] = $d; $add[] = shop_chat_ai_line_name($it); } }
-	foreach ($before as $k => $b) { $d = $b[0] - (isset($after[$k]) ? $after[$k][0] : 0); if ($d > 0) { $it = $b[1]; $it['qty'] = $d; $del[] = shop_chat_ai_line_name($it); } }
-	return trim(($add ? 'Dazugekommen: '.implode(', ', $add).'.' : '').($del ? ($add ? ' ' : '').'Entfernt: '.implode(', ', $del).'.' : ''));
+	$add = array(); $del = array(); $chg = array();
+	foreach ($after as $k => $a) { $d = $a[0] - (isset($before[$k]) ? $before[$k][0] : 0); if ($d > 0) { $it = $a[1]; $it['qty'] = $d; $add[$k] = shop_chat_ai_line_name($it); } }
+	foreach ($before as $k => $b) { $d = $b[0] - (isset($after[$k]) ? $after[$k][0] : 0); if ($d > 0) { $it = $b[1]; $it['qty'] = $d; $del[$k] = $it; } }
+	// the same dish with another wish: not "removed and added" but "changed"
+	foreach ($del as $kd => $it) {
+		$base = substr($kd, 0, strrpos($kd, '|'));
+		foreach ($add as $ka => $name) { if (substr($ka, 0, strrpos($ka, '|')) === $base && $after[$ka][1]['qty'] === $it['qty']) { $chg[] = $name; unset($add[$ka], $del[$kd]); break; } }
+	}
+	$delNames = array(); foreach ($del as $it) { $delNames[] = shop_chat_ai_line_name($it); }
+	$parts = array();
+	if ($add) { $parts[] = 'Dazugekommen: '.implode(', ', $add).'.'; }
+	if ($chg) { $parts[] = 'Geändert: '.implode(', ', $chg).'.'; }
+	if ($delNames) { $parts[] = 'Entfernt: '.implode(', ', $delNames).'.'; }
+	return implode(' ', $parts);
 }
 // the chat shows plain text: markdown marks of the model are taken out
 function shop_chat_ai_plain($t) {

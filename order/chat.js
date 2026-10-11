@@ -4,7 +4,7 @@
 	var body = document.body, token = body.getAttribute('data-token');
 	var log = document.getElementById('chat-log'), form = document.getElementById('chat-form'), input = document.getElementById('chat-text'), label = document.getElementById('chat-text-label');
 	var err = document.getElementById('chat-error'), sendBtn = form.querySelector('.chat-send'), busy = false;
-	var PLACEHOLDER = { text: 'Deine Antwort', search: 'Gericht suchen', ask: 'Schreib, was du möchtest', code: 'Code eingeben', number: 'Zahl eingeben' };
+	var PLACEHOLDER = { text: 'Deine Antwort', search: 'Gericht suchen', ask: 'Schreib, was du möchtest', extra: 'Noch etwas vergessen? Schreib es hier', code: 'Code eingeben', number: 'Zahl eingeben' };
 	var cartBar = document.getElementById('chat-cart');
 
 	function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) { e.className = cls; } if (txt != null) { e.textContent = txt; } return e; }

@@ -108,7 +108,7 @@ function shop_chat_priced_now($ctx) {
 }
 function shop_chat_line_text($it) {
 	$o = array(); foreach ($it['options'] as $x) { $o[] = ($x['qty'] > 1 ? $x['qty'].'× ' : '').$x['title']; }
-	return $it['qty'].'× '.$it['title'].($it['variation'] !== '' ? ' ('.$it['variation'].')' : '').($o ? ', '.implode(', ', $o) : '').' – '.shop_money($it['line_cents']);
+	return $it['qty'].'× '.$it['title'].($it['variation'] !== '' ? ' ('.$it['variation'].')' : '').($o ? ', '.implode(', ', $o) : '').($it['note'] !== '' ? ' ['.$it['note'].']' : '').' – '.shop_money($it['line_cents']);
 }
 function shop_chat_cart_text($ctx) {
 	$p = shop_chat_priced($ctx);
@@ -361,7 +361,13 @@ function shop_chat_run_checkout(&$c, $out) {
 	$ctx = &$c['ctx'];
 	if (!$ctx['cart']) { $c['state'] = 'cat'; $out[] = shop_chat_ask_category($ctx, 'Dein Warenkorb ist noch leer.'); return shop_chat_finish($c, $out); }
 	if (!shop_flag('accepting')) { $out[] = shop_chat_msg('Wir nehmen gerade keine Bestellungen an.', array('cart' => 'Warenkorb ansehen')); return shop_chat_finish($c, $out); }
-	unset($ctx['offer_done'], $ctx['when']);
+	// back from "Etwas ergänzen": the answers of the guest stay (name, number, address, payment, time as long as it is still possible); a free extra is not asked twice
+	if (!isset($ctx['extra'])) { unset($ctx['offer_done']); }
+	if (!empty($ctx['when'])) {
+		$w = $ctx['when'];
+		$still = ($w === 'asap') ? !empty(shop_state($ctx['type'])['open']) : (preg_match('/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})$/', $w, $m) && in_array($m[2], shop_slots($ctx['type'], $m[1]), true));
+		if (!$still) { unset($ctx['when']); }
+	}
 	$c['state'] = 'offer';
 	return shop_chat_offer($c, $out, null);
 }
@@ -573,6 +579,11 @@ function shop_chat_checkout(&$c, $out, $st, $btn, $text, $enter = false) {
 	if ($st === 'note' && $text !== null && $text !== '') { $ctx['note'] = trim((isset($ctx['note']) ? $ctx['note'].' ' : '').$text); }
 
 	// ---- summary and the last word of the guest
+	// something forgotten, written as a sentence: the AI puts it into the cart (or the wish onto the dish), then the summary comes again with the new sums
+	if ($st === 'confirm' && $text !== null && $text !== '' && shop_chat_ai_ready()) {
+		$ai = shop_chat_ai_turn($c, $out, $text, true);
+		if ($ai !== null) { return $ai; }
+	}
 	if ($st === 'confirm' && $btn === 'confirm') { return shop_chat_place($c, $out, $acc); }
 	if ($st === 'confirm' && $btn === 'cancel') { $ctx = array('type' => 'delivery', 'cart' => array(), 'offered' => array(), 'fresh' => 1); $c['state'] = 'type'; $out[] = shop_chat_msg('Alles klar, ich habe die Bestellung verworfen.'); $out[] = shop_chat_ask_type($ctx); return shop_chat_finish($c, $out); }
 	return $ask('confirm', shop_chat_summary($ctx, $couponNote));
@@ -605,7 +616,7 @@ function shop_chat_summary($ctx, $lead = '') {
 	$lines[] = ($ctx['type'] === 'delivery' ? $ctx['addr']['street'].', '.$ctx['addr']['zip'].' '.$ctx['addr']['city'] : 'Abholung').' · '.($ctx['when'] === 'asap' ? 'so schnell wie möglich' : date('d.m. H:i', strtotime($ctx['when'])).' Uhr');
 	$lines[] = $ctx['name'].', '.$ctx['phone'].' · '.$pay[$ctx['pay']];
 	if (!empty($ctx['note'])) { $lines[] = 'Anmerkung: '.$ctx['note']; }
-	return shop_chat_msg(implode("\n", $lines), array('confirm' => 'Verbindlich bestellen', 'addnote' => empty($ctx['note']) ? 'Anmerkung hinzufügen' : 'Anmerkung ändern', 'coupon' => empty($ctx['coupon']) ? 'Gutscheincode eingeben' : 'Gutschein ändern') + (empty($ctx['coupon']) ? array() : array('couponx' => 'Gutschein entfernen')) + array('edit' => 'Warenkorb ändern', 'cancel' => 'Abbrechen'));
+		return shop_chat_msg(implode("\n", $lines), array('confirm' => 'Verbindlich bestellen', 'more' => 'Etwas ergänzen', 'addnote' => empty($ctx['note']) ? 'Anmerkung hinzufügen' : 'Anmerkung ändern', 'coupon' => empty($ctx['coupon']) ? 'Gutscheincode eingeben' : 'Gutschein ändern') + (empty($ctx['coupon']) ? array() : array('couponx' => 'Gutschein entfernen')) + array('edit' => 'Warenkorb ändern', 'cancel' => 'Abbrechen'), shop_chat_ai_ready() ? 'extra' : '');
 }
 
 // the little summary the page shows in the cart bar: array(count, total text); empty when nothing is in the cart

@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.38.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Bestell-Chat: Etwas vergessen, kurz vor dem Bestellen: in der Zusammenfassung gibt es "Etwas ergänzen"; danach führt "Zur Kasse" sofort zur Zusammenfassung zurück (Name, Nummer, Adresse, Zahlung, Gutschein und die Zeit, solange sie noch möglich ist, bleiben; ein gewähltes Gratis-Extra wird nicht noch einmal gefragt). Mit KI steht unter der Zusammenfassung ein Eingabefeld "Noch etwas vergessen?": ein Satz legt Gerichte nach oder setzt einen Wunsch auf ein Gericht im Warenkorb (neues Werkzeug set_note), danach erscheint die Zusammenfassung erneut mit der neuen Summe. Wünsche stehen in der Zeile des Chats und auf dem Küchenbon; die Rückmeldung des Servers nennt auch "Geändert: ...".
+
 2026-10-12 == mySeat v6.38.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Behoben: Bestell-Chat mit KI: Haiku 5.5 denkt standardmäßig, das Denken verbrauchte das ganze Limit (stop_reason max_tokens), es kam weder Text noch Werkzeugaufruf, und der Chat zeigte ein leeres "Okay." und schrieb es in den Verlauf. Jetzt: niedriger Denkaufwand (output_config effort low), 1500 statt 700 Tokens, eine abgeschnittene, abgelehnte oder leere Antwort fällt auf die Wortsuche zurück und erscheint in der Liste "Chat-Gespräche zum Ansehen".
