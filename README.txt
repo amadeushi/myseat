@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-13 == mySeat v6.49.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Schneller Checkout für Gäste, die schon einmal auf diesem Gerät bestellt haben: Lieferart und Zahlart der letzten Bestellung sind vorgewählt (localStorage amadeusLastV1), und sind alle Angaben da (Adresse im Liefergebiet, Name, Telefon, "so schnell wie möglich", Zahlart), zeigt der Checkout nur die Karte "Deine Angaben" mit Anmerkungsfeld und dem Bestellknopf; "Angaben ändern" öffnet das ganze Formular, ein unvollständiger Stand öffnet es nach wenigen Sekunden von selbst. Der Satz "Lieferung an ... / Abholung bei uns" über dem Knopf bleibt. Neue Gäste wählen Lieferart und Zahlart einmal bewusst (hervorgehobene Knöpfe).
+ * Neu: Statusseite, Block "Falsch bestellt?": eine Bestellung im Status neu/angenommen, nicht online bezahlt, nicht in einer Tour, lässt sich einmal von Abholung in Lieferung (Adresse, Zone, Gebühr, Mindestbestellwert werden geprüft, Lieferzeit nicht früher als die Lieferzeit der Küche) oder von Lieferung in Abholung (Gebühr und Trinkgeld fallen weg) umstellen (op switch_mode, shop_order_guest_switch). Eintrag im Bestell-Log.
+
 2026-10-13 == mySeat v6.48.3 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geändert: Checkout: Der Fortschrittsbalken nennt jetzt, was noch fehlt ("Fast geschafft – noch 3 Angaben: Name, Telefon, Zahlungsart"; möglich sind Lieferart, Lieferadresse, Zeit, Name, Telefon, Zahlungsart). Der Block "Bezahlung" ist, solange keine Zahlart gewählt ist (bei mehreren Möglichkeiten), wie die Lieferart hervorgehoben (goldener Rahmen, leichtes Pulsieren, ohne Bewegung bei reduzierter Animation) und fordert mit "Bitte wähle, wie du bezahlen möchtest." zur Wahl auf.

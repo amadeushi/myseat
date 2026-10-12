@@ -795,3 +795,25 @@
 .co-sec.is-ask .co-askhint { color: var(--gold-strong); font-weight: 700; font-size: 16px; margin: 0 0 10px; }
 #co-paysec.is-ask .co-pay { padding: 6px; border: 2px solid var(--gold-strong); border-radius: var(--radius-md); animation: co-ask 1.8s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { #co-paysec.is-ask .co-pay { animation: none; } }
+
+.st-switch { margin-top: 16px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius-md); }
+.st-switch-q { margin: 0 0 8px; color: var(--text); }
+.st-switch-form { display: grid; gap: 10px; margin-top: 10px; max-width: 420px; }
+.st-switch-form label { display: grid; gap: 4px; font-size: 14px; color: var(--text-muted); }
+.st-switch-form input { min-height: 44px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-2); color: var(--text); font: inherit; }
+
+/* quick view for a returning guest: one card instead of the whole form */
+.co-quick { display: none; margin: 20px 0 0; padding: 18px 20px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); }
+body.co-quick-wait .co-quick, body.co-quick-on .co-quick { display: block; }
+.co-quick h2 { font-family: var(--font-display); font-size: 24px; margin: 0 0 10px; }
+.co-quick-list { margin: 0 0 12px; display: grid; gap: 8px; }
+.co-quick-list > div { display: flex; gap: 12px; flex-wrap: wrap; }
+.co-quick-list dt { flex: 0 0 120px; color: var(--text-muted); font-size: 14px; }
+.co-quick-list dd { margin: 0; flex: 1 1 200px; color: var(--text); font-weight: 600; }
+.co-quick-wait { margin: 0; color: var(--text-muted); }
+body.co-quick-on .co-quick-wait { display: none; }
+body.co-quick-wait .co-quick-list, body.co-quick-wait .co-quick-note, body.co-quick-wait .co-quick-edit { display: none; }
+.co-quick-edit { margin-top: 10px; min-height: 44px; padding: 0 18px; border: 1px solid var(--border); border-radius: var(--radius-pill, 999px); background: transparent; color: var(--gold-strong); font: inherit; font-weight: 600; cursor: pointer; }
+body.co-quick-wait #co-modesec, body.co-quick-wait #sec-address, body.co-quick-wait #sec-when, body.co-quick-wait #sec-data, body.co-quick-wait #co-paysec,
+body.co-quick-on #co-modesec, body.co-quick-on #sec-address, body.co-quick-on #sec-when, body.co-quick-on #sec-data { display: none; }
+body.co-quick-on #co-paysec > legend, body.co-quick-on #co-paysec .co-askhint, body.co-quick-on #co-pay { display: none; }

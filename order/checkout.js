@@ -20,9 +20,29 @@
 	}
 	// the mode (Lieferung / Abholung) of an earlier visit is not taken over: it counts only when it was chosen in this browser session (on the menu or here); else the guest chooses, the button waits
 	var MKEY = 'myseat_mode_chosen';
+	// what the guest chose at his last order on this device: it is taken as the start (and shown plainly, see the quick view), a guest who has never ordered here is asked
+	var LKEY = 'amadeusLastV1';
 	function loadChosen() {
-		try { var sm = sessionStorage.getItem(MKEY); if (sm === 'pickup' || sm === 'delivery') { S.mode = sm; S.modeChosen = true; return; } } catch (e) {}
-		S.mode = 'delivery'; S.modeChosen = false;
+		try { var l = JSON.parse(localStorage.getItem(LKEY) || 'null'); if (l && (l.mode === 'pickup' || l.mode === 'delivery')) { S.last = { mode: l.mode, pay: String(l.pay || '') }; } } catch (e) {}
+		try { var sm = sessionStorage.getItem(MKEY); if (sm === 'pickup' || sm === 'delivery') { S.mode = sm; S.modeChosen = true; } } catch (e) {}
+		if (!S.modeChosen) { if (S.last) { S.mode = S.last.mode; S.modeChosen = true; } else { S.mode = 'delivery'; S.modeChosen = false; } }
+		if (S.last) { document.body.classList.add('co-quick-wait'); setTimeout(function () { if (S.quick !== true) { quickOff(); } }, 3500); }
+	}
+	function rememberLast() { try { localStorage.setItem(LKEY, JSON.stringify({ mode: S.mode, pay: S.pay })); } catch (e) {} }
+	// ---- quick view: a guest who has ordered here before and whose details are all there sees one card (where, when, who, how to pay) and one button, "Angaben ändern" opens the full form
+	function quickOff() { S.quick = false; document.body.classList.remove('co-quick-wait', 'co-quick-on'); }
+	function renderQuick() {
+		var f = form.elements, addr = [f.street.value.trim(), (f.zip.value.trim() + ' ' + f.city.value.trim()).trim()].filter(Boolean).join(', ');
+		var rows = [[S.mode === 'delivery' ? 'Lieferung an' : 'Abholung', S.mode === 'delivery' ? addr : 'bei uns'], ['Wann', 'so schnell wie möglich'], ['Für', f.name.value.trim() + ' · ' + f.phone.value.trim()], ['Bezahlung', (S.payLabels && S.payLabels[S.pay]) || '']];
+		$('#co-quick-list').innerHTML = rows.map(function (r) { return '<div><dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd></div>'; }).join('');
+		var qn = $('#co-quick-note'); if (qn && document.activeElement !== qn) { qn.value = f.note.value; }
+	}
+	function quickEval() {
+		if (!S.last || S.quick === false) { return; }
+		if (S.group) { quickOff(); return; }
+		var f = form.elements;
+		var ok = S.info && S.modeChosen && S.pay && S.when === 'asap' && f.name.value.trim() && f.phone.value.trim() && !reason();
+		if (ok) { if (S.quick !== true) { S.quick = true; document.body.classList.remove('co-quick-wait'); document.body.classList.add('co-quick-on'); } renderQuick(); }
 	}
 	function saveMode() { try { var d = JSON.parse(localStorage.getItem(KEY) || '{}'); d.mode = S.mode; localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) {} }
 
@@ -203,7 +223,7 @@
 	}
 	function updateSubmit() {
 		var why = reason(), btn = $('#co-submit');
-		renderModeLine(); renderModeSubs();
+		renderModeLine(); renderModeSubs(); quickEval();
 		btn.disabled = !!why || S.busy;
 		if (!S.busy) { btn.textContent = 'Zahlungspflichtig bestellen · ' + fmt(total()); }
 		$('#co-why').textContent = S.busy ? '' : why;
@@ -370,7 +390,9 @@
 		if (S.info.pay.online) { opts.push(['mollie', 'Jetzt online bezahlen', 'Karte, PayPal, Apple Pay und mehr, sicher über Mollie. Du bezahlst im nächsten Schritt.']); }
 		if (S.info.pay.cash) { opts.push(['cash', S.mode === 'delivery' ? 'Bar bei Lieferung' : 'Bar bei Abholung', 'Bitte halte ' + tot + ' bereit, möglichst passend.']); }
 		if (S.info.pay.card_door) { opts.push(['card_door', S.mode === 'delivery' ? 'Mit Karte bei Lieferung bezahlen' : 'Mit Karte bei Abholung bezahlen', S.mode === 'delivery' ? 'Der Fahrer bringt das Kartengerät mit. ' + tot + ' zahlst du dort.' : 'Du zahlst ' + tot + ' bei der Abholung mit Karte.']); }
-		if (!opts.some(function (o) { return o[0] === S.pay; })) { S.pay = opts.length === 1 ? opts[0][0] : ''; }   // nothing is preselected when there is a choice: the guest decides, the button waits
+		S.payLabels = {}; opts.forEach(function (o) { S.payLabels[o[0]] = o[1]; });
+		if (!opts.some(function (o) { return o[0] === S.pay; })) { S.pay = opts.length === 1 ? opts[0][0] : ''; }
+		if (!S.pay && S.last && opts.some(function (o) { return o[0] === S.last.pay; })) { S.pay = S.last.pay; }   // the way he chose last time, shown in the quick view and above the button   // nothing is preselected when there is a choice: the guest decides, the button waits
 		$('#co-pay').innerHTML = opts.map(function (o) {
 			return '<label class="co-radio"><input type="radio" name="pay" value="' + o[0] + '"' + (S.pay === o[0] ? ' checked' : '') + '/><span>' + o[1] + ' <small>' + o[2] + '</small></span></label>';
 		}).join('') || '<p class="co-zone bad">Zurzeit ist keine Zahlungsart verfügbar.</p>';
@@ -405,7 +427,8 @@
 		if (t.name === 'pay') { S.pay = t.value; updateSubmit(); }
 	});
 	document.addEventListener('click', function (ev) {
-		if (ev.target.closest('#co-modeedit')) { ev.preventDefault(); var mb = $('.mode-btn'); if (mb) { mb.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); mb.focus(); } return; }
+		if (ev.target.closest('#co-quick-edit')) { quickOff(); var ms = $('#co-modesec'); if (ms) { ms.scrollIntoView({ block: 'start' }); } return; }
+		if (ev.target.closest('#co-modeedit')) { ev.preventDefault(); if (S.quick === true || document.body.classList.contains('co-quick-on')) { quickOff(); } var mb = $('.mode-btn'); if (mb) { mb.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); mb.focus(); } return; }
 		if (ev.target.closest('#co-coupon-toggle')) { var bx = $('#co-coupon-box'); bx.hidden = !bx.hidden; if (!bx.hidden) { $('#co-coupon-in').focus(); } $('#co-coupon-toggle').setAttribute('aria-expanded', bx.hidden ? 'false' : 'true'); return; }
 		if (ev.target.closest('#co-coupon-go')) { applyCoupon($('#co-coupon-in').value, false); return; }
 		if (ev.target.closest('#co-coupon-off')) { removeCoupon(); return; }
@@ -452,11 +475,13 @@
 				if (S.group) { localStorage.removeItem(GKEY); } // the shared basket is done; the own cart stays as it was
 				else { var d = JSON.parse(localStorage.getItem(KEY) || '{}'); d.cart = []; localStorage.setItem(KEY, JSON.stringify(d)); }
 			} catch (e) {}
+			rememberLast();
 			location.href = r.redirect;
 		}).catch(function () { var msg = 'Das hat nicht geklappt. Bitte versuche es noch einmal.'; err.textContent = msg; S.busy = false; updateSubmit(); $('#co-why').textContent = msg; err.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); });
 	});
 
 	load(); loadChosen(); prefill(); accountPrefill(); loadOffers();
+	document.addEventListener('input', function (ev) { if (ev.target && ev.target.id === 'co-quick-note') { form.elements.note.value = ev.target.value; } });
 	form.addEventListener('change', function (ev) { if (ev.target && (ev.target.name === 'nl_news' || ev.target.name === 'nl_stamps')) { syncNl(); } });
 	form.addEventListener('input', function (ev) { if (ev.target && (ev.target.name === 'phone' || ev.target.name === 'email')) { clearTimeout(stampTimer); stampTimer = setTimeout(refreshStamp, 600); } });
 	// coming from a shared basket (checkout.php?g=...): the lines are everybody's, the organizer of that basket orders and pays

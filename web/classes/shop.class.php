@@ -2956,6 +2956,40 @@ function shop_order_to_delivery($orderId, $in, $by) {
 	shop_log((int)$orderId, 'Abholung in Lieferung umgewandelt', mb_substr($by.': '.trim($street.', '.$zip.' '.$city).', Liefergebühr '.shop_money($fee).', Summe '.shop_money($total), 0, 200));
 	return array('ok' => true, 'fee' => $fee, 'total' => $total);
 }
+// the guest corrects the way of his order on the status page (ordered for pickup but wanted it brought, or the other way round): once, as long as the kitchen has not started (new / accepted), not
+// in a tour, not for an order paid online (the fee or the refund would need a booking at Mollie). To delivery: the address is checked like at the checkout (zone, fee, minimum); to pickup: the fee
+// and the tip fall away, the address is cleared. Returns array(ok, error, fee, total).
+function shop_order_guest_switch($order, $to, $in) {
+	$no = function ($m) { return array('ok' => false, 'error' => $m); };
+	if (!$order || $order['source'] !== 'shop' || !in_array($order['status'], array('new', 'accepted'), true)) { return $no('Das lässt sich jetzt nicht mehr ändern. Bitte ruf uns kurz an.'); }
+	if ($order['payment_method'] === 'mollie') { return $no('Diese Bestellung ist online bezahlt. Bitte ruf uns kurz an, dann ändern wir es für dich.'); }
+	if (!empty($order['tour'])) { return $no('Das lässt sich jetzt nicht mehr ändern. Bitte ruf uns kurz an.'); }
+	if (fb_row("SELECT id FROM ".fb_t('tp_shop_order_log')." WHERE order_id = ? AND event = 'mode_switch' LIMIT 1", 'i', array((int)$order['id']))) { return $no('Du hast die Art schon einmal geändert. Bitte ruf uns kurz an.'); }
+	$id = (int)$order['id'];
+	if ($to === 'delivery' && $order['type'] === 'pickup') {
+		$r = shop_order_to_delivery($id, $in, 'Gast (Statusseite)');
+		if (empty($r['ok'])) { return $r; }
+		// a delivery takes longer than a pickup: the promised time is not earlier than the delivery time of the kitchen
+		if (empty($order['scheduled_at'])) { fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET eta_at = ? WHERE id = ? AND (eta_at IS NULL OR eta_at < ?)", 'sis', array(date('Y-m-d H:i:s', time() + max(5, (int)shop_setting('eta_delivery_min')) * 60), $id, date('Y-m-d H:i:s', time() + max(5, (int)shop_setting('eta_delivery_min')) * 60))); }
+		shop_log($id, 'mode_switch', 'Gast: Abholung -> Lieferung');
+		return $r;
+	}
+	if ($to === 'pickup' && $order['type'] === 'delivery') {
+		if ((string)$order['coupon_code'] !== '') {
+			$c = fb_row("SELECT applies FROM ".fb_t('tp_shop_coupons')." WHERE code = ?", 's', array($order['coupon_code']));
+			if ($c && $c['applies'] === 'delivery') { return $no('Der Gutschein '.$order['coupon_code'].' gilt nur für Lieferung. Bitte ruf uns kurz an.'); }
+		}
+		$min = shop_cents(shop_setting('min_order_pickup')); $goods = (int)$order['subtotal_cents'] - (int)$order['discount_cents'];
+		if ($goods < $min) { return $no('Für Abholung gilt ein Mindestbestellwert von '.shop_money($min).'.'); }
+		$total = (int)$order['total_cents'] - (int)$order['fee_cents'] - (int)$order['tip_cents'];
+		$upd = fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET type = 'pickup', street = '', zip = '', city = '', address_note = '', lat = NULL, lng = NULL, zone_id = NULL, fee_cents = 0, tip_cents = 0, total_cents = ?,
+			suburb = NULL, route_m = NULL, route_s = NULL, geo_at = NULL, driver_id = NULL, updated_at = ? WHERE id = ? AND type = 'delivery' AND status IN ('new', 'accepted')", 'isi', array($total, date('Y-m-d H:i:s'), $id));
+		if (!$upd || mysqli_stmt_affected_rows($upd) < 1) { return $no('Das hat nicht geklappt. Bitte ruf uns kurz an.'); }
+		shop_log($id, 'mode_switch', 'Gast: Lieferung -> Abholung, Summe '.shop_money($total));
+		return array('ok' => true, 'fee' => 0, 'total' => $total);
+	}
+	return $no('Das lässt sich nicht ändern.');
+}
 function shop_dispatch_retry_order($orderId, $in, $by) {
 	$o = shop_order($orderId);
 	if (!$o || $o['type'] !== 'delivery' || $o['status'] !== 'failed') { return array('ok' => false, 'error' => 'Nur eine fehlgeschlagene Lieferung lässt sich zurückholen.'); }

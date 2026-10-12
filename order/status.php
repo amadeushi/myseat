@@ -98,6 +98,29 @@ $delivery = $order && $order['type'] === 'delivery';
 		<?php if ($late): ?><p class="st-late">Es dauert etwas länger als geplant, danke für deine Geduld. Wir sind dran<?php echo $tel !== '' ? '. Bei Fragen erreichst du uns unter '.$tel : ''; ?>.</p><?php endif; ?>
 		<span class="st-num">Bestellung <?php echo shop_h($order['number']); ?></span>
 
+		<?php
+			// "Falsch bestellt?": as long as the kitchen has not begun, the guest can turn a pickup into a delivery or the other way round (once; not for an order paid online or in a tour)
+			$canSwitch = in_array($st, array('new', 'accepted'), true) && $order['source'] === 'shop' && $order['payment_method'] !== 'mollie' && empty($order['tour'])
+				&& !fb_row("SELECT id FROM ".fb_t('tp_shop_order_log')." WHERE order_id = ? AND event = 'mode_switch' LIMIT 1", 'i', array((int)$order['id']));
+		?>
+		<?php if ($canSwitch): ?>
+			<div class="st-switch" id="st-switch" data-to="<?php echo $delivery ? 'pickup' : 'delivery'; ?>">
+				<p class="st-switch-q"><strong>Falsch bestellt?</strong> <?php echo $delivery ? 'Du möchtest lieber selbst abholen?' : 'Du möchtest es doch geliefert bekommen?'; ?></p>
+				<?php if ($delivery): ?>
+					<button type="button" class="st-pay-sw" id="st-sw-go">Doch selbst abholen</button>
+				<?php else: ?>
+					<button type="button" class="st-pay-sw" id="st-sw-open" aria-expanded="false" aria-controls="st-sw-form">Doch liefern lassen</button>
+					<div class="st-switch-form" id="st-sw-form" hidden>
+						<label>Straße und Hausnummer<input type="text" id="st-sw-street" maxlength="120" autocomplete="street-address"/></label>
+						<label>PLZ<input type="text" id="st-sw-zip" maxlength="10" inputmode="numeric" autocomplete="postal-code"/></label>
+						<label>Ort<input type="text" id="st-sw-city" maxlength="80" value="Hildesheim" autocomplete="address-level2"/></label>
+						<label>Hinweis für die Lieferung (optional)<input type="text" id="st-sw-note" maxlength="200" placeholder="Etage, Klingel"/></label>
+						<button type="button" class="st-pay-sw" id="st-sw-go">Liefern lassen</button>
+					</div>
+				<?php endif; ?>
+				<span class="st-warn" id="st-sw-msg" role="alert"></span>
+			</div>
+		<?php endif; ?>
 		<?php if ($st === 'pending' && $paidOnline): ?>
 			<div class="st-pay">Die Zahlung ist noch offen. <a href="#" id="st-repay">Jetzt online bezahlen</a><span id="st-repay-msg" class="st-warn" role="alert"></span>
 				<?php if ($order['payment_method'] === 'mollie' && $order['payment_status'] !== 'paid' && (shop_flag('allow_cash') || shop_flag('allow_card_door'))): ?>
@@ -314,6 +337,18 @@ $delivery = $order && $order['type'] === 'delivery';
 					});
 				});
 				rb.addEventListener('mouseleave', function () { if (!stars[0].disabled) { paint(0); } });
+			}
+			var sw = document.getElementById('st-switch');
+			if (sw) {
+				var swOpen = document.getElementById('st-sw-open'), swGo = document.getElementById('st-sw-go'), swMsg = document.getElementById('st-sw-msg');
+				if (swOpen) { swOpen.addEventListener('click', function () { var f = document.getElementById('st-sw-form'); f.hidden = !f.hidden; swOpen.setAttribute('aria-expanded', f.hidden ? 'false' : 'true'); if (!f.hidden) { document.getElementById('st-sw-street').focus(); } }); }
+				swGo.addEventListener('click', function () {
+					var to = sw.dataset.to, body = { op: 'switch_mode', token: TOKEN, order: t, to: to };
+					if (to === 'delivery') { body.street = document.getElementById('st-sw-street').value; body.zip = document.getElementById('st-sw-zip').value; body.city = document.getElementById('st-sw-city').value; body.note = document.getElementById('st-sw-note').value; }
+					swGo.disabled = true; swMsg.textContent = ' Einen Moment ...';
+					fetch('api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(body) }).then(function (r) { return r.json(); }).then(function (r) {
+						if (r.ok) { location.reload(); } else { swMsg.textContent = ' ' + (r.error || 'Das hat nicht geklappt.'); swGo.disabled = false; } }).catch(function () { swMsg.textContent = ' Das hat nicht geklappt.'; swGo.disabled = false; });
+				});
 			}
 			Array.prototype.forEach.call(document.querySelectorAll('.st-pay-sw'), function (b) {
 				b.addEventListener('click', function () {

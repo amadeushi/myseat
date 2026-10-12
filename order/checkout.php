@@ -38,6 +38,14 @@ $imprint = (!empty($settings['imprintUrl']) && preg_match('#^https?://#i', $sett
 		<form class="co-form" id="co-form" novalidate autocomplete="on">
 			<h1>Zur Kasse</h1>
 			<div class="co-acc" id="co-acc" role="status" hidden></div>
+			<section class="co-quick" id="co-quick" aria-label="Deine Angaben">
+				<h2>Deine Angaben</h2>
+				<p class="co-quick-wait" id="co-quick-wait">Einen Moment, wir holen deine Angaben ...</p>
+				<dl class="co-quick-list" id="co-quick-list"></dl>
+				<label class="co-f wide co-quick-note"><span>Anmerkung zur Bestellung (optional)</span><input type="text" id="co-quick-note" maxlength="500"/></label>
+				<button type="button" class="co-quick-edit" id="co-quick-edit">Angaben ändern</button>
+			</section>
+
 			<p class="co-empty" id="co-empty" hidden>Dein Warenkorb ist leer. <a href="./">Zur Speisekarte</a></p>
 
 			<fieldset class="co-sec" id="co-modesec">
@@ -65,12 +73,12 @@ $imprint = (!empty($settings['imprintUrl']) && preg_match('#^https?://#i', $sett
 				</div>
 			</fieldset>
 
-			<fieldset class="co-sec">
+			<fieldset class="co-sec" id="sec-when">
 				<legend>Wann?</legend>
 				<div id="co-when" class="co-when"></div>
 			</fieldset>
 
-			<fieldset class="co-sec">
+			<fieldset class="co-sec" id="sec-data">
 				<legend>Deine Daten</legend>
 				<div class="co-grid">
 					<label class="co-f wide"><span>Name</span><input type="text" name="name" autocomplete="name" maxlength="120" required/></label>

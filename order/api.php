@@ -136,6 +136,10 @@ if ($op === 'push_subscribe') {
 	api_out(shop_push_subscribe(shop_order_by_token(isset($body['order']) ? (string)$body['order'] : ''), isset($body['endpoint']) ? (string)$body['endpoint'] : ''));
 }
 
+if ($op === 'switch_mode') {
+	$to = (isset($body['to']) && $body['to'] === 'delivery') ? 'delivery' : 'pickup';
+	api_out(shop_order_guest_switch(shop_order_by_token(isset($body['order']) ? (string)$body['order'] : ''), $to, array('street' => isset($body['street']) ? $body['street'] : '', 'zip' => isset($body['zip']) ? $body['zip'] : '', 'city' => isset($body['city']) ? $body['city'] : '', 'note' => isset($body['note']) ? $body['note'] : '')));
+}
 if ($op === 'switch_pay') {
 	api_out(shop_order_switch_pay(shop_order_by_token(isset($body['order']) ? (string)$body['order'] : ''), isset($body['payment']) ? (string)$body['payment'] : ''));
 }
