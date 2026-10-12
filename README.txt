@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.46.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Korrigiert: Beim runden Zeus-Abzeichen schnitt der Kreis die Ecken des Bildes ab, das Ohr oben rechts und die Schulter unten links verloren dadurch die weiße Kontur. Das Bild sitzt jetzt weiter innen, die Abzeichen sind etwas größer (72 px im Warenkorb und auf der Statusseite, 56 px beim Dank für die Bewertung).
+
 2026-10-12 == mySeat v6.46.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geändert: Zeus im leeren Warenkorb, über dem Titel der Statusseite und beim Dank für die Bewertung sitzt in einem runden Abzeichen mit goldenem Ring und weichem Schein statt mit Umriss-Glow. Das Bild ist eine Büste, die oben und unten am Bildrand endet; der Glow am Umriss endete dort in einer geraden Linie. Im Warenkorb 64 statt 56 px. Zeus als Stempel und als Fahrer auf der Karte bleiben unverändert.
