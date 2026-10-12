@@ -69,6 +69,7 @@ $delivery = $order && $order['type'] === 'delivery';
 		$items = shop_order_items((int)$order['id']);
 		$eta = $order['scheduled_at'] ? strtotime($order['scheduled_at']) : ($order['eta_at'] ? strtotime($order['eta_at']) : 0); // a wish time always stands as the guest chose it
 	?>
+		<?php if (!in_array($st, array('failed', 'cancelled'), true)): ?><img class="st-zeus-head" src="zeus_dot.png" alt="" width="64" height="64"/><?php endif; ?>
 		<h1 class="st-title<?php echo in_array($st, array('failed', 'cancelled'), true) ? ' is-danger' : ($st === 'done' ? ' is-success' : ''); ?>"><?php echo shop_h($titles[$st]); ?></h1>
 		<p class="st-lead">
 			<?php if ($st === 'pending'): ?>Deine Bestellung geht erst an die Küche, wenn die Zahlung angekommen ist.

@@ -103,7 +103,7 @@ function shop_acc_send_mail($to, $code, $link) {
 		'subject' => 'Dein Anmeldecode: '.$code, 'headline' => 'Dein Anmeldecode', 'lead' => 'Gib diesen Code im Bestellshop ein, am besten in dem Browser, in dem dein Warenkorb liegt. Der Knopf meldet nur den Browser an, in dem du ihn öffnest.',
 		'image' => '', 'alt' => '', 'box' => array('label' => 'Anmeldecode', 'value' => $code, 'note' => 'gültig '.(int)(SHOP_ACC_TTL / 60).' Minuten, nur einmal nutzbar'),
 		'after' => 'Du hast das nicht angefordert? Dann kannst du diese Mail einfach löschen, ohne den Code passiert nichts.',
-		'btn' => 'Jetzt anmelden', 'url' => $link, 'signoff' => 'Dein Team vom '.shop_acc_brand()));
+		'btn' => 'Jetzt anmelden', 'url' => $link, 'zeus' => false, 'signoff' => 'Dein Team vom '.shop_acc_brand()));
 	return true;
 }
 

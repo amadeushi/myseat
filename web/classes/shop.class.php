@@ -3600,6 +3600,8 @@ function shop_stamp_mail($to, $m) {
 	if (!empty($settings['imprintUrl'])) { $links[] = '<a href="'.$h($settings['imprintUrl']).'" style="color:#8a6d3b;">Impressum</a>'; }
 	if (!empty($settings['privacyUrl'])) { $links[] = '<a href="'.$h($settings['privacyUrl']).'" style="color:#8a6d3b;">Datenschutz</a>'; }
 	$footer = $legal ? '<tr><td style="'.$font.'padding:16px 32px 24px;border-top:1px solid #e6e0d2;font-size:12px;line-height:1.6;color:#6e685c;"><strong>Angaben zum Anbieter</strong><br>'.implode('<br>', array_map($h, $legal)).($links ? '<br>'.implode(' &middot; ', $links) : '').'</td></tr>' : '';
+	$sign = '<div style="'.$font.'font-size:14px;color:#555;line-height:1.6;">'.$h($m['signoff']).'</div>';
+	if (!isset($m['zeus']) || $m['zeus']) { $sign = bm_mail_with_zeus($sign); }   // the mascot greets in the mails about the stamp card; confirmations of sign-ups and codes stay plain
 	$html = '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'.$h($m['subject']).'</title></head>'
 		.'<body style="margin:0;padding:0;background-color:#f4f1ea;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f1ea;"><tr><td align="center" style="padding:24px 12px;">'
 		.'<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background-color:#ffffff;border:1px solid #e6e0d2;">'
@@ -3611,7 +3613,7 @@ function shop_stamp_mail($to, $m) {
 			.'<div style="'.$serif.'font-size:40px;line-height:1.1;color:#6b5330;">'.$h($m['box']['value']).'</div><div style="'.$font.'font-size:13px;color:#7a6a45;padding-top:2px;">'.$h($m['box']['note']).'</div></div></td></tr>' : '')
 		.'<tr><td style="padding:14px 32px 4px;"><div style="'.$font.'font-size:15px;color:#555;line-height:1.6;">'.$h($m['after']).'</div></td></tr>'
 		.($m['url'] !== '' ? '<tr><td style="padding:14px 32px 6px;"><a href="'.$h($m['url']).'" style="'.$font.'display:inline-block;padding:13px 24px;background:#8a6d3b;border-radius:6px;font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;">'.$h($m['btn']).'</a></td></tr>' : '')
-		.'<tr><td style="padding:14px 32px 30px;"><div style="'.$font.'font-size:14px;color:#555;line-height:1.6;">'.$h($m['signoff']).'</div></td></tr>'
+		.'<tr><td style="padding:14px 32px 30px;">'.$sign.'</td></tr>'
 		.$footer.'</table></td></tr></table></body></html>';
 	$plain = $m['headline']."\r\n\r\n".$m['lead']."\r\n\r\n".(!empty($m['box']) ? $m['box']['label'].': '.$m['box']['value'].' ('.$m['box']['note'].")\r\n\r\n" : '').$m['after']."\r\n".($m['url'] !== '' ? "\r\n".$m['btn'].': '.$m['url']."\r\n" : '')."\r\n".$m['signoff']."\r\n";
 	bm_send_guest_mail($to, array('subject' => $m['subject'], 'plain' => $plain, 'html' => $html, 'ics' => '', 'ics_filename' => ''), $brand, $from);

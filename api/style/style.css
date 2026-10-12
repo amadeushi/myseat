@@ -2320,3 +2320,24 @@ button.offer-chip:focus-visible { outline: 2px solid var(--gold); outline-offset
 		transition: none;
 	}
 }
+
+/* final screen after a booking: one calm card (what is booked, what happens next, how to arrive) */
+.confirm-card.is-rich { max-width: 560px; padding: 36px 32px 30px; text-align: left; }
+.confirm-card.is-rich .done-brand { margin: 0 0 22px; }
+.done-eyebrow { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 14px; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); }
+.done-eyebrow svg { width: 16px; height: 16px; flex: none; }
+.confirm-card.is-rich .confirm-title { font-size: clamp(30px, 8vw, 40px); text-wrap: balance; outline: none; }
+.confirm-card.is-rich .confirm-text { max-width: 46ch; margin: 0 0 22px; font-size: 15px; }
+.confirm-card.is-rich .guest-section { margin-top: 28px; padding-top: 22px; }
+.confirm-card.is-rich .guest-section h2 { font-size: 22px; margin-bottom: 12px; }
+.confirm-card.is-rich .guest-quick-actions { margin-top: 24px; }
+.done-steps { list-style: none; margin: 0; padding: 0; }
+.done-steps li { display: grid; grid-template-columns: 8.5em minmax(0, 1fr); gap: 4px 14px; padding: 12px 0; border-top: 1px solid var(--border-soft); font-size: 15px; line-height: 1.5; }
+.done-steps li:last-child { border-bottom: 1px solid var(--border-soft); }
+.done-steps b { color: var(--gold); font-weight: 700; }
+.done-steps span { color: var(--text); overflow-wrap: anywhere; }
+@media (max-width: 480px) { .confirm-card.is-rich { padding: 28px 20px 24px; } .done-steps li { grid-template-columns: 1fr; } }
+.done-ask { margin-top: 20px; }
+.done-foot { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--border-soft); text-align: center; }
+.done-foot .guest-text { max-width: none; margin: 0 auto 10px; }
+.done-sign { margin: 0 0 6px; font-family: var(--font-display); font-size: 20px; color: var(--text); }

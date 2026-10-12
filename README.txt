@@ -52,6 +52,12 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.46.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Der Abschlussbildschirm nach einer Reservierung (api/process_booking.php) ist neu aufgebaut, ein Aufbau für drei Antworten: bestätigt, Anfrage (Antwort innerhalb von 24 Stunden) und Warteliste. Das weiße Restaurant-Logo steht oben, dann die Zusage als Satz mit Vornamen ("Danke, Anna. Dein Tisch wartet." / "Bis morgen, Anna." / "Bis später, Anna."), Datum, Uhrzeit, Personen, Buchungsnummer, "Was jetzt passiert" (Bestätigungsmail, Erinnerung am Vortag auch per SMS, der Tag selbst), "In den Kalender" und "Mit Mitgästen teilen", vier aufklappbare Fragen ("Wo parke ich?", "Wie komme ich hin?", "Geht es barrierefrei?", "Verspätest du dich?"), die Karten, die Frage nach Neuigkeiten und die Unterschrift. Deutsch und Englisch; die Haltezeit des Tisches wird bewusst nicht genannt.
+ * Neu: Zeus, das Maskottchen von Amadeus Delivery, steht auf der Bestellstatusseite über dem Titel und als kleiner Gruß neben der Schlusszeile der Mails zur Bestellung (Bestellbestätigung, Feedback-Mail, Stempelmails, Gutscheinmails). Reservierungen und Bestätigungen von Anmeldungen bleiben ohne Zeus.
+ * Korrigiert: "Dein Team vom ..." auch in der Bestellbestätigung (HTML und Text).
+
 2026-10-12 == mySeat v6.45.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Das kleine Logo (braun, 110 px) steht in der Kopfzeile aller Mail-Vorlagen statt des Namens in Großbuchstaben: Reservierungsbestätigung, Hinweis ans Team (neben dem Status), Feedback-Mails, Bestellbestätigung, Stempel- und Kontomails (web/classes/mail_logo.class.php). Ohne bekannte Adresse erscheint wie bisher der Name als Text.

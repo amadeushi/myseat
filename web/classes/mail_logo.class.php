@@ -22,3 +22,14 @@ function bm_mail_logo_inline($brand) {
 	if ($u === '') { return ' <span style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#8a6d3b;font-weight:bold;">&nbsp;'.$h.'</span>'; }
 	return ' <img src="'.htmlspecialchars($u, ENT_QUOTES, 'UTF-8').'" width="80" height="29" alt="'.$h.'" style="border:0;vertical-align:middle;margin-left:8px;width:80px;height:auto;">';
 }
+
+// Zeus, the mascot of Amadeus Delivery, as a small greeting next to the closing line of the mails about orders and the stamp card (not for reservations: there the restaurant logo speaks)
+function bm_mail_zeus_url() {
+	$u = bm_mail_logo_url();
+	return $u === '' ? '' : str_replace('/mail/logo-mail.png', '/zeus_dot.png', $u);
+}
+function bm_mail_with_zeus($html) {
+	$u = bm_mail_zeus_url();
+	if ($u === '') { return $html; }
+	return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td valign="middle">'.$html.'</td><td width="68" align="right" valign="middle" style="padding-left:12px;"><img src="'.htmlspecialchars($u, ENT_QUOTES, 'UTF-8').'" width="56" height="56" alt="Zeus" style="display:block;border:0;width:56px;height:56px;"></td></tr></table>';
+}

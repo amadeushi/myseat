@@ -80,12 +80,12 @@ function shop_notify_order($o) {
 			.'<tr><td style="padding:16px 32px 4px;"><div style="'.$font.'font-size:13px;color:#6e6e6e;text-transform:uppercase;letter-spacing:.06em;padding-bottom:4px;">Deine Bestellung '.$h($o['number']).'</div>'
 			.'<table role="presentation" width="100%" cellpadding="0" cellspacing="0">'.$rows.$sums.'</table><div style="'.$font.'font-size:14px;color:#1c1a18;padding-top:12px;">'.$h($payLine).'</div></td></tr>'
 			.($link !== '' ? '<tr><td style="padding:16px 32px 6px;"><a href="'.$h($link).'" style="'.$font.'display:inline-block;padding:13px 24px;background:#8a6d3b;border-radius:6px;font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;">Bestellung verfolgen</a></td></tr>' : '')
-			.'<tr><td style="padding:14px 32px 30px;"><div style="'.$font.'font-size:14px;color:#555;line-height:1.6;">Stimmt etwas nicht? Ruf uns kurz an'.($phone !== '' ? ': <a href="tel:'.$h(preg_replace('/\s+/', '', $phone)).'" style="color:#6b5330;">'.$h($phone).'</a>' : '').'.<br>Guten Appetit wünscht dein Team von '.$h($brand).'.</div></td></tr>'
+			.'<tr><td style="padding:14px 32px 30px;">'.bm_mail_with_zeus('<div style="'.$font.'font-size:14px;color:#555;line-height:1.6;">Stimmt etwas nicht? Ruf uns kurz an'.($phone !== '' ? ': <a href="tel:'.$h(preg_replace('/\s+/', '', $phone)).'" style="color:#6b5330;">'.$h($phone).'</a>' : '').'.<br>Guten Appetit wünscht dein Team vom '.$h($brand).'.</div>').'</td></tr>'
 			.$footer_html
 			.'</table></td></tr></table></body></html>';
 		$plain = 'Danke'.($first !== '' ? ', '.$first : '')."!\r\n\r\n".$lead."\r\n\r\n".($clock !== '' ? $timeLabel.' '.$clock." Uhr\r\n" : '').($delivery ? 'Lieferung an: ' : 'Abholung: ').$where."\r\n\r\nDeine Bestellung ".$o['number'].":\r\n";
 		foreach ($lines as $l) { $plain .= $l['head'].'  '.$l['price']."\r\n".($l['sub'] !== '' ? '   '.$l['sub']."\r\n" : '').($l['note'] !== '' ? '   Hinweis: '.$l['note']."\r\n" : ''); }
-		$plain .= "\r\nGesamt: ".$total."\r\n".$payLine."\r\n".($link !== '' ? "\r\nBestellung verfolgen: ".$link."\r\n" : '')."\r\nStimmt etwas nicht? Ruf uns kurz an".($phone !== '' ? ': '.$phone : '').".\r\nGuten Appetit wünscht dein Team von ".$brand.".\r\n";
+		$plain .= "\r\nGesamt: ".$total."\r\n".$payLine."\r\n".($link !== '' ? "\r\nBestellung verfolgen: ".$link."\r\n" : '')."\r\nStimmt etwas nicht? Ruf uns kurz an".($phone !== '' ? ': '.$phone : '').".\r\nGuten Appetit wünscht dein Team vom ".$brand.".\r\n";
 		bm_send_guest_mail($o['email'], array('subject' => $subject, 'plain' => $plain, 'html' => $html, 'ics' => '', 'ics_filename' => ''), $brand, $from);
 	}
 

@@ -344,6 +344,7 @@
 .st-title { font-family: var(--font-display); font-weight: 400; font-size: 40px; line-height: 1.1; margin: 8px 0 8px; text-wrap: balance; }
 /* failed/cancelled and delivered used to render through the exact same title styling as every other status -
    the hardest and the happiest moments on this page now get the same Ampel-set accent used elsewhere (.st-warn) */
+.st-zeus-head { display: block; width: 64px; height: 64px; margin: 4px 0 8px; object-fit: contain; }
 .st-title.is-danger { color: var(--danger); }
 .st-title.is-success { color: var(--success); }
 .st-lead { color: var(--text-muted); max-width: 52ch; }

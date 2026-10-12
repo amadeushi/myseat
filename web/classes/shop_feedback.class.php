@@ -84,7 +84,7 @@ function shop_fb_mail_build($ctx) {
 		.'<tr><td style="padding:0 29px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'.$tiles.'</tr></table></td></tr>'
 		.'<tr><td style="padding:6px 32px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="left" style="'.$font.'font-size:12px;color:#6e685c;">'.$h($lo).'</td><td align="right" style="'.$font.'font-size:12px;color:#6e685c;">'.$h($hi).'</td></tr></table></td></tr>'
 		.'<tr><td style="'.$font.'padding:22px 32px 6px;font-size:16px;line-height:1.6;color:#333333;">'.$h($after).'</td></tr>'
-		.'<tr><td style="'.$font.'padding:10px 32px 28px;font-size:16px;line-height:1.6;color:#333333;">'.$h($thanks).'<br>'.$h($sign).'</td></tr>'
+		.'<tr><td style="'.$font.'padding:10px 32px 28px;font-size:16px;line-height:1.6;color:#333333;">'.bm_mail_with_zeus($h($thanks).'<br>'.$h($sign)).'</td></tr>'
 		.'<tr><td style="'.$font.'padding:16px 32px 24px;border-top:1px solid #e6e0d2;font-size:12px;line-height:1.6;color:#6e685c;"><strong>Angaben zum Anbieter</strong><br>'.$legal_html.($links ? '<br>'.implode(' &middot; ', $links) : '')
 		.'<br><br>'.$h($auto).' <a href="'.$h($ctx['optout_url']).'" style="color:#8a6d3b;">'.$h($opt).'</a></td></tr>'
 		.'</table></td></tr></table></body></html>';

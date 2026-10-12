@@ -238,13 +238,13 @@ function shop_nl_mail_confirm($email, $name, $topics, $confirmToken, $lang) {
 			'lead' => 'You signed up with '.$brand.' for: '.$what.'. Please confirm with one tap so that we know this address is yours.',
 			'image' => '', 'alt' => '', 'box' => null,
 			'after' => 'You did not sign up? Then just ignore this mail, without your tap you will not get anything. The link works for '.SHOP_NL_CONFIRM_DAYS.' days. You can unsubscribe at any time.',
-			'btn' => 'Confirm sign-up', 'url' => $url, 'signoff' => 'Your team at '.$brand
+			'btn' => 'Confirm sign-up', 'url' => $url, 'zeus' => false, 'signoff' => 'Your team at '.$brand
 		) : array(
 			'subject' => $subDe, 'headline' => 'Fast geschafft'.($first !== '' ? ', '.$first : '').'!',
 			'lead' => 'Du hast dich bei '.$brand.' angemeldet für: '.$what.'. Bitte bestätige das mit einem Tipp, damit wir wissen, dass diese Adresse dir gehört.',
 			'image' => '', 'alt' => '', 'box' => null,
 			'after' => 'Du hast dich nicht angemeldet? Dann ignoriere diese Mail einfach, ohne deinen Tipp bekommst du nichts. Der Link gilt '.SHOP_NL_CONFIRM_DAYS.' Tage. Abmelden kannst du dich jederzeit.',
-			'btn' => 'Anmeldung bestätigen', 'url' => $url, 'signoff' => 'Dein Team vom '.$brand));
+			'btn' => 'Anmeldung bestätigen', 'url' => $url, 'zeus' => false, 'signoff' => 'Dein Team vom '.$brand));
 	} catch (Throwable $e) { error_log('mySeat newsletter mail: '.$e->getMessage()); }
 }
 
