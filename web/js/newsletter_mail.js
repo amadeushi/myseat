@@ -3,9 +3,10 @@
 (function () {
 	'use strict';
 	var page = document.getElementById('nl-page'), root = document.getElementById('nlm-root'); if (!page || !root) { return; }
+	var mailRoot = root, autoRoot = document.getElementById('nla-root'), fromAuto = false;
 	var TOKEN = page.dataset.token, live = document.getElementById('nlm-live');
 	var cur = null, saveTimer = null, saving = false, dirty = false, version = 0, lastField = null, pollTimer = null, recipients = 0, problems = [], fromMail = '';
-	var STATUS = { draft: 'Entwurf', sending: 'Läuft', done: 'Versendet', cancelled: 'Abgebrochen' };
+	var STATUS = { auto: 'Vorlage', draft: 'Entwurf', sending: 'Läuft', done: 'Versendet', cancelled: 'Abgebrochen' };
 	var BLOCKS = [['h', 'Überschrift'], ['p', 'Text'], ['img', 'Bild'], ['btn', 'Button'], ['box', 'Box'], ['hr', 'Trenner']];
 	var ICON = {
 		up: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
@@ -50,25 +51,28 @@
 	}
 
 	/* ---- tabs ---- */
-	var tabS = document.getElementById('nl-tab-subs'), tabM = document.getElementById('nl-tab-mail'), panS = document.getElementById('nl-panel-subs'), panM = document.getElementById('nl-panel-mail');
+	var TABS = { subs: [document.getElementById('nl-tab-subs'), document.getElementById('nl-panel-subs')], mail: [document.getElementById('nl-tab-mail'), document.getElementById('nl-panel-mail')], auto: [document.getElementById('nl-tab-auto'), document.getElementById('nl-panel-auto')] };
 	function tab(which, focus) {
-		var m = which === 'mail';
-		tabS.setAttribute('aria-selected', String(!m)); tabM.setAttribute('aria-selected', String(m)); tabS.tabIndex = m ? -1 : 0; tabM.tabIndex = m ? 0 : -1;
-		panS.hidden = m; panM.hidden = !m;
-		if (focus) { (m ? tabM : tabS).focus(); }
+		Object.keys(TABS).forEach(function (k) { var on = k === which; TABS[k][0].setAttribute('aria-selected', String(on)); TABS[k][0].tabIndex = on ? 0 : -1; TABS[k][1].hidden = !on; });
+		if (focus) { TABS[which][0].focus(); }
 		try { sessionStorage.setItem('nlTab', which); } catch (e) { /* the tab is only a convenience */ }
-		if (m && !cur) { showList(); }
-		if (!m) { stopPoll(); }
+		stopPoll();
+		if (which === 'mail') { root = mailRoot; fromAuto = false; if (!cur || cur.kind) { cur = null; showList(); } }
+		if (which === 'auto') { root = autoRoot; fromAuto = true; if (!cur || !cur.kind) { cur = null; showAutos(); } }
 	}
-	tabS.addEventListener('click', function () { tab('subs'); });
-	tabM.addEventListener('click', function () { tab('mail'); });
-	[tabS, tabM].forEach(function (t) { t.addEventListener('keydown', function (ev) { if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft' || ev.key === 'Home' || ev.key === 'End') { ev.preventDefault(); tab(t === tabS ? 'mail' : 'subs', true); } }); });
+	Object.keys(TABS).forEach(function (k, i, all) {
+		TABS[k][0].addEventListener('click', function () { tab(k); });
+		TABS[k][0].addEventListener('keydown', function (ev) {
+			var j = ev.key === 'ArrowRight' ? i + 1 : ev.key === 'ArrowLeft' ? i - 1 : ev.key === 'Home' ? 0 : ev.key === 'End' ? all.length - 1 : -1;
+			if (j >= 0) { ev.preventDefault(); tab(all[(j + all.length) % all.length], true); }
+		});
+	});
 
 	/* ---- list of mailings ---- */
 	function stopPoll() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
 	function chip(status) { return el('span', { class: 'nlm-chip is-' + status, text: STATUS[status] || status }); }
 	function showList() {
-		stopPoll(); cur = null; root.textContent = ''; root.appendChild(el('p', { class: 'sh-help', text: 'Hier schreibst du Mails an alle, die Neuigkeiten bestätigt haben. Jedes Mailing wird in Ruhe in kleinen Paketen verschickt.' }));
+		stopPoll(); cur = null; root = mailRoot; fromAuto = false; root.textContent = ''; root.appendChild(el('p', { class: 'sh-help', text: 'Hier schreibst du Mails an alle, die Neuigkeiten bestätigt haben. Jedes Mailing wird in Ruhe in kleinen Paketen verschickt.' }));
 		var box = el('div', { class: 'nlm-listbox' }); root.appendChild(box);
 		get('mail_list').then(function (r) {
 			if (!r.ok) { say(r.error || 'Das hat nicht geklappt.'); return; }
@@ -94,15 +98,15 @@
 			});
 			box.appendChild(el('div', { class: 'nl-table-wrap' }, [el('table', { class: 'nl-table nlm-table' }, [
 				el('thead', {}, [el('tr', {}, [el('th', { scope: 'col', text: 'Mailing' }), el('th', { scope: 'col', text: 'Stand' }), el('th', { scope: 'col', text: 'Versand' }), el('th', { scope: 'col', text: 'Datum' }), el('th', { scope: 'col' }, [el('span', { class: 'sh-vh', text: 'Aktionen' })])])]), tb])]));
-			if (r.mails.some(function (m) { return m.status === 'sending'; })) { pollTimer = setInterval(function () { if (!cur && !panM.hidden) { showList(); } }, 10000); }
+			if (r.mails.some(function (m) { return m.status === 'sending'; })) { pollTimer = setInterval(function () { if (!cur && !TABS.mail[1].hidden) { showList(); } }, 10000); }
 		}).catch(fail);
 	}
 
 	/* ---- editor ---- */
-	function open(id) {
-		stopPoll(); say('');
+	function open(id, auto) {
+		stopPoll(); say(''); fromAuto = !!auto; root = auto ? autoRoot : mailRoot;
 		get('mail_get', '&id=' + id).then(function (r) {
-			if (!r.ok) { say(r.error || 'Das hat nicht geklappt.'); showList(); return; }
+			if (!r.ok) { say(r.error || 'Das hat nicht geklappt.'); if (fromAuto) { showAutos(); } else { showList(); } return; }
 			cur = r.mail; recipients = r.recipients; problems = r.mail.problems || []; dirty = false; version = 0; lastField = null; draw();
 			if (cur.status === 'sending') { pollTimer = setInterval(refreshStats, 8000); }
 		}).catch(fail);
@@ -117,12 +121,12 @@
 	}
 	function setSaveState(t) { var s = document.getElementById('nlm-save'); if (s) { s.textContent = t; } }
 	function touch() {
-		if (cur.status !== 'draft') { return; }
+		if (cur.status !== 'draft' && cur.status !== 'auto') { return; }
 		dirty = true; version++; setSaveState('Änderungen noch nicht gespeichert'); clearTimeout(saveTimer); saveTimer = setTimeout(save, 1200);
 	}
 	function save() {
 		clearTimeout(saveTimer);
-		if (!cur || cur.status !== 'draft' || !dirty) { return Promise.resolve(true); }
+		if (!cur || (cur.status !== 'draft' && cur.status !== 'auto') || !dirty) { return Promise.resolve(true); }
 		if (saving) { saveTimer = setTimeout(save, 400); return Promise.resolve(false); }
 		saving = true; var v = version; setSaveState('Speichert ...');
 		return post('mail_save', { id: cur.id, name: cur.name, subject: cur.subject, preheader: cur.preheader, blocks: JSON.stringify(cur.blocks) }).then(function (r) {
@@ -264,11 +268,11 @@
 
 	function draw() {
 		stopPollIfNot(); root.textContent = '';
-		var draft = cur.status === 'draft';
-		var name = el('input', { type: 'text', class: 'nlm-name-in', value: cur.name, maxlength: 120, 'aria-label': 'Name des Mailings (nur für dich)', disabled: !draft });
+		var draft = cur.status === 'draft' || cur.status === 'auto', isAuto = cur.status === 'auto';
+		var name = el('input', { type: 'text', class: 'nlm-name-in', value: cur.name, maxlength: 120, 'aria-label': 'Name des Mailings (nur für dich)', disabled: !draft || isAuto });
 		name.addEventListener('input', function () { cur.name = name.value; touch(); });
 		var top = el('div', { class: 'nlm-top' }, [
-			el('button', { type: 'button', class: 'sh-btn nlm-backbtn', html: ICON.back + '<span>Alle Mailings</span>', onclick: function () { save().then(function () { showList(); }); } }), name, chip(cur.status),
+			el('button', { type: 'button', class: 'sh-btn nlm-backbtn', html: ICON.back + '<span>' + (isAuto ? 'Alle Automatiken' : 'Alle Mailings') + '</span>', onclick: function () { save().then(function () { if (isAuto) { cur = null; showAutos(); } else { showList(); } }); } }), name, chip(cur.status),
 			el('span', { class: 'detail-status', id: 'nlm-save', text: draft ? 'Gespeichert' : '' }),
 			el('button', { type: 'button', class: 'sh-btn nlm-eyebtn', html: ICON.eye + '<span>Vorschau</span>', onclick: preview })]);
 		root.appendChild(top);
@@ -278,12 +282,14 @@
 			main.appendChild(el('div', { class: 'nlm-paper', id: 'nlm-paper' }));
 			var add = el('div', { class: 'nlm-grid' }); BLOCKS.forEach(function (b) { add.appendChild(el('button', { type: 'button', class: 'sh-btn', text: b[1], onclick: function () { addBlock(b[0]); } })); });
 			side.appendChild(el('section', { class: 'nlm-card' }, [el('h3', { text: 'Block hinzufügen' }), add, el('p', { class: 'sh-help', text: 'Der Block kommt hinter den Block, in dem du gerade bist, sonst ans Ende.' })]));
-			var ph = el('div', { class: 'nlm-grid' }); [['Vorname', '{vorname|Gast}'], ['Ganzer Name', '{name}'], ['Abmelde-Link', '{abmelden}']].forEach(function (p) { var b = el('button', { type: 'button', class: 'sh-btn', text: p[0], onclick: function () { insertAtCaret(p[1]); } }); b.addEventListener('mousedown', function (ev) { ev.preventDefault(); }); ph.appendChild(b); });
+			var VARS = { gutschein: 'Gutschein-Code', gutschein_wert: 'Gutschein-Wert', gutschein_bis: 'Gutschein gültig bis', gutschein_ab: 'Gutschein ab Warenwert', stempel_stand: 'Stempel: Stand', stempel_fehlen: 'Stempel: es fehlen', stempel_ziel: 'Stempel: Ziel', stempel_bis: 'Stempel gültig bis', halten: 'Link: weiter Mails' };
+			var ph = el('div', { class: 'nlm-grid' }); [['Vorname', '{vorname|Gast}'], ['Ganzer Name', '{name}'], ['Abmelde-Link', '{abmelden}']].concat((cur.vars || []).map(function (v) { return [VARS[v] || v, '{' + v + '}']; })).forEach(function (p) { var b = el('button', { type: 'button', class: 'sh-btn', text: p[0], onclick: function () { insertAtCaret(p[1]); } }); b.addEventListener('mousedown', function (ev) { ev.preventDefault(); }); ph.appendChild(b); });
 			side.appendChild(el('section', { class: 'nlm-card' }, [el('h3', { text: 'Platzhalter' }), ph, el('p', { class: 'sh-help', text: 'Fügt an der Stelle im Text den Namen des Gastes ein. "Gast" steht da, wenn wir keinen Namen haben. Der Abmelde-Link steht ohnehin in jeder Mail unten.' })]));
 			var to = el('input', { type: 'email', id: 'nlm-to', placeholder: 'deine@adresse.de', autocomplete: 'email' }); try { to.value = localStorage.getItem('nlTestTo') || ''; } catch (e) { /* optional */ }
 			var tb = el('button', { type: 'button', class: 'sh-btn', text: 'Testmail senden', onclick: function () { if (!to.value.trim()) { to.focus(); say('Bitte gib eine Adresse für die Testmail an.'); return; } try { localStorage.setItem('nlTestTo', to.value.trim()); } catch (e) { /* optional */ } tb.disabled = true; say('Testmail wird gesendet ...'); save().then(function () { return post('mail_test', { id: cur.id, to: to.value.trim() }); }).then(function (r) { tb.disabled = false; say(r.ok ? 'Testmail ist unterwegs an ' + to.value.trim() + '.' : (r.error || 'Das hat nicht geklappt.')); }).catch(function () { tb.disabled = false; fail(); }); } });
 			side.appendChild(el('section', { class: 'nlm-card' }, [el('h3', { text: 'Testmail' }), el('label', { class: 'sh-vh', for: 'nlm-to', text: 'Adresse für die Testmail' }), to, tb, el('p', { class: 'sh-help', text: 'Schau sie dir im Mailprogramm und auf dem Handy an, bevor du startest.' })]));
-			side.appendChild(el('section', { class: 'nlm-card' }, [el('h3', { text: 'Versand' }), el('div', { id: 'nlm-send' })]));
+			if (isAuto) { side.appendChild(el('section', { class: 'nlm-card' }, [el('h3', { text: 'Diese Automatik' }), el('p', { class: 'sh-help', text: 'Das ist die Mail, die die Automatik verschickt. Änderungen gelten sofort für alle folgenden Mails. Die Platzhalter mit dem Gutschein füllt das System für jeden Gast einzeln.' })])); }
+			else { side.appendChild(el('section', { class: 'nlm-card' }, [el('h3', { text: 'Versand' }), el('div', { id: 'nlm-send' })])); }
 		} else {
 			var st = el('section', { class: 'nlm-card nlm-wide' }, [el('h3', { text: cur.status === 'sending' ? 'Der Versand läuft' : (cur.status === 'done' ? 'Versendet' : 'Abgebrochen') }), el('div', { id: 'nlm-stats' })]);
 			if (cur.status === 'sending') {
@@ -298,10 +304,46 @@
 			main.appendChild(el('p', { class: 'sh-help', text: 'Der Inhalt ist nach dem Start gesperrt. Über "Vorschau" siehst du die Mail, mit "Duplizieren" machst du eine neue Fassung daraus.' }));
 		}
 		root.appendChild(el('div', { class: 'nlm-cols' }, [main, side]));
-		if (draft) { drawPaper(); drawSend(); } else { drawStats(); }
+		if (draft) { drawPaper(); if (!isAuto) { drawSend(); } } else { drawStats(); }
 	}
 	function stopPollIfNot() { if (cur && cur.status !== 'sending') { stopPoll(); } }
 
-	var want = 'subs'; try { want = sessionStorage.getItem('nlTab') === 'mail' ? 'mail' : 'subs'; } catch (e) { /* optional */ }
-	if (want === 'mail') { tab('mail'); }
+	/* ---- automations ---- */
+	var TOPIC = { news: 'Neuigkeiten', stamps: 'Stempel-Erinnerungen' };
+	function showAutos() {
+		stopPoll(); cur = null; root = autoRoot; fromAuto = true; root.textContent = '';
+		root.appendChild(el('p', { class: 'sh-help', text: 'Automatiken schicken Mails von selbst, wenn bei einem Gast etwas passiert. Alle sind aus, bis du sie einschaltest. Ein Gast bekommt höchstens eine automatische Mail in ' + 7 + ' Tagen (die Begrüßungsmail ausgenommen), und nur, wenn er der Sparte per Mail zugestimmt hat. Sie laufen über den Cron-Job oder, solange diese Seite offen ist.' }));
+		var box = el('div', { class: 'nla-list' }); root.appendChild(box);
+		get('auto_list').then(function (r) {
+			if (!r.ok) { say(r.error || 'Das hat nicht geklappt.'); return; }
+			if (!r.from) { box.appendChild(el('p', { class: 'sh-warn', text: 'Der Mailversand ist noch nicht eingerichtet. Ohne Absenderadresse kann nichts verschickt werden.' })); }
+			r.autos.forEach(function (a) { box.appendChild(autoCard(a)); });
+		}).catch(fail);
+	}
+	function autoCard(a) {
+		var vals = {}, timer = null;
+		var state = el('span', { class: 'nlm-chip ' + (a.on ? 'is-done' : ''), text: a.on ? 'An' : 'Aus' });
+		var head = el('div', { class: 'nla-head' }, [el('h3', { text: a.title }), state, el('span', { class: 'nla-topic', text: 'Sparte: ' + TOPIC[a.topic] })]);
+		var inputs = el('div', { class: 'nla-fields' });
+		a.fields.forEach(function (f) {
+			var eur = f[2] === 'eur', id = 'nla-' + a.kind + '-' + f[0], v = eur ? (a.cfg[f[0]] / 100) : a.cfg[f[0]];
+			var inp = el('input', { type: 'number', id: id, value: String(v), min: String(f[3]), max: String(f[4]), step: '1', inputmode: 'numeric' });
+			inp.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(saveCfg, 700); });
+			vals[f[0]] = function () { var n = parseInt(inp.value, 10); return isNaN(n) ? 0 : (eur ? n * 100 : n); };
+			inputs.appendChild(el('div', { class: 'nlm-field' }, [el('label', { for: id, text: f[1] }), el('span', { class: 'nla-unit' }, [inp, el('span', { text: eur ? 'EUR' : f[2] })])]));
+		});
+		function params() { var o = {}; for (var k in vals) { o[k] = vals[k](); } return JSON.stringify(o); }
+		function saveCfg(on) { return post('auto_save', { kind: a.kind, on: (on === undefined ? a.on : on) ? 1 : 0, params: params() }).then(function (r) { if (!r.ok) { say(r.error || 'Das hat nicht geklappt.'); return null; } say(a.title + ': gespeichert.'); return r; }); }
+		var sw = el('button', { type: 'button', class: 'sh-btn' + (a.on ? '' : ' is-primary'), text: a.on ? 'Ausschalten' : 'Einschalten' });
+		sw.addEventListener('click', function () {
+			if (!a.on && !sw.dataset.armed) { sw.dataset.armed = '1'; sw.textContent = 'Wirklich einschalten? Ab dann gehen Mails raus'; setTimeout(function () { sw.dataset.armed = ''; if (!a.on) { sw.textContent = 'Einschalten'; } }, 6000); return; }
+			sw.dataset.armed = ''; var turn = !a.on; saveCfg(turn).then(function (r) { if (r) { showAutos(); say(a.title + (turn ? ' ist eingeschaltet.' : ' ist ausgeschaltet.')); } });
+		});
+		var edit = el('button', { type: 'button', class: 'sh-btn', text: 'Mail bearbeiten', onclick: function () { open(a.template, true); } });
+		var stat = el('p', { class: 'nla-stat', text: a.n30 + (a.n30 === 1 ? ' Mail' : ' Mails') + ' in den letzten 30 Tagen' + (a.bad30 ? ', ' + a.bad30 + ' nicht zugestellt' : '') });
+		return el('section', { class: 'nlm-card nla-card' }, [head, el('p', { class: 'nla-when', text: a.when }), el('p', { class: 'sh-help', text: a.desc }), inputs, el('div', { class: 'nla-actions' }, [sw, edit]), stat]);
+	}
+
+	var want = 'subs'; try { want = ({ mail: 1, auto: 1 })[sessionStorage.getItem('nlTab')] ? sessionStorage.getItem('nlTab') : 'subs'; } catch (e) { /* optional */ }
+	if (want !== 'subs') { tab(want); }
 })();

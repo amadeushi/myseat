@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.44.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Newsletter, Schritt 4 (Automatiken). Neuer Reiter "Automatiken" auf der Seite "Newsletter" (p=14) mit sechs Automatiken, alle zunächst aus (Einschalten mit zweitem Tipp): Begrüßungsmail mit persönlichem, einmaligem Gutschein (an die E-Mail-Adresse gebunden, nicht für importierte Gäste), Stempelkarte fast voll, Stempel laufen ab, Gutschein läuft ab, "Wir vermissen dich" (optional mit Gutschein, danach 180 Tage Pause) und "Noch Interesse?" (nach langer Inaktivität eine Frage, ohne Antwort in 30 Tagen werden die Neuigkeiten ausgeschaltet). Jede Mail wird im Block-Editor bearbeitet; neue Platzhalter {gutschein}, {gutschein_wert}, {gutschein_bis}, {gutschein_ab}, {stempel_stand}, {stempel_fehlen}, {stempel_ziel}, {stempel_bis}, {halten}.
+ * Neu: Regeln: nur mit bestätigter Zustimmung der jeweiligen Sparte, höchstens eine automatische Mail je Gast in 7 Tagen (Begrüßungsmail ausgenommen), jede Mail wird vor dem Versand reserviert (tp_shop_nl_auto_log, nie doppelt), Abmelde-Link in jeder Mail. Aktivität = letzte Bestellung oder Reservierung mit derselben Adresse. Die Automatiken laufen über den Cron web/cron/send_newsletter.php und bei offener Seite. order/newsletter.php hat die Antwortseite "Ja, gerne weiter".
+
 2026-10-12 == mySeat v6.43.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Newsletter, Schritt 3 (Editor und Versand). Die Seite "Newsletter" (p=14) hat die Reiter "Abonnenten" und "Mailings". Im Block-Editor (Überschrift, Text mit Fett/Kursiv/Liste/Link, Bild mit Upload, Button, Box, Trenner; verschieben, entfernen, automatisches Speichern) entsteht ein Mailing; Vorschau am Computer und Handy, Testmail, Platzhalter {vorname|Gast}, {name}, {abmelden}. Die fertige Mail baut der Server aus den Blöcken, Text und Links werden bereinigt.

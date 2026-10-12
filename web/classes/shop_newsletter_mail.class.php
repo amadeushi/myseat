@@ -20,6 +20,10 @@ function shop_nlm_schema($db, $opts) {
 	mysqli_query($db, "CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_nl_queue')." (
 		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `campaign_id` INT UNSIGNED NOT NULL, `sub_id` INT UNSIGNED NOT NULL, `email` VARCHAR(160) NOT NULL, `status` VARCHAR(10) NOT NULL DEFAULT 'pending',
 		`error` VARCHAR(120) NOT NULL DEFAULT '', `sent_at` DATETIME NULL, UNIQUE KEY `cs` (`campaign_id`, `sub_id`), KEY `st` (`status`, `campaign_id`)) $opts");
+	// the templates of the automations are rows of the same table with kind <> '' (status 'auto'), the mailings have kind ''
+	$c = mysqli_query($db, "SHOW COLUMNS FROM ".fb_t('tp_shop_nl_campaigns')." LIKE 'kind'");
+	if ($c && mysqli_num_rows($c) === 0) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_nl_campaigns')." ADD `kind` VARCHAR(14) NOT NULL DEFAULT ''"); }
+	if (function_exists('shop_nla_schema')) { shop_nla_schema($db, $opts); }
 }
 
 // ---- cleaning what the browser sends -------------------------------------------------------------------------------------------------------------------
@@ -28,7 +32,7 @@ function shop_nlm_schema($db, $opts) {
 function shop_nlm_link($u) {
 	$u = trim((string)$u);
 	if (strlen($u) > 500) { return ''; }
-	if ($u === '{abmelden}') { return $u; }
+	if ($u === '{abmelden}' || $u === '{halten}') { return $u; }
 	if (preg_match('#^(mailto:|tel:)#i', $u) && !preg_match('/[\s"<>]/', $u)) { return $u; }
 	if (preg_match('#^https?://#i', $u) && !preg_match('/[\s"<>]/', $u) && filter_var($u, FILTER_VALIDATE_URL) !== false) { return $u; }
 	return '';
@@ -98,13 +102,14 @@ function shop_nlm_clean_blocks($b) {
 
 function shop_nlm_h($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
-// the tags: {vorname} {vorname|Gast} {name} {abmelden}; $html tells whether the values go into html
+// the tags: {vorname} {vorname|Gast} {name} {abmelden} and the variables of an automation ({gutschein} ...); $html tells whether the values go into html
 function shop_nlm_merge($s, $sub, $html) {
 	$first = function_exists('shop_stamp_first_name') ? shop_stamp_first_name(isset($sub['name']) ? $sub['name'] : '') : '';
-	$full = trim((string)(isset($sub['name']) ? $sub['name'] : ''));
-	$url = shop_nl_base().'newsletter.php?m='.(!empty($sub['token']) ? $sub['token'] : '0');
-	return preg_replace_callback('/\{(vorname|name|abmelden)(?:\|([^{}]{0,40}))?\}/u', function ($m) use ($first, $full, $url, $html) {
-		$v = $m[1] === 'vorname' ? $first : ($m[1] === 'name' ? $full : $url);
+	$map = array('vorname' => $first, 'name' => trim((string)(isset($sub['name']) ? $sub['name'] : '')), 'abmelden' => shop_nl_base().'newsletter.php?m='.(!empty($sub['token']) ? $sub['token'] : '0'));
+	if (!empty($sub['vars']) && is_array($sub['vars'])) { foreach ($sub['vars'] as $k => $v) { $map[$k] = (string)$v; } }
+	return preg_replace_callback('/\{([a-z_]+)(?:\|([^{}]{0,40}))?\}/u', function ($m) use ($map, $html) {
+		if (!array_key_exists($m[1], $map)) { return $m[0]; }
+		$v = $map[$m[1]];
 		if ($v === '' && isset($m[2])) { $v = $m[2]; }
 		return $html ? shop_nlm_h($v) : $v;
 	}, (string)$s);
@@ -128,7 +133,7 @@ function shop_nlm_render($c, $sub, $o = array()) {
 			$rows .= '<tr><td style="padding:14px 32px 4px;">'.($b['link'] !== '' ? '<a href="'.$h($b['link']).'">'.$img.'</a>' : $img).'</td></tr>';
 		}
 		elseif ($b['t'] === 'btn' && $b['text'] !== '' && $b['url'] !== '') { $rows .= '<tr><td style="padding:14px 32px 6px;"><a href="'.$h($b['url']).'" style="'.$font.'display:inline-block;padding:13px 24px;background:#8a6d3b;border-radius:6px;font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;">'.$h($b['text']).'</a></td></tr>'; $plain[] = $b['text'].': '.$b['url']; }
-		elseif ($b['t'] === 'box' && ($b['label'] !== '' || $b['value'] !== '' || $b['note'] !== '')) {
+		elseif ($b['t'] === 'box' && ($b['label'] !== '' || $b['value'] !== '' || $b['note'] !== '') && trim(shop_nlm_merge($b['value'].$b['note'], $sub, false)) !== '') {
 			$rows .= '<tr><td style="padding:14px 32px 4px;"><div style="background:#f8f2e4;border:1px solid #e6d9b8;border-radius:10px;padding:14px 18px;"><div style="'.$font.'font-size:13px;color:#7a6a45;">'.$h($b['label']).'</div>'
 				.'<div style="'.$serif.'font-size:36px;line-height:1.1;color:#6b5330;">'.$h($b['value']).'</div><div style="'.$font.'font-size:13px;color:#7a6a45;padding-top:2px;">'.$h($b['note']).'</div></div></td></tr>';
 			$plain[] = trim(trim($b['label'].($b['value'] !== '' ? ': '.$b['value'] : '')).($b['note'] !== '' ? ' ('.$b['note'].')' : ''));
@@ -140,7 +145,7 @@ function shop_nlm_render($c, $sub, $o = array()) {
 	if (!empty($settings['imprintUrl'])) { $links[] = '<a href="'.$h($settings['imprintUrl']).'" style="color:#8a6d3b;">Impressum</a>'; }
 	if (!empty($settings['privacyUrl'])) { $links[] = '<a href="'.$h($settings['privacyUrl']).'" style="color:#8a6d3b;">Datenschutz</a>'; }
 	$footer = '<tr><td style="'.$font.'padding:16px 32px 24px;border-top:1px solid #e6e0d2;font-size:12px;line-height:1.6;color:#6e685c;">'
-		.'Du bekommst diese Mail, weil du dich für Neuigkeiten von '.$h($brand).' angemeldet hast. <a href="{abmelden}" style="color:#8a6d3b;">Abmelden oder Einstellungen ändern</a>'
+		.'Du bekommst diese Mail, weil du dich für '.(isset($o['topic']) && $o['topic'] === 'stamps' ? 'Erinnerungen zu deiner Stempelkarte' : 'Neuigkeiten').' von '.$h($brand).' angemeldet hast. <a href="{abmelden}" style="color:#8a6d3b;">Abmelden oder Einstellungen ändern</a>'
 		.($legal ? '<br><br><strong>Angaben zum Anbieter</strong><br>'.implode('<br>', array_map($h, $legal)) : '').($links ? '<br>'.implode(' &middot; ', $links) : '').'</td></tr>';
 	$pre = trim((string)(isset($c['preheader']) ? $c['preheader'] : ''));
 	$html = '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'.$h(isset($c['subject']) ? $c['subject'] : '').'</title></head>'
@@ -172,7 +177,7 @@ function shop_nlm_stats($id) {
 function shop_nlm_list() {
 	shop_ensure_schema();
 	$out = array();
-	foreach (fb_rows("SELECT id, name, subject, status, created_at, updated_at, started_at, finished_at FROM ".fb_t('tp_shop_nl_campaigns')." ORDER BY id DESC LIMIT 100") as $c) { $c['stats'] = shop_nlm_stats($c['id']); $out[] = $c; }
+	foreach (fb_rows("SELECT id, name, subject, status, created_at, updated_at, started_at, finished_at FROM ".fb_t('tp_shop_nl_campaigns')." WHERE kind = '' ORDER BY id DESC LIMIT 100") as $c) { $c['stats'] = shop_nlm_stats($c['id']); $out[] = $c; }
 	return $out;
 }
 function shop_nlm_recipients_count() { shop_ensure_schema(); $r = fb_row("SELECT COUNT(*) AS n FROM ".fb_t('tp_shop_subscribers')." WHERE news = 1 AND blocked = 0"); return $r ? (int)$r['n'] : 0; }
@@ -196,14 +201,14 @@ function shop_nlm_create($name, $copyFrom = 0) {
 function shop_nlm_save($id, $d) {
 	$c = shop_nlm_get($id);
 	if (!$c) { return array('ok' => false, 'error' => 'Das Mailing gibt es nicht mehr.'); }
-	if ($c['status'] !== 'draft') { return array('ok' => false, 'error' => 'Dieses Mailing ist schon verschickt oder läuft. Dupliziere es für eine neue Fassung.'); }
+	if ($c['status'] !== 'draft' && $c['status'] !== 'auto') { return array('ok' => false, 'error' => 'Dieses Mailing ist schon verschickt oder läuft. Dupliziere es für eine neue Fassung.'); }
 	$blocks = shop_nlm_clean_blocks(isset($d['blocks']) ? $d['blocks'] : array());
-	fb_exec("UPDATE ".fb_t('tp_shop_nl_campaigns')." SET name = ?, subject = ?, preheader = ?, blocks = ?, updated_at = ? WHERE id = ? AND status = 'draft'", 'sssssi',
+	fb_exec("UPDATE ".fb_t('tp_shop_nl_campaigns')." SET name = ?, subject = ?, preheader = ?, blocks = ?, updated_at = ? WHERE id = ? AND status IN ('draft', 'auto')", 'sssssi',
 		array(shop_nlm_str(isset($d['name']) ? $d['name'] : '', 120), shop_nlm_str(isset($d['subject']) ? $d['subject'] : '', 200), shop_nlm_str(isset($d['preheader']) ? $d['preheader'] : '', 200), json_encode($blocks, JSON_UNESCAPED_UNICODE), date('Y-m-d H:i:s'), (int)$id));
 	return array('ok' => true);
 }
 function shop_nlm_delete($id) {
-	$c = shop_nlm_get($id); if (!$c || $c['status'] === 'sending') { return false; }
+	$c = shop_nlm_get($id); if (!$c || $c['status'] === 'sending' || $c['kind'] !== '') { return false; }
 	fb_exec("DELETE FROM ".fb_t('tp_shop_nl_queue')." WHERE campaign_id = ?", 'i', array((int)$id));
 	fb_exec("DELETE FROM ".fb_t('tp_shop_nl_campaigns')." WHERE id = ?", 'i', array((int)$id));
 	return true;
@@ -225,7 +230,8 @@ function shop_nlm_send_test($id, $to) {
 	$c = shop_nlm_get($id); if (!$c) { return array('ok' => false, 'error' => 'Das Mailing gibt es nicht mehr.'); }
 	$to = trim((string)$to); if (!filter_var($to, FILTER_VALIDATE_EMAIL)) { return array('ok' => false, 'error' => 'Bitte gib eine gültige Adresse für die Testmail an.'); }
 	if (shop_mail_from() === '') { return array('ok' => false, 'error' => 'Der Mailversand ist noch nicht eingerichtet.'); }
-	$m = shop_nlm_render($c, array('email' => $to, 'name' => 'Max Mustermann', 'token' => ''), array('test' => true));
+	$kinds = function_exists('shop_nla_kinds') ? shop_nla_kinds() : array();
+	$m = shop_nlm_render($c, array('email' => $to, 'name' => 'Max Mustermann', 'token' => '', 'vars' => ($c['kind'] !== '' ? shop_nla_sample_vars() : array())), array('test' => true, 'topic' => ($c['kind'] !== '' && isset($kinds[$c['kind']])) ? $kinds[$c['kind']]['topic'] : 'news'));
 	global $settings; $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 	$ok = bm_send_guest_mail($to, array('subject' => $m['subject'], 'plain' => $m['plain'], 'html' => $m['html'], 'ics' => '', 'ics_filename' => '', 'headers' => array()), $brand, shop_mail_from());
 	return $ok === false ? array('ok' => false, 'error' => 'Die Testmail konnte nicht verschickt werden.') : array('ok' => true);
@@ -293,6 +299,7 @@ function shop_nlm_run($limit = SHOP_NLM_PER_RUN, $seconds = 25) {
 }
 // the backend page asks for the list while it is open: that moves a running mailing on, once a minute at most
 function shop_nlm_tick() {
+	shop_nla_tick();
 	try {
 		if (!fb_row("SELECT id FROM ".fb_t('tp_shop_nl_campaigns')." WHERE status = 'sending' LIMIT 1")) { return; }
 		if (time() - (int)shop_setting('nl_last_run') < 55) { return; }

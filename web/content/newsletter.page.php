@@ -9,6 +9,7 @@ if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = myse
 	<div class="nl-tabs" role="tablist" aria-label="Newsletter">
 		<button type="button" role="tab" id="nl-tab-subs" aria-controls="nl-panel-subs" aria-selected="true">Abonnenten</button>
 		<button type="button" role="tab" id="nl-tab-mail" aria-controls="nl-panel-mail" aria-selected="false" tabindex="-1">Mailings</button>
+		<button type="button" role="tab" id="nl-tab-auto" aria-controls="nl-panel-auto" aria-selected="false" tabindex="-1">Automatiken</button>
 	</div>
 	<div id="nl-panel-subs" role="tabpanel" aria-labelledby="nl-tab-subs">
 		<p class="sh-help">Hier siehst du, wer welche Mails von uns bekommen darf und wie das belegt ist. Aufgenommen wird nur, wer per Mail bestätigt hat (Double-Opt-in). Jede Anmeldung, Bestätigung und Abmeldung steht mit Zeit, Adresse des Besuchers und Quelle im Nachweis.</p>
@@ -65,6 +66,9 @@ if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = myse
 	<div id="nl-panel-mail" role="tabpanel" aria-labelledby="nl-tab-mail" hidden>
 		<div id="nlm-root"></div>
 		<p class="detail-status" id="nlm-live" role="status" aria-live="polite"></p>
+	</div>
+	<div id="nl-panel-auto" role="tabpanel" aria-labelledby="nl-tab-auto" hidden>
+		<div id="nla-root"></div>
 	</div>
 </div>
 <script src="js/newsletter.js?v=<?php echo @filemtime(__DIR__.'/../js/newsletter.js'); ?>"></script>

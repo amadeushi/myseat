@@ -2289,3 +2289,13 @@ button.orders-kitchen:disabled { opacity: .5; cursor: wait; }
 .nlm-dlgbtns { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 .nlm-frames { display: flex; justify-content: center; background: #f4f1ea; border-radius: 8px; overflow: auto; max-height: 68vh; }
 .nlm-frame { width: 100%; height: 66vh; border: 0; background: #f4f1ea; }
+.nla-list { display: grid; gap: 12px; max-width: 760px; }
+.nla-card h3 { margin: 0; }
+.nla-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0 0 4px; }
+.nla-topic { color: var(--text-muted); font-size: 13px; }
+.nla-when { margin: 0 0 4px; font-weight: 600; color: var(--gold-strong); }
+.nla-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px 14px; margin: 10px 0; }
+.nla-unit { display: flex; align-items: center; gap: 8px; }
+.nla-unit input { width: 100%; max-width: 120px; min-height: 44px; box-sizing: border-box; font: inherit; font-size: 15px; }
+.nla-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 8px; }
+.nla-stat { margin: 0; color: var(--text-muted); font-size: 14px; }

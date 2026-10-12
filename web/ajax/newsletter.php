@@ -42,11 +42,15 @@ if ($op === 'mail_list') {
 	foreach (shop_nlm_list() as $c) { $out[] = array('id' => (int)$c['id'], 'name' => $c['name'], 'subject' => $c['subject'], 'status' => $c['status'], 'stats' => $c['stats'], 'created' => date('d.m.Y', strtotime($c['created_at'])), 'started' => $c['started_at'] ? date('d.m.Y H:i', strtotime($c['started_at'])) : '', 'finished' => $c['finished_at'] ? date('d.m.Y H:i', strtotime($c['finished_at'])) : ''); }
 	nl_out(array('ok' => true, 'mails' => $out, 'recipients' => shop_nlm_recipients_count(), 'from' => shop_mail_from()));
 }
+if ($op === 'auto_list') {
+	shop_nlm_tick();
+	nl_out(array('ok' => true, 'autos' => shop_nla_overview(), 'from' => shop_mail_from(), 'cap' => SHOP_NLA_CAP_DAYS));
+}
 if ($op === 'mail_get') {
 	shop_nlm_tick();
 	$c = shop_nlm_get((int)(isset($_GET['id']) ? $_GET['id'] : 0));
 	if (!$c) { nl_out(array('ok' => false, 'error' => 'Das Mailing gibt es nicht mehr.')); }
-	nl_out(array('ok' => true, 'mail' => array('id' => (int)$c['id'], 'name' => $c['name'], 'subject' => $c['subject'], 'preheader' => $c['preheader'], 'status' => $c['status'], 'blocks' => shop_nlm_clean_blocks($c['blocks']), 'stats' => shop_nlm_stats($c['id']), 'problems' => shop_nlm_problems($c)), 'recipients' => shop_nlm_recipients_count(), 'base' => shop_stamp_shop_url()));
+	nl_out(array('ok' => true, 'mail' => array('id' => (int)$c['id'], 'name' => $c['name'], 'subject' => $c['subject'], 'preheader' => $c['preheader'], 'status' => $c['status'], 'kind' => $c['kind'], 'vars' => ($c['kind'] !== '' && isset(shop_nla_kinds()[$c['kind']])) ? shop_nla_kinds()[$c['kind']]['vars'] : array(), 'blocks' => shop_nlm_clean_blocks($c['blocks']), 'stats' => shop_nlm_stats($c['id']), 'problems' => shop_nlm_problems($c)), 'recipients' => shop_nlm_recipients_count(), 'base' => shop_stamp_shop_url()));
 }
 if ($op === 'proof') {
 	$id = (int)(isset($_GET['id']) ? $_GET['id'] : 0);
@@ -55,12 +59,16 @@ if ($op === 'proof') {
 	nl_out(array('ok' => true, 'proof' => $out));
 }
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['token']) || !hash_equals((string)$_SESSION['shop_admin_token'], (string)$_POST['token'])) { nl_out(array('ok' => false, 'error' => 'Die Sitzung ist abgelaufen. Bitte lade die Seite neu.')); }
+if ($op === 'auto_save') {
+	$p = json_decode(isset($_POST['params']) ? (string)$_POST['params'] : '{}', true);
+	nl_out(shop_nla_cfg_set(isset($_POST['kind']) ? (string)$_POST['kind'] : '', !empty($_POST['on']), is_array($p) ? $p : array()) ? array('ok' => true, 'autos' => shop_nla_overview()) : array('ok' => false, 'error' => 'Unbekannte Automatik.'));
+}
 if (strpos($op, 'mail_') === 0) {
 	$id = (int)(isset($_POST['id']) ? $_POST['id'] : 0);
 	if ($op === 'mail_new') { nl_out(array('ok' => true, 'id' => shop_nlm_create(isset($_POST['name']) ? $_POST['name'] : '', (int)(isset($_POST['copy']) ? $_POST['copy'] : 0)))); }
 	if ($op === 'mail_save') { $r = shop_nlm_save($id, array('name' => isset($_POST['name']) ? $_POST['name'] : '', 'subject' => isset($_POST['subject']) ? $_POST['subject'] : '', 'preheader' => isset($_POST['preheader']) ? $_POST['preheader'] : '', 'blocks' => isset($_POST['blocks']) ? $_POST['blocks'] : '[]')); if ($r['ok']) { $r['problems'] = shop_nlm_problems(shop_nlm_get($id)); } nl_out($r); }
 	if ($op === 'mail_preview') {
-		$m = shop_nlm_render(array('subject' => isset($_POST['subject']) ? shop_nlm_str($_POST['subject'], 200) : '', 'preheader' => isset($_POST['preheader']) ? shop_nlm_str($_POST['preheader'], 200) : '', 'blocks' => isset($_POST['blocks']) ? $_POST['blocks'] : '[]'), array('email' => 'max@example.com', 'name' => 'Max Mustermann', 'token' => ''));
+		$m = shop_nlm_render(array('subject' => isset($_POST['subject']) ? shop_nlm_str($_POST['subject'], 200) : '', 'preheader' => isset($_POST['preheader']) ? shop_nlm_str($_POST['preheader'], 200) : '', 'blocks' => isset($_POST['blocks']) ? $_POST['blocks'] : '[]'), array('email' => 'max@example.com', 'name' => 'Max Mustermann', 'token' => '', 'vars' => shop_nla_sample_vars()));
 		nl_out(array('ok' => true, 'html' => $m['html'], 'subject' => $m['subject']));
 	}
 	if ($op === 'mail_test') { nl_out(shop_nlm_send_test($id, isset($_POST['to']) ? $_POST['to'] : '')); }

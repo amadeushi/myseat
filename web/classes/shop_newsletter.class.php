@@ -110,7 +110,16 @@ function shop_nl_confirm($token) {
 	fb_exec("UPDATE ".fb_t('tp_shop_subscribers')." SET news = GREATEST(news, want_news), stamps = GREATEST(stamps, want_stamps), want_news = 0, want_stamps = 0, blocked = 0, confirm_token = NULL, confirmed_at = ?, unsub_at = NULL, updated_at = ? WHERE id = ?",
 		'ssi', array($now, $now, (int)$r['id']));
 	shop_nl_log((int)$r['id'], 'confirm', $topics, '', 'Bestätigungslink benutzt');
+	if (in_array('news', $topics, true) && function_exists('shop_nla_welcome_now')) { shop_nla_welcome_now((int)$r['id']); }
 	return array('ok' => true, 'topics' => $topics, 'token' => $r['token'], 'lang' => $r['lang']);
+}
+
+// "yes, I still want the mails" (answer to the question of the sunset mail): written to the proof, the guest counts as active from now on
+function shop_nl_keep($token) {
+	$r = shop_nl_by_token($token);
+	if (!$r || empty($r['news']) || !empty($r['blocked'])) { return array('ok' => false, 'error' => 'Dieser Link ist ungültig.'); }
+	shop_nl_log((int)$r['id'], 'keep', array('news'), '', 'Möchte weiter Neuigkeiten erhalten (Antwort auf die Frage nach langer Pause)');
+	return array('ok' => true);
 }
 
 // the guest (known by his personal link) switches a topic on or off; "on" is fine here because the link proves the mailbox
@@ -250,3 +259,4 @@ function shop_nl_purge() {
 }
 require_once __DIR__.'/shop_newsletter_import.class.php';
 require_once __DIR__.'/shop_newsletter_mail.class.php';
+require_once __DIR__.'/shop_newsletter_auto.class.php';
