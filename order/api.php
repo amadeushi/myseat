@@ -187,7 +187,7 @@ if ($op === 'stamp_state') {
 }
 
 // ---- guest account: sign-in by code or link, overview, reorder, favorites (see shop_account.class.php)
-if (in_array($op, array('me', 'login_request', 'login_verify', 'link_request', 'addr_save', 'logout', 'logout_all', 'acc_delete', 'reorder', 'fav_add', 'fav_remove'), true)) {
+if (in_array($op, array('me', 'login_request', 'login_verify', 'link_request', 'addr_save', 'logout', 'logout_all', 'acc_delete', 'reorder', 'fav_add', 'fav_remove', 'nl_set'), true)) {
 	if (!shop_acc_enabled()) { api_out(array('ok' => false, 'error' => 'Das Kundenkonto ist gerade nicht verfügbar.', 'off' => true)); }
 	$acc = shop_acc_current();
 	$str = function ($k, $max) use ($body) { return mb_substr((string)(isset($body[$k]) ? $body[$k] : ''), 0, $max); };
@@ -216,6 +216,7 @@ if (in_array($op, array('me', 'login_request', 'login_verify', 'link_request', '
 	}
 	if ($op === 'logout') { shop_acc_logout(false); api_out(array('ok' => true)); }
 	if ($op === 'logout_all') { shop_acc_logout(true); api_out(array('ok' => true)); }
+	if ($op === 'nl_set') { api_out(shop_nl_account_set($acc, $str('email', 160), !empty($body['news']), !empty($body['stamps']))); }
 	if ($op === 'acc_delete') { shop_acc_delete($acc); api_out(array('ok' => true)); }
 	if ($op === 'reorder') { api_out(shop_acc_reorder($acc, (int)(isset($body['order_id']) ? $body['order_id'] : 0))); }
 	if ($op === 'fav_add') { $r = shop_acc_fav_add($acc, isset($body['line']) && is_array($body['line']) ? $body['line'] : array()); api_out($r['ok'] ? array('ok' => true, 'favs' => shop_acc_favs($acc)) : $r); }
@@ -262,6 +263,11 @@ if ($op === 'create') {
 	$r = shop_create_order($body);
 	if (!$r['ok']) { api_out(array('ok' => false, 'error' => $r['error'])); }
 	$order = $r['order'];
+	// the ticks "Neuigkeiten" / "Stempelkarten-Erinnerungen": a request with the confirmation mail (nothing is mailable before the guest confirms); not for test orders
+	if (empty($order['is_test']) && (!empty($body['nl_news']) || (!empty($body['nl_stamps']) && $accNow))) {
+		$nlMail = trim((string)$order['email']) !== '' ? $order['email'] : ($accNow && !empty($accNow['contact_mail']) ? $accNow['contact_mail'] : '');
+		shop_nl_from_form($nlMail, $order['customer_name'], !empty($body['nl_news']), !empty($body['nl_stamps']) && $accNow, 'shop', $accNow ? (int)$accNow['id'] : 0, 'de');
+	}
 	// the account learns name and number from its first order, so the customer record is complete without typing it twice
 	if ($accNow) { fb_exec("UPDATE ".fb_t('tp_shop_accounts')." SET name = IF(name = '', ?, name), contact_phone = IF(contact_phone = '', ?, contact_phone) WHERE id = ?", 'ssi', array(mb_substr(trim((string)$order['customer_name']), 0, 80), mb_substr(trim((string)$order['phone']), 0, 30), (int)$accNow['id'])); }
 	if ($basket !== '') { shop_basket_mark($basket, 'ordered', (int)$order['id']); }

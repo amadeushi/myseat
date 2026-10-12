@@ -368,6 +368,10 @@
 /* checkout */
 .co-check { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; color: var(--text-muted); font-size: 13px; line-height: 1.45; min-height: 44px; }
 .co-check input { width: 20px; height: 20px; accent-color: var(--gold); flex: none; margin: 1px 0 0; }
+.co-check[hidden], .co-hint[hidden] { display: none; }
+.co-nl { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border-soft, rgba(245,240,230,.08)); }
+.co-nl .co-check { margin-top: 8px; }
+.co-nl .co-hint { margin: 4px 0 0 30px; }
 .shop-shell .co-why { margin-top: 10px; color: var(--gold-strong); font-size: 14px; text-align: center; min-height: 20px; }
 
 /* checkout completion progress: how much is left before the order can be placed - a clearly visible,

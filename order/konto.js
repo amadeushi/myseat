@@ -196,6 +196,28 @@
 	}
 
 	// ---- the delivery address of the account: kept only when we deliver there, and put into the menu page and the checkout
+	// which mails the guest gets: the two topics of the newsletter; turning one on sends a confirmation mail, turning one off is immediate
+	function panelMail() {
+		var n = me.newsletter || {}, mail = n.email || ((me.contact && me.contact.mail) || '');
+		var note = function (on, want) { return on ? ' <em class="acc-ok">bestätigt</em>' : (want ? ' <em>wartet auf deine Bestätigung</em>' : ''); };
+		return '<form class="acc-addr" data-nl-form novalidate><p class="acc-fine">Du bestimmst, welche Mails du von uns bekommst. Zum Einschalten schicken wir dir eine Mail, die du einmal bestätigst. Ausschalten geht sofort.</p>' +
+			'<label class="co-f"><span>E-Mail-Adresse</span><input type="email" name="email" maxlength="160" autocomplete="email" value="' + esc(mail) + '"/></label>' +
+			'<label class="co-check"><input type="checkbox" name="news" value="1"' + ((n.news || n.want_news) ? ' checked' : '') + '/> <span>Neuigkeiten vom Restaurant (Aktionen, neue Gerichte, Öffnungszeiten)' + note(n.news, n.want_news) + '</span></label>' +
+			'<label class="co-check"><input type="checkbox" name="stamps" value="1"' + ((n.stamps || n.want_stamps) ? ' checked' : '') + '/> <span>Erinnerungen zu meiner Stempelkarte' + note(n.stamps, n.want_stamps) + '</span></label>' +
+			'<p class="acc-addr-msg" id="acc-nl-msg" role="status" aria-live="polite"></p>' +
+			'<div class="gb-actions"><button type="submit" class="gb-btn solid">Speichern</button></div></form>';
+	}
+	dlg.addEventListener('submit', function (ev) {
+		var f = ev.target.closest && ev.target.closest('[data-nl-form]'); if (!f) { return; }
+		ev.preventDefault();
+		var btn = $('.solid', f), msg = $('#acc-nl-msg', dlg); btn.disabled = true; msg.className = 'acc-addr-msg'; msg.textContent = 'Einen Moment ...';
+		api('nl_set', { email: f.email.value, news: f.news.checked ? 1 : 0, stamps: f.stamps.checked ? 1 : 0 }).then(function (r) {
+			btn.disabled = false;
+			if (!r.ok) { msg.className = 'acc-addr-msg bad'; msg.textContent = r.error || NETERR; return; }
+			me.newsletter = r.newsletter; viewAccount(true);
+			var m2 = $('#acc-nl-msg', dlg); if (m2) { m2.className = 'acc-addr-msg ok'; m2.textContent = r.message; }
+		}).catch(function () { btn.disabled = false; msg.className = 'acc-addr-msg bad'; msg.textContent = NETERR; });
+	});
 	function panelAddr() {
 		var a = me.address || { street: '', zip: '', city: 'Hildesheim', note: '' }, c = me.contact || {};
 		return '<form class="acc-addr" data-addr-form novalidate><p class="acc-fine">Name, Telefonnummer und Lieferadresse sind beim Anmelden gleich im Shop und in der Kasse eingetragen, die Adresse mit Liefergebühr und Mindestbestellwert.</p>' +
@@ -232,11 +254,11 @@
 		clearInterval(timer);
 		if (!keepTab) { tab = me.orders.length ? 'orders' : 'stamp'; }
 		var who = [me.account.mask_mail, me.account.mask_phone].filter(Boolean).join(' · ');
-		var tabs = [['orders', 'Bestellungen'], ['favs', 'Favoriten' + (me.favs.length ? ' (' + me.favs.length + ')' : '')], ['addr', 'Meine Daten'], ['stamp', 'Stempel']];
+		var tabs = [['orders', 'Bestellungen'], ['favs', 'Favoriten' + (me.favs.length ? ' (' + me.favs.length + ')' : '')], ['addr', 'Meine Daten'], ['stamp', 'Stempel'], ['mail', 'Mails']];
 		var add = !me.account.has_mail ? 'E-Mail-Adresse ergänzen' : (!me.account.has_phone && me.sms !== false ? 'Handynummer ergänzen' : '');
 		dlg.innerHTML = '<div class="acc-view"><div class="acc-head"><div><h2 id="acc-title" tabindex="-1">Mein Konto</h2><p class="acc-who">Angemeldet mit ' + esc(who) + '</p></div><button type="button" class="acc-x" data-acc-cancel aria-label="Schließen">&times;</button></div>' +
 			'<div class="acc-tabs" role="tablist" aria-label="Dein Konto">' + tabs.map(function (t) { return '<button type="button" role="tab" id="acc-tab-' + t[0] + '" aria-selected="' + (tab === t[0]) + '" aria-controls="acc-panel" tabindex="' + (tab === t[0] ? '0' : '-1') + '" data-tab="' + t[0] + '">' + t[1] + '</button>'; }).join('') + '</div>' +
-			'<div class="acc-panel" id="acc-panel" role="tabpanel" aria-labelledby="acc-tab-' + tab + '">' + (tab === 'orders' ? panelOrders() : (tab === 'favs' ? panelFavs() : (tab === 'addr' ? panelAddr() : '<div id="acc-stamp"></div>'))) + '</div>' +
+			'<div class="acc-panel" id="acc-panel" role="tabpanel" aria-labelledby="acc-tab-' + tab + '">' + (tab === 'orders' ? panelOrders() : (tab === 'favs' ? panelFavs() : (tab === 'addr' ? panelAddr() : (tab === 'mail' ? panelMail() : '<div id="acc-stamp"></div>')))) + '</div>' +
 			'<details class="acc-more"><summary>Konto verwalten</summary><div class="acc-more-in">' + (add ? '<button type="button" class="gb-btn ghost" data-acc-link>' + add + '</button>' : '') +
 			'<button type="button" class="gb-btn ghost" data-acc-logout>Abmelden</button><button type="button" class="gb-btn ghost" data-acc-logout-all>Auf allen Geräten abmelden</button>' +
 			'<button type="button" class="gb-btn ghost acc-danger" data-acc-delete>Konto löschen</button></div></details></div>';

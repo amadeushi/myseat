@@ -114,13 +114,19 @@
 		}
 		el.hidden = false;
 	}
+	// the mail ticks: the reminder box only for a signed-in guest (stamps belong to an account); the hint appears as soon as one box is ticked
+	function syncNl() {
+		var box = $('#co-nl-stamps'), f = form.elements;
+		if (box) { box.hidden = !(S.signedIn && ACCOUNT); if (box.hidden && f.nl_stamps) { f.nl_stamps.checked = false; } }
+		var h = $('#co-nl-hint'); if (h) { h.hidden = !((f.nl_news && f.nl_news.checked) || (f.nl_stamps && f.nl_stamps.checked)); }
+	}
 	function accountPrefill() {
 		if (!ACCOUNT) { return; }
 		fetch('api.php?op=me&type=' + S.mode, { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) {
 			if (!r.ok) { return; }
 			S.accChecked = true; renderAcc(r);
 			if (!r.signed_in) { return; }
-			S.signedIn = true;
+			S.signedIn = true; syncNl();
 			// the number or address typed to sign in comes first, then what the last order held
 			var p = Object.assign({}, r.profile || {}), c = r.contact || {}, filled = false;
 			if (c.phone) { p.phone = c.phone; }
@@ -379,6 +385,7 @@
 		if (!when) { err.textContent = 'Bitte wähle eine Zeit.'; return; }
 		if (!f.name.value.trim()) { err.textContent = 'Bitte gib deinen Namen an.'; f.name.focus(); return; }
 		if (!f.phone.value.trim()) { err.textContent = 'Bitte gib deine Telefonnummer an.'; f.phone.focus(); return; }
+		if ((f.nl_news.checked || f.nl_stamps.checked) && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email.value.trim())) { err.textContent = 'Für die Mails von uns brauchen wir deine E-Mail-Adresse. Bitte trag sie ein oder nimm den Haken heraus.'; f.email.focus(); return; }
 		// not signed in on a device that had an account: ask once before the order goes (stamps and vouchers only count for an account)
 		if (ACCOUNT && S.accChecked && !S.signedIn && hadAccount() && !S.skipAcc) {
 			var w = $('#co-accwarn');
@@ -388,7 +395,7 @@
 		remember();
 		S.busy = true; updateSubmit(); $('#co-submit').textContent = 'Einen Moment ...';
 		post('create', {
-			type: S.mode, when: when, payment: S.pay, tip: tipCents(), name: f.name.value, phone: f.phone.value, email: f.email.value, note: f.note.value,
+			type: S.mode, when: when, payment: S.pay, tip: tipCents(), name: f.name.value, phone: f.phone.value, email: f.email.value, note: f.note.value, nl_news: f.nl_news.checked ? 1 : 0, nl_stamps: f.nl_stamps.checked ? 1 : 0,
 			street: f.street.value, zip: f.zip.value, city: f.city.value, words: S.zoneWords, address_note: f.address_note.value, website: f.website.value, coupon: S.coupon ? S.coupon.code : '', extra: S.extra,
 			lines: S.cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; }),
 			group: S.group ? S.group.token : '', me: S.group ? S.group.me : '', rev: S.group ? (S.group.rev || '') : ''
@@ -403,6 +410,7 @@
 	});
 
 	load(); prefill(); accountPrefill(); loadOffers();
+	form.addEventListener('change', function (ev) { if (ev.target && (ev.target.name === 'nl_news' || ev.target.name === 'nl_stamps')) { syncNl(); } });
 	form.addEventListener('input', function (ev) { if (ev.target && (ev.target.name === 'phone' || ev.target.name === 'email')) { clearTimeout(stampTimer); stampTimer = setTimeout(refreshStamp, 600); } });
 	// coming from a shared basket (checkout.php?g=...): the lines are everybody's, the organizer of that basket orders and pays
 	var gTok = ''; try { gTok = new URLSearchParams(location.search).get('g') || ''; } catch (e) {}

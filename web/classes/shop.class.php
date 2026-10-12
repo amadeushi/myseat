@@ -259,6 +259,7 @@ function shop_ensure_schema() {
 	foreach (array('gk1' => 'guest_key', 'gk2' => 'guest_key2') as $kn => $kc) {
 		if (!fb_rows("SHOW INDEX FROM ".fb_t('tp_shop_orders')." WHERE Key_name = '$kn'")) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD KEY `$kn` (`$kc`)"); }
 	}
+	shop_nl_schema($db, $opts);   // subscribers of the newsletter and the log of their consent (shop_newsletter.class.php)
 	$done = true;
 	shop_migrate_groups();
 }
@@ -3620,6 +3621,7 @@ function shop_stamp_signoff() { global $settings; return 'Guten Appetit wünscht
 function shop_stamp_notify_stamp($email, $name, $keys) {
 	try {
 		if (trim((string)$email) === '') { return; }
+		if (!shop_nl_allows($email, 'stamps')) { return; }   // the status mail of a stamp is a reminder: only for guests who confirmed the stamp card reminders (the card itself is in the account)
 		$st = shop_stamp_state($keys);
 		$n = (int)$st['count']; $goal = (int)$st['goal']; $left = max(0, $goal - $n); $first = shop_stamp_first_name($name);
 		shop_stamp_mail(trim($email), array(
@@ -3650,6 +3652,7 @@ function shop_stamp_notify_voucher($phone, $email, $value, $until, $name = '', $
 	} catch (Throwable $e) { error_log('mySeat voucher notice: '.$e->getMessage()); }
 }
 
+require_once __DIR__.'/shop_newsletter.class.php';
 require_once __DIR__.'/shop_tours.class.php';
 require_once __DIR__.'/shop_flags.class.php';
 require_once __DIR__.'/shop_offers.class.php';

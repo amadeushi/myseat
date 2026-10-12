@@ -2158,3 +2158,30 @@ button.orders-kitchen:disabled { opacity: .5; cursor: wait; }
 	.sh-row { grid-template-columns: minmax(0, 1fr); }
 	.sh-group > h3 { font-size: 28px; }
 }
+
+
+/* Newsletter page of the backend (p=14): counts as filters, the list with the proof of consent */
+.nl-page { max-width: 1040px; }
+.nl-counts { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+.nl-count { display: inline-flex; align-items: baseline; gap: 8px; min-height: 44px; padding: 0 14px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: transparent; color: var(--text-muted); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.nl-count b { color: var(--text); font-size: 18px; font-variant-numeric: tabular-nums; }
+.nl-count:hover { border-color: var(--border); color: var(--gold-strong); }
+.nl-count:focus-visible { outline: 2px solid var(--gold-strong); outline-offset: 2px; }
+.nl-count[aria-pressed="true"] { background: var(--gold); border-color: var(--gold); color: var(--ink-strong); }
+.nl-count[aria-pressed="true"] b { color: var(--ink-strong); }
+.nl-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 0 0 12px; }
+.nl-bar input[type=search] { width: 100%; max-width: 360px; min-height: 44px; box-sizing: border-box; }
+.nl-table-wrap { overflow-x: auto; }
+.nl-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.nl-table[hidden] { display: none; }
+.nl-table th, .nl-table td { padding: 10px 12px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border-soft); }
+.nl-table thead th { color: var(--text-muted); font-weight: 600; white-space: nowrap; }
+.nl-table small { color: var(--text-muted); }
+.nl-act { white-space: nowrap; text-align: right; }
+.nl-act .sh-btn { min-height: 40px; margin-left: 6px; }
+.nl-erase { color: var(--danger); }
+.nl-proofrow > td { background: var(--surface-2); padding: 12px 14px; }
+.nl-proof { width: 100%; border-collapse: collapse; font-size: 13px; }
+.nl-proof th, .nl-proof td { padding: 6px 10px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border-soft); overflow-wrap: anywhere; }
+.nl-proof th { color: var(--text-muted); font-weight: 600; }
+.nl-proof td:nth-child(1), .nl-proof td:nth-child(4) { white-space: nowrap; }

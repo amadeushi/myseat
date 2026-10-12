@@ -78,6 +78,16 @@ if ($rsv_error !== '') {
 	exit;
 }
 
+// newsletter: the tick of the staff only asks for the confirmation mail to the guest (double opt-in); it counts after he has confirmed. Only when it was not ticked before.
+if (isset($_POST['reservation_advertise']) && $_POST['reservation_advertise'] === 'YES' && $rsv_email !== '') {
+	try {
+		require_once(__DIR__.'/../classes/shop.class.php');
+		$rsv_was = false;
+		if (!empty($_POST['reservation_id'])) { $rsv_old = fb_row("SELECT reservation_advertise FROM `".$dbTables->reservations."` WHERE reservation_id = ?", 'i', array((int)$_POST['reservation_id'])); $rsv_was = $rsv_old && $rsv_old['reservation_advertise'] === 'YES'; }
+		if (!$rsv_was) { shop_nl_from_form($rsv_email, html_entity_decode(isset($_POST['reservation_guest_name']) ? (string)$_POST['reservation_guest_name'] : '', ENT_QUOTES, 'UTF-8'), true, false, 'backend', 0, 'de'); }
+	} catch (Throwable $e) { error_log('mySeat newsletter (backend): '.$e->getMessage()); }
+}
+
 // columns of the reservations table that the forms may write (form field names are never
 // used as column names unchecked)
 $allowed_cols = array('reservation_id', 'reservation_outlet_id', 'reservation_date', 'reservation_time', 'reservation_title',

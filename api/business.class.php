@@ -754,6 +754,15 @@ function processBooking(){
 					$hook->execute_hook('after_booking', $needs_approval ? 'pending' : 'confirmed');
 				}
 
+			// newsletter: the tick only asks for the confirmation mail (double opt-in); nothing is mailable before the guest has confirmed
+			if (isset($_POST['reservation_advertise']) && $_POST['reservation_advertise'] === 'YES') {
+				try {
+					require_once(__DIR__.'/../web/classes/shop.class.php');
+					shop_nl_from_form(trim((string)$_POST['reservation_guest_email']), stripslashes(trim((string)(isset($_POST['reservation_guest_name']) ? $_POST['reservation_guest_name'] : ''))), true, false, 'widget', 0,
+						(isset($_POST['reservation_email_lang']) && substr((string)$_POST['reservation_email_lang'], 0, 2) === 'de') ? 'de' : 'en');
+				} catch (Throwable $e) { error_log('mySeat newsletter (widget): '.$e->getMessage()); }
+			}
+
 			// store new reservation in history
 			$result = query("INSERT INTO `$dbTables->res_history` (reservation_id,author) VALUES ('%d','%s')",$resID,mysql_real_escape_string(isset($_SESSION['author']) ? $_SESSION['author'] : ''));
 			// table plan: put the new reservation on a table (optional, never breaks the booking) -

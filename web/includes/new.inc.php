@@ -77,7 +77,7 @@ $rsv_selected = array();
 			<div class="rsv-grid rsv-grid-details">
 				<div class="rsv-field">
 					<input type="hidden" name="reservation_advertise" value=""/>
-					<label class="rsv-check"><input type="checkbox" name="reservation_advertise" id="reservation_advertise" value="YES"/> <span><?php echo _reservation_advertise; ?></span></label>
+					<label class="rsv-check"><input type="checkbox" name="reservation_advertise" id="reservation_advertise" value="YES"/> <span><?php echo defined('_reservation_advertise_staff') ? _reservation_advertise_staff : _reservation_advertise; ?></span></label>
 				</div>
 				<div class="rsv-field rsv-series">
 					<label><?php echo rt('series'); ?></label>

@@ -52,6 +52,12 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.41.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Newsletter, Schritt 1 (Einwilligung). Eine Liste mit zwei Sparten: Neuigkeiten vom Restaurant und Stempelkarten-Erinnerungen. Aufgenommen wird nur, wer per Mail bestätigt (Double-Opt-in); die Bestätigungsseite zeigt zuerst nur einen Knopf, damit Mail-Programme nicht von selbst bestätigen. Jede Anfrage, Bestätigung, Änderung und Abmeldung steht mit Zeit, IP, Browser, Quelle und angezeigtem Text im Nachweis (tp_shop_consent_log); Nachweis 3 Jahre nach Abmeldung, unbestätigte Anfragen 30 Tage. Grenzen: 3 Bestätigungsmails je Adresse und Tag, 10 Anfragen je Besucher und Stunde.
+ * Neu: Haken im Bestellablauf (Stempel-Haken nur mit Konto), im Chat nach der Bestellung, im Kundenkonto (neuer Reiter "Mails"), im Reservierungs-Widget (neuer Text, Deutsch und Englisch) und bei der Eingabe im Backend. Öffentliche Seite order/newsletter.php zum Bestätigen, Verwalten und Abbestellen. Neue Backend-Seite "Newsletter" (p=14) mit Zählern, Suche, Nachweis und Löschen samt Nachweis. Alte Reservierungs-Haken ohne Bestätigung bleiben gesperrt.
+ * Geändert: Die Stempel-Statusmail ("Dein Stempel x von 5") geht nur noch an bestätigte Abonnenten der Stempel-Erinnerungen; die Gutschein-Mail geht weiter an alle.
+
 2026-10-12 == mySeat v6.40.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Einstellungen > Lieferservice (p=6&q=10) nach einem UI-Audit neu geordnet und lesbarer gemacht. Sieben Gruppen (Allgemein, Zeiten, Zahlung, Gebiete und Adressen, Fahrer, Gäste, Anbindungen) mit klebender Navigation, die dem Scrollen folgt. Zusammengehöriges steht zusammen: alle Zeiten in einer Gruppe, Mollie bei der Zahlung, Google und what3words bei den Adressen; Feedback-Mail und Straßenvorschläge nicht mehr unter Stempelkarte; der veraltete Uber-Text ("Auslesen folgt") ist erneuert; aus "(Test)" wurde der Chip "in Erprobung".

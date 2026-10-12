@@ -613,7 +613,8 @@ define ( '_status_pending', 'Unbestätigt' );
 define ( '_status_cancel', 'Storniert' );
 
 //original text: "I would like to receive informations by email."
-define ( '_reservation_advertise', 'Ich möchte in Zukunft Informationen per Email erhalten.' );
+define ( '_reservation_advertise', 'Ich möchte Neuigkeiten vom Restaurant erhalten (Aktionen, neue Gerichte, Öffnungszeiten). Du bekommst eine Mail zum Bestätigen und kannst dich jederzeit abmelden.' );
+define ( '_reservation_advertise_staff', 'Gast möchte Neuigkeiten vom Restaurant erhalten (er bekommt eine Mail zum Bestätigen, erst danach zählt es)' );
 
 //original text: "Dr."
 define ( '_DR_', 'Dr.' );

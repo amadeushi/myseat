@@ -411,5 +411,6 @@ function shop_acc_overview($acc, $type = 'delivery') {
 	return array('ok' => true, 'account' => array('mask_phone' => $acc['mask_phone'], 'mask_mail' => $acc['mask_mail'], 'has_phone' => $keys[0] !== '', 'has_mail' => $keys[1] !== ''),
 		'address' => shop_acc_address($acc),
 		'contact' => array('name' => isset($acc['name']) ? (string)$acc['name'] : '', 'phone' => isset($acc['contact_phone']) ? (string)$acc['contact_phone'] : '', 'mail' => isset($acc['contact_mail']) ? (string)$acc['contact_mail'] : ''),
-		'stamp' => $stamp, 'orders' => $orders, 'favs' => shop_acc_favs($acc), 'profile' => $orders ? shop_acc_profile($acc) : null);
+		'stamp' => $stamp, 'orders' => $orders, 'favs' => shop_acc_favs($acc), 'profile' => $orders ? shop_acc_profile($acc) : null,
+		'newsletter' => shop_nl_state(isset($acc['contact_mail']) ? (string)$acc['contact_mail'] : ''));
 }

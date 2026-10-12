@@ -70,11 +70,11 @@
 			<p>
 				<?php
 					echo $row->reservation_guest_email; 
-					if ( $row->reservation_advertise =='YES' ) {
-						echo uiIcon('mail', array('class' => 'mail-icon', 'title' => 'Advertise allowed', 'alt' => 'Advertise allowed'));
-					}else{
-						echo uiIcon('mail_no', array('class' => 'mail-icon', 'title' => 'No advertise', 'alt' => 'No advertise'));
-					}
+					// newsletter: what is known about this address (a tick alone is no consent, the guest confirms by mail)
+					require_once(__DIR__.'/../classes/shop.class.php');
+					$nlb = shop_nl_badge($row->reservation_guest_email);
+					echo uiIcon($nlb['state'] === 'confirmed' ? 'mail' : 'mail_no', array('class' => 'mail-icon', 'title' => $nlb['label'], 'alt' => $nlb['label']));
+					echo ' <small>'.htmlspecialchars($nlb['label']).'</small>';
 				?>
 			</p>
 			<?php

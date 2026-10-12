@@ -33,6 +33,13 @@
 					</a>
 				</li>
 				<?php endif ?>
+				<?php if ( current_user_can( 'Settings-General' ) ): ?>
+				<li>
+					<a href="main_page.php?p=14" <?php if($_SESSION['page']=='14'){echo "class='active'";} ?> >
+						Newsletter
+					</a>
+				</li>
+				<?php endif ?>
 				<?php if ( current_user_can( 'Page-Statistic' ) ): ?>
 				<li>
 					<a href="main_page.php?p=3" <?php if($_SESSION['page']=='3'){echo "class='active'";} ?> >
