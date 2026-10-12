@@ -789,7 +789,7 @@
 	// ---- events
 	document.addEventListener('click', function (ev) {
 		var t = ev.target;
-		var mode = t.closest('.mode-btn'); if (mode) { setMode(mode.dataset.mode); return; }
+		var mode = t.closest('.mode-btn'); if (mode) { try { sessionStorage.setItem('myseat_mode_chosen', mode.dataset.mode); } catch (e) {} setMode(mode.dataset.mode); return; }
 		// the chat button: the cart goes along (the chat takes it over); on a wide screen the chat opens in the bubble, else as a page
 		var chatBtn = t.closest('.shop-chat-fab');
 		if (chatBtn && (state.cart.length || chatBubble())) {

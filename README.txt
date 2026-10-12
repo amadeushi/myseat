@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-13 == mySeat v6.48.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geändert: Checkout: Die Lieferart eines früheren Besuchs wird nicht mehr übernommen, damit niemand aus Versehen abholt, obwohl er liefern lassen wollte. Im Checkout ist weder Lieferung noch Abholung vorgewählt, bis der Gast klickt (oder auf der Speisekarte in diesem Besuch geklickt hat); bis dahin bleibt der Bestellknopf gesperrt und die Adressfelder sind verborgen.
+ * Neu: Über dem Bestellknopf steht ein deutlicher Satz: "Abholung bei uns. Du holst dein Essen selbst ab, wir liefern nicht." oder "Lieferung an <Adresse>", mit "ändern" zurück zur Auswahl.
+
 2026-10-13 == mySeat v6.48.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Telefonerfassung: bei einer Anruferin mit bereitliegendem Stempelgutschein steht in der Kundenkarte der Knopf "Stempelgutschein einlösen (-x EUR, bis TT.MM.JJJJ)". Der feste Betrag wird abgezogen (ab einem Warenwert in Höhe des Gutscheins), der Gutschein ist danach verbraucht und wird bei einer Stornierung wieder frei. Rabatt und Gutschein schließen sich aus; der Server prüft Nummer, Gültigkeit und Warenwert noch einmal.

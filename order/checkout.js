@@ -18,6 +18,12 @@
 	function load() {
 		try { var d = JSON.parse(localStorage.getItem(KEY) || '{}'); if (d && Array.isArray(d.cart)) { S.cart = d.cart; } if (d && (d.mode === 'pickup' || d.mode === 'delivery')) { S.mode = d.mode; } if (d && (d.extra === 'voucher' || +d.extra > 0)) { S.extra = d.extra; } } catch (e) {}
 	}
+	// the mode (Lieferung / Abholung) of an earlier visit is not taken over: it counts only when it was chosen in this browser session (on the menu or here); else the guest chooses, the button waits
+	var MKEY = 'myseat_mode_chosen';
+	function loadChosen() {
+		try { var sm = sessionStorage.getItem(MKEY); if (sm === 'pickup' || sm === 'delivery') { S.mode = sm; S.modeChosen = true; return; } } catch (e) {}
+		S.mode = 'delivery'; S.modeChosen = false;
+	}
 	function saveMode() { try { var d = JSON.parse(localStorage.getItem(KEY) || '{}'); d.mode = S.mode; localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) {} }
 
 	// details the guest wants to keep on this device (never sent anywhere but with the order)
@@ -161,6 +167,7 @@
 	function reason() {
 		if (!S.cart.length) { return 'Dein Warenkorb ist leer.'; }
 		if (S.info && !S.info.accepting) { return 'Wir nehmen gerade keine Bestellungen an.'; }
+		if (!S.modeChosen) { return 'Bitte wähle Lieferung oder Abholung.'; }
 		var pz = S.info && S.info[S.mode];
 		if (pz && pz.paused) { return (S.mode === 'delivery' ? 'Die Lieferung' : 'Die Abholung') + ' ist gerade pausiert' + (pz.paused_until ? ' bis etwa ' + pz.paused_until + ' Uhr' : '') + '.'; }
 		if (subtotal() < min()) { return 'Noch ' + fmt(min() - subtotal()) + ' bis zum Mindestbestellwert von ' + fmt(min()) + '.'; }
@@ -180,8 +187,17 @@
 		if (!S.pay) { return 'Bitte wähle eine Zahlungsart.'; }
 		return '';
 	}
+	// one plain sentence above the button: what the guest is about to order (delivery to this address / pick up with us), with a way back to the choice
+	function renderModeLine() {
+		var el = $('#co-modeline'); if (!el) { return; }
+		if (!S.modeChosen) { el.hidden = true; return; }
+		var f = form.elements, addr = [f.street.value.trim(), (f.zip.value.trim() + ' ' + f.city.value.trim()).trim()].filter(Boolean).join(', ');
+		el.innerHTML = (S.mode === 'delivery' ? '<strong>Lieferung</strong> ' + (addr ? 'an ' + esc(addr) : 'an deine Adresse (noch nicht eingetragen)') : '<strong>Abholung bei uns.</strong> Du holst dein Essen selbst ab, wir liefern nicht.') + ' <a href="#" id="co-modeedit">ändern</a>';
+		el.hidden = false;
+	}
 	function updateSubmit() {
 		var why = reason(), btn = $('#co-submit');
+		renderModeLine();
 		btn.disabled = !!why || S.busy;
 		if (!S.busy) { btn.textContent = 'Zahlungspflichtig bestellen · ' + fmt(total()); }
 		$('#co-why').textContent = S.busy ? '' : why;
@@ -190,7 +206,7 @@
 	// what is still needed before the order can be placed, as a short checklist (delivery address only
 	// while ordering for delivery; the time step counts as done once "as soon as possible" or a slot is picked)
 	function checklist() {
-		var items = [];
+		var items = [!!S.modeChosen];
 		if (S.mode === 'delivery') { items.push(!!(S.zoneWords || (form.elements.street.value.trim() && form.elements.zip.value.trim() && form.elements.city.value.trim())) && !!S.zone); }
 		var dayEl = $('select[name=day]'), timeEl = $('select[name=time]');
 		items.push(S.when === 'asap' || !!(dayEl && timeEl && timeEl.value));
@@ -206,16 +222,18 @@
 	}
 
 	// ---- mode, address, time, payment
-	function setMode(m) {
-		S.mode = m; saveMode();
-		$$('.mode-btn').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.mode === m ? 'true' : 'false'); });
-		$('#sec-address').hidden = m !== 'delivery';
+	function setMode(m, byGuest) {
+		S.mode = m;
+		if (byGuest) { S.modeChosen = true; try { sessionStorage.setItem(MKEY, m); } catch (e) {} }
+		if (S.modeChosen) { saveMode(); }
+		$$('.mode-btn').forEach(function (b) { b.setAttribute('aria-pressed', S.modeChosen && b.dataset.mode === m ? 'true' : 'false'); });
+		$('#sec-address').hidden = !S.modeChosen || m !== 'delivery';
 		$('#co-tipbox').hidden = !(S.info && S.info.pay.tip && m === 'delivery');
 		if (m !== 'delivery' && (S.tipPct || S.tipCustom)) {
 			S.tipPct = 0; S.tipCustom = ''; $('#co-tip-custom').hidden = true; $('#co-tip-custom-in').value = '';
 			$$('.tip-btn').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.pct === '0' ? 'true' : 'false'); });
 		}
-		$('#co-modehint').textContent = m === 'delivery' ? 'Wir liefern innerhalb unseres Liefergebiets. Die Liefergebühr hängt von deiner Adresse ab.' : 'Du holst dein Essen bei uns ab, bezahlen kannst du online oder vor Ort.';
+		$('#co-modehint').textContent = !S.modeChosen ? 'Bitte wähle, ob wir liefern oder ob du abholst.' : m === 'delivery' ? 'Wir liefern innerhalb unseres Liefergebiets. Die Liefergebühr hängt von deiner Adresse ab.' : 'Du holst dein Essen bei uns ab, bezahlen kannst du online oder vor Ort.';
 		loadSlots(); renderPay(); renderSummary();
 	}
 	// the what3words escape hatch only appears once a typed address is not found (not when it is
@@ -361,12 +379,13 @@
 		if (t.name === 'pay') { S.pay = t.value; updateSubmit(); }
 	});
 	document.addEventListener('click', function (ev) {
+		if (ev.target.closest('#co-modeedit')) { ev.preventDefault(); var mb = $('.mode-btn'); if (mb) { mb.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); mb.focus(); } return; }
 		if (ev.target.closest('#co-coupon-toggle')) { var bx = $('#co-coupon-box'); bx.hidden = !bx.hidden; if (!bx.hidden) { $('#co-coupon-in').focus(); } $('#co-coupon-toggle').setAttribute('aria-expanded', bx.hidden ? 'false' : 'true'); return; }
 		if (ev.target.closest('#co-coupon-go')) { applyCoupon($('#co-coupon-in').value, false); return; }
 		if (ev.target.closest('#co-coupon-off')) { removeCoupon(); return; }
 		if (ev.target.closest('#co-accwarn-skip')) { S.skipAcc = true; $('#co-accwarn').hidden = true; form.requestSubmit(); return; }
 		if (ev.target.closest('#co-acc-out')) { post('logout', {}).then(function () { location.reload(); }).catch(function () { location.reload(); }); return; }
-		var m = ev.target.closest('.mode-btn'); if (m) { setMode(m.dataset.mode); if (S.coupon) { applyCoupon(S.coupon.code, true); } return; }
+		var m = ev.target.closest('.mode-btn'); if (m) { setMode(m.dataset.mode, true); if (S.coupon) { applyCoupon(S.coupon.code, true); } return; }
 		var tp = ev.target.closest('.tip-btn');
 		if (tp) {
 			S.tipPct = tp.dataset.pct === 'custom' ? 'custom' : +tp.dataset.pct;
@@ -411,7 +430,7 @@
 		}).catch(function () { var msg = 'Das hat nicht geklappt. Bitte versuche es noch einmal.'; err.textContent = msg; S.busy = false; updateSubmit(); $('#co-why').textContent = msg; err.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); });
 	});
 
-	load(); prefill(); accountPrefill(); loadOffers();
+	load(); loadChosen(); prefill(); accountPrefill(); loadOffers();
 	form.addEventListener('change', function (ev) { if (ev.target && (ev.target.name === 'nl_news' || ev.target.name === 'nl_stamps')) { syncNl(); } });
 	form.addEventListener('input', function (ev) { if (ev.target && (ev.target.name === 'phone' || ev.target.name === 'email')) { clearTimeout(stampTimer); stampTimer = setTimeout(refreshStamp, 600); } });
 	// coming from a shared basket (checkout.php?g=...): the lines are everybody's, the organizer of that basket orders and pays
@@ -429,7 +448,7 @@
 			S.group.rev = v.rev; // what the order is checked against: changed basket = the organizer looks again first
 			v.members.forEach(function (m) { m.lines.forEach(function (l) { if (!l.unavailable) { var c = {}; Object.keys(l).forEach(function (k) { c[k] = l[k]; }); c.who = m.name; S.cart.push(c); } }); });
 			if (!S.cart.length) { showEmpty(); return; }
-			setMode(S.mode); checkZone(); renderSummary(); loadOffers();
+			S.modeChosen = true; setMode(S.mode); checkZone(); renderSummary(); loadOffers();
 		});
 	});
 	renderSummary();

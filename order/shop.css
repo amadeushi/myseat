@@ -773,3 +773,7 @@
 .st-pay-sw { margin: 6px 8px 0 0; min-height: 40px; padding: 0 16px; border: 1px solid var(--border); border-radius: var(--radius-pill, 999px); background: transparent; color: var(--text); font: inherit; cursor: pointer; }
 .st-pay-sw:hover { border-color: var(--gold-strong); }
 .st-pay-sw:disabled { opacity: .5; cursor: default; }
+
+.shop-shell .co-modeline { margin: 0 0 10px; padding: 10px 14px; border: 1px solid var(--gold-strong); border-radius: var(--radius-md); color: var(--text); font-size: 15px; line-height: 1.45; }
+.shop-shell .co-modeline strong { color: var(--gold-strong); }
+.shop-shell .co-modeline[hidden] { display: none; }

@@ -132,6 +132,7 @@ $imprint = (!empty($settings['imprintUrl']) && preg_match('#^https?://#i', $sett
 			</div>
 			<p class="co-legal">Mit dem Klick auf den Knopf gibst du eine verbindliche Bestellung ab und bist zur Zahlung verpflichtet. Speisen werden für dich frisch zubereitet, ein Widerrufsrecht besteht dafür nicht. <?php if ($terms): ?>Es gelten unsere <a href="<?php echo shop_h($terms); ?>" target="_blank" rel="noopener noreferrer">AGB</a>.<?php endif; ?> <?php if ($privacy): ?>Hinweise zum Datenschutz findest du <a href="<?php echo shop_h($privacy); ?>" target="_blank" rel="noopener noreferrer">hier</a>.<?php endif; ?> <?php if ($imprint): ?><a href="<?php echo shop_h($imprint); ?>" target="_blank" rel="noopener noreferrer">Impressum</a><?php endif; ?></p>
 			<div class="co-accwarn" id="co-accwarn" role="alert" hidden></div>
+			<p class="co-modeline" id="co-modeline" role="status" hidden></p>
 			<button type="submit" form="co-form" class="cart-go" id="co-submit" disabled>Zahlungspflichtig bestellen</button>
 			<p class="co-why" id="co-why" role="status" aria-live="polite"></p>
 		</aside>
