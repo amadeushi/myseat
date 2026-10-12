@@ -344,7 +344,7 @@
 .st-title { font-family: var(--font-display); font-weight: 400; font-size: 40px; line-height: 1.1; margin: 8px 0 8px; text-wrap: balance; }
 /* failed/cancelled and delivered used to render through the exact same title styling as every other status -
    the hardest and the happiest moments on this page now get the same Ampel-set accent used elsewhere (.st-warn) */
-.st-zeus-head { display: block; width: 64px; height: 64px; margin: 4px 0 8px; object-fit: contain; }
+.st-zeus-head { display: block; width: 64px; height: 64px; margin: 6px 0 12px; }
 .st-title.is-danger { color: var(--danger); }
 .st-title.is-success { color: var(--success); }
 .st-lead { color: var(--text-muted); max-width: 52ch; }
@@ -475,11 +475,13 @@
 .co-accwarn-act .cart-go { text-align: center; }
 .co-accwarn-skip { min-height: 44px; border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .cart-stamp strong { color: var(--text); }
-/* Zeus in small everyday moments: the thanks for a rating, the empty cart (the same glow along his outline as the driver on the map; still, never animated) */
-.st-zeus, .cart-zeus { filter: drop-shadow(0 0 1px #f3ede1) drop-shadow(0 0 5px rgba(226, 192, 127, 0.7)); }
+/* Zeus in small everyday moments (the thanks for a rating, the empty cart, the head of the status page): the picture is a bust cut at the top and the bottom edge, so a glow along his
+   outline ends in a flat line there. In a round badge with a gold ring and a soft glow the cut is the circle's edge; still, never animated */
+.st-zeus, .cart-zeus, .st-zeus-head { box-sizing: border-box; padding: 5px; border-radius: 50%; object-fit: contain; background: radial-gradient(circle at 50% 40%, #2b251c 0%, #16130f 100%); box-shadow: 0 0 0 1.5px rgba(226, 192, 127, 0.65), 0 0 16px rgba(226, 192, 127, 0.28); }
+.st-zeus { padding: 4px; }
 .st-ratethanks { display: flex; align-items: center; gap: 12px; }
 .st-ratethanks .st-zeus[hidden] { display: none; }
-.cart-zeus { margin-bottom: 8px; }
+.cart-zeus { display: block; margin: 4px 0 12px; }
 .st-push { margin: 14px 0; padding: 14px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface); }
 .st-push p { margin: 0 0 10px; color: var(--text-muted); font-size: 14px; line-height: 1.5; }
 .st-push .cart-go { width: 100%; }

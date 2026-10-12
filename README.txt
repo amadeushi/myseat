@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.46.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geändert: Zeus im leeren Warenkorb, über dem Titel der Statusseite und beim Dank für die Bewertung sitzt in einem runden Abzeichen mit goldenem Ring und weichem Schein statt mit Umriss-Glow. Das Bild ist eine Büste, die oben und unten am Bildrand endet; der Glow am Umriss endete dort in einer geraden Linie. Im Warenkorb 64 statt 56 px. Zeus als Stempel und als Fahrer auf der Karte bleiben unverändert.
+
 2026-10-12 == mySeat v6.46.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Der Abschlussbildschirm nach einer Reservierung (api/process_booking.php) ist neu aufgebaut, ein Aufbau für drei Antworten: bestätigt, Anfrage (Antwort innerhalb von 24 Stunden) und Warteliste. Das weiße Restaurant-Logo steht oben, dann die Zusage als Satz mit Vornamen ("Danke, Anna. Dein Tisch wartet." / "Bis morgen, Anna." / "Bis später, Anna."), Datum, Uhrzeit, Personen, Buchungsnummer, "Was jetzt passiert" (Bestätigungsmail, Erinnerung am Vortag auch per SMS, der Tag selbst), "In den Kalender" und "Mit Mitgästen teilen", vier aufklappbare Fragen ("Wo parke ich?", "Wie komme ich hin?", "Geht es barrierefrei?", "Verspätest du dich?"), die Karten, die Frage nach Neuigkeiten und die Unterschrift. Deutsch und Englisch; die Haltezeit des Tisches wird bewusst nicht genannt.
