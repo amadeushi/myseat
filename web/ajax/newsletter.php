@@ -34,7 +34,7 @@ if ($op === 'list') {
 	$old = fb_row("SELECT COUNT(DISTINCT LOWER(reservation_guest_email)) AS n FROM `".$dbTables->reservations."` WHERE reservation_advertise = 'YES' AND reservation_guest_email <> ''");
 	$oldN = $old ? (int)$old['n'] : 0;
 	$known = fb_row("SELECT COUNT(DISTINCT LOWER(r.reservation_guest_email)) AS n FROM `".$dbTables->reservations."` r JOIN ".fb_t('tp_shop_subscribers')." s ON s.email = LOWER(r.reservation_guest_email) WHERE r.reservation_advertise = 'YES'");
-	nl_out(array('ok' => true, 'counts' => shop_nl_counts(), 'rows' => $rows, 'legacy' => max(0, $oldN - ($known ? (int)$known['n'] : 0))));
+	nl_out(array('ok' => true, 'counts' => shop_nl_counts(), 'rows' => $rows, 'legacy' => max(0, $oldN - ($known ? (int)$known['n'] : 0)), 'batches' => array_map(function ($b) { return array('batch' => (int)$b['batch'], 'at' => date('d.m.Y H:i', strtotime($b['at'])), 'n' => (int)$b['n'], 'confirmed' => strpos($b['detail'], 'Inhaber bestätigt') !== false); }, shop_nl_import_batches())));
 }
 if ($op === 'proof') {
 	$id = (int)(isset($_GET['id']) ? $_GET['id'] : 0);
@@ -43,6 +43,27 @@ if ($op === 'proof') {
 	nl_out(array('ok' => true, 'proof' => $out));
 }
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['token']) || !hash_equals((string)$_SESSION['shop_admin_token'], (string)$_POST['token'])) { nl_out(array('ok' => false, 'error' => 'Die Sitzung ist abgelaufen. Bitte lade die Seite neu.')); }
+if ($op === 'import_preview' || $op === 'import_run') {
+	$text = isset($_POST['text']) ? (string)$_POST['text'] : '';
+	if (trim($text) === '') { nl_out(array('ok' => false, 'error' => 'Die Liste ist leer.')); }
+	$mode = (isset($_POST['mode']) && $_POST['mode'] === 'confirmed') ? 'confirmed' : 'blocked';
+	$rows = shop_nl_import_parse($text);
+	if (!$rows) { nl_out(array('ok' => false, 'error' => 'Ich finde in der Liste keine Zeilen. Erwartet wird eine Datei mit E-Mail und Name, je Zeile ein Gast.')); }
+	if (count($rows) > SHOP_NL_IMPORT_MAX_ROWS) { nl_out(array('ok' => false, 'error' => 'Die Liste hat mehr als '.SHOP_NL_IMPORT_MAX_ROWS.' Zeilen. Bitte teile sie.')); }
+	if ($op === 'import_preview') {
+		$plan = shop_nl_import_plan($rows, $mode);
+		$sample = array();
+		foreach ($plan['rows'] as $r) { if ($r['kind'] !== 'new' || count(array_filter($sample, function ($x) { return $x['kind'] === 'new'; })) < 5) { $sample[] = $r; } if (count($sample) >= 60) { break; } }
+		nl_out(array('ok' => true, 'counts' => $plan['counts'], 'sample' => $sample));
+	}
+	if ($mode === 'confirmed' && empty($_POST['attest'])) { nl_out(array('ok' => false, 'error' => 'Bitte bestätige die Einwilligung der Gäste mit dem Haken.')); }
+	$res = shop_nl_import_run($rows, array('mode' => $mode, 'file' => isset($_POST['file']) ? $_POST['file'] : '', 'origin' => isset($_POST['origin']) ? $_POST['origin'] : '', 'user' => is_string($_SESSION['valid_user']) ? $_SESSION['valid_user'] : ''));
+	nl_out($res);
+}
+if ($op === 'import_undo') {
+	$n = shop_nl_import_undo((int)(isset($_POST['batch']) ? $_POST['batch'] : 0));
+	nl_out(array('ok' => true, 'removed' => $n));
+}
 if ($op === 'erase') {
 	$id = (int)(isset($_POST['id']) ? $_POST['id'] : 0);
 	if ($id <= 0) { nl_out(array('ok' => false, 'error' => 'Unbekannter Abonnent.')); }

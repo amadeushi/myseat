@@ -2185,3 +2185,30 @@ button.orders-kitchen:disabled { opacity: .5; cursor: wait; }
 .nl-proof th, .nl-proof td { padding: 6px 10px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border-soft); overflow-wrap: anywhere; }
 .nl-proof th { color: var(--text-muted); font-weight: 600; }
 .nl-proof td:nth-child(1), .nl-proof td:nth-child(4) { white-space: nowrap; }
+.nl-import { margin: 22px 0 0; border: 1px solid var(--border-soft); border-radius: var(--radius-md); }
+.nl-import > summary { min-height: 44px; padding: 0 16px; display: flex; align-items: center; cursor: pointer; font-weight: 600; color: var(--gold-strong); }
+.nl-import > summary:focus-visible { outline: 2px solid var(--gold-strong); outline-offset: 2px; }
+.nl-import-body { padding: 4px 16px 16px; }
+.nl-imp-step { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 0 0 14px; }
+.nl-file { display: inline-flex; align-items: center; cursor: pointer; }
+.nl-imp-step textarea { flex-basis: 100%; width: 100%; max-width: 640px; box-sizing: border-box; font: inherit; font-size: 14px; }
+.nl-imp-mode { border: 0; margin: 0 0 12px; padding: 0; }
+.nl-imp-mode legend { padding: 0; margin: 0 0 6px; font-weight: 600; }
+.nl-imp-attest { margin: 8px 0 0 26px; display: grid; gap: 8px; max-width: 640px; }
+.nl-imp-attest[hidden], #nl-preview[hidden], #nl-batches[hidden] { display: none; }
+.nl-imp-attest input[type=text] { min-height: 44px; box-sizing: border-box; width: 100%; }
+.nl-imp-actions { margin: 10px 0; }
+.sh-btn.is-primary { background: var(--gold); border-color: var(--gold); color: var(--ink-strong); }
+.sh-btn.is-primary:hover { background: var(--gold-strong); color: var(--ink-strong); }
+.sh-btn:disabled { opacity: 0.5; cursor: default; }
+.nl-sum { list-style: none; margin: 10px 0 14px; padding: 0; display: grid; gap: 4px; font-size: 15px; }
+.nl-sum b { display: inline-block; min-width: 3ch; font-variant-numeric: tabular-nums; color: var(--text); }
+.nl-sum li.k-new b, .nl-sum li.k-upgrade b { color: var(--gold-strong); }
+.nl-k { font-weight: 600; }
+.nl-k.k-new, .nl-k.k-upgrade { color: var(--gold-strong); }
+.nl-k.k-invalid, .nl-k.k-unsub { color: var(--danger); }
+.nl-sample td:nth-child(1) { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.nl-h3 { margin: 18px 0 6px; font-size: 15px; }
+.nl-batch { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 14px; }
+.nl-batch li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.nl-batch .sh-btn { min-height: 40px; }

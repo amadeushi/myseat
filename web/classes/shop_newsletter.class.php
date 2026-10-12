@@ -247,3 +247,4 @@ function shop_nl_purge() {
 	foreach (fb_rows("SELECT id FROM ".fb_t('tp_shop_subscribers')." WHERE news = 0 AND stamps = 0 AND unsub_at IS NOT NULL AND unsub_at < ?", 's', array($gone)) as $r) { $ids[] = $r; }
 	foreach ($ids as $r) { shop_nl_erase((int)$r['id']); }
 }
+require_once __DIR__.'/shop_newsletter_import.class.php';

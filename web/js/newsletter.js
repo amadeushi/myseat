@@ -46,7 +46,7 @@
 	function load() {
 		fetch('ajax/newsletter.php?op=list&filter=' + encodeURIComponent(filter) + '&q=' + encodeURIComponent(q), { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (r) {
 			if (!r.ok) { say(r.error || 'Das hat nicht geklappt.', true); return; }
-			say(''); data = r; draw();
+			say(''); data = r; draw(); batches(r.batches);
 		}).catch(function () { say('Keine Verbindung.', true); });
 	}
 	page.addEventListener('click', function (ev) {
@@ -67,5 +67,62 @@
 		}
 	});
 	$('nl-q').addEventListener('input', function () { clearTimeout(timer); var v = this.value; timer = setTimeout(function () { q = v; load(); }, 250); });
+
+	/* ---- Import: choose or paste a list, check it (duplicates), import it, take a batch back ---- */
+	var impFile = '', checked = false;
+	var KIND = { 'new': 'wird aufgenommen', upgrade: 'war gesperrt, wird freigegeben', dupfile: 'doppelt in der Datei', have: 'schon angemeldet', pending: 'wartet auf Bestätigung', unsub: 'hat sich abgemeldet, bleibt abgemeldet', blockedhave: 'schon gesperrt vorhanden', invalid: 'ungültig' };
+	function impMode() { return document.querySelector('input[name="nl-mode"]:checked').value; }
+	function impMsg(t, bad) { var m = $('nl-imp-msg'); m.textContent = t || ''; m.classList.toggle('is-error', !!bad); }
+	function impReset() { checked = false; $('nl-preview').hidden = true; impMsg(''); }
+	function impPost(op, extra) {
+		var fd = new FormData(); fd.append('op', op); fd.append('token', TOKEN); fd.append('text', $('nl-text').value); fd.append('mode', impMode()); fd.append('file', impFile);
+		fd.append('origin', $('nl-origin').value); if ($('nl-attest-box').checked) { fd.append('attest', '1'); }
+		for (var k in (extra || {})) { fd.append(k, extra[k]); }
+		return fetch('ajax/newsletter.php', { method: 'POST', body: fd, credentials: 'same-origin' }).then(function (r) { return r.json(); });
+	}
+	function batches(list) {
+		$('nl-batches').hidden = !list || !list.length;
+		$('nl-batch-list').innerHTML = (list || []).map(function (b) { return '<li><span>Import ' + b.batch + ', ' + esc(b.at) + ': ' + b.n + ' Adressen, ' + (b.confirmed ? 'mit Einwilligung' : 'gesperrt') + '</span> <button type="button" class="sh-btn nl-erase" data-undo="' + b.batch + '">Rückgängig</button></li>'; }).join('');
+	}
+	$('nl-file').addEventListener('change', function () {
+		var f = this.files && this.files[0]; if (!f) { return; }
+		if (f.size > 3000000) { impMsg('Die Datei ist größer als 3 MB. Bitte teile sie.', true); return; }
+		var rd = new FileReader();
+		rd.onload = function () { $('nl-text').value = rd.result; impFile = f.name; $('nl-filename').textContent = f.name; impReset(); };
+		rd.onerror = function () { impMsg('Die Datei konnte nicht gelesen werden.', true); };
+		rd.readAsText(f, 'UTF-8');
+	});
+	$('nl-text').addEventListener('input', function () { impReset(); });
+	Array.prototype.forEach.call(document.querySelectorAll('input[name="nl-mode"]'), function (r) { r.addEventListener('change', function () { $('nl-attest').hidden = impMode() !== 'confirmed'; impReset(); }); });
+	$('nl-check').addEventListener('click', function () {
+		impMsg('Einen Moment ...');
+		impPost('import_preview').then(function (r) {
+			if (!r.ok) { impMsg(r.error || 'Das hat nicht geklappt.', true); return; }
+			var c = r.counts, conf = impMode() === 'confirmed';
+			var items = [['new', c['new'], conf ? 'neu, bekommen Neuigkeiten' : 'neu, werden gesperrt abgelegt'], ['upgrade', c.upgrade, 'waren gesperrt und werden freigegeben'], ['dupfile', c.dupfile, 'doppelt in der Datei, übersprungen'], ['have', c.have, 'schon angemeldet, übersprungen'], ['pending', c.pending, 'warten schon auf ihre Bestätigung, übersprungen'], ['blockedhave', c.blockedhave, 'schon gesperrt vorhanden, übersprungen'], ['unsub', c.unsub, 'hatten sich abgemeldet, bleiben abgemeldet'], ['invalid', c.invalid, 'ungültige Adresse, übersprungen']];
+			$('nl-sum').innerHTML = '<li class="is-total"><b>' + c.total + '</b> Zeilen gelesen</li>' + items.filter(function (i) { return i[1] > 0; }).map(function (i) { return '<li class="k-' + i[0] + '"><b>' + i[1] + '</b> ' + i[2] + '</li>'; }).join('');
+			$('nl-sample').innerHTML = r.sample.map(function (x) { return '<tr><td>' + x.line + '</td><td>' + esc(x.email) + '</td><td>' + esc(x.name) + '</td><td><span class="nl-k k-' + x.kind + '">' + esc(KIND[x.kind] || x.kind) + '</span>' + (x.note ? '<br><small>' + esc(x.note) + '</small>' : '') + '</td></tr>'; }).join('');
+			$('nl-sample-note').textContent = r.sample.length < c.total ? 'Die Tabelle zeigt einige Beispiele und alle auffälligen Zeilen (bis 60). Der Import folgt derselben Prüfung.' : '';
+			$('nl-run').disabled = (c['new'] + c.upgrade) === 0; $('nl-run').textContent = (c['new'] + c.upgrade) === 0 ? 'Nichts zu importieren' : (c['new'] + c.upgrade) + ' Adressen importieren';
+			$('nl-preview').hidden = false; checked = true; impMsg('');
+		}).catch(function () { impMsg('Keine Verbindung.', true); });
+	});
+	$('nl-run').addEventListener('click', function () {
+		if (!checked) { return; }
+		if (impMode() === 'confirmed' && (!$('nl-attest-box').checked || $('nl-origin').value.trim().length < 10)) { impMsg('Bitte nenne die Herkunft der Einwilligung und setze den Haken.', true); $('nl-origin').focus(); return; }
+		this.disabled = true; impMsg('Importiere ...');
+		var btn = this;
+		impPost('import_run').then(function (r) {
+			if (!r.ok) { btn.disabled = false; impMsg(r.error || 'Das hat nicht geklappt.', true); return; }
+			impMsg('Fertig: ' + r.added + ' Adressen aufgenommen' + (r.upgraded ? ', ' + r.upgraded + ' freigegeben' : '') + ' (Import ' + r.batch + ').');
+			$('nl-preview').hidden = true; checked = false; $('nl-text').value = ''; impFile = ''; $('nl-filename').textContent = 'oder die Liste hier einfügen'; $('nl-file').value = ''; load();
+		}).catch(function () { btn.disabled = false; impMsg('Keine Verbindung.', true); });
+	});
+	$('nl-batch-list').addEventListener('click', function (ev) {
+		var u = ev.target.closest('[data-undo]'); if (!u) { return; }
+		if (!u.dataset.armed) { u.dataset.armed = '1'; u.textContent = 'Wirklich zurücknehmen?'; setTimeout(function () { u.dataset.armed = ''; u.textContent = 'Rückgängig'; }, 4000); return; }
+		var fd = new FormData(); fd.append('op', 'import_undo'); fd.append('token', TOKEN); fd.append('batch', u.dataset.undo);
+		fetch('ajax/newsletter.php', { method: 'POST', body: fd, credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) { if (!r.ok) { impMsg(r.error || 'Das hat nicht geklappt.', true); return; } impMsg(r.removed + ' Adressen zurückgenommen. Wer inzwischen selbst etwas geändert hat, bleibt erhalten.'); load(); }).catch(function () { impMsg('Keine Verbindung.', true); });
+	});
 	load();
 })();

@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.42.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Newsletter, Schritt 2 (Import). Auf der Seite "Newsletter" (p=14) gibt es "Liste importieren": Datei (CSV, Excel-Export, Liste, "Name <mail>") wählen oder einfügen, mit E-Mail und Name je Zeile. Erkennt Trennzeichen, UTF-8 und Windows-Umlaute sowie Spalten Vorname/Nachname. Zwei Modi: ohne Nachweis (Adressen werden nur gesperrt abgelegt, keine Mail bis zur Bestätigung durch den Gast) oder mit dokumentierter Einwilligung (Herkunft und Haken Pflicht, die Bestätigung des Inhabers steht mit Datei, Datum und Benutzer im Nachweis jeder Adresse).
+ * Neu: Duplikatprüfung vor dem Import: doppelte Adressen in der Datei und in der Liste (Groß-/Kleinschreibung und +Zusatz zählen als gleich), bereits angemeldete, wartende und gesperrte Adressen werden übersprungen, Abgemeldete werden nie wieder aufgenommen, ungültige Zeilen werden aufgelistet. Die Vorschau ("Liste prüfen") zeigt Zähler und Beispielzeilen, der Import folgt derselben Prüfung. Importe lassen sich unter "Bisherige Importe" zurücknehmen.
+
 2026-10-12 == mySeat v6.41.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Newsletter, Schritt 1 (Einwilligung). Eine Liste mit zwei Sparten: Neuigkeiten vom Restaurant und Stempelkarten-Erinnerungen. Aufgenommen wird nur, wer per Mail bestätigt (Double-Opt-in); die Bestätigungsseite zeigt zuerst nur einen Knopf, damit Mail-Programme nicht von selbst bestätigen. Jede Anfrage, Bestätigung, Änderung und Abmeldung steht mit Zeit, IP, Browser, Quelle und angezeigtem Text im Nachweis (tp_shop_consent_log); Nachweis 3 Jahre nach Abmeldung, unbestätigte Anfragen 30 Tage. Grenzen: 3 Bestätigungsmails je Adresse und Tag, 10 Anfragen je Besucher und Stunde.
