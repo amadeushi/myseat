@@ -57,6 +57,7 @@ $or_pause = shop_pause_state();
 		<?php endforeach; ?>
 	</div>
 
+	<div class="uber-alert" id="uber-alert" role="alert" hidden></div>
 	<div class="orders-stats" id="orders-stats"></div>
 	<div id="orders-list" class="orders-list" aria-live="polite"></div>
 	<p class="orders-note" id="orders-note" role="status" aria-live="polite"></p>

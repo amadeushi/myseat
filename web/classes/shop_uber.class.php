@@ -243,6 +243,40 @@ function shop_uber_pending($limit = 3) {
 	return array_map(function ($r) { return (int)$r['id']; }, $rows);
 }
 
+
+// reads a failed receipt again (an outage of OpenAI is over after a few minutes): the failed ones of the last 45 minutes (as long as the automatic import still takes a receipt as fresh), each at
+// most every 2 minutes, at most $max per call; a receipt that is read becomes an order as with a new one. Called by the backend pages that stay open (op uber_retry) and by web/cron/uber_retry.php.
+function shop_uber_retry($max = 1) {
+	shop_ensure_schema();
+	if (shop_uber_read_url() === '') { return 0; }
+	$n = 0;
+	foreach (fb_rows("SELECT id, data FROM ".fb_t('tp_shop_uber_slips')." WHERE status = 'error' AND ref = '' AND received > ? ORDER BY id", 's', array(date('Y-m-d H:i:s', time() - 2700))) as $r) {
+		if ($n >= (int)$max) { break; }
+		$d = $r['data'] ? json_decode($r['data'], true) : null;
+		if (is_array($d) && !empty($d['read_at']) && strtotime($d['read_at']) > time() - 120) { continue; }
+		$res = shop_uber_process((int)$r['id']);
+		if (!empty($res['skipped'])) { continue; }
+		$n++;
+		if (!empty($res['status']) && $res['status'] === 'read') { try { shop_uber_auto((int)$r['id']); } catch (Throwable $e) { error_log('uber retry auto import: '.$e->getMessage()); } }
+	}
+	return $n;
+}
+
+// receipts that did not become an order and need a person: not read (error), read but the sums do not fit (check), read but not taken over although the automatic import is on. Of the last
+// 3 hours; the pages show them in red. [{id, at: "H:i", kind: error|check|open, text}]
+function shop_uber_alert() {
+	shop_ensure_schema();
+	$out = array(); $auto = shop_setting('uber_auto_import') === '1';
+	foreach (fb_rows("SELECT id, received, status, data FROM ".fb_t('tp_shop_uber_slips')." WHERE ref = '' AND order_id IS NULL AND received > ? AND (status IN ('error', 'check') OR (status = 'read' AND received < ?)) ORDER BY id DESC LIMIT 5",
+			'ss', array(date('Y-m-d H:i:s', time() - 10800), date('Y-m-d H:i:s', time() - 180))) as $r) {
+		$at = date('H:i', strtotime($r['received'])); $d = $r['data'] ? json_decode($r['data'], true) : null;
+		if ($r['status'] === 'error') { $out[] = array('id' => (int)$r['id'], 'at' => $at, 'kind' => 'error', 'text' => 'Der Uber-Eats-Bon von '.$at.' Uhr konnte nicht gelesen werden. Das System versucht es weiter; wenn es nicht klappt, bitte die Bestellung von Hand anlegen.'); }
+		elseif ($r['status'] === 'check') { $out[] = array('id' => (int)$r['id'], 'at' => $at, 'kind' => 'check', 'text' => 'Der Uber-Eats-Bon von '.$at.' Uhr wurde gelesen, aber die Zahlen stimmen nicht. Bitte im Backend (Einstellungen > Lieferservice) prüfen und übernehmen.'); }
+		elseif ($auto) { $why = (is_array($d) && !empty($d['auto']['message'])) ? ' ('.mb_substr((string)$d['auto']['message'], 0, 120).')' : ''; $out[] = array('id' => (int)$r['id'], 'at' => $at, 'kind' => 'open', 'text' => 'Der Uber-Eats-Bon von '.$at.' Uhr wurde gelesen, aber nicht als Bestellung übernommen'.$why.'. Bitte im Backend prüfen.'); }
+	}
+	return $out;
+}
+
 // the last receipts for the backend page ('stale' = read before the payment was part of the format: it has to be read again): what became of each (no names, no addresses: only state, stage, number of items, amount and the reason when it does not add up)
 function shop_uber_recent($limit = 12) {
 	$out = array();

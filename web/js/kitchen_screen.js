@@ -286,13 +286,26 @@
 	setInterval(function () { if (page > 0 && Date.now() - lastAct > IDLE_BACK_MS) { page = 0; render(); } }, 5000);
 
 	// ---- loading
+
+	// receipts of Uber Eats that did not become an order: a red bar until a person has dealt with them; a failed read is tried again from here (the server holds the pace)
+	var uberAlertEl = document.getElementById('uber-alert'), uberRetryAt = 0;
+	function uberAlert(list) {
+		if (!uberAlertEl) { return; }
+		list = list || [];
+		uberAlertEl.hidden = !list.length;
+		uberAlertEl.innerHTML = list.map(function (a) { return '<p>' + String(a.text).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }) + '</p>'; }).join('');
+		if (list.some(function (a) { return a.kind === 'error'; }) && Date.now() - uberRetryAt > 60000) {
+			uberRetryAt = Date.now();
+			fetch('ajax/shop_orders.php?op=uber_retry', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (r) { if (r && r.uber_alert) { uberAlert(r.uber_alert); } }).catch(function () {});
+		}
+	}
 	function load() {
 		fetch('ajax/shop_orders.php?op=kitchen', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) {
 			if (r.status === 403) { location.href = '../PLC/index.php'; throw new Error('login'); }
 			return r.json();
 		}).then(function (r) {
 			if (!r.ok) { throw new Error('bad'); }
-			$('#k-offline').hidden = true; lastOk = Date.now();
+			$('#k-offline').hidden = true; lastOk = Date.now(); uberAlert(r.uber_alert);
 			var ids = r.orders.map(function (o) { return o.id; });
 			var fresh = seen === null ? [] : r.orders.filter(function (o) { return seen.indexOf(o.id) < 0; });
 			orders = r.orders; seen = ids;

@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.47.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Ein Uber-Eats-Bon, der nicht gelesen werden konnte (Fehler bei OpenAI/n8n), wird alle 2 Minuten erneut gelesen, solange er jünger als 45 Minuten ist (so lange nimmt die automatische Übernahme einen Bon als frisch an). Das machen die offenen Seiten "Bestellungen" und "Küche" selbst (op uber_retry, ein Versuch pro Minute); zusätzlich gibt es web/cron/uber_retry.php für einen Cron alle 2 Minuten (gleicher Schlüssel wie die anderen Crons, optional).
+ * Neu: Roter Balken auf "Bestellungen" und in der Küche, solange ein Bon der letzten 3 Stunden keine Bestellung geworden ist: nicht gelesen, Zahlen stimmen nicht, oder gelesen aber trotz automatischer Übernahme nicht übernommen (mit dem Grund).
+
 2026-10-12 == mySeat v6.47.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Uber-Eats-Bons haben jetzt einen zweiten Leser. Wenn n8n/OpenAI den Bon nicht lesen kann (zum Beispiel ein Serverfehler 500 bei OpenAI), liest mySeat ihn direkt mit Claude von Anthropic (Schlüssel des Bestell-Chats, Modell claude-sonnet-5-5, Einstellung uber_claude_model). Die Antwort läuft durch dieselbe Prüfung wie bisher (Summen, Zahlart, Frische); als Lesestufe steht "claude" am Bon. Abschalten mit uber_claude_fallback = 0.

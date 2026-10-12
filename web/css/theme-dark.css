@@ -2300,3 +2300,9 @@ button.orders-kitchen:disabled { opacity: .5; cursor: wait; }
 .nla-unit input { width: 100%; max-width: 120px; min-height: 44px; box-sizing: border-box; font: inherit; font-size: 15px; }
 .nla-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 8px; }
 .nla-stat { margin: 0; color: var(--text-muted); font-size: 14px; }
+
+/* red bar: a receipt of Uber Eats that did not become an order */
+.uber-alert { margin: 0 0 12px; padding: 10px 16px; border-radius: var(--radius-md, 10px); background: rgba(226,134,124,.16); border: 1px solid var(--danger, #e2867c); color: var(--danger, #e2867c); font-weight: 600; }
+.uber-alert p { margin: 2px 0; }
+body.kitchen .uber-alert { margin: 8px 18px; font-size: 20px; }
+.uber-alert[hidden] { display: none; }

@@ -56,6 +56,7 @@ $logoCss = preg_match('#^https?://[^\s\'"()\\\\]+$#', $logo) ? ' style="--ks-log
 			<a class="k-btn k-sq" href="disposition.php" aria-label="Disposition" data-tip="Disposition"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="12" rx="1"/><rect x="9.500" y="4" width="5" height="16" rx="1"/><rect x="16" y="4" width="5" height="9" rx="1"/></svg></a>
 		</div>
 	</header>
+	<div class="uber-alert" id="uber-alert" role="alert" hidden></div>
 	<p class="k-offline" id="k-offline" role="alert" hidden>Keine Verbindung. Ich versuche es weiter ...</p>
 	<div class="ks-main">
 		<main class="ks-board" id="ks-board" aria-live="polite"></main>

@@ -12,6 +12,7 @@ include('../classes/database.class.php');
 include('../classes/db_queries.db.php');
 include('../classes/business.class.php');
 require_once('../classes/shop.class.php');
+require_once('../classes/shop_uber.class.php');
 date_default_timezone_set('Europe/Berlin');
 
 header('Content-Type: application/json; charset=utf-8');
@@ -27,16 +28,23 @@ if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = myse
 shop_ensure_schema();
 $op = isset($_REQUEST['op']) ? (string)$_REQUEST['op'] : '';
 
+if ($op === 'uber_retry') {   // the open pages ask for it when a receipt failed: one read per call, so a slow answer of the reader holds up nothing else
+	$last = (int)shop_setting('uber_retry_at');
+	if (time() - $last < 60) { so_out(array('ok' => true, 'tried' => 0)); }
+	shop_setting_set('uber_retry_at', (string)time());
+	@set_time_limit(150);
+	so_out(array('ok' => true, 'tried' => shop_uber_retry(1), 'uber_alert' => shop_uber_alert()));
+}
 if ($op === 'board') {
-	so_out(array('ok' => true, 'out_n' => shop_out_count(), 'now' => date('H:i'), 'tours_on' => shop_tours_on(), 'orders' => shop_board(), 'drivers' => shop_dispatch_drivers(), 'pause' => shop_pause_state(), 'drive_min' => max(0, min(60, (int)shop_setting('kitchen_drive_min')))));
+	so_out(array('ok' => true, 'uber_alert' => shop_uber_alert(), 'out_n' => shop_out_count(), 'now' => date('H:i'), 'tours_on' => shop_tours_on(), 'orders' => shop_board(), 'drivers' => shop_dispatch_drivers(), 'pause' => shop_pause_state(), 'drive_min' => max(0, min(60, (int)shop_setting('kitchen_drive_min')))));
 }
 if ($op === 'kitchen') {
-	so_out(array('ok' => true, 'now' => date('H:i'), 'orders' => shop_kitchen_board(), 'done' => shop_kitchen_done()));
+	so_out(array('ok' => true, 'uber_alert' => shop_uber_alert(), 'now' => date('H:i'), 'orders' => shop_kitchen_board(), 'done' => shop_kitchen_done()));
 }
 if ($op === 'day') {
 	$date = (isset($_REQUEST['date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_REQUEST['date'])) ? $_REQUEST['date'] : date('Y-m-d');
 	$filter = (isset($_REQUEST['filter']) && in_array($_REQUEST['filter'], array('open', 'closed'), true)) ? $_REQUEST['filter'] : 'all';
-	so_out(array('ok' => true, 'date' => $date, 'orders' => shop_day_orders($date, $filter), 'stats' => shop_day_stats($date), 'pause' => shop_pause_state()));
+	so_out(array('ok' => true, 'date' => $date, 'uber_alert' => shop_uber_alert(), 'orders' => shop_day_orders($date, $filter), 'stats' => shop_day_stats($date), 'pause' => shop_pause_state()));
 }
 // the dishes that can be switched off for today (the dispatch list "Heute aus")
 if ($op === 'out_list') { so_out(array('ok' => true, 'products' => shop_out_list())); }

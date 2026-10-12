@@ -158,10 +158,23 @@
 			}).catch(function () { note('Keine Verbindung.', true); });
 		}
 	}
+
+	// receipts of Uber Eats that did not become an order: a red bar until a person has dealt with them; a failed read is tried again from here (the server holds the pace)
+	var uberAlertEl = document.getElementById('uber-alert'), uberRetryAt = 0;
+	function uberAlert(list) {
+		if (!uberAlertEl) { return; }
+		list = list || [];
+		uberAlertEl.hidden = !list.length;
+		uberAlertEl.innerHTML = list.map(function (a) { return '<p>' + String(a.text).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }) + '</p>'; }).join('');
+		if (list.some(function (a) { return a.kind === 'error'; }) && Date.now() - uberRetryAt > 60000) {
+			uberRetryAt = Date.now();
+			fetch('ajax/shop_orders.php?op=uber_retry', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (r) { if (r && r.uber_alert) { uberAlert(r.uber_alert); } }).catch(function () {});
+		}
+	}
 	function load() {
 		fetch('ajax/shop_orders.php?op=day&date=' + DATE + '&filter=' + filter, { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (r) {
 			if (!r.ok) { note(r.error || 'Das hat nicht geklappt.', true); return; }
-			stats(r.stats); window.__pauseLast = r.pause; drawPause(r.pause);
+			stats(r.stats); uberAlert(r.uber_alert); window.__pauseLast = r.pause; drawPause(r.pause);
 			var failedNote = '';
 			if (filter === 'closed') { var nFailed = r.orders.filter(function (o) { return o.status === 'failed'; }).length; if (nFailed) { failedNote = '<p class="orders-fail-chip">Fehlgeschlagen: ' + nFailed + '</p>'; } }
 			document.getElementById('orders-list').innerHTML = failedNote + (r.orders.length ? r.orders.map(row).join('') : '<p class="orders-empty">Keine Bestellungen an diesem Tag.</p>');
