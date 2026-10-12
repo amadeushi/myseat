@@ -38,6 +38,16 @@ function shop_nl_topic_label($t, $lang = 'de') {
 	return $m[$lang === 'en' ? 'en' : 'de'][$t];
 }
 
+// the words of the two consents exactly as the pages show them (checkout, status page, account, chat); they are written to the proof
+function shop_nl_consent_text($topic, $lang = 'de') {
+	$t = array(
+		'de' => array('news' => 'Ich möchte ab und zu Neuigkeiten und Aktionen vom Restaurant per Mail erhalten (neue Gerichte, Angebote, Öffnungszeiten)',
+			'stamps' => 'Ich möchte Bescheid bekommen, wenn meine Stempelkarte fast voll ist und bevor Stempel verfallen'),
+		'en' => array('news' => 'I would like to get news and offers from the restaurant by e-mail from time to time (new dishes, offers, opening times)',
+			'stamps' => 'I would like to be told when my stamp card is almost full and before stamps expire'));
+	$l = $lang === 'en' ? 'en' : 'de';
+	return isset($t[$l][$topic]) ? $t[$l][$topic] : '';
+}
 function shop_nl_log($subId, $event, $topics, $source, $detail = '') {
 	fb_exec("INSERT INTO ".fb_t('tp_shop_consent_log')." (sub_id, event, topics, source, ip, ua, detail, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", 'isssssss',
 		array((int)$subId, $event, implode(',', (array)$topics), (string)$source, shop_nl_ip(), shop_nl_ua(), mb_substr((string)$detail, 0, 255), date('Y-m-d H:i:s')));
@@ -160,7 +170,7 @@ function shop_nl_account_set($acc, $email, $news, $stamps) {
 	}
 	if ($need) {
 		$r = shop_nl_request($email, isset($acc['name']) ? $acc['name'] : '', $need, 'konto', array('account_id' => (int)$acc['id'], 'lang' => 'de',
-			'text' => implode(' | ', array_map(function ($t) { return $t === 'news' ? 'Ich möchte Neuigkeiten vom Restaurant erhalten' : 'Ich möchte an meine Stempelkarte erinnert werden'; }, $need))));
+			'text' => implode(' | ', array_map(function ($t) { return shop_nl_consent_text($t, 'de'); }, $need))));
 		if (!$r['ok']) { return $r; }
 		$msg = $r['state'] === 'already' ? 'Gespeichert.' : 'Wir haben dir eine Mail zum Bestätigen geschickt. Erst danach gilt die Anmeldung.';
 	}
@@ -191,12 +201,13 @@ function shop_nl_state($email) {
 }
 
 // an order or a reservation came with ticks: the request goes out for the ticked topics
-function shop_nl_from_form($email, $name, $news, $stamps, $source, $accountId = 0, $lang = 'de') {
+function shop_nl_from_form($email, $name, $news, $stamps, $source, $accountId = 0, $lang = 'de', $shownText = null) {
 	$t = array(); if ($news) { $t[] = 'news'; } if ($stamps) { $t[] = 'stamps'; }
 	if (!$t || !shop_nl_valid($email)) { return null; }
-	$text = array('news' => 'Ich möchte Neuigkeiten vom Restaurant erhalten', 'stamps' => 'Ich möchte an meine Stempelkarte erinnert werden');
-	$shown = array(); foreach ($t as $x) { $shown[] = $text[$x]; }
-	try { return shop_nl_request($email, $name, $t, $source, array('lang' => $lang, 'account_id' => $accountId, 'text' => implode(' | ', $shown))); }
+	$shown = array(); foreach ($t as $x) { $shown[] = shop_nl_consent_text($x, $lang); }
+	// the page may pass the text it really showed (the reservation form has its own wording)
+	$text = ($shownText !== null && trim((string)$shownText) !== '') ? trim((string)$shownText) : implode(' | ', $shown);
+	try { return shop_nl_request($email, $name, $t, $source, array('lang' => $lang, 'account_id' => $accountId, 'text' => $text)); }
 	catch (Throwable $e) { error_log('mySeat newsletter: '.$e->getMessage()); return null; }
 }
 
@@ -210,14 +221,18 @@ function shop_nl_mail_confirm($email, $name, $topics, $confirmToken, $lang) {
 		$labels = array(); foreach ($topics as $t) { $labels[] = shop_nl_topic_label($t, $lang); }
 		$what = implode($en ? ' and ' : ' und ', $labels);
 		$url = shop_nl_base().'newsletter.php?t='.$confirmToken;
+		// the subject names what was asked for, so the guest recognises his own request at a glance
+		$only = count($topics) === 1 ? $topics[0] : '';
+		$subEn = $only === 'stamps' ? 'Please confirm: stamp card reminders from '.$brand : ($only === 'news' ? 'Please confirm: news from '.$brand : 'Please confirm your sign-up with '.$brand);
+		$subDe = $only === 'stamps' ? 'Bitte bestätige: Stempel-Erinnerungen vom '.$brand : ($only === 'news' ? 'Bitte bestätige: Neuigkeiten vom '.$brand : 'Bitte bestätige deine Anmeldung beim '.$brand);
 		shop_stamp_mail($email, $en ? array(
-			'subject' => 'Please confirm your sign-up', 'headline' => 'Almost done'.($first !== '' ? ', '.$first : '').'!',
+			'subject' => $subEn, 'headline' => 'Almost done'.($first !== '' ? ', '.$first : '').'!',
 			'lead' => 'You signed up with '.$brand.' for: '.$what.'. Please confirm with one tap so that we know this address is yours.',
 			'image' => '', 'alt' => '', 'box' => null,
 			'after' => 'You did not sign up? Then just ignore this mail, without your tap you will not get anything. The link works for '.SHOP_NL_CONFIRM_DAYS.' days. You can unsubscribe at any time.',
 			'btn' => 'Confirm sign-up', 'url' => $url, 'signoff' => 'Your team at '.$brand
 		) : array(
-			'subject' => 'Bitte bestätige deine Anmeldung', 'headline' => 'Fast geschafft'.($first !== '' ? ', '.$first : '').'!',
+			'subject' => $subDe, 'headline' => 'Fast geschafft'.($first !== '' ? ', '.$first : '').'!',
 			'lead' => 'Du hast dich bei '.$brand.' angemeldet für: '.$what.'. Bitte bestätige das mit einem Tipp, damit wir wissen, dass diese Adresse dir gehört.',
 			'image' => '', 'alt' => '', 'box' => null,
 			'after' => 'Du hast dich nicht angemeldet? Dann ignoriere diese Mail einfach, ohne deinen Tipp bekommst du nichts. Der Link gilt '.SHOP_NL_CONFIRM_DAYS.' Tage. Abmelden kannst du dich jederzeit.',

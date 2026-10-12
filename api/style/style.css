@@ -1398,6 +1398,49 @@ a.contact-item:hover svg {
 	font-variant-numeric: tabular-nums;
 }
 
+.optin-group {
+	margin-top: 22px;
+	padding: 12px 14px;
+	border: 1px solid var(--border-soft, rgba(255, 255, 255, 0.12));
+	border-radius: 10px;
+	background: rgba(201, 162, 89, 0.06);
+}
+.optin-tag {
+	margin: 0 0 6px;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--gold);
+}
+.nl-after {
+	margin: 22px 0 0;
+	padding: 14px 16px;
+	border: 1px solid var(--border-soft, rgba(255, 255, 255, 0.12));
+	border-radius: 10px;
+	background: rgba(201, 162, 89, 0.06);
+	text-align: left;
+}
+.nl-after h2 { margin: 0 0 6px; font-size: 16px; }
+.nl-after p { margin: 0 0 10px; font-size: 14px; line-height: 1.55; color: var(--text-muted); }
+.nl-after p strong { color: var(--text); }
+.nl-after .nl-fine { margin: 0; font-size: 12.5px; }
+.nl-after-btns { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 10px; }
+.nl-after-btn {
+	flex: 1 1 170px;
+	min-height: 46px;
+	padding: 0 16px;
+	border: 1px solid var(--border, rgba(255, 255, 255, 0.25));
+	border-radius: 999px;
+	background: transparent;
+	color: var(--text);
+	font: inherit;
+	font-size: 14px;
+	font-weight: 700;
+	cursor: pointer;
+}
+.nl-after-btn.is-yes { background: var(--gold); border-color: var(--gold); color: #1a1408; }
+.nl-after-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .consent-group {
 	display: flex;
 	flex-direction: column;

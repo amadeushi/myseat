@@ -3630,7 +3630,8 @@ function shop_stamp_notify_stamp($email, $name, $keys) {
 			'lead' => 'Schön, dass du bei uns bestellt hast. Dafür gibt es einen Stempel auf deine Karte.',
 			'image' => shop_stamp_card_image($n, $goal), 'alt' => 'Deine Stempelkarte: '.$n.' von '.$goal.' Stempeln', 'box' => null,
 			'after' => ($left === 1 ? 'Noch 1 Stempel' : 'Noch '.$left.' Stempel').' bis zu deinem Gutschein. Mit der vollen Karte schenken wir dir '.$st['percent'].' % deiner Bestellungen zurück, und wir ziehen den Gutschein automatisch ab.'.($st['until'] !== '' ? ' Deine Stempel gelten bis zum '.$st['until'].'.' : ''),
-			'btn' => 'Wieder bestellen', 'url' => shop_stamp_shop_url(), 'signoff' => shop_stamp_signoff()));
+			// information about the card only: no button, no offer. The reminders to order again are the automations (they need the confirmed consent as well), so the two kinds of mail stay apart
+			'btn' => '', 'url' => '', 'signoff' => shop_stamp_signoff()));
 	} catch (Throwable $e) { error_log('mySeat stamp notice: '.$e->getMessage()); }
 }
 // when the card is full: the voucher, by mail, or by SMS for a guest without e-mail

@@ -52,6 +52,13 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.45.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Einwilligung für Stempel-Erinnerungen und Newsletter an den richtigen Stellen. Statusseite der Bestellung: unter der Stempelkarte die Frage "Soll ich dir Bescheid geben?" mit zwei gleich großen Antworten (Ja / Nein danke; nach "Nein danke" 90 Tage keine neue Frage); nur für angemeldete Gäste mit E-Mail-Adresse (neue API-Aktion nl_ask, Quelle "status"). Bestellablauf: das Stempel-Kästchen steht jetzt direkt unter der Stempelkarte, das Newsletter-Kästchen nennt konkret, was kommt. Chat: Antworten "Ja, ..." und "Nein danke", die Frage nennt nur, was noch offen ist.
+ * Neu: Reservierungs-Widget: das Newsletter-Kästchen steht im eigenen Block "Optional", getrennt von den AGB; auf der Bestätigungsseite nach der Buchung gibt es für alle ohne Zustimmung die Frage "Ab und zu Neuigkeiten vom Restaurant?" (Knopf statt Kästchen; api/newsletter_ask.php, die Adresse kommt aus der Buchung in der Sitzung, Quelle "widget_after").
+ * Neu: Bestätigung nicht verlieren: nach jedem Ja steht "Fast fertig, wir haben eine Mail an ga***@... geschickt" mit Spam-Hinweis und "Mail erneut senden" (Statusseite, Widget, Kundenkonto). Der Betreff der Bestätigungsmail nennt, worum es geht ("Bitte bestätige: Stempel-Erinnerungen vom Amadeus").
+ * Geändert: Die Texte der beiden Einwilligungen stehen zentral (shop_nl_consent_text) und werden genau so im Nachweis gespeichert; das Widget speichert seinen angezeigten Text. Die Mail zu jedem neuen Stempel ist reine Information ohne Knopf und Angebot, Erinnerungen laufen nur über die Automatiken (beides bleibt an die bestätigte Zustimmung gebunden).
+
 2026-10-12 == mySeat v6.44.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Bestellseite am Desktop (ab 960 px): Das Produktfenster ist 920 statt 640 px breit, die Pflichtgruppen stehen als Formularzeilen (Titel und Pflicht-Hinweis links, Auswahl rechts), die Extras zeigen mehr Karten pro Reihe (bis zu 6, bei langen Namen 3) und etwas niedrigere Karten. Beim Grillfleisch schrumpft der Inhalt um rund ein Fünftel; lange Wörter werden getrennt statt mitten im Wort umgebrochen. Auf dem Handy unverändert.

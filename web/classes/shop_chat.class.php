@@ -191,10 +191,11 @@ function shop_chat_step(&$c, $ev) {
 	// buttons that work in every state
 	if ($btn === 'cart') { $say(shop_chat_msg(shop_chat_cart_text($ctx), $ctx['cart'] ? array('co' => 'Zur Kasse', 'more' => 'Weiter bestellen', 'edit' => 'Ändern') : array('more' => 'Speisekarte ansehen'))); return shop_chat_finish($c, $out); }
 	if ($btn === 'restart') { $ctx = array('type' => 'delivery', 'cart' => array(), 'offered' => array(), 'fresh' => 1); $c['state'] = 'type'; $say(shop_chat_ask_type($ctx)); return shop_chat_finish($c, $out); }
+	if ($btn === 'nl:no') { $say(shop_chat_msg('Alles klar, ich frage nicht weiter. Du kannst es jederzeit in deinem Konto unter „Mails“ einschalten.', array('restart' => 'Neue Bestellung'))); return shop_chat_finish($c, $out); }
 	if ($btn !== null && strpos($btn, 'nl:') === 0) {
 		$acc = shop_acc_current(); $topics = $btn === 'nl:both' ? array('news', 'stamps') : array(substr($btn, 3));
 		$r = $acc ? shop_nl_request(trim((string)$acc['contact_mail']), isset($ctx['name']) ? $ctx['name'] : '', $topics, 'chat', array('account_id' => (int)$acc['id'], 'lang' => 'de',
-			'text' => implode(' | ', array_map(function ($t) { return $t === 'news' ? 'Ich möchte Neuigkeiten vom Restaurant erhalten' : 'Ich möchte an meine Stempelkarte erinnert werden'; }, $topics)))) : array('ok' => false, 'error' => 'Dafür musst du angemeldet sein.');
+			'text' => implode(' | ', array_map(function ($t) { return shop_nl_consent_text($t, 'de'); }, $topics)))) : array('ok' => false, 'error' => 'Dafür musst du angemeldet sein.');
 		$say(shop_chat_msg($r['ok'] ? ($r['state'] === 'already' ? 'Das hast du schon bestätigt.' : 'Wir haben dir eine Mail zum Bestätigen geschickt. Erst danach gilt die Anmeldung.') : $r['error'], array('restart' => 'Neue Bestellung')));
 		return shop_chat_finish($c, $out);
 	}
@@ -669,15 +670,23 @@ function shop_chat_cart_info($c) {
 	return array('count' => $n, 'total' => shop_money($p['sub']));
 }
 
+// the question that goes with the buttons (only what is still open is asked)
+function shop_chat_nl_text($b) {
+	$st = isset($b['nl:stamps']); $nw = isset($b['nl:news']);
+	$q = ($st && $nw) ? 'Soll ich dir Bescheid geben, wenn deine Stempelkarte fast voll ist und bevor Stempel verfallen? Oder ab und zu Neuigkeiten und Aktionen schicken?'
+		: ($st ? 'Soll ich dir Bescheid geben, wenn deine Stempelkarte fast voll ist und bevor Stempel verfallen?' : 'Darf ich dir ab und zu Neuigkeiten und Aktionen vom Restaurant per Mail schicken?');
+	return $q.' Du bestätigst es einmal per Mail, abmelden geht jederzeit.';
+}
 // after the order: the offer to be reachable by mail (the two topics of the newsletter; the guest confirms in the mail that follows). Buttons only for what is not on or asked for yet.
 function shop_chat_nl_offer($acc) {
 	$mail = trim((string)(isset($acc['contact_mail']) ? $acc['contact_mail'] : ''));
 	if (!shop_nl_valid($mail) || shop_mail_from() === '') { return array(); }
 	$st = shop_nl_state($mail); $b = array();
 	$needNews = !$st['news'] && !$st['want_news']; $needStamps = shop_stamp_cfg()['on'] && !$st['stamps'] && !$st['want_stamps'];
-	if ($needNews) { $b['nl:news'] = 'Neuigkeiten per Mail'; }
-	if ($needStamps) { $b['nl:stamps'] = 'Stempelkarten-Erinnerungen'; }
-	if ($needNews && $needStamps) { $b['nl:both'] = 'Beides'; }
+	if ($needStamps) { $b['nl:stamps'] = $needNews ? 'Ja, Stempel-Erinnerungen' : 'Ja, bitte Bescheid geben'; }
+	if ($needNews) { $b['nl:news'] = $needStamps ? 'Ja, Neuigkeiten' : 'Ja, Neuigkeiten per Mail'; }
+	if ($needNews && $needStamps) { $b['nl:both'] = 'Ja, beides'; }
+	if ($b) { $b['nl:no'] = 'Nein danke'; }
 	return $b;
 }
 
@@ -702,7 +711,7 @@ function shop_chat_place(&$c, $out, $acc) {
 	}
 	shop_after_order_placed($o['id']);
 	$nl = shop_chat_nl_offer($acc);
-	$out[] = shop_chat_msg('Danke, deine Bestellung ist da! Nummer '.$o['number'].', '.shop_money($o['total_cents']).'.'.($nl ? "\nMöchtest du per Mail von uns hören? Du bestätigst das einmal in einer Mail, abmelden geht jederzeit." : ''), array('restart' => 'Neue Bestellung') + $nl, '', array('status.php?t='.$o['token'] => 'Status ansehen'));
+	$out[] = shop_chat_msg('Danke, deine Bestellung ist da! Nummer '.$o['number'].', '.shop_money($o['total_cents']).'.'.($nl ? "\n".shop_chat_nl_text($nl) : ''), array('restart' => 'Neue Bestellung') + $nl, '', array('status.php?t='.$o['token'] => 'Status ansehen'));
 	return shop_chat_finish($c, $out);
 }
 

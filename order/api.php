@@ -187,6 +187,21 @@ if ($op === 'stamp_state') {
 }
 
 // ---- guest account: sign-in by code or link, overview, reorder, favorites (see shop_account.class.php)
+// "Bescheid geben?" on the status page of an order (and "Mail erneut senden"): the secret token of the order proves the order, the address is the one of the order.
+// Stamp card reminders need a signed-in account. Nothing is mailable before the guest confirms with the link in the mail (double opt-in).
+if ($op === 'nl_ask') {
+	$o = shop_order_by_token((string)(isset($body['order']) ? $body['order'] : ''));
+	if (!$o || !empty($o['is_test']) || !shop_nl_valid($o['email'])) { api_out(array('ok' => false, 'error' => 'Für diese Bestellung haben wir keine E-Mail-Adresse.')); }
+	$topics = array(); foreach ((array)(isset($body['topics']) ? $body['topics'] : array()) as $t) { if (in_array($t, array('news', 'stamps'), true) && !in_array($t, $topics, true)) { $topics[] = $t; } }
+	if (!$topics) { api_out(array('ok' => false, 'error' => 'Nichts ausgewählt.')); }
+	$accAsk = shop_acc_enabled() ? shop_acc_current() : null;
+	if (in_array('stamps', $topics, true) && !$accAsk) { api_out(array('ok' => false, 'error' => 'Bitte melde dich an, damit wir deine Stempelkarte erreichen können.')); }
+	$r = shop_nl_request($o['email'], $o['customer_name'], $topics, 'status', array('lang' => 'de', 'account_id' => $accAsk ? (int)$accAsk['id'] : 0,
+		'text' => implode(' | ', array_map(function ($t) { return shop_nl_consent_text($t, 'de'); }, $topics))));
+	if (!$r['ok']) { api_out($r); }
+	api_out(array('ok' => true, 'state' => $r['state'], 'mail' => preg_replace('/^(.{2}).*(@.*)$/u', '$1***$2', shop_nl_email($o['email']))));
+}
+
 if (in_array($op, array('me', 'login_request', 'login_verify', 'link_request', 'addr_save', 'logout', 'logout_all', 'acc_delete', 'reorder', 'fav_add', 'fav_remove', 'nl_set'), true)) {
 	if (!shop_acc_enabled()) { api_out(array('ok' => false, 'error' => 'Das Kundenkonto ist gerade nicht verfügbar.', 'off' => true)); }
 	$acc = shop_acc_current();

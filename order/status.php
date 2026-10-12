@@ -174,6 +174,52 @@ $delivery = $order && $order['type'] === 'delivery';
 		})();
 		</script>
 		<?php endif; ?>
+		<?php
+			// stamp card reminders: asked when the guest sees his progress (his best moment). Two equal answers, no second ask after "Nein danke" for 90 days;
+			// a request that waits for its confirmation shows what to do next (and a button to send the mail again)
+			$nlAcc = (shop_acc_enabled() && $order && shop_stamp_cfg()['on']) ? shop_acc_current() : null;
+			if ($nlAcc && $st !== 'cancelled' && $st !== 'failed' && empty($order['is_test']) && shop_nl_valid($order['email'])):
+				$nlSt = shop_nl_state($order['email']);
+				if (!$nlSt['stamps']):
+					$nlMode = $nlSt['want_stamps'] ? 'pending' : 'ask';
+					$nlCount = isset($sState) ? (int)$sState['count'] : 0; $nlGoal = isset($sState) ? (int)$sState['goal'] : shop_stamp_cfg()['goal'];
+		?>
+		<section class="st-nl" id="st-nl" data-mode="<?php echo $nlMode; ?>" data-order="<?php echo shop_h($token); ?>" data-csrf="<?php echo shop_h($_SESSION['shop_token']); ?>" data-mail="<?php echo shop_h(preg_replace('/^(.{2}).*(@.*)$/u', '$1***$2', shop_nl_email($order['email']))); ?>" data-count="<?php echo $nlCount; ?>" data-goal="<?php echo $nlGoal; ?>" aria-live="polite"></section>
+		<script>
+		(function () {
+			var box = document.getElementById('st-nl'), d = box.dataset, KEY = 'amadeusNlNo', busy = false;
+			function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+			function skipped() { try { var t = +localStorage.getItem(KEY); return t && Date.now() - t < 90 * 86400000; } catch (e) { return false; } }
+			function ask() {
+				if (skipped()) { box.hidden = true; return; }
+				var n = +d.count, g = +d.goal;
+				box.innerHTML = '<h2>Soll ich dir Bescheid geben?</h2><p>' + (n > 0 ? 'Du hast ' + n + ' von ' + g + ' Stempeln. ' : '') + 'Wir sagen dir per Mail Bescheid, wenn deine Karte fast voll ist und bevor Stempel verfallen.</p>' +
+					'<div class="st-nl-btns"><button type="button" class="st-nl-btn is-yes" data-yes>Ja, bitte Bescheid geben</button><button type="button" class="st-nl-btn" data-no>Nein danke</button></div>' +
+					'<p class="st-nl-fine">Du bestätigst es einmal per Mail an ' + esc(d.mail) + '. Abmelden kannst du dich jederzeit.</p>';
+			}
+			function pending(msg) {
+				box.innerHTML = '<h2>Fast fertig</h2><p>' + (msg || 'Wir haben dir eine Mail an <strong>' + esc(d.mail) + '</strong> geschickt. Tippe dort auf „Anmeldung bestätigen“, erst dann gilt es. Schau auch im Spam-Ordner nach.') + '</p>' +
+					'<div class="st-nl-btns"><button type="button" class="st-nl-btn" data-again>Mail erneut senden</button></div><p class="st-nl-fine" data-state role="status"></p>';
+			}
+			function send(again) {
+				if (busy) { return; } busy = true;
+				fetch('api.php', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'nl_ask', token: d.csrf, order: d.order, topics: ['stamps'] }) })
+					.then(function (r) { return r.json(); }).then(function (r) {
+						busy = false;
+						if (!r.ok) { if (again) { var s = box.querySelector('[data-state]'); if (s) { s.textContent = r.error || 'Das hat nicht geklappt.'; } } else { var p = box.querySelector('.st-nl-fine'); if (p) { p.textContent = r.error || 'Das hat nicht geklappt. Bitte versuche es noch einmal.'; } } return; }
+						if (r.state === 'already') { box.innerHTML = '<h2>Das hast du schon eingestellt</h2><p>Wir geben dir Bescheid. Ändern kannst du es in deinem Konto unter „Mails“.</p>'; return; }
+						if (again) { var st = box.querySelector('[data-state]'); if (st) { st.textContent = 'Die Mail ist unterwegs.'; } } else { pending(); }
+					}).catch(function () { busy = false; var f = box.querySelector('.st-nl-fine, [data-state]'); if (f) { f.textContent = 'Keine Verbindung. Bitte versuche es noch einmal.'; } });
+			}
+			box.addEventListener('click', function (ev) {
+				if (ev.target.closest('[data-yes]')) { send(false); }
+				else if (ev.target.closest('[data-no]')) { try { localStorage.setItem(KEY, String(Date.now())); } catch (e) {} box.innerHTML = '<p class="st-nl-fine">Alles klar, wir fragen nicht noch einmal. Du kannst es jederzeit in deinem Konto unter „Mails“ einschalten.</p>'; }
+				else if (ev.target.closest('[data-again]')) { send(true); }
+			});
+			if (d.mode === 'pending') { pending(); } else { ask(); }
+		})();
+		</script>
+		<?php endif; endif; ?>
 		<?php if (shop_acc_enabled() && !shop_acc_current()): ?>
 		<p class="st-account">Du bist nicht angemeldet, deshalb zählt diese Bestellung noch nicht für deine Stempelkarte. Melde dich an (mit derselben Telefonnummer oder E-Mail-Adresse wie bei dieser Bestellung), dann tragen wir sie nach. <a href="./?konto=1&amp;next=<?php echo rawurlencode('status.php?t='.$token); ?>">Jetzt anmelden</a></p>
 		<?php endif; ?>

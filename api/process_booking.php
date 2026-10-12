@@ -122,6 +122,41 @@ $prp_info = querySQL('property_info');
   $contact_email = isset($prp_info['email']) ? $prp_info['email'] : '';
 
   $_SESSION['messages'] = array();
+
+  // newsletter, one more chance in the warm moment after the booking (a button, not a pre-set tick): only for a guest who is not on the list yet.
+  // The address comes from the booking and stays in the session, the endpoint only ever asks this one.
+  $nlBox = '';
+  if (($waitlist == 2 || $waitlist == 3) && filter_var(trim((string)(isset($_POST['reservation_guest_email']) ? $_POST['reservation_guest_email'] : '')), FILTER_VALIDATE_EMAIL)) {
+	try {
+		require_once(__DIR__.'/../web/classes/shop.class.php');
+		$nlEmail = trim((string)$_POST['reservation_guest_email']); $nlSt = shop_nl_state($nlEmail);
+		$nlDe = isset($_POST['reservation_email_lang']) && substr((string)$_POST['reservation_email_lang'], 0, 2) === 'de';
+		if (!$nlSt['news'] && shop_mail_from() !== '') {
+			$_SESSION['nl_widget'] = array('email' => $nlEmail, 'name' => stripslashes(trim((string)(isset($_POST['reservation_guest_name']) ? $_POST['reservation_guest_name'] : ''))), 'lang' => $nlDe ? 'de' : 'en', 'text' => shop_nl_consent_text('news', $nlDe ? 'de' : 'en'));
+			$nlBox = (($_POST['reservation_advertise'] ?? '') === 'YES' || $nlSt['want_news']) ? 'pending' : 'ask';
+		}
+	} catch (Throwable $e) { error_log('mySeat newsletter (widget after): '.$e->getMessage()); }
+  }
+  function nl_after_box($mode) {
+	if ($mode === '') { return; }
+	$de = isset($_SESSION['nl_widget']) && $_SESSION['nl_widget']['lang'] === 'de';
+	$mail = preg_replace('/^(.{2}).*(@.*)$/u', '$1***$2', strtolower(trim((string)$_SESSION['nl_widget']['email'])));
+	$t = $de ? array('ask_h' => 'Ab und zu Neuigkeiten vom Restaurant?', 'ask_p' => 'Neue Gerichte, Aktionen, Öffnungszeiten: ab und zu eine Mail. Du bestätigst es einmal per Mail, abmelden geht jederzeit.', 'yes' => 'Ja, gerne', 'no' => 'Nein danke',
+		'p_h' => 'Fast fertig', 'p_p' => 'Wir haben dir eine Mail an <strong>'.htmlspecialchars($mail).'</strong> geschickt. Tippe dort auf „Anmeldung bestätigen“, erst dann gilt es. Schau auch im Spam-Ordner nach.', 'again' => 'Mail erneut senden', 'sent' => 'Die Mail ist unterwegs.',
+		'bye' => 'Alles klar, wir fragen nicht noch einmal.', 'err' => 'Das hat nicht geklappt. Bitte versuche es noch einmal.', 'net' => 'Keine Verbindung. Bitte versuche es noch einmal.')
+		: array('ask_h' => 'News from the restaurant now and then?', 'ask_p' => 'New dishes, offers, opening times: an e-mail from time to time. You confirm it once by e-mail and can unsubscribe at any time.', 'yes' => 'Yes, please', 'no' => 'No thanks',
+		'p_h' => 'Almost done', 'p_p' => 'We sent an e-mail to <strong>'.htmlspecialchars($mail).'</strong>. Tap "Confirm sign-up" in it, only then does it count. Please check your spam folder too.', 'again' => 'Send e-mail again', 'sent' => 'The e-mail is on its way.',
+		'bye' => 'All right, we will not ask again.', 'err' => 'That did not work. Please try again.', 'net' => 'No connection. Please try again.');
+	echo '<section class="nl-after" id="nl-after" data-mode="'.htmlspecialchars($mode).'" data-barrier="'.htmlspecialchars($_SESSION['barrier']).'" data-t="'.htmlspecialchars(json_encode($t)).'" aria-live="polite"></section>';
+	echo '<script>(function(){var b=document.getElementById("nl-after"),T=JSON.parse(b.dataset.t),busy=false;'
+		.'function ask(){b.innerHTML="<h2>"+T.ask_h+"</h2><p>"+T.ask_p+"</p><div class=\"nl-after-btns\"><button type=\"button\" class=\"nl-after-btn is-yes\" data-yes>"+T.yes+"</button><button type=\"button\" class=\"nl-after-btn\" data-no>"+T.no+"</button></div>";}'
+		.'function pend(){b.innerHTML="<h2>"+T.p_h+"</h2><p>"+T.p_p+"</p><div class=\"nl-after-btns\"><button type=\"button\" class=\"nl-after-btn\" data-again>"+T.again+"</button></div><p class=\"nl-fine\" data-state role=\"status\"></p>";}'
+		.'function send(again){if(busy){return;}busy=true;var f=new FormData();f.append("barrier",b.dataset.barrier);fetch("newsletter_ask.php",{method:"POST",body:f,credentials:"same-origin"}).then(function(r){return r.json();}).then(function(r){busy=false;'
+		.'if(!r.ok){var s=b.querySelector("[data-state]");if(again&&s){s.textContent=r.error||T.err;}else{b.insertAdjacentHTML("beforeend","<p class=\"nl-fine\" role=\"alert\">"+(r.error||T.err).replace(/</g,"&lt;")+"</p>");}return;}'
+		.'if(again){var st=b.querySelector("[data-state]");if(st){st.textContent=T.sent;}}else{pend();}}).catch(function(){busy=false;var s=b.querySelector("[data-state]");if(s){s.textContent=T.net;}else{b.insertAdjacentHTML("beforeend","<p class=\"nl-fine\" role=\"alert\">"+T.net+"</p>");}});}'
+		.'b.addEventListener("click",function(e){if(e.target.closest("[data-yes]")){send(false);}else if(e.target.closest("[data-no]")){b.innerHTML="<p class=\"nl-fine\">"+T.bye+"</p>";}else if(e.target.closest("[data-again]")){send(true);}});'
+		.'if(b.dataset.mode==="pending"){pend();}else{ask();}})();</script>';
+  }
 ?>
 
 <!DOCTYPE html>
@@ -163,6 +198,8 @@ $prp_info = querySQL('property_info');
 			</div>
 		</div>
 
+		<?php nl_after_box($nlBox); ?>
+
 		<div class="confirm-actions">
 			<a class="submit-button" href="<?php echo $website; ?>"><?php echo bt('back_site'); ?></a>
 			<a class="confirm-secondary" href="cancel.php?nr=<?php echo urlencode($_SESSION['booking_number']); ?>&amp;email=<?php echo urlencode($_POST['reservation_guest_email']); ?>"><?php echo bt('cancel_res'); ?></a>
@@ -190,6 +227,8 @@ $prp_info = querySQL('property_info');
 				<span class="summary-value"><?php echo (int)$_POST['reservation_pax']; ?></span>
 			</div>
 		</div>
+
+		<?php nl_after_box($nlBox); ?>
 
 		<div class="confirm-actions">
 			<a class="submit-button" href="<?php echo $website; ?>"><?php echo bt('back_site'); ?></a>

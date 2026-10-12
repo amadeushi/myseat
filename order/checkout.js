@@ -88,6 +88,7 @@
 	function drawStamp() {
 		var el = $('#co-stamp'); if (!window.AmadeusStamp || !el) { return; }
 		AmadeusStamp.render(el, S.stamp, { known: stampAuthed(), next: true, cart: true });
+		syncNl();
 		if (ACCOUNT && !stampAuthed() && el.firstChild) {
 			var p = document.createElement('p'), pc = +(S.stamp && S.stamp.percent) || 0, lost = Math.round(Math.max(0, subtotal() - discount()) * pc / 100);
 			p.className = 'stp-hint';
@@ -116,9 +117,10 @@
 	}
 	// the mail ticks: the reminder box only for a signed-in guest (stamps belong to an account); the hint appears as soon as one box is ticked
 	function syncNl() {
-		var box = $('#co-nl-stamps'), f = form.elements;
-		if (box) { box.hidden = !(S.signedIn && ACCOUNT); if (box.hidden && f.nl_stamps) { f.nl_stamps.checked = false; } }
-		var h = $('#co-nl-hint'); if (h) { h.hidden = !((f.nl_news && f.nl_news.checked) || (f.nl_stamps && f.nl_stamps.checked)); }
+		var box = $('#co-nl-stamps-box'), f = form.elements;
+		if (box) { box.hidden = !(S.signedIn && ACCOUNT) || !!(S.stamp && S.stamp.on === false); if (box.hidden && f.nl_stamps) { f.nl_stamps.checked = false; } }
+		var h = $('#co-nl-hint'); if (h) { h.hidden = !(f.nl_news && f.nl_news.checked); }
+		var hs = $('#co-nl-hint-stamps'); if (hs) { hs.hidden = !(f.nl_stamps && f.nl_stamps.checked); }
 	}
 	function accountPrefill() {
 		if (!ACCOUNT) { return; }

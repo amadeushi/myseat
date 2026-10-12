@@ -5,7 +5,7 @@
 	var TOKEN = page.dataset.token, filter = 'all', q = '', timer = null, open = {}, data = null;
 	var $ = function (s) { return document.getElementById(s); };
 	function esc(s) { return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-	var SOURCE = { shop: 'Bestellablauf', chat: 'Chat', konto: 'Kundenkonto', widget: 'Reservierung', backend: 'Eingabe im Backend', 'import': 'Import' };
+	var SOURCE = { shop: 'Bestellablauf', chat: 'Chat', konto: 'Kundenkonto', widget: 'Reservierung (Formular)', widget_after: 'Reservierung (nach der Buchung)', status: 'Statusseite der Bestellung', backend: 'Eingabe im Backend', 'import': 'Import' };
 	var EVENT = { request: 'Angefordert (Bestätigungsmail geschickt)', confirm: 'Bestätigt', change: 'Geändert', unsubscribe: 'Abgemeldet' };
 	var TOPIC = { news: 'Neuigkeiten', stamps: 'Stempel-Erinnerungen' };
 	function say(text, bad) { var m = $('nl-msg'); m.textContent = text || ''; m.classList.toggle('is-error', !!bad); }

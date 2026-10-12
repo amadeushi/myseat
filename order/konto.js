@@ -202,10 +202,11 @@
 		var note = function (on, want) { return on ? ' <em class="acc-ok">bestätigt</em>' : (want ? ' <em>wartet auf deine Bestätigung</em>' : ''); };
 		return '<form class="acc-addr" data-nl-form novalidate><p class="acc-fine">Du bestimmst, welche Mails du von uns bekommst. Zum Einschalten schicken wir dir eine Mail, die du einmal bestätigst. Ausschalten geht sofort.</p>' +
 			'<label class="co-f"><span>E-Mail-Adresse</span><input type="email" name="email" maxlength="160" autocomplete="email" value="' + esc(mail) + '"/></label>' +
-			'<label class="co-check"><input type="checkbox" name="news" value="1"' + ((n.news || n.want_news) ? ' checked' : '') + '/> <span>Neuigkeiten vom Restaurant (Aktionen, neue Gerichte, Öffnungszeiten)' + note(n.news, n.want_news) + '</span></label>' +
-			'<label class="co-check"><input type="checkbox" name="stamps" value="1"' + ((n.stamps || n.want_stamps) ? ' checked' : '') + '/> <span>Erinnerungen zu meiner Stempelkarte' + note(n.stamps, n.want_stamps) + '</span></label>' +
+			'<label class="co-check"><input type="checkbox" name="news" value="1"' + ((n.news || n.want_news) ? ' checked' : '') + '/> <span>Ich möchte ab und zu Neuigkeiten und Aktionen vom Restaurant per Mail erhalten (neue Gerichte, Angebote, Öffnungszeiten)' + note(n.news, n.want_news) + '</span></label>' +
+			'<label class="co-check"><input type="checkbox" name="stamps" value="1"' + ((n.stamps || n.want_stamps) ? ' checked' : '') + '/> <span>Ich möchte Bescheid bekommen, wenn meine Stempelkarte fast voll ist und bevor Stempel verfallen' + note(n.stamps, n.want_stamps) + '</span></label>' +
 			'<p class="acc-addr-msg" id="acc-nl-msg" role="status" aria-live="polite"></p>' +
-			'<div class="gb-actions"><button type="submit" class="gb-btn solid">Speichern</button></div></form>';
+			(n.pending ? '<p class="acc-fine">Wir warten noch auf deine Bestätigung. Schau in dein Postfach, auch im Spam-Ordner, und tippe in der Mail auf „Anmeldung bestätigen“.</p>' : '') +
+			'<div class="gb-actions">' + (n.pending ? '<button type="submit" class="gb-btn ghost">Mail erneut senden</button>' : '') + '<button type="submit" class="gb-btn solid">Speichern</button></div></form>';
 	}
 	dlg.addEventListener('submit', function (ev) {
 		var f = ev.target.closest && ev.target.closest('[data-nl-form]'); if (!f) { return; }

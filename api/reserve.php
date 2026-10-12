@@ -488,11 +488,15 @@ if($check_web_outlet==1){
 					</script>
 				</div>
 
-				<div class="consent-group">
+				<div class="optin-group">
+					<p class="optin-tag">Optional</p>
 					<label class="checkbox-row">
 						<input type="checkbox" name="reservation_advertise" id="reservation_advertise" value="YES"/>
 						<span><?php echo _reservation_advertise; ?></span>
 					</label>
+				</div>
+
+				<div class="consent-group">
 					<label class="checkbox-row">
 						<input type="checkbox" name="terms" class="required checkbox" id="terms" value="YES" data-msg="<?php echo htmlspecialchars(bt('terms_invalid')); ?>"/>
 						<span class="checktext">
