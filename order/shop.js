@@ -397,7 +397,7 @@
 			if (m) { m.textContent = q ? q + '× im Warenkorb' : ''; m.hidden = !q; }
 		});
 		if (state.group) { renderGroupCart(box, sub, min, below); return; }
-		if (!n) { box.innerHTML = '<p class="cart-empty"><img class="cart-zeus" src="zeus_dot.png" alt="" width="64" height="64"/>Dein Warenkorb ist noch leer.<br/>Such dir etwas Feines aus, wir kochen es frisch für dich.</p>' + groupInvite(); return; }
+		if (!n) { box.innerHTML = '<p class="cart-empty"><img class="cart-zeus" src="zeus_badge.png" alt="" width="72" height="64"/>Dein Warenkorb ist noch leer.<br/>Such dir etwas Feines aus, wir kochen es frisch für dich.</p>' + groupInvite(); return; }
 		var s0 = state.info ? state.info[state.mode] : null, h = '';
 		if (s0) { h += '<p class="cart-eta">' + (state.mode === 'delivery' ? 'Lieferung' : 'Abholung') + (s0.open ? ' in etwa ' + s0.lead + ' Minuten' : (s0.paused ? ' gerade pausiert' + (s0.paused_until ? ' bis etwa ' + s0.paused_until + ' Uhr' : '') : ' zurzeit nicht möglich' + (s0.next ? ', ' + s0.next : ''))) + '</p>'; }
 		if (min > 0) {

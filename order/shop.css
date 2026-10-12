@@ -477,8 +477,8 @@
 .cart-stamp strong { color: var(--text); }
 /* Zeus in small everyday moments (the thanks for a rating, the empty cart, the head of the status page): the picture is a bust cut at the top and the bottom edge, so a glow along his
    outline ends in a flat line there. In a round badge with a gold ring and a soft glow the cut is the circle's edge; still, never animated */
-.st-zeus, .cart-zeus, .st-zeus-head { box-sizing: border-box; padding: 11px; border-radius: 50%; object-fit: contain; background: radial-gradient(circle at 50% 40%, #2b251c 0%, #16130f 100%); box-shadow: 0 0 0 1.5px rgba(226, 192, 127, 0.65), 0 0 16px rgba(226, 192, 127, 0.28); }
-.st-zeus { width: 56px; height: 56px; padding: 9px; }
+.st-zeus, .cart-zeus, .st-zeus-head { box-sizing: border-box; padding: 6px; border-radius: 50%; object-fit: contain; background: radial-gradient(circle at 50% 40%, #2b251c 0%, #16130f 100%); box-shadow: 0 0 0 1.5px rgba(226, 192, 127, 0.65), 0 0 16px rgba(226, 192, 127, 0.28); }
+.st-zeus { width: 56px; height: 56px; padding: 5px; }
 .st-ratethanks { display: flex; align-items: center; gap: 12px; }
 .st-ratethanks .st-zeus[hidden] { display: none; }
 .cart-zeus { display: block; width: 72px; height: 72px; margin: 4px 0 12px; }

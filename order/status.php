@@ -69,7 +69,7 @@ $delivery = $order && $order['type'] === 'delivery';
 		$items = shop_order_items((int)$order['id']);
 		$eta = $order['scheduled_at'] ? strtotime($order['scheduled_at']) : ($order['eta_at'] ? strtotime($order['eta_at']) : 0); // a wish time always stands as the guest chose it
 	?>
-		<?php if (!in_array($st, array('failed', 'cancelled'), true)): ?><img class="st-zeus-head" src="zeus_dot.png" alt="" width="64" height="64"/><?php endif; ?>
+		<?php if (!in_array($st, array('failed', 'cancelled'), true)): ?><img class="st-zeus-head" src="zeus_badge.png" alt="" width="72" height="64"/><?php endif; ?>
 		<h1 class="st-title<?php echo in_array($st, array('failed', 'cancelled'), true) ? ' is-danger' : ($st === 'done' ? ' is-success' : ''); ?>"><?php echo shop_h($titles[$st]); ?></h1>
 		<p class="st-lead">
 			<?php if ($st === 'pending'): ?>Deine Bestellung geht erst an die Küche, wenn die Zahlung angekommen ist.
@@ -130,7 +130,7 @@ $delivery = $order && $order['type'] === 'delivery';
 			<div class="st-stars" role="group" aria-label="Bewertung von 1 bis 5 Sternen">
 				<?php for ($i = 1; $i <= 5; $i++): ?><button type="button" class="st-star<?php echo $i <= $rated ? ' is-on' : ''; ?>" data-rate="<?php echo $i; ?>" aria-label="<?php echo $i; ?> von 5 Sternen"<?php echo $rated ? ' disabled' : ''; ?>><svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z" stroke-linejoin="round"/></svg></button><?php endfor; ?>
 			</div>
-			<div class="st-ratethanks"><img class="st-zeus" id="st-zeus" src="zeus_dot.png" alt="" width="48" height="48"<?php echo $rated ? '' : ' hidden'; ?>/><p class="st-ratemsg" id="st-ratemsg" role="status" aria-live="polite"><?php echo $rated ? 'Danke dir! Zeus freut sich.' : ''; ?></p></div>
+			<div class="st-ratethanks"><img class="st-zeus" id="st-zeus" src="zeus_badge.png" alt="" width="56" height="48"<?php echo $rated ? '' : ' hidden'; ?>/><p class="st-ratemsg" id="st-ratemsg" role="status" aria-live="polite"><?php echo $rated ? 'Danke dir! Zeus freut sich.' : ''; ?></p></div>
 		</div>
 		<?php endif; ?>
 		<?php if ($st === 'done'): ?><p class="st-again"><a class="cart-go" href="./">Noch einmal bestellen</a></p><?php endif; ?>
