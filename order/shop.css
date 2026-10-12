@@ -769,3 +769,7 @@
 .shop-item.is-out h3, .shop-item.is-out .shop-price { color: var(--text-muted); }
 .shop-item.is-out .shop-item-img { opacity: 0.45; filter: grayscale(0.7); }
 .shop-out-note { font-size: 0.875rem; font-weight: 600; color: var(--danger); }
+.st-pay-alt { display: block; margin-top: 10px; color: var(--text-muted); }
+.st-pay-sw { margin: 6px 8px 0 0; min-height: 40px; padding: 0 16px; border: 1px solid var(--border); border-radius: var(--radius-pill, 999px); background: transparent; color: var(--text); font: inherit; cursor: pointer; }
+.st-pay-sw:hover { border-color: var(--gold-strong); }
+.st-pay-sw:disabled { opacity: .5; cursor: default; }

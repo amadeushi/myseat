@@ -205,3 +205,5 @@ body.kx-mode #wrapper { margin: 10px 14px 0; }
 .kx .kx-sug li:hover, .kx .kx-sug li.is-on { background: var(--gold); color: var(--ink-strong); }
 .kx .kx-sug li:hover small, .kx .kx-sug li.is-on small { color: var(--ink-strong); }
 
+
+.kx .kx-vch { min-height: 34px; padding: 0 12px; margin-left: 6px; font-size: 14px; }

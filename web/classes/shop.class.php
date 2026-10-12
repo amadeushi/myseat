@@ -1409,7 +1409,8 @@ function shop_pos_customer($phone) {
 		require_once __DIR__.'/shop_customers.class.php';
 		$c = shop_cust_by_phone($phone);
 		if ($c) { $labels = shop_cust_flag_labels(); $cust = array('id' => $c['id'], 'note' => $c['note'], 'flags' => array_map(function ($f) use ($labels) { return isset($labels[$f]) ? $labels[$f] : $f; }, $c['flags']), 'warn' => (bool)array_intersect($c['flags'], array('vorsicht', 'allergie', 'passend')) || $c['blocked'],
-			'stamps' => $c['stamps'], 'goal' => shop_stamp_cfg()['goal'], 'account' => (bool)$c['accounts'], 'voucher' => $c['voucher_value'], 'blocked' => $c['blocked']); }
+			'stamps' => $c['stamps'], 'goal' => shop_stamp_cfg()['goal'], 'account' => (bool)$c['accounts'], 'voucher' => $c['voucher_value'], 'blocked' => $c['blocked'],
+			'vch' => ($vv = shop_stamp_voucher(shop_coupon_guest_keys($phone, ''))) ? (int)$vv['value'] : 0, 'vch_until' => ($vv && $vv['valid_until']) ? date('d.m.Y', strtotime($vv['valid_until'])) : ''); }
 	}
 	return array('n' => $n, 'orders' => $orders, 'open' => $open, 'fav' => $fav, 'cust' => $cust);
 }
@@ -1514,7 +1515,18 @@ function shop_create_manual_order($in) {
 	if (!in_array($pay, array('cash', 'card_door'), true)) { return array('ok' => false, 'error' => 'Bitte eine Zahlart wählen.'); }
 	$adj = shop_pos_adjust($sub, $fee, $in);
 	if (!$adj['ok']) { return $adj; }
-	$total = $sub + $fee + $adj['surcharge'] - $adj['discount'];
+	// the voucher of the stamp card of the caller (a fixed amount, used up completely): instead of the manual discount, never both; it is taken from the keys of the phone number (and e-mail)
+	$coupon = null; $vDiscount = 0; $gkeys = array('', '');
+	if (!empty($in['use_voucher'])) {
+		if ($adj['discount'] > 0) { return array('ok' => false, 'error' => 'Stempelgutschein und Rabatt gehen nicht zusammen.'); }
+		$gkeys = shop_coupon_guest_keys($phone, $email);
+		$av = shop_stamp_voucher($gkeys);
+		if (!$av) { return array('ok' => false, 'error' => 'Für diese Nummer liegt kein Stempelgutschein bereit.'); }
+		$cr = shop_coupon_check($av['code'], $type, $sub, $gkeys);
+		if (!$cr['ok']) { return array('ok' => false, 'error' => $cr['error']); }
+		$coupon = $cr['coupon']; $vDiscount = (int)$cr['discount'];
+	}
+	$total = $sub + $fee + $adj['surcharge'] - $adj['discount'] - $vDiscount;
 	// a wish time (Y-m-d H:i) stands as the caller chose it; "as soon as possible" is the time the till told the caller (shop_pos_quote)
 	$scheduled = null; $eta = date('Y-m-d H:i:s', time() + shop_pos_quote($type)['min'] * 60);
 	if (!empty($in['when'])) {
@@ -1523,6 +1535,7 @@ function shop_create_manual_order($in) {
 		$scheduled = date('Y-m-d H:i:00', $w); $eta = $scheduled;
 	}
 	$payWith = ($pay === 'cash' && !empty($in['pay_with']) && (int)$in['pay_with'] >= $total) ? min(100000, (int)$in['pay_with']) : null;
+	if ($coupon && !shop_coupon_reserve($coupon['id'])) { return array('ok' => false, 'error' => 'Dieser Gutschein wurde gerade eingelöst und ist jetzt aufgebraucht.'); }
 	$token = bin2hex(random_bytes(16));
 	$number = shop_order_number();
 	$today = date('Y-m-d');
@@ -1536,13 +1549,17 @@ function shop_create_manual_order($in) {
 		'ssisss'.'s'.'sssssss'.'ddi'.'iii'.'ssss'.'i'.'iis'.'s', array($token, $number, $dayNo, $today, $type, $scheduled, $eta, $name, $phone, $email, $street, $zip, $city, $addrNote,
 			$lat === null ? 0 : $lat, $lng === null ? 0 : $lng, $zoneId === null ? 0 : $zoneId, $sub, $fee, $total, $pay,
 			mb_substr(trim((string)(isset($in['note']) ? $in['note'] : '')), 0, 500), $now, $now, $payWith, $adj['discount'], $adj['surcharge'], $adj['note'], $now));
-	if (!$ok) { shop_dayno_unlock(); return array('ok' => false, 'error' => 'Die Bestellung konnte nicht gespeichert werden. Bitte versuche es noch einmal.'); }
+	if (!$ok) { if ($coupon) { shop_coupon_unreserve($coupon['id']); } shop_dayno_unlock(); return array('ok' => false, 'error' => 'Die Bestellung konnte nicht gespeichert werden. Bitte versuche es noch einmal.'); }
 	$id = (int)mysqli_insert_id(fb_db()); shop_dayno_unlock();
+	if ($coupon) {
+		fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET coupon_code = ?, discount_cents = ? WHERE id = ?", 'sii', array($coupon['code'], $vDiscount, $id));
+		fb_exec("INSERT INTO ".fb_t('tp_shop_coupon_uses')." (coupon_id, order_id, guest_key, guest_key2, discount_cents, created_at) VALUES (?, ?, ?, ?, ?, NOW())", 'iissi', array((int)$coupon['id'], $id, $gkeys[0], $gkeys[1], $vDiscount));
+	}
 	foreach ($items as $it) {
 		fb_exec("INSERT INTO ".fb_t('tp_shop_order_items')." (order_id, product_id, variation_id, title, variation, options, qty, unit_cents, line_cents, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 			'iiisssiiis', array($id, $it['product_id'], $it['vid'] > 0 ? $it['vid'] : null, $it['title'], $it['variation'], json_encode($it['options'], JSON_UNESCAPED_UNICODE), $it['qty'], $it['unit_cents'], $it['line_cents'], $it['note']));
 	}
-	shop_log($id, 'created', 'phone: '.$pay.($adj['note'] !== '' ? ' - '.$adj['note'] : ''));
+	shop_log($id, 'created', 'phone: '.$pay.($adj['note'] !== '' ? ' - '.$adj['note'] : '').($coupon ? ' - Stempelgutschein '.$coupon['code'].' -'.shop_money($vDiscount) : ''));
 	return array('ok' => true, 'order' => shop_order($id));
 }
 
@@ -1758,6 +1775,7 @@ function shop_mollie_request($method, $path, $data = null) {
 	$ch = curl_init('https://api.mollie.com/v2'.$path);
 	$headers = array('Authorization: Bearer '.$key, 'Accept: application/json');
 	$opts = array(CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => false, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_TIMEOUT => 20, CURLOPT_USERAGENT => 'mySeat-Lieferservice');
+	if ($method === 'DELETE') { $opts[CURLOPT_CUSTOMREQUEST] = 'DELETE'; }
 	if ($method === 'POST') { $opts[CURLOPT_POST] = true; $opts[CURLOPT_POSTFIELDS] = json_encode($data); $headers[] = 'Content-Type: application/json'; }
 	$opts[CURLOPT_HTTPHEADER] = $headers;
 	curl_setopt_array($ch, $opts);
@@ -1798,6 +1816,29 @@ function shop_mollie_create($order, $baseUrl) {
 	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET mollie_id = ?, updated_at = ? WHERE id = ?", 'ssi', array($r['body']['id'], date('Y-m-d H:i:s'), (int)$order['id']));
 	shop_log((int)$order['id'], 'mollie_created', $r['body']['id']);
 	return array('ok' => true, 'url' => $r['body']['_links']['checkout']['href']);
+}
+
+// an online order that is not paid yet becomes an order to pay at the door (cash or card): the guest decided otherwise on the status page. The open payment at Mollie is cancelled first (so it cannot
+// be paid afterwards by a second tab); if Mollie cannot cancel it (it is being paid right now) nothing changes. Then the order goes to the kitchen like any cash or card order.
+function shop_order_switch_pay($order, $pay) {
+	if (!$order || $order['status'] !== 'pending' || $order['payment_method'] !== 'mollie') { return array('ok' => false, 'error' => 'Bei dieser Bestellung lässt sich die Zahlart nicht mehr ändern.'); }
+	if (!in_array($pay, array('cash', 'card_door'), true) || !shop_flag($pay === 'cash' ? 'allow_cash' : 'allow_card_door')) { return array('ok' => false, 'error' => 'Diese Zahlungsart ist nicht möglich.'); }
+	$order = shop_mollie_sync($order);   // a payment that came in a moment ago counts
+	if ($order['payment_status'] === 'paid' || $order['status'] !== 'pending') { return array('ok' => false, 'error' => 'Die Zahlung ist schon angekommen. Danke, deine Bestellung ist bei uns.', 'paid' => true); }
+	if (!empty($order['mollie_id']) && !in_array($order['payment_status'], array('canceled', 'expired', 'failed'), true)) {
+		$r = shop_mollie_request('DELETE', '/payments/'.rawurlencode($order['mollie_id']));
+		if (!in_array($r['http'], array(200, 204), true)) {
+			shop_mollie_sync($order);
+			shop_log((int)$order['id'], 'mollie_cancel_failed', shop_mollie_describe($r));
+			return array('ok' => false, 'error' => ($r['http'] === 0 ? 'Gerade geht das nicht. Bitte versuche es gleich noch einmal.' : 'Die Zahlung läuft noch bei Mollie. Bitte schließe sie dort ab oder warte einen Moment und versuche es dann noch einmal.'));
+		}
+	}
+	$upd = fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET payment_method = ?, payment_status = 'open', updated_at = ? WHERE id = ? AND status = 'pending' AND payment_method = 'mollie'", 'ssi', array($pay, date('Y-m-d H:i:s'), (int)$order['id']));
+	if (!$upd || mysqli_stmt_affected_rows($upd) < 1) { return array('ok' => false, 'error' => 'Bei dieser Bestellung lässt sich die Zahlart nicht mehr ändern.'); }
+	shop_log((int)$order['id'], 'payment', 'Zahlart gewechselt: online -> '.($pay === 'cash' ? 'bar' : 'Karte vor Ort'));
+	shop_set_status((int)$order['id'], 'new', 'Zahlart gewechselt');
+	shop_after_order_placed((int)$order['id']);
+	return array('ok' => true);
 }
 
 // ask Mollie what happened to the payment of this order and update it (called by the webhook and when the guest returns)

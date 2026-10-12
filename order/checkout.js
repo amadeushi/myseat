@@ -323,10 +323,10 @@
 		if (!S.info) { updateSubmit(); return; }
 		var opts = [];
 		var tot = fmt(total());
-		if (S.info.pay.online) { opts.push(['mollie', 'Online bezahlen', 'Karte, PayPal, Apple Pay und mehr. Sicher über Mollie, du bezahlst im nächsten Schritt.']); }
+		if (S.info.pay.online) { opts.push(['mollie', 'Jetzt online bezahlen', 'Karte, PayPal, Apple Pay und mehr, sicher über Mollie. Du bezahlst im nächsten Schritt.']); }
 		if (S.info.pay.cash) { opts.push(['cash', S.mode === 'delivery' ? 'Bar bei Lieferung' : 'Bar bei Abholung', 'Bitte halte ' + tot + ' bereit, möglichst passend.']); }
-		if (S.info.pay.card_door) { opts.push(['card_door', S.mode === 'delivery' ? 'Karte bei Lieferung' : 'Karte bei Abholung', 'Wir bringen das Kartengerät mit. ' + tot + ' zahlst du dort.']); }
-		if (!opts.some(function (o) { return o[0] === S.pay; })) { S.pay = opts.length ? opts[0][0] : ''; }
+		if (S.info.pay.card_door) { opts.push(['card_door', S.mode === 'delivery' ? 'Mit Karte bei Lieferung bezahlen' : 'Mit Karte bei Abholung bezahlen', S.mode === 'delivery' ? 'Der Fahrer bringt das Kartengerät mit. ' + tot + ' zahlst du dort.' : 'Du zahlst ' + tot + ' bei der Abholung mit Karte.']); }
+		if (!opts.some(function (o) { return o[0] === S.pay; })) { S.pay = opts.length === 1 ? opts[0][0] : ''; }   // nothing is preselected when there is a choice: the guest decides, the button waits
 		$('#co-pay').innerHTML = opts.map(function (o) {
 			return '<label class="co-radio"><input type="radio" name="pay" value="' + o[0] + '"' + (S.pay === o[0] ? ' checked' : '') + '/><span>' + o[1] + ' <small>' + o[2] + '</small></span></label>';
 		}).join('') || '<p class="co-zone bad">Zurzeit ist keine Zahlungsart verfügbar.</p>';

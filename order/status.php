@@ -99,7 +99,14 @@ $delivery = $order && $order['type'] === 'delivery';
 		<span class="st-num">Bestellung <?php echo shop_h($order['number']); ?></span>
 
 		<?php if ($st === 'pending' && $paidOnline): ?>
-			<div class="st-pay">Die Zahlung ist noch offen. <a href="#" id="st-repay">Jetzt online bezahlen</a><span id="st-repay-msg" class="st-warn" role="alert"></span></div>
+			<div class="st-pay">Die Zahlung ist noch offen. <a href="#" id="st-repay">Jetzt online bezahlen</a><span id="st-repay-msg" class="st-warn" role="alert"></span>
+				<?php if ($order['payment_method'] === 'mollie' && $order['payment_status'] !== 'paid' && (shop_flag('allow_cash') || shop_flag('allow_card_door'))): ?>
+				<span class="st-pay-alt">Lieber vor Ort zahlen?
+					<?php if (shop_flag('allow_cash')): ?><button type="button" class="st-pay-sw" data-pay="cash"><?php echo $delivery ? 'Bar bei Lieferung' : 'Bar bei Abholung'; ?></button><?php endif; ?>
+					<?php if (shop_flag('allow_card_door')): ?><button type="button" class="st-pay-sw" data-pay="card_door"><?php echo $delivery ? 'Karte bei Lieferung' : 'Karte bei Abholung'; ?></button><?php endif; ?>
+				</span>
+				<?php endif; ?>
+			</div>
 		<?php endif; ?>
 
 		<?php if ($st !== 'cancelled' && $st !== 'failed' && $st !== 'pending'): ?>
@@ -308,6 +315,13 @@ $delivery = $order && $order['type'] === 'delivery';
 				});
 				rb.addEventListener('mouseleave', function () { if (!stars[0].disabled) { paint(0); } });
 			}
+			Array.prototype.forEach.call(document.querySelectorAll('.st-pay-sw'), function (b) {
+				b.addEventListener('click', function () {
+					var m = document.getElementById('st-repay-msg'); Array.prototype.forEach.call(document.querySelectorAll('.st-pay-sw'), function (x) { x.disabled = true; }); m.textContent = ' Einen Moment ...';
+					fetch('api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ op: 'switch_pay', token: TOKEN, order: t, payment: b.dataset.pay }) }).then(function (r) { return r.json(); }).then(function (r) {
+						if (r.ok || r.paid) { location.reload(); } else { m.textContent = ' ' + (r.error || 'Das hat nicht geklappt.'); Array.prototype.forEach.call(document.querySelectorAll('.st-pay-sw'), function (x) { x.disabled = false; }); } }).catch(function () { m.textContent = ' Das hat nicht geklappt.'; Array.prototype.forEach.call(document.querySelectorAll('.st-pay-sw'), function (x) { x.disabled = false; }); });
+				});
+			});
 			var re = document.getElementById('st-repay');
 			if (re) { re.addEventListener('click', function (ev) { ev.preventDefault(); var m = document.getElementById('st-repay-msg'); m.textContent = ' Einen Moment ...';
 				fetch('api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ op: 'repay', token: TOKEN, order: t }) }).then(function (r) { return r.json(); }).then(function (r) {

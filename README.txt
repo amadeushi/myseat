@@ -52,6 +52,12 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-13 == mySeat v6.48.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Telefonerfassung: bei einer Anruferin mit bereitliegendem Stempelgutschein steht in der Kundenkarte der Knopf "Stempelgutschein einlösen (-x EUR, bis TT.MM.JJJJ)". Der feste Betrag wird abgezogen (ab einem Warenwert in Höhe des Gutscheins), der Gutschein ist danach verbraucht und wird bei einer Stornierung wieder frei. Rabatt und Gutschein schließen sich aus; der Server prüft Nummer, Gültigkeit und Warenwert noch einmal.
+ * Geändert: Checkout: keine Zahlart ist mehr vorausgewählt (bei mehreren Möglichkeiten); der Knopf bleibt gesperrt, bis gewählt ist. Klarere Texte: "Jetzt online bezahlen", "Mit Karte bei Lieferung/Abholung bezahlen". Der Knopf heißt weiter "Zahlungspflichtig bestellen".
+ * Neu: Statusseite einer nicht bezahlten Online-Bestellung: "Lieber vor Ort zahlen?" mit den Knöpfen Bar und Karte bei Lieferung/Abholung (nach Einstellung). Die offene Mollie-Zahlung wird storniert, die Bestellung geht danach wie eine Bar- oder Kartenbestellung an die Küche; ist die Zahlung schon angekommen oder läuft sie gerade, ändert sich nichts.
+
 2026-10-12 == mySeat v6.47.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Ein Uber-Eats-Bon, der nicht gelesen werden konnte (Fehler bei OpenAI/n8n), wird alle 2 Minuten erneut gelesen, solange er jünger als 45 Minuten ist (so lange nimmt die automatische Übernahme einen Bon als frisch an). Das machen die offenen Seiten "Bestellungen" und "Küche" selbst (op uber_retry, ein Versuch pro Minute); zusätzlich gibt es web/cron/uber_retry.php für einen Cron alle 2 Minuten (gleicher Schlüssel wie die anderen Crons, optional).

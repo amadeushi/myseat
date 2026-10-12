@@ -8,7 +8,7 @@
 	var page = document.getElementById('pos-page'); if (!page) { return; }
 	var TOKEN = page.dataset.token;
 	var catalog = [], cart = [], activeCat = null, seenCalls = {};
-	var S = { disc: false, discWhy: '', sur: 0, surWhy: '', panel: '', quote: null, when: null, zone: null, zoneErr: '', customer: null, popular: [], payWith: 0, prefilled: false };
+	var S = { vch: false, disc: false, discWhy: '', sur: 0, surWhy: '', panel: '', quote: null, when: null, zone: null, zoneErr: '', customer: null, popular: [], payWith: 0, prefilled: false };
 	var f = document.getElementById('pos-form');
 
 	function $(s, r) { return (r || document).querySelector(s); }
@@ -531,12 +531,12 @@
 	var phoneTimer = null, lastLookup = '';
 	function lookup() {
 		var phone = f.elements.phone.value.trim();
-		if (phone.replace(/\D/g, '').length < 6) { S.customer = null; lastLookup = ''; renderCust(); renderCats(); renderAlerts(); return; }
+		if (phone.replace(/\D/g, '').length < 6) { S.vch = false; S.customer = null; lastLookup = ''; renderCust(); renderCats(); renderAlerts(); return; }
 		if (phone === lastLookup) { return; }
 		lastLookup = phone;
 		get('customer', { phone: phone }).then(function (r) {
 			if (!r.ok || f.elements.phone.value.trim() !== phone) { return; }
-			S.customer = r; applyCustomer(r); renderCust(); renderCats(); renderAlerts();
+			S.vch = false; S.customer = r; applyCustomer(r); renderCust(); renderCats(); renderAlerts();
 		}).catch(function () {});
 	}
 	f.elements.phone.addEventListener('input', function () { clearTimeout(phoneTimer); phoneTimer = setTimeout(lookup, 400); });
@@ -553,7 +553,7 @@
 		if (!c) { root.innerHTML = ''; return; }
 		var cu = c.cust, cuHtml = '';
 		if (cu) {
-			cuHtml = '<p class="kx-cust-card">' + (cu.account ? 'Stempel <b>' + cu.stamps + '/' + cu.goal + '</b>' : 'Kein Kundenkonto') + (cu.voucher ? ' · Gutschein <b>' + money(cu.voucher) + '</b> liegt bereit' : '') + ' · <a href="main_page.php?p=13&c=' + esc(cu.id) + '" target="_blank" rel="noopener">Kundenkarte</a></p>';
+			cuHtml = '<p class="kx-cust-card">' + (cu.account ? 'Stempel <b>' + cu.stamps + '/' + cu.goal + '</b>' : 'Kein Kundenkonto') + (cu.voucher ? ' · Gutschein <b>' + money(cu.voucher) + '</b> liegt bereit' : '') + (cu.vch > 0 ? ' <button type="button" class="kx-chip kx-vch' + (S.vch ? ' is-on' : '') + '" id="kx-vch" aria-pressed="' + (S.vch ? 'true' : 'false') + '">Stempelgutschein einlösen (&minus;' + money(cu.vch) + (cu.vch_until ? ', bis ' + esc(cu.vch_until) : '') + ')</button>' : '') + ' · <a href="main_page.php?p=13&c=' + esc(cu.id) + '" target="_blank" rel="noopener">Kundenkarte</a></p>';
 		}
 		if (!c.n) { root.innerHTML = '<p class="kx-known is-new"><b>Neukunde</b> · noch keine Bestellung unter dieser Nummer.</p>' + cuHtml; return; }
 		var last = c.orders[0], h = '<p class="kx-known"><b>Stammkunde</b> · ' + c.n + (c.n === 1 ? ' Bestellung' : ' Bestellungen') + (last ? ' · zuletzt ' + esc(last.created.slice(8, 10) + '.' + last.created.slice(5, 7) + '.') : '') + (S.prefilled ? ' · Name und Adresse aus der letzten Bestellung' : '') + '</p>';
@@ -590,7 +590,8 @@
 	// ---- Zahlung: cash with "the guest pays with ...", the change is shown for the caller and goes onto the delivery slip
 	function goods() { return subtotal() + (type() === 'delivery' && S.zone ? S.zone.fee : 0); }
 	function discAmt() { var b = goods(); return S.disc ? Math.min(b, Math.round(b * DISC_PCT / 100)) : 0; }
-	function total() { return goods() + S.sur - discAmt(); }
+	function vchAmt() { var cu = S.customer && S.customer.cust; return (S.vch && cu && cu.vch > 0 && subtotal() >= cu.vch) ? cu.vch : 0; }
+	function total() { return goods() + S.sur - discAmt() - vchAmt(); }
 	function renderCash() {
 		var box = $('#kx-cash'), cash = pay() === 'cash'; box.hidden = !cash;
 		if (!cash) { S.payWith = 0; return; }
@@ -622,12 +623,17 @@
 	}
 	// one panel at a time, laid over the lower edge of the Bon so the sum stays in view; it closes with a reason, Esc, a click elsewhere or by switching the key off
 	function closePanel() { S.panel = ''; renderAdj(); }
-	function toggleDisc() { S.disc = !S.disc; S.discWhy = ''; S.panel = S.disc ? 'd' : (S.panel === 'd' ? '' : S.panel); renderSum(); }
+	function toggleDisc() { S.disc = !S.disc; if (S.disc) { S.vch = false; renderCust(); } S.discWhy = ''; S.panel = S.disc ? 'd' : (S.panel === 'd' ? '' : S.panel); renderSum(); }
 	function toggleSur() {
 		if (S.sur || S.panel === 's') { S.sur = 0; S.surWhy = ''; S.panel = ''; $('#kx-sur-in').value = ''; renderSum(); return; }
 		S.panel = 's'; renderSum(); $('#kx-sur-in').focus();
 	}
 	$('#kx-disc').addEventListener('click', toggleDisc);
+	$('#kx-cust').addEventListener('click', function (ev) {
+		if (!ev.target.closest('#kx-vch')) { return; }
+		S.vch = !S.vch; if (S.vch && S.disc) { S.disc = false; S.discWhy = ''; if (S.panel === 'd') { S.panel = ''; } }
+		renderCust(); renderSum();
+	});
 	$('#kx-sur').addEventListener('click', toggleSur);
 	$('#kx-sum').addEventListener('click', function (ev) { var b = ev.target.closest('[data-edit]'); if (b) { S.panel = b.dataset.edit; renderAdj(); if (S.panel === 's') { $('#kx-sur-in').focus(); } } });
 	$('#kx-disc-why').addEventListener('click', function (ev) { var b = ev.target.closest('[data-why-d]'); if (b) { S.discWhy = S.discWhy === b.dataset.whyD ? '' : b.dataset.whyD; S.panel = S.discWhy ? '' : 'd'; renderSum(); } });
@@ -646,6 +652,7 @@
 		var sub = subtotal(), del = type() === 'delivery', fee = del && S.zone ? S.zone.fee : 0, t = total(), da = discAmt();
 		$('#kx-sum').innerHTML = '<div><dt>Zwischensumme</dt><dd>' + money(sub) + '</dd></div>' + (del ? '<div><dt>Lieferung</dt><dd>' + (S.zone ? money(fee) : '<span class="kx-dash">Adresse fehlt</span>') + '</dd></div>' : '') +
 			(S.disc ? '<div class="is-adj"><dt><button type="button" class="kx-adjedit" data-edit="d" title="Grund ändern">Rabatt ' + DISC_PCT + ' %' + (S.discWhy ? ' · ' + esc(S.discWhy) : ' · Grund wählen') + '</button></dt><dd>&minus;' + money(da) + '</dd></div>' : '') +
+			(S.vch ? (vchAmt() ? '<div class="is-adj"><dt>Stempelgutschein</dt><dd>&minus;' + money(vchAmt()) + '</dd></div>' : '<div class="is-adj"><dt>Stempelgutschein</dt><dd><span class="kx-dash">gilt ab ' + money(S.customer.cust.vch) + ' Warenwert</span></dd></div>') : '') +
 			(S.sur ? '<div class="is-adj"><dt><button type="button" class="kx-adjedit" data-edit="s" title="Betrag oder Grund ändern">Aufschlag' + (S.surWhy ? ' · ' + esc(S.surWhy) : ' · Grund wählen') + '</button></dt><dd>+' + money(S.sur) + '</dd></div>' : '') +
 			'<div class="is-total"><dt>Gesamt</dt><dd>' + money(t) + '</dd></div>';
 		renderAdj();
@@ -744,7 +751,7 @@
 		var payload = {
 			type: type(), name: el.name.value, phone: el.phone.value, no_phone: !!el.no_phone.checked, street: el.street.value, zip: el.zip.value, city: el.city.value,
 			address_note: el.address_note.value, payment: pay(), note: el.note.value, when: S.when || '', pay_with: pay() === 'cash' ? S.payWith : 0,
-			discount: S.disc ? 1 : 0, discount_reason: S.disc ? S.discWhy : '', surcharge: S.sur, surcharge_reason: S.sur ? S.surWhy : '',
+			use_voucher: vchAmt() > 0 ? 1 : 0, discount: S.disc ? 1 : 0, discount_reason: S.disc ? S.discWhy : '', surcharge: S.sur, surcharge_reason: S.sur ? S.surWhy : '',
 			lines: cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; })
 		};
 		$('#kx-go').disabled = true; setMsg('Einen Moment ...');
@@ -760,7 +767,7 @@
 		}).catch(function () { $('#kx-go').disabled = !cart.length; fail('Keine Verbindung. Bitte versuche es noch einmal.'); });
 	});
 	function resetBon() {
-		cart = []; saveCart(); f.reset(); S.when = null; S.zone = null; S.zoneErr = ''; S.customer = null; S.payWith = 0; S.disc = false; S.discWhy = ''; S.sur = 0; S.surWhy = ''; S.panel = ''; $('#kx-sur-in').value = ''; S.prefilled = false; lastLookup = ''; zoneSeq++;
+		cart = []; saveCart(); f.reset(); S.when = null; S.zone = null; S.zoneErr = ''; S.customer = null; S.payWith = 0; S.disc = false; S.vch = false; S.discWhy = ''; S.sur = 0; S.surWhy = ''; S.panel = ''; $('#kx-sur-in').value = ''; S.prefilled = false; lastLookup = ''; zoneSeq++;
 		$('#pos-zone').innerHTML = ''; $('#kx-custom').hidden = true; $('#kx-cash-in').value = ''; $('#pos-search').value = ''; $('#pos-search-clear').hidden = true;
 		renderCart(); renderCust(); pickDefaultCat(); renderCats(); renderProducts(); syncType(); setMsg('');
 		f.elements.phone.focus();

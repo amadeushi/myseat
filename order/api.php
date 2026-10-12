@@ -136,6 +136,10 @@ if ($op === 'push_subscribe') {
 	api_out(shop_push_subscribe(shop_order_by_token(isset($body['order']) ? (string)$body['order'] : ''), isset($body['endpoint']) ? (string)$body['endpoint'] : ''));
 }
 
+if ($op === 'switch_pay') {
+	api_out(shop_order_switch_pay(shop_order_by_token(isset($body['order']) ? (string)$body['order'] : ''), isset($body['payment']) ? (string)$body['payment'] : ''));
+}
+
 if ($op === 'repay') {
 	$order = shop_order_by_token(isset($body['order']) ? (string)$body['order'] : '');
 	if (!$order || $order['status'] !== 'pending' || $order['payment_method'] !== 'mollie') { api_out(array('ok' => false, 'error' => 'Diese Bestellung kann nicht mehr bezahlt werden.')); }
