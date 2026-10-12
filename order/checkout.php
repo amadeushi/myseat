@@ -92,8 +92,9 @@ $imprint = (!empty($settings['imprintUrl']) && preg_match('#^https?://#i', $sett
 				<p class="co-hint" id="co-nl-hint-stamps" hidden>Dafür brauchen wir deine E-Mail-Adresse. Du bekommst eine Mail zum Bestätigen, abmelden kannst du dich jederzeit.</p>
 			</div>
 
-			<fieldset class="co-sec">
+			<fieldset class="co-sec" id="co-paysec">
 				<legend>Bezahlung</legend>
+				<p class="co-hint co-askhint" id="co-payhint" hidden>Bitte wähle, wie du bezahlen möchtest.</p>
 				<div id="co-pay" class="co-pay"></div>
 				<div id="co-tipbox" class="co-tip" hidden>
 					<span>Trinkgeld für die Fahrerin oder den Fahrer</span>

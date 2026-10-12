@@ -220,11 +220,30 @@
 		items.push(!!S.pay);
 		return items;
 	}
+	// what is still missing, by name (the order of the page): the list under the progress bar, so the guest does not have to guess
+	function missing() {
+		var m = [], f = form.elements;
+		if (!S.modeChosen) { m.push('Lieferart'); }
+		if (S.modeChosen && S.mode === 'delivery' && !(!!(S.zoneWords || (f.street.value.trim() && f.zip.value.trim() && f.city.value.trim())) && !!S.zone)) { m.push('Lieferadresse'); }
+		var dayEl = $('select[name=day]'), timeEl = $('select[name=time]');
+		if (!(S.when === 'asap' || !!(dayEl && timeEl && timeEl.value))) { m.push('Zeit'); }
+		if (!f.name.value.trim()) { m.push('Name'); }
+		if (!f.phone.value.trim()) { m.push('Telefon'); }
+		if (!S.pay) { m.push('Zahlungsart'); }
+		return m;
+	}
+	// the payment block stands out while nothing is chosen (like the mode choice), and says so
+	function payAsk() {
+		var sec = $('#co-paysec'), ask = !S.pay && $$('input[name=pay]').length > 1;
+		if (sec) { sec.classList.toggle('is-ask', ask); $('#co-payhint').hidden = !ask; }
+	}
 	function updateProgress() {
 		if (!S.cart.length) { return; }
 		var items = checklist(), done = items.filter(Boolean).length, left = items.length - done;
 		$('#co-progress-fill').style.transform = 'scaleX(' + (items.length ? done / items.length : 1) + ')';
-		$('#co-progress-text').textContent = left <= 0 ? 'Bereit zum Bestellen!' : (left === 1 ? 'Fast geschafft – nur noch 1 Angabe!' : 'Fast geschafft – noch ' + left + ' Angaben');
+		var miss = missing(), n = Math.max(left, miss.length);
+		$('#co-progress-text').textContent = n <= 0 ? 'Bereit zum Bestellen!' : (n === 1 ? 'Fast geschafft – nur noch 1 Angabe' : 'Fast geschafft – noch ' + n + ' Angaben') + (miss.length ? ': ' + miss.join(', ') : '');
+		payAsk();
 	}
 
 	// ---- mode, address, time, payment

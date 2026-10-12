@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-13 == mySeat v6.48.3 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geändert: Checkout: Der Fortschrittsbalken nennt jetzt, was noch fehlt ("Fast geschafft – noch 3 Angaben: Name, Telefon, Zahlungsart"; möglich sind Lieferart, Lieferadresse, Zeit, Name, Telefon, Zahlungsart). Der Block "Bezahlung" ist, solange keine Zahlart gewählt ist (bei mehreren Möglichkeiten), wie die Lieferart hervorgehoben (goldener Rahmen, leichtes Pulsieren, ohne Bewegung bei reduzierter Animation) und fordert mit "Bitte wähle, wie du bezahlen möchtest." zur Wahl auf.
+
 2026-10-13 == mySeat v6.48.2 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geändert: Checkout: Solange Lieferung oder Abholung noch nicht gewählt ist, stehen die beiden Möglichkeiten als zwei große, hervorgehobene Knöpfe da (goldener Rahmen, leichtes Pulsieren, ohne Bewegung bei reduzierter Animation), jeweils mit einer Zeile darunter: "an <Adresse>" bzw. "zu dir nach Hause" und "bei uns". Nach der Wahl wird daraus wieder die normale Umschaltleiste.
