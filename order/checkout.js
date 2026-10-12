@@ -167,7 +167,7 @@
 	function reason() {
 		if (!S.cart.length) { return 'Dein Warenkorb ist leer.'; }
 		if (S.info && !S.info.accepting) { return 'Wir nehmen gerade keine Bestellungen an.'; }
-		if (!S.modeChosen) { return 'Bitte wähle Lieferung oder Abholung.'; }
+		if (!S.modeChosen) { return 'Bitte wähle oben Lieferung oder Abholung.'; }
 		var pz = S.info && S.info[S.mode];
 		if (pz && pz.paused) { return (S.mode === 'delivery' ? 'Die Lieferung' : 'Die Abholung') + ' ist gerade pausiert' + (pz.paused_until ? ' bis etwa ' + pz.paused_until + ' Uhr' : '') + '.'; }
 		if (subtotal() < min()) { return 'Noch ' + fmt(min() - subtotal()) + ' bis zum Mindestbestellwert von ' + fmt(min()) + '.'; }
@@ -187,6 +187,12 @@
 		if (!S.pay) { return 'Bitte wähle eine Zahlungsart.'; }
 		return '';
 	}
+	// under the two big buttons: what each one means for this guest (the delivery address that is filled in, a signed-in guest's saved one included, or "to your address")
+	function renderModeSubs() {
+		var d = $('#co-sub-delivery'); if (!d) { return; }
+		var f = form.elements, addr = [f.street.value.trim(), (f.zip.value.trim() + ' ' + f.city.value.trim()).trim()].filter(Boolean).join(', ');
+		d.textContent = addr ? 'an ' + addr : 'zu dir nach Hause';
+	}
 	// one plain sentence above the button: what the guest is about to order (delivery to this address / pick up with us), with a way back to the choice
 	function renderModeLine() {
 		var el = $('#co-modeline'); if (!el) { return; }
@@ -197,7 +203,7 @@
 	}
 	function updateSubmit() {
 		var why = reason(), btn = $('#co-submit');
-		renderModeLine();
+		renderModeLine(); renderModeSubs();
 		btn.disabled = !!why || S.busy;
 		if (!S.busy) { btn.textContent = 'Zahlungspflichtig bestellen · ' + fmt(total()); }
 		$('#co-why').textContent = S.busy ? '' : why;
@@ -228,12 +234,13 @@
 		if (S.modeChosen) { saveMode(); }
 		$$('.mode-btn').forEach(function (b) { b.setAttribute('aria-pressed', S.modeChosen && b.dataset.mode === m ? 'true' : 'false'); });
 		$('#sec-address').hidden = !S.modeChosen || m !== 'delivery';
+		$('#co-modesec').classList.toggle('is-ask', !S.modeChosen);
 		$('#co-tipbox').hidden = !(S.info && S.info.pay.tip && m === 'delivery');
 		if (m !== 'delivery' && (S.tipPct || S.tipCustom)) {
 			S.tipPct = 0; S.tipCustom = ''; $('#co-tip-custom').hidden = true; $('#co-tip-custom-in').value = '';
 			$$('.tip-btn').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.pct === '0' ? 'true' : 'false'); });
 		}
-		$('#co-modehint').textContent = !S.modeChosen ? 'Bitte wähle, ob wir liefern oder ob du abholst.' : m === 'delivery' ? 'Wir liefern innerhalb unseres Liefergebiets. Die Liefergebühr hängt von deiner Adresse ab.' : 'Du holst dein Essen bei uns ab, bezahlen kannst du online oder vor Ort.';
+		$('#co-modehint').textContent = !S.modeChosen ? 'Bitte tippe auf Lieferung oder Abholung.' : m === 'delivery' ? 'Wir liefern innerhalb unseres Liefergebiets. Die Liefergebühr hängt von deiner Adresse ab.' : 'Du holst dein Essen bei uns ab, bezahlen kannst du online oder vor Ort.';
 		loadSlots(); renderPay(); renderSummary();
 	}
 	// the what3words escape hatch only appears once a typed address is not found (not when it is

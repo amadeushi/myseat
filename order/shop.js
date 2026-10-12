@@ -31,6 +31,8 @@
 	function loadState() {
 		fetch('api.php?op=state', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) { if (r.ok) { state.info = r; renderStatus(); renderCart(); } }).catch(function () {});
 	}
+	// a mode the guest chose in this visit (a tap on the switch, or an address that was checked with "Liefert ihr zu mir?"): the checkout takes it over, an older one it does not
+	function modeChosen(m) { try { sessionStorage.setItem('myseat_mode_chosen', m); } catch (e) {} }
 	function setMode(m) {
 		state.mode = m; save();
 		$$('.mode-btn').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.mode === m ? 'true' : 'false'); });
@@ -79,7 +81,7 @@
 				if (!s || !z) { return; }
 				z.value = c.postcode;
 				zoneKey = s.value.trim() + '|' + z.value.trim() + '|' + cty.value.trim();
-				state.zone = c.zone;
+				state.zone = c.zone; modeChosen('delivery');
 				renderZoneResult('ok', '✓ Wir liefern zu dir · ' + fmt(c.zone.fee) + ' Liefergebühr, ab ' + fmt(c.zone.min));
 				setDeliveryLocked(false); setW3wVisible(false);
 				box.hidden = true; box.innerHTML = '';
@@ -119,7 +121,7 @@
 						// since a confirmed match knows better. The street itself is never rewritten: a guest
 						// should never see their own typed text silently replaced by something else
 						if (r.postcode) { z.value = r.postcode; }
-						state.zone = r.zone; renderZoneResult('ok', '✓ Wir liefern zu dir · ' + fmt(r.zone.fee) + ' Liefergebühr, ab ' + fmt(r.zone.min)); setDeliveryLocked(false); setW3wVisible(false);
+						state.zone = r.zone; modeChosen('delivery'); renderZoneResult('ok', '✓ Wir liefern zu dir · ' + fmt(r.zone.fee) + ' Liefergebühr, ab ' + fmt(r.zone.min)); setDeliveryLocked(false); setW3wVisible(false);
 					} else if (r.reason === 'ambiguous') {
 						state.zone = null; renderZoneResult('', 'Mehrere passende Adressen - bitte auswählen:'); setDeliveryLocked(true); setW3wVisible(false); renderCandidates(r.candidates);
 					} else {
@@ -144,7 +146,7 @@
 			fetch('api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ op: 'zone', token: TOKEN, words: words }) })
 				.then(function (r) { return r.json(); }).then(function (r) {
 					w3wKey = words;
-					if (r.ok) { state.zone = r.zone; renderZoneResult('ok', '✓ Wir liefern zu dir · ' + fmt(r.zone.fee) + ' Liefergebühr, ab ' + fmt(r.zone.min)); setDeliveryLocked(false); }
+					if (r.ok) { state.zone = r.zone; modeChosen('delivery'); renderZoneResult('ok', '✓ Wir liefern zu dir · ' + fmt(r.zone.fee) + ' Liefergebühr, ab ' + fmt(r.zone.min)); setDeliveryLocked(false); }
 					else { state.zone = null; renderZoneResult('', ''); setDeliveryLocked(true); toast(r.error); }
 					renderCart();
 				}).catch(function () { renderZoneResult('bad', 'Code konnte nicht geprüft werden'); });
@@ -789,7 +791,7 @@
 	// ---- events
 	document.addEventListener('click', function (ev) {
 		var t = ev.target;
-		var mode = t.closest('.mode-btn'); if (mode) { try { sessionStorage.setItem('myseat_mode_chosen', mode.dataset.mode); } catch (e) {} setMode(mode.dataset.mode); return; }
+		var mode = t.closest('.mode-btn'); if (mode) { modeChosen(mode.dataset.mode); setMode(mode.dataset.mode); return; }
 		// the chat button: the cart goes along (the chat takes it over); on a wide screen the chat opens in the bubble, else as a page
 		var chatBtn = t.closest('.shop-chat-fab');
 		if (chatBtn && (state.cart.length || chatBubble())) {

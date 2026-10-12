@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-13 == mySeat v6.48.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geändert: Checkout: Solange Lieferung oder Abholung noch nicht gewählt ist, stehen die beiden Möglichkeiten als zwei große, hervorgehobene Knöpfe da (goldener Rahmen, leichtes Pulsieren, ohne Bewegung bei reduzierter Animation), jeweils mit einer Zeile darunter: "an <Adresse>" bzw. "zu dir nach Hause" und "bei uns". Nach der Wahl wird daraus wieder die normale Umschaltleiste.
+ * Geändert: Speisekarte: Eine mit "Liefert ihr zu mir?" geprüfte Adresse (Straße, Auswahl aus Vorschlägen oder what3words) zählt in diesem Besuch als Wahl von Lieferung; der Checkout fragt dann nicht noch einmal. Eine Wahl früherer Besuche zählt weiter nicht.
+
 2026-10-13 == mySeat v6.48.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geändert: Checkout: Die Lieferart eines früheren Besuchs wird nicht mehr übernommen, damit niemand aus Versehen abholt, obwohl er liefern lassen wollte. Im Checkout ist weder Lieferung noch Abholung vorgewählt, bis der Gast klickt (oder auf der Speisekarte in diesem Besuch geklickt hat); bis dahin bleibt der Bestellknopf gesperrt und die Adressfelder sind verborgen.

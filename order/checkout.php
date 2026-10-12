@@ -40,11 +40,11 @@ $imprint = (!empty($settings['imprintUrl']) && preg_match('#^https?://#i', $sett
 			<div class="co-acc" id="co-acc" role="status" hidden></div>
 			<p class="co-empty" id="co-empty" hidden>Dein Warenkorb ist leer. <a href="./">Zur Speisekarte</a></p>
 
-			<fieldset class="co-sec">
+			<fieldset class="co-sec" id="co-modesec">
 				<legend>Wie möchtest du bestellen?</legend>
 				<div class="shop-mode" role="group" aria-label="Lieferart">
-					<button type="button" class="mode-btn" data-mode="delivery" aria-pressed="true">Lieferung</button>
-					<button type="button" class="mode-btn" data-mode="pickup" aria-pressed="false">Abholung</button>
+					<button type="button" class="mode-btn" data-mode="delivery" aria-pressed="true">Lieferung<small class="mode-sub" id="co-sub-delivery"></small></button>
+					<button type="button" class="mode-btn" data-mode="pickup" aria-pressed="false">Abholung<small class="mode-sub" id="co-sub-pickup">bei uns</small></button>
 				</div>
 				<p class="co-hint" id="co-modehint"></p>
 			</fieldset>
