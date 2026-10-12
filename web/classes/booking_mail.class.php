@@ -593,7 +593,7 @@ function bm_build($d) {
  */
 function bm_send_guest_mail($to_guest, $m, $brand, $admin_email) {
 	global $settings;
-	if ($to_guest === '' || !filter_var($to_guest, FILTER_VALIDATE_EMAIL) || $admin_email === '') { return; }
+	if ($to_guest === '' || !filter_var($to_guest, FILTER_VALIDATE_EMAIL) || $admin_email === '') { return false; }
 
 	$subject_guest = mb_encode_mimeheader($m['subject'], 'UTF-8', 'B');
 	$from = mb_encode_mimeheader($brand, 'UTF-8', 'B').' <'.$admin_email.'>';
@@ -618,7 +618,9 @@ function bm_send_guest_mail($to_guest, $m, $brand, $admin_email) {
 		if (!empty($m['ics'])) {
 			$mail->AddStringAttachment($m['ics'], $m['ics_filename'], 'base64', 'text/calendar; method=PUBLISH; charset=UTF-8');
 		}
-		if (!$mail->Send()) { error_log('mySeat mail to guest failed: '.$mail->ErrorInfo); }
+		if (!empty($m['headers'])) { foreach ($m['headers'] as $hd) { $mail->AddCustomHeader($hd); } }
+		if (!$mail->Send()) { error_log('mySeat mail to guest failed: '.$mail->ErrorInfo); return false; }
+		return true;
 	} else {
 		$alt_boundary = '=_'.md5(uniqid('', true));
 		$alt  = "--".$alt_boundary."\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n".chunk_split(base64_encode($m['plain']));
@@ -626,6 +628,7 @@ function bm_send_guest_mail($to_guest, $m, $brand, $admin_email) {
 		$alt .= "--".$alt_boundary."--\r\n";
 
 		$headers  = "MIME-Version: 1.0\r\nFrom: ".$from."\r\nReply-To: ".$from."\r\nX-Mailer: mySeat\r\n";
+		if (!empty($m['headers'])) { foreach ($m['headers'] as $hd) { $headers .= preg_replace('/[\r\n]+/', ' ', $hd)."\r\n"; } }
 		if (!empty($m['ics'])) {
 			$mix_boundary = '=_'.md5(uniqid('', true));
 			$headers .= "Content-Type: multipart/mixed; boundary=\"".$mix_boundary."\"\r\n";
@@ -636,7 +639,7 @@ function bm_send_guest_mail($to_guest, $m, $brand, $admin_email) {
 			$headers .= "Content-Type: multipart/alternative; boundary=\"".$alt_boundary."\"\r\n";
 			$body = $alt;
 		}
-		mail($to_guest, $subject_guest, $body, $headers);
+		return (bool)mail($to_guest, $subject_guest, $body, $headers);
 	}
 }
 

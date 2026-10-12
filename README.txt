@@ -52,6 +52,12 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.43.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Newsletter, Schritt 3 (Editor und Versand). Die Seite "Newsletter" (p=14) hat die Reiter "Abonnenten" und "Mailings". Im Block-Editor (Überschrift, Text mit Fett/Kursiv/Liste/Link, Bild mit Upload, Button, Box, Trenner; verschieben, entfernen, automatisches Speichern) entsteht ein Mailing; Vorschau am Computer und Handy, Testmail, Platzhalter {vorname|Gast}, {name}, {abmelden}. Die fertige Mail baut der Server aus den Blöcken, Text und Links werden bereinigt.
+ * Neu: Versand über eine Warteschlange (tp_shop_nl_campaigns, tp_shop_nl_queue) an alle mit bestätigten Neuigkeiten: Start mit zweitem Tipp, danach ist der Inhalt gesperrt; Pakete zu 10 Mails pro Minute bei offener Seite, 30 pro Minute mit dem neuen Cron web/cron/send_newsletter.php (Schlüssel wie bei den anderen Crons). Vor jeder Mail wird die Einwilligung erneut geprüft, jede Mail geht höchstens einmal raus, Abbrechen und Fortschrittsanzeige. Jede Mail hat Abmelde-Link und List-Unsubscribe mit einem Tipp (schaltet nur die Neuigkeiten aus). Kein Tracking.
+ * Geändert: bm_send_guest_mail gibt jetzt zurück, ob die Mail abgeschickt wurde, und nimmt zusätzliche Kopfzeilen entgegen.
+
 2026-10-12 == mySeat v6.42.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Newsletter, Schritt 2 (Import). Auf der Seite "Newsletter" (p=14) gibt es "Liste importieren": Datei (CSV, Excel-Export, Liste, "Name <mail>") wählen oder einfügen, mit E-Mail und Name je Zeile. Erkennt Trennzeichen, UTF-8 und Windows-Umlaute sowie Spalten Vorname/Nachname. Zwei Modi: ohne Nachweis (Adressen werden nur gesperrt abgelegt, keine Mail bis zur Bestätigung durch den Gast) oder mit dokumentierter Einwilligung (Herkunft und Haken Pflicht, die Bestätigung des Inhabers steht mit Datei, Datum und Benutzer im Nachweis jeder Adresse).

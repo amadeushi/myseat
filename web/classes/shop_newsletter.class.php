@@ -23,6 +23,7 @@ function shop_nl_schema($db, $opts) {
 	mysqli_query($db, "CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_consent_log')." (
 		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `sub_id` INT UNSIGNED NOT NULL, `event` VARCHAR(16) NOT NULL, `topics` VARCHAR(24) NOT NULL DEFAULT '', `source` VARCHAR(16) NOT NULL DEFAULT '',
 		`ip` VARCHAR(45) NOT NULL DEFAULT '', `ua` VARCHAR(200) NOT NULL DEFAULT '', `detail` VARCHAR(255) NOT NULL DEFAULT '', `at` DATETIME NOT NULL, KEY `sub` (`sub_id`)) $opts");
+	shop_nlm_schema($db, $opts);
 }
 
 function shop_nl_email($e) { return mb_strtolower(trim((string)$e), 'UTF-8'); }
@@ -248,3 +249,4 @@ function shop_nl_purge() {
 	foreach ($ids as $r) { shop_nl_erase((int)$r['id']); }
 }
 require_once __DIR__.'/shop_newsletter_import.class.php';
+require_once __DIR__.'/shop_newsletter_mail.class.php';

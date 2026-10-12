@@ -36,6 +36,18 @@ if ($op === 'list') {
 	$known = fb_row("SELECT COUNT(DISTINCT LOWER(r.reservation_guest_email)) AS n FROM `".$dbTables->reservations."` r JOIN ".fb_t('tp_shop_subscribers')." s ON s.email = LOWER(r.reservation_guest_email) WHERE r.reservation_advertise = 'YES'");
 	nl_out(array('ok' => true, 'counts' => shop_nl_counts(), 'rows' => $rows, 'legacy' => max(0, $oldN - ($known ? (int)$known['n'] : 0)), 'batches' => array_map(function ($b) { return array('batch' => (int)$b['batch'], 'at' => date('d.m.Y H:i', strtotime($b['at'])), 'n' => (int)$b['n'], 'confirmed' => strpos($b['detail'], 'Inhaber bestätigt') !== false); }, shop_nl_import_batches())));
 }
+if ($op === 'mail_list') {
+	shop_nlm_tick();
+	$out = array();
+	foreach (shop_nlm_list() as $c) { $out[] = array('id' => (int)$c['id'], 'name' => $c['name'], 'subject' => $c['subject'], 'status' => $c['status'], 'stats' => $c['stats'], 'created' => date('d.m.Y', strtotime($c['created_at'])), 'started' => $c['started_at'] ? date('d.m.Y H:i', strtotime($c['started_at'])) : '', 'finished' => $c['finished_at'] ? date('d.m.Y H:i', strtotime($c['finished_at'])) : ''); }
+	nl_out(array('ok' => true, 'mails' => $out, 'recipients' => shop_nlm_recipients_count(), 'from' => shop_mail_from()));
+}
+if ($op === 'mail_get') {
+	shop_nlm_tick();
+	$c = shop_nlm_get((int)(isset($_GET['id']) ? $_GET['id'] : 0));
+	if (!$c) { nl_out(array('ok' => false, 'error' => 'Das Mailing gibt es nicht mehr.')); }
+	nl_out(array('ok' => true, 'mail' => array('id' => (int)$c['id'], 'name' => $c['name'], 'subject' => $c['subject'], 'preheader' => $c['preheader'], 'status' => $c['status'], 'blocks' => shop_nlm_clean_blocks($c['blocks']), 'stats' => shop_nlm_stats($c['id']), 'problems' => shop_nlm_problems($c)), 'recipients' => shop_nlm_recipients_count(), 'base' => shop_stamp_shop_url()));
+}
 if ($op === 'proof') {
 	$id = (int)(isset($_GET['id']) ? $_GET['id'] : 0);
 	$out = array();
@@ -43,6 +55,32 @@ if ($op === 'proof') {
 	nl_out(array('ok' => true, 'proof' => $out));
 }
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['token']) || !hash_equals((string)$_SESSION['shop_admin_token'], (string)$_POST['token'])) { nl_out(array('ok' => false, 'error' => 'Die Sitzung ist abgelaufen. Bitte lade die Seite neu.')); }
+if (strpos($op, 'mail_') === 0) {
+	$id = (int)(isset($_POST['id']) ? $_POST['id'] : 0);
+	if ($op === 'mail_new') { nl_out(array('ok' => true, 'id' => shop_nlm_create(isset($_POST['name']) ? $_POST['name'] : '', (int)(isset($_POST['copy']) ? $_POST['copy'] : 0)))); }
+	if ($op === 'mail_save') { $r = shop_nlm_save($id, array('name' => isset($_POST['name']) ? $_POST['name'] : '', 'subject' => isset($_POST['subject']) ? $_POST['subject'] : '', 'preheader' => isset($_POST['preheader']) ? $_POST['preheader'] : '', 'blocks' => isset($_POST['blocks']) ? $_POST['blocks'] : '[]')); if ($r['ok']) { $r['problems'] = shop_nlm_problems(shop_nlm_get($id)); } nl_out($r); }
+	if ($op === 'mail_preview') {
+		$m = shop_nlm_render(array('subject' => isset($_POST['subject']) ? shop_nlm_str($_POST['subject'], 200) : '', 'preheader' => isset($_POST['preheader']) ? shop_nlm_str($_POST['preheader'], 200) : '', 'blocks' => isset($_POST['blocks']) ? $_POST['blocks'] : '[]'), array('email' => 'max@example.com', 'name' => 'Max Mustermann', 'token' => ''));
+		nl_out(array('ok' => true, 'html' => $m['html'], 'subject' => $m['subject']));
+	}
+	if ($op === 'mail_test') { nl_out(shop_nlm_send_test($id, isset($_POST['to']) ? $_POST['to'] : '')); }
+	if ($op === 'mail_start') { nl_out(shop_nlm_start($id)); }
+	if ($op === 'mail_cancel') { nl_out(array('ok' => shop_nlm_cancel($id))); }
+	if ($op === 'mail_delete') { nl_out(shop_nlm_delete($id) ? array('ok' => true) : array('ok' => false, 'error' => 'Ein laufendes Mailing kann nicht gelöscht werden. Brich es zuerst ab.')); }
+	if ($op === 'mail_upload') {
+		$f = isset($_FILES['image']) ? $_FILES['image'] : null;
+		if (!$f || $f['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($f['tmp_name'])) { nl_out(array('ok' => false, 'error' => 'Das Bild konnte nicht hochgeladen werden.')); }
+		if ($f['size'] > 1500000) { nl_out(array('ok' => false, 'error' => 'Das Bild ist größer als 1,5 MB. Bitte verkleinere es, große Bilder laden in Mails langsam.')); }
+		$i = @getimagesize($f['tmp_name']); $ext = array(IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_GIF => 'gif', IMAGETYPE_WEBP => 'webp');
+		if (!$i || !isset($ext[$i[2]])) { nl_out(array('ok' => false, 'error' => 'Erlaubt sind JPG, PNG, GIF und WebP.')); }
+		$dir = __DIR__.'/../../order/mail/nl'; if (!is_dir($dir)) { @mkdir($dir, 0755, true); }
+		if (!is_dir($dir) || !is_writable($dir)) { nl_out(array('ok' => false, 'error' => 'Der Ordner für Bilder ist nicht beschreibbar.')); }
+		$name = bin2hex(random_bytes(8)).'.'.$ext[$i[2]];
+		if (!move_uploaded_file($f['tmp_name'], $dir.'/'.$name)) { nl_out(array('ok' => false, 'error' => 'Das Bild konnte nicht gespeichert werden.')); }
+		nl_out(array('ok' => true, 'url' => shop_stamp_shop_url().'mail/nl/'.$name, 'w' => $i[0], 'h' => $i[1]));
+	}
+	nl_out(array('ok' => false, 'error' => 'Unbekannte Aktion.'));
+}
 if ($op === 'import_preview' || $op === 'import_run') {
 	$text = isset($_POST['text']) ? (string)$_POST['text'] : '';
 	if (trim($text) === '') { nl_out(array('ok' => false, 'error' => 'Die Liste ist leer.')); }

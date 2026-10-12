@@ -132,6 +132,16 @@
         "rule": "design-system-radius",
         "value": "8px",
         "createdAt": "2026-10-01T20:02:53.197Z"
+      },
+      {
+        "rule": "overused-font",
+        "value": "arial",
+        "createdAt": "2026-10-12T01:04:32.081Z"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "arial",
+        "createdAt": "2026-10-12T01:04:32.110Z"
       }
     ]
   }

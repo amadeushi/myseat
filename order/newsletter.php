@@ -11,6 +11,11 @@ $ct = isset($_REQUEST['t']) ? (string)$_REQUEST['t'] : '';
 $mt = isset($_REQUEST['m']) ? (string)$_REQUEST['m'] : '';
 $sub = $mt !== '' ? shop_nl_by_token($mt) : ($ct !== '' ? shop_nl_by_confirm($ct) : null);
 $en = $sub && $sub['lang'] === 'en';
+// "unsubscribe" of the mail program (List-Unsubscribe-Post, one tap): switches the news off, the stamp card reminders stay as they are
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['List-Unsubscribe']) && $_POST['List-Unsubscribe'] === 'One-Click' && $mt !== '' && $sub) {
+	shop_nl_set($mt, false, !empty($sub['stamps']));
+	header('Content-Type: text/plain; charset=utf-8'); echo 'OK'; exit;
+}
 function nl_t($de, $en_, $isEn) { return $isEn ? $en_ : $de; }
 
 $view = 'invalid'; $err = ''; $result = null; $csrf = false;
