@@ -102,7 +102,7 @@ $showStamps = $sub && (!empty($sub['stamps']) || !empty($sub['want_stamps']) || 
 		<form method="post" action="newsletter.php" class="st-again">
 			<input type="hidden" name="m" value="<?php echo shop_h($mt); ?>"/>
 			<input type="hidden" name="token" value="<?php echo shop_h($_SESSION['shop_token']); ?>"/>
-			<label class="co-check"><input type="checkbox" name="news" value="1"<?php echo (!empty($sub['news']) && empty($sub['blocked'])) ? ' checked' : ''; ?>/> <?php echo shop_h(nl_t('Neuigkeiten vom Restaurant (Aktionen, neue Gerichte, Öffnungszeiten)', 'News from the restaurant (offers, new dishes, opening times)', $en)); ?></label>
+			<label class="co-check"><input type="checkbox" name="news" value="1"<?php echo (!empty($sub['news']) && empty($sub['blocked'])) ? ' checked' : ''; ?>/> <?php echo shop_h(nl_t('Neuigkeiten vom Restaurant, höchstens 2 Mal im Monat (Aktionen, neue Gerichte, Öffnungszeiten)', 'News from the restaurant, at most twice a month (offers, new dishes, opening times)', $en)); ?></label>
 			<?php if ($showStamps): ?><label class="co-check"><input type="checkbox" name="stamps" value="1"<?php echo (!empty($sub['stamps']) && empty($sub['blocked'])) ? ' checked' : ''; ?>/> <?php echo shop_h(nl_t('Erinnerungen zu meiner Stempelkarte', 'Reminders about my stamp card', $en)); ?></label><?php endif; ?>
 			<p class="st-again"><button type="submit" name="do" value="save" class="cart-go"><?php echo shop_h(nl_t('Speichern', 'Save', $en)); ?></button></p>
 			<p class="st-lead"><button type="submit" name="do" value="unsub" class="gb-btn ghost"><?php echo shop_h(nl_t('Alles abbestellen', 'Unsubscribe from everything', $en)); ?></button></p>

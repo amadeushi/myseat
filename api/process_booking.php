@@ -141,10 +141,10 @@ $prp_info = querySQL('property_info');
 	if ($mode === '') { return; }
 	$de = isset($_SESSION['nl_widget']) && $_SESSION['nl_widget']['lang'] === 'de';
 	$mail = preg_replace('/^(.{2}).*(@.*)$/u', '$1***$2', strtolower(trim((string)$_SESSION['nl_widget']['email'])));
-	$t = $de ? array('ask_h' => 'Ab und zu Neuigkeiten vom Restaurant?', 'ask_p' => 'Neue Gerichte, Aktionen, Öffnungszeiten: ab und zu eine Mail. Du bestätigst es einmal per Mail, abmelden geht jederzeit.', 'yes' => 'Ja, gerne', 'no' => 'Nein danke',
+	$t = $de ? array('ask_h' => 'Ab und zu Neuigkeiten vom Restaurant?', 'ask_p' => 'Neue Gerichte, Aktionen, Öffnungszeiten: höchstens 2 Mails im Monat. Du bestätigst es einmal per Mail, abmelden geht jederzeit.', 'yes' => 'Ja, gerne', 'no' => 'Nein danke',
 		'p_h' => 'Fast fertig', 'p_p' => 'Wir haben dir eine Mail an <strong>'.htmlspecialchars($mail).'</strong> geschickt. Tippe dort auf „Anmeldung bestätigen“, erst dann gilt es. Schau auch im Spam-Ordner nach.', 'again' => 'Mail erneut senden', 'sent' => 'Die Mail ist unterwegs.',
 		'bye' => 'Alles klar, wir fragen nicht noch einmal.', 'err' => 'Das hat nicht geklappt. Bitte versuche es noch einmal.', 'net' => 'Keine Verbindung. Bitte versuche es noch einmal.')
-		: array('ask_h' => 'News from the restaurant now and then?', 'ask_p' => 'New dishes, offers, opening times: an e-mail from time to time. You confirm it once by e-mail and can unsubscribe at any time.', 'yes' => 'Yes, please', 'no' => 'No thanks',
+		: array('ask_h' => 'News from the restaurant now and then?', 'ask_p' => 'New dishes, offers, opening times: at most two e-mails a month. You confirm it once by e-mail and can unsubscribe at any time.', 'yes' => 'Yes, please', 'no' => 'No thanks',
 		'p_h' => 'Almost done', 'p_p' => 'We sent an e-mail to <strong>'.htmlspecialchars($mail).'</strong>. Tap "Confirm sign-up" in it, only then does it count. Please check your spam folder too.', 'again' => 'Send e-mail again', 'sent' => 'The e-mail is on its way.',
 		'bye' => 'All right, we will not ask again.', 'err' => 'That did not work. Please try again.', 'net' => 'No connection. Please try again.');
 	echo '<section class="nl-after" id="nl-after" data-mode="'.htmlspecialchars($mode).'" data-barrier="'.htmlspecialchars($_SESSION['barrier']).'" data-t="'.htmlspecialchars(json_encode($t)).'" aria-live="polite"></section>';

@@ -52,6 +52,12 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.45.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Das kleine Logo (braun, 110 px) steht in der Kopfzeile aller Mail-Vorlagen statt des Namens in Großbuchstaben: Reservierungsbestätigung, Hinweis ans Team (neben dem Status), Feedback-Mails, Bestellbestätigung, Stempel- und Kontomails (web/classes/mail_logo.class.php). Ohne bekannte Adresse erscheint wie bisher der Name als Text.
+ * Neu: Newsletter: "höchstens 2 Mal im Monat" steht jetzt in allen Einwilligungstexten (Kasse, Konto, Chat, Widget, Verwaltungsseite) und wird eingehalten: Wer in den letzten 30 Tagen schon 2 Neuigkeiten-Mails (Mailings und Automatiken der Sparte Neuigkeiten) bekommen hat, wird übersprungen ("Limit: 2 Mails im Monat"); die Begrüßungsmail ist ausgenommen, zählt aber mit.
+ * Geändert: Die Statusmail zu einem neuen Stempel (aus einer Bestellung oder von Hand als Kulanz gutgeschrieben) geht als Information zur Vertragsabwicklung an jeden mit E-Mail-Adresse, ohne Newsletter-Zustimmung. Sie enthält nur den Stand der Karte, die Gültigkeit und den Hinweis, dass es eine Information ist: kein Knopf, kein Angebot. Erinnerungen und Anreize bleiben Automatiken mit bestätigter Zustimmung. Behoben: "Gast benachrichtigen" beim Kulanzstempel im Kundenbackend meldete "benachrichtigt", schickte aber ohne Zustimmung nichts.
+
 2026-10-12 == mySeat v6.45.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Einwilligung für Stempel-Erinnerungen und Newsletter an den richtigen Stellen. Statusseite der Bestellung: unter der Stempelkarte die Frage "Soll ich dir Bescheid geben?" mit zwei gleich großen Antworten (Ja / Nein danke; nach "Nein danke" 90 Tage keine neue Frage); nur für angemeldete Gäste mit E-Mail-Adresse (neue API-Aktion nl_ask, Quelle "status"). Bestellablauf: das Stempel-Kästchen steht jetzt direkt unter der Stempelkarte, das Newsletter-Kästchen nennt konkret, was kommt. Chat: Antworten "Ja, ..." und "Nein danke", die Frage nennt nur, was noch offen ist.

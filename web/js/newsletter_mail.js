@@ -251,7 +251,7 @@
 		var done = s.sent + s.failed + s.skipped, pct = s.total ? Math.round(done * 100 / s.total) : 0;
 		box.textContent = '';
 		box.appendChild(el('div', { class: 'nlm-bar', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': String(s.total), 'aria-valuenow': String(done), 'aria-label': 'Fortschritt des Versands' }, [el('span', { style: 'width:' + pct + '%' })]));
-		box.appendChild(el('p', { class: 'nlm-statline', text: s.sent + ' von ' + s.total + ' gesendet' + (s.pending + s.sending ? ', ' + (s.pending + s.sending) + ' warten noch' : '') + (s.failed ? ', ' + s.failed + ' fehlgeschlagen' : '') + (s.skipped ? ', ' + s.skipped + ' übersprungen (inzwischen abgemeldet oder abgebrochen)' : '') }));
+		box.appendChild(el('p', { class: 'nlm-statline', text: s.sent + ' von ' + s.total + ' gesendet' + (s.pending + s.sending ? ', ' + (s.pending + s.sending) + ' warten noch' : '') + (s.failed ? ', ' + s.failed + ' fehlgeschlagen' : '') + (s.skipped ? ', ' + s.skipped + ' übersprungen (abgemeldet, Monatslimit oder abgebrochen)' : '') }));
 	}
 	function drawSend() {
 		var box = document.getElementById('nlm-send'); if (!box || cur.status !== 'draft') { return; }
@@ -264,7 +264,7 @@
 			go.disabled = true; save().then(function () { return post('mail_start', { id: cur.id }); }).then(function (r) { if (!r.ok) { go.disabled = false; say(r.error || 'Das hat nicht geklappt.'); return; } say('Der Versand läuft.'); open(cur.id); }).catch(function () { go.disabled = false; fail(); });
 		});
 		box.appendChild(go);
-		box.appendChild(el('p', { class: 'sh-help', text: 'Danach lässt sich der Inhalt nicht mehr ändern. Wer sich bis dahin abmeldet, bekommt nichts.' }));
+		box.appendChild(el('p', { class: 'sh-help', text: 'Danach lässt sich der Inhalt nicht mehr ändern. Wer sich bis dahin abmeldet, bekommt nichts. Wer in den letzten 30 Tagen schon 2 Mails mit Neuigkeiten bekommen hat, wird übersprungen: So steht es bei der Anmeldung (höchstens 2 Mal im Monat).' }));
 	}
 
 	function draw() {
@@ -313,7 +313,7 @@
 	var TOPIC = { news: 'Neuigkeiten', stamps: 'Stempel-Erinnerungen' };
 	function showAutos() {
 		stopPoll(); cur = null; root = autoRoot; fromAuto = true; root.textContent = '';
-		root.appendChild(el('p', { class: 'sh-help', text: 'Automatiken schicken Mails von selbst, wenn bei einem Gast etwas passiert. Alle sind aus, bis du sie einschaltest. Ein Gast bekommt höchstens eine automatische Mail in ' + 7 + ' Tagen (die Begrüßungsmail ausgenommen), und nur, wenn er der Sparte per Mail zugestimmt hat. Sie laufen über den Cron-Job oder, solange diese Seite offen ist.' }));
+		root.appendChild(el('p', { class: 'sh-help', text: 'Automatiken schicken Mails von selbst, wenn bei einem Gast etwas passiert. Alle sind aus, bis du sie einschaltest. Ein Gast bekommt höchstens eine automatische Mail in ' + 7 + ' Tagen (die Begrüßungsmail ausgenommen) und mit allen Neuigkeiten-Mails zusammen höchstens 2 im Monat, und nur, wenn er der Sparte per Mail zugestimmt hat. Sie laufen über den Cron-Job oder, solange diese Seite offen ist.' }));
 		var box = el('div', { class: 'nla-list' }); root.appendChild(box);
 		get('auto_list').then(function (r) {
 			if (!r.ok) { say(r.error || 'Das hat nicht geklappt.'); return; }

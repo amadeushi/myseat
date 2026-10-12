@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__.'/mail_logo.class.php';
 /*
  * Texts and layout of the booking mails (guest confirmation and notification for the restaurant).
  * Plain text and HTML without any images. German by default, English when the guest used the
@@ -461,7 +462,7 @@ function bm_build($d) {
 		.'<body style="margin:0;padding:0;background-color:#f4f1ea;">'
 		.'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f1ea;"><tr><td align="center" style="padding:24px 12px;">'
 		.'<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px;background-color:#ffffff;border:1px solid #e6e0d2;">'
-		.'<tr><td style="'.$font.'padding:28px 32px 4px;font-size:12px;font-weight:bold;letter-spacing:.16em;text-transform:uppercase;color:#8a6d3b;">'.$h($brand).'</td></tr>'
+		.bm_mail_logo_row($brand, '28px 32px 4px')
 		.'<tr><td style="font-family:Georgia,\'Times New Roman\',serif;padding:0 32px 8px;font-size:26px;line-height:1.25;color:#1c1a18;">'.$h($head).'</td></tr>'
 		.'<tr><td style="'.$font.'padding:12px 32px 4px;font-size:16px;line-height:1.6;color:#333333;">'.$h($greeting).'<br><br>'.$h($intro).'</td></tr>'
 		.'<tr><td style="padding:12px 32px;"><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="'.($mode === 'declined' ? 'border-top:1px solid #e6e0d2;border-bottom:1px solid #e6e0d2;' : 'background-color:#faf8f3;border:1px solid #e6e0d2;border-radius:6px;').'"><tr><td style="padding:12px 18px;"><table role="presentation" cellpadding="0" cellspacing="0">'.$row_html.'</table></td></tr></table></td></tr>'
@@ -569,7 +570,7 @@ function bm_build($d) {
 		.'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f1ea;"><tr><td align="center" style="padding:24px 12px;">'
 		.'<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px;background-color:#ffffff;border:1px solid #e6e0d2;">'
 		.'<tr><td style="'.$font.'padding:26px 32px 0;"><span style="display:inline-block;padding:5px 12px;border-radius:999px;background-color:'.$badge_bg.';color:'.$badge_fg.';font-size:12px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;">'.$h($pending ? $L['badge_req'] : $L['badge_new']).'</span>'
-		.' <span style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#8a6d3b;font-weight:bold;">&nbsp;'.$h($brand).'</span></td></tr>'
+		.bm_mail_logo_inline($brand).'</td></tr>'
 		.'<tr><td style="font-family:Georgia,\'Times New Roman\',serif;padding:12px 32px 6px;font-size:26px;line-height:1.25;color:#1c1a18;">'.$h($pending ? $L['head_req'] : $L['head_new']).'</td></tr>'
 		.'<tr><td style="padding:10px 32px 16px;"><table role="presentation" cellpadding="0" cellspacing="0"><tr>'.$fact($L['date'], $date_txt).$fact($L['time'], $time_txt).$fact($L['pax'], (string)$pax).'</tr></table></td></tr>'
 		.'<tr><td style="padding:0 32px 8px;"><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-top:1px solid #e6e0d2;"><tr><td style="padding-top:8px;"><table role="presentation" cellpadding="0" cellspacing="0">'.$details.'</table></td></tr></table></td></tr>'

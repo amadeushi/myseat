@@ -3603,7 +3603,8 @@ function shop_stamp_mail($to, $m) {
 	$html = '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'.$h($m['subject']).'</title></head>'
 		.'<body style="margin:0;padding:0;background-color:#f4f1ea;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f1ea;"><tr><td align="center" style="padding:24px 12px;">'
 		.'<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background-color:#ffffff;border:1px solid #e6e0d2;">'
-		.'<tr><td style="padding:30px 32px 6px;"><div style="'.$serif.'font-size:28px;color:#1c1a18;">'.$h($m['headline']).'</div>'
+		.bm_mail_logo_row($brand)
+		.'<tr><td style="padding:22px 32px 6px;"><div style="'.$serif.'font-size:28px;color:#1c1a18;">'.$h($m['headline']).'</div>'
 		.'<div style="'.$font.'font-size:15px;color:#555;line-height:1.6;padding-top:8px;">'.$h($m['lead']).'</div></td></tr>'
 		.($m['image'] !== '' ? '<tr><td style="padding:18px 32px 4px;"><img src="'.$h($m['image']).'" width="496" alt="'.$h($m['alt']).'" style="display:block;width:100%;max-width:496px;height:auto;border:0;border-radius:10px;"></td></tr>' : '')
 		.(!empty($m['box']) ? '<tr><td style="padding:14px 32px 4px;"><div style="background:#f8f2e4;border:1px solid #e6d9b8;border-radius:10px;padding:14px 18px;"><div style="'.$font.'font-size:13px;color:#7a6a45;">'.$h($m['box']['label']).'</div>'
@@ -3617,20 +3618,21 @@ function shop_stamp_mail($to, $m) {
 }
 function shop_stamp_signoff() { global $settings; return 'Guten Appetit wünscht dein Team vom '.(!empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus'); }
 
-// after every stamp (not for the one that fills the card, that gets the voucher mail)
-function shop_stamp_notify_stamp($email, $name, $keys) {
+// after every stamp (not for the one that fills the card, that gets the voucher mail): a status mail about the card, as part of the stamp program the guest takes part in.
+// It is pure information (what was booked, where the card stands, how long the stamps count): no reminder, no offer, no button. That keeps it a notice of the contract
+// and not advertising; everything that asks the guest to order again (almost full, expiring) is an automation and needs the confirmed consent.
+// $manual: a stamp the restaurant wrote by hand (goodwill, correction), not one earned by an order.
+function shop_stamp_notify_stamp($email, $name, $keys, $manual = false) {
 	try {
-		if (trim((string)$email) === '') { return; }
-		if (!shop_nl_allows($email, 'stamps')) { return; }   // the status mail of a stamp is a reminder: only for guests who confirmed the stamp card reminders (the card itself is in the account)
+		if (trim((string)$email) === '' || !filter_var(trim((string)$email), FILTER_VALIDATE_EMAIL)) { return; }
 		$st = shop_stamp_state($keys);
 		$n = (int)$st['count']; $goal = (int)$st['goal']; $left = max(0, $goal - $n); $first = shop_stamp_first_name($name);
 		shop_stamp_mail(trim($email), array(
 			'subject' => 'Dein Stempel '.$n.' von '.$goal.($first !== '' ? ', '.$first : '').'!',
-			'headline' => $first !== '' ? 'Danke, '.$first.'!' : 'Danke!',
-			'lead' => 'Schön, dass du bei uns bestellt hast. Dafür gibt es einen Stempel auf deine Karte.',
+			'headline' => $manual ? 'Ein Stempel für dich' : ($first !== '' ? 'Danke, '.$first.'!' : 'Danke!'),
+			'lead' => $manual ? 'Wir haben dir einen Stempel auf deine Karte geschrieben.' : 'Für deine Bestellung ist ein Stempel auf deiner Karte eingetragen.',
 			'image' => shop_stamp_card_image($n, $goal), 'alt' => 'Deine Stempelkarte: '.$n.' von '.$goal.' Stempeln', 'box' => null,
-			'after' => ($left === 1 ? 'Noch 1 Stempel' : 'Noch '.$left.' Stempel').' bis zu deinem Gutschein. Mit der vollen Karte schenken wir dir '.$st['percent'].' % deiner Bestellungen zurück, und wir ziehen den Gutschein automatisch ab.'.($st['until'] !== '' ? ' Deine Stempel gelten bis zum '.$st['until'].'.' : ''),
-			// information about the card only: no button, no offer. The reminders to order again are the automations (they need the confirmed consent as well), so the two kinds of mail stay apart
+			'after' => 'Stand deiner Karte: '.$n.' von '.$goal.' Stempeln, noch '.$left.' bis zum Gutschein.'.($st['until'] !== '' ? ' Deine Stempel gelten bis zum '.$st['until'].'.' : '').' Das ist eine Information zu deiner Stempelkarte.',
 			'btn' => '', 'url' => '', 'signoff' => shop_stamp_signoff()));
 	} catch (Throwable $e) { error_log('mySeat stamp notice: '.$e->getMessage()); }
 }

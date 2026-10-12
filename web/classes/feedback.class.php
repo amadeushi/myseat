@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__.'/mail_logo.class.php';
 /*
  * Guest feedback after a visit: a star rating (food, service, overall) plus an optional comment,
  * collected 24h+ after the reservation's time. A 4-5 star overall rating asks the guest to also
@@ -294,7 +295,7 @@ function fb_mail_build($ctx) {
 		.'<body style="margin:0;padding:0;background-color:#f4f1ea;">'
 		.'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f1ea;"><tr><td align="center" style="padding:24px 12px;">'
 		.'<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px;background-color:#ffffff;border:1px solid #e6e0d2;">'
-		.'<tr><td style="'.$font.'padding:28px 32px 4px;font-size:12px;font-weight:bold;letter-spacing:.16em;text-transform:uppercase;color:#8a6d3b;">'.$h($brand).'</td></tr>'
+		.bm_mail_logo_row($brand, '28px 32px 4px')
 		.'<tr><td style="'.$font.'padding:16px 32px 4px;font-size:16px;line-height:1.6;color:#333333;">'.$h($greeting).'<br><br>'.$h($intro).'</td></tr>'
 		.'<tr><td style="padding:20px 32px;"><a href="'.$h($url).'" style="display:inline-block;background-color:#c9a259;color:#1a1408;font-weight:bold;text-decoration:none;padding:14px 28px;border-radius:999px;'.$font.'font-size:16px;">'.$h($cta).'</a></td></tr>'
 		.'<tr><td style="'.$font.'padding:0 32px 20px;font-size:13px;color:#6e685c;">'.$h($note).'</td></tr>'
@@ -354,7 +355,7 @@ function fb_reply_mail_build($ctx) {
 		.'<body style="margin:0;padding:0;background-color:#f4f1ea;">'
 		.'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f1ea;"><tr><td align="center" style="padding:24px 12px;">'
 		.'<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px;background-color:#ffffff;border:1px solid #e6e0d2;">'
-		.'<tr><td style="'.$font.'padding:28px 32px 4px;font-size:12px;font-weight:bold;letter-spacing:.16em;text-transform:uppercase;color:#8a6d3b;">'.$h($brand).'</td></tr>'
+		.bm_mail_logo_row($brand, '28px 32px 4px')
 		.'<tr><td style="'.$font.'padding:16px 32px 4px;font-size:16px;line-height:1.6;color:#333333;">'.$h($greeting).'<br><br>'.$h($intro).'</td></tr>'
 		.'<tr><td style="padding:12px 32px;"><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#faf8f3;border-left:3px solid #c9a259;"><tr><td style="padding:14px 18px;'.$font.'font-size:15px;line-height:1.6;color:#333333;font-style:italic;">'.nl2br($h($reply)).'</td></tr></table></td></tr>'
 		.'<tr><td style="'.$font.'padding:16px 32px 28px;font-size:16px;line-height:1.6;color:#333333;">'.$h($closing).'<br>'.$h($sign).'</td></tr>'

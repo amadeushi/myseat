@@ -164,6 +164,7 @@ function shop_nla_try($sub, $kind, $ref, $make, $cap = true) {
 	$kinds = shop_nla_kinds();
 	if (!shop_nl_allows($sub['email'], $kinds[$kind]['topic'])) { return false; }
 	if ($cap && shop_nla_capped($sub['id'])) { return false; }
+	if ($kind !== 'welcome' && $kinds[$kind]['topic'] === 'news' && shop_nl_news_count((int)$sub['id']) >= SHOP_NL_NEWS_MAX) { return false; }   // the promise of the tick: at most two news mails a month
 	$st = fb_exec("INSERT IGNORE INTO ".fb_t('tp_shop_nl_auto_log')." (sub_id, kind, ref, sent_at, ok) VALUES (?, ?, ?, ?, 0)", 'isss', array((int)$sub['id'], $kind, $ref, date('Y-m-d H:i:s')));
 	if (!$st || mysqli_stmt_affected_rows($st) !== 1) { return false; }
 	$vars = $make(); $ok = $vars !== false && shop_nla_send($sub, $kind, is_array($vars) ? $vars : array());

@@ -673,8 +673,8 @@ function shop_chat_cart_info($c) {
 // the question that goes with the buttons (only what is still open is asked)
 function shop_chat_nl_text($b) {
 	$st = isset($b['nl:stamps']); $nw = isset($b['nl:news']);
-	$q = ($st && $nw) ? 'Soll ich dir Bescheid geben, wenn deine Stempelkarte fast voll ist und bevor Stempel verfallen? Oder ab und zu Neuigkeiten und Aktionen schicken?'
-		: ($st ? 'Soll ich dir Bescheid geben, wenn deine Stempelkarte fast voll ist und bevor Stempel verfallen?' : 'Darf ich dir ab und zu Neuigkeiten und Aktionen vom Restaurant per Mail schicken?');
+	$q = ($st && $nw) ? 'Soll ich dir Bescheid geben, wenn deine Stempelkarte fast voll ist und bevor Stempel verfallen? Oder Neuigkeiten und Aktionen schicken, höchstens 2 Mal im Monat?'
+		: ($st ? 'Soll ich dir Bescheid geben, wenn deine Stempelkarte fast voll ist und bevor Stempel verfallen?' : 'Darf ich dir Neuigkeiten und Aktionen vom Restaurant per Mail schicken, höchstens 2 Mal im Monat?');
 	return $q.' Du bestätigst es einmal per Mail, abmelden geht jederzeit.';
 }
 // after the order: the offer to be reachable by mail (the two topics of the newsletter; the guest confirms in the mail that follows). Buttons only for what is not on or asked for yet.

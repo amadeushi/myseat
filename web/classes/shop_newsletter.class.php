@@ -12,6 +12,7 @@
 const SHOP_NL_CONFIRM_DAYS = 14;       // how long the link of the confirmation mail works
 const SHOP_NL_KEEP_YEARS = 3;          // the proof is kept this long after the guest unsubscribed, then deleted
 const SHOP_NL_TOPICS = array('news', 'stamps');
+const SHOP_NL_NEWS_MAX = 2;            // the promise in the tick: at most this many news mails per guest in 30 days (mailings and the news automations together)
 
 function shop_nl_schema($db, $opts) {
 	mysqli_query($db, "CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_subscribers')." (
@@ -41,9 +42,9 @@ function shop_nl_topic_label($t, $lang = 'de') {
 // the words of the two consents exactly as the pages show them (checkout, status page, account, chat); they are written to the proof
 function shop_nl_consent_text($topic, $lang = 'de') {
 	$t = array(
-		'de' => array('news' => 'Ich möchte ab und zu Neuigkeiten und Aktionen vom Restaurant per Mail erhalten (neue Gerichte, Angebote, Öffnungszeiten)',
+		'de' => array('news' => 'Ich möchte Neuigkeiten und Aktionen vom Restaurant per Mail erhalten, höchstens 2 Mal im Monat (neue Gerichte, Angebote, Öffnungszeiten)',
 			'stamps' => 'Ich möchte Bescheid bekommen, wenn meine Stempelkarte fast voll ist und bevor Stempel verfallen'),
-		'en' => array('news' => 'I would like to get news and offers from the restaurant by e-mail from time to time (new dishes, offers, opening times)',
+		'en' => array('news' => 'I would like to get news and offers from the restaurant by e-mail, at most twice a month (new dishes, offers, opening times)',
 			'stamps' => 'I would like to be told when my stamp card is almost full and before stamps expire'));
 	$l = $lang === 'en' ? 'en' : 'de';
 	return isset($t[$l][$topic]) ? $t[$l][$topic] : '';
@@ -57,6 +58,13 @@ function shop_nl_find($email) { shop_ensure_schema(); return fb_row("SELECT * FR
 function shop_nl_by_token($token) { shop_ensure_schema(); $t = preg_replace('/[^a-f0-9]/', '', (string)$token); return strlen($t) === 32 ? fb_row("SELECT * FROM ".fb_t('tp_shop_subscribers')." WHERE token = ?", 's', array($t)) : null; }
 function shop_nl_by_confirm($token) { shop_ensure_schema(); $t = preg_replace('/[^a-f0-9]/', '', (string)$token); return strlen($t) === 32 ? fb_row("SELECT * FROM ".fb_t('tp_shop_subscribers')." WHERE confirm_token = ?", 's', array($t)) : null; }
 
+// how many news mails this guest got in the last 30 days: mailings that were sent to him and the automations of the news topic (the confirmation mail does not count)
+function shop_nl_news_count($subId) {
+	$since = date('Y-m-d H:i:s', time() - 30 * 86400); $n = 0;
+	$a = fb_row("SELECT COUNT(*) AS n FROM ".fb_t('tp_shop_nl_queue')." WHERE sub_id = ? AND status = 'sent' AND sent_at > ?", 'is', array((int)$subId, $since)); if ($a) { $n += (int)$a['n']; }
+	$b = fb_row("SELECT COUNT(*) AS n FROM ".fb_t('tp_shop_nl_auto_log')." WHERE sub_id = ? AND ok = 1 AND kind IN ('welcome', 'winback', 'sunset') AND sent_at > ?", 'is', array((int)$subId, $since)); if ($b) { $n += (int)$b['n']; }
+	return $n;
+}
 // may a mail of this topic go to this address? (confirmed, not blocked, not unsubscribed)
 function shop_nl_allows($email, $topic) {
 	if (!shop_nl_valid($email) || !in_array($topic, SHOP_NL_TOPICS, true)) { return false; }

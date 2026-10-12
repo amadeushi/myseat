@@ -615,7 +615,7 @@ define ( '_status_pending', 'Unconfirmed' );
 define ( '_status_cancel', 'Cancelled' );
 
 //original text: "I would like to receive informations by email."
-define ( '_reservation_advertise', 'I would like to get news and offers from the restaurant by e-mail from time to time (new dishes, offers, opening times). I confirm this once more by e-mail and can unsubscribe at any time.' );
+define ( '_reservation_advertise', 'I would like to get news and offers from the restaurant by e-mail, at most twice a month (new dishes, offers, opening times). I confirm this once more by e-mail and can unsubscribe at any time.' );
 define ( '_reservation_advertise_staff', 'Guest would like to receive news from the restaurant (he gets a mail to confirm, it only counts after that)' );
 
 //original text: "Dr."

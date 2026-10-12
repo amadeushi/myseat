@@ -283,6 +283,7 @@ function shop_nlm_run($limit = SHOP_NLM_PER_RUN, $seconds = 25) {
 			if (!$st || mysqli_stmt_affected_rows($st) !== 1) { continue; }
 			$sub = fb_row("SELECT id, email, name, token FROM ".fb_t('tp_shop_subscribers')." WHERE id = ?", 'i', array((int)$q['sub_id']));
 			if (!$sub || !shop_nl_allows($sub['email'], 'news')) { fb_exec("UPDATE ".fb_t('tp_shop_nl_queue')." SET status = 'skipped', error = 'nicht mehr angemeldet' WHERE id = ?", 'i', array((int)$q['id'])); continue; }
+			if (shop_nl_news_count((int)$sub['id']) >= SHOP_NL_NEWS_MAX) { fb_exec("UPDATE ".fb_t('tp_shop_nl_queue')." SET status = 'skipped', error = 'Limit: 2 Mails im Monat' WHERE id = ?", 'i', array((int)$q['id'])); continue; }
 			if (!isset($camps[$q['campaign_id']])) { $camps[$q['campaign_id']] = shop_nlm_get($q['campaign_id']); }
 			$m = shop_nlm_render($camps[$q['campaign_id']], $sub);
 			$ok = false;

@@ -71,7 +71,8 @@ function shop_notify_order($o) {
 		// feedback.class.php - this used to be its own uncoordinated third visual system
 		$html = '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'.$h($subject).'</title></head><body style="margin:0;padding:0;background-color:#f4f1ea;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f1ea;"><tr><td align="center" style="padding:24px 12px;">'
 			.'<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background-color:#ffffff;border:1px solid #e6e0d2;">'
-			.'<tr><td style="padding:30px 32px 6px;"><div style="font-family:Georgia,\'Times New Roman\',serif;font-size:28px;color:#1c1a18;">Danke'.($first !== '' ? ', '.$h($first) : '').'!</div>'
+			.bm_mail_logo_row($brand)
+			.'<tr><td style="padding:22px 32px 6px;"><div style="font-family:Georgia,\'Times New Roman\',serif;font-size:28px;color:#1c1a18;">Danke'.($first !== '' ? ', '.$h($first) : '').'!</div>'
 			.'<div style="'.$font.'font-size:15px;color:#555;line-height:1.6;padding-top:8px;">'.$h($lead).'</div></td></tr>'
 			.($clock !== '' ? '<tr><td style="padding:14px 32px 4px;"><div style="background:#f8f2e4;border:1px solid #e6d9b8;border-radius:10px;padding:14px 18px;"><div style="'.$font.'font-size:13px;color:#7a6a45;">'.$h($timeLabel).'</div>'
 				.'<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:40px;line-height:1.1;color:#6b5330;">'.$h($clock).' <span style="'.$font.'font-size:15px;color:#7a6a45;">Uhr</span></div></div></td></tr>' : '')

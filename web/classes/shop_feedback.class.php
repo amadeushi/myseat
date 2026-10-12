@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__.'/mail_logo.class.php';
 /*
  * Feedback mail after an order: about two hours after a delivery or pickup is done the guest (with an e-mail address) gets a short, friendly mail - "Hat's geschmeckt?" -
  * whose answer is one tap on a number from 1 to 5. The tap is saved at once (status 'partial'); the page behind it asks for the second rating (delivery or pickup), a free
@@ -75,7 +76,8 @@ function shop_fb_mail_build($ctx) {
 		.'<div style="display:none;max-height:0;overflow:hidden;opacity:0;">Ein Tipp reicht, und wir wissen, wie es war.</div>'
 		.'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f1ea;"><tr><td align="center" style="padding:24px 12px;">'
 		.'<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px;background-color:#ffffff;border:1px solid #e6e0d2;">'
-		.'<tr><td style="padding:30px 32px 4px;"><div style="font-family:Georgia,\'Times New Roman\',serif;font-size:28px;color:#1c1a18;">'.$h($greeting).'</div></td></tr>'
+		.bm_mail_logo_row($brand)
+		.'<tr><td style="padding:22px 32px 4px;"><div style="font-family:Georgia,\'Times New Roman\',serif;font-size:28px;color:#1c1a18;">'.$h($greeting).'</div></td></tr>'
 		.'<tr><td style="'.$font.'padding:8px 32px 0;font-size:16px;line-height:1.6;color:#333333;">'.$h($intro).'</td></tr>'
 		.($ctx['summary'] !== '' ? '<tr><td style="'.$font.'padding:10px 32px 0;font-size:13px;color:#6e685c;">'.$h($ctx['summary']).'</td></tr>' : '')
 		.'<tr><td style="'.$font.'padding:22px 32px 8px;font-size:17px;font-weight:bold;color:#1c1a18;">'.$h($ask).'</td></tr>'

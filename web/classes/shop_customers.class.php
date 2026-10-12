@@ -238,7 +238,7 @@ function shop_cust_stamp_add($id, $base, $reason, $by, $notify = false) {
 	// a full card makes the voucher and tells the guest by itself; without the tick the notice is held back (no address, no mail)
 	$made = shop_stamp_check($keys, $notify ? $c['phone'] : '', $notify ? $c['email'] : '', $c['name']);
 	$told = false;
-	if ($notify && !$made && $ct['mail'] !== '') { shop_stamp_notify_stamp($ct['mail'], $c['name'], $keys); $told = true; }
+	if ($notify && !$made && $ct['mail'] !== '') { shop_stamp_notify_stamp($ct['mail'], $c['name'], $keys, true); $told = true; }
 	if ($notify && $made && ($ct['mail'] !== '' || $ct['sms'])) { $told = true; }
 	shop_cust_log($c['id'], 'stamp+', 'Stempel gutgeschrieben, Grundbetrag '.shop_money($base).' ('.shop_cust_reason($reason).')'.($made ? '; Karte voll, Gutschein ausgestellt' : '').($told ? '; Gast benachrichtigt' : '; Gast nicht benachrichtigt'), $by);
 	shop_cust_index(true);
