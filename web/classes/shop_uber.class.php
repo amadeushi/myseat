@@ -81,6 +81,34 @@ function shop_uber_call($png, $tier) {
 	return array('ok' => true, 'data' => $j['data'], 'model' => isset($j['model']) ? (string)$j['model'] : '');
 }
 
+
+// the second reader: when n8n / OpenAI cannot read the receipt (an outage, a 500 of OpenAI), Claude of Anthropic reads it directly from here (the key of the order chat, see shop_chat_ai_key()).
+// The answer is forced into the same schema through a tool, so the check and the import after it stay as they are. Off with the setting uber_claude_fallback = 0.
+function shop_uber_claude_ready() {
+	require_once __DIR__.'/shop_chat_ai.class.php';
+	return shop_setting('uber_claude_fallback') !== '0' && shop_chat_ai_key() !== '';
+}
+function shop_uber_call_claude($png) {
+	if (!shop_uber_claude_ready()) { return array('ok' => false, 'error' => 'Kein Schlüssel für Anthropic hinterlegt.'); }
+	$model = trim((string)shop_setting('uber_claude_model')); if ($model === '') { $model = 'claude-sonnet-5-5'; }
+	$schema = shop_uber_schema();
+	$r = shop_chat_ai_request(array('model' => $model, 'max_tokens' => 4000,
+		'tools' => array(array('name' => 'uber_bon', 'description' => 'Die gelesenen Daten des Bons', 'input_schema' => $schema)),
+		'tool_choice' => array('type' => 'tool', 'name' => 'uber_bon'),
+		'messages' => array(array('role' => 'user', 'content' => array(
+			array('type' => 'image', 'source' => array('type' => 'base64', 'media_type' => 'image/png', 'data' => base64_encode(shop_uber_enlarge($png)))),
+			array('type' => 'text', 'text' => shop_uber_prompt()))))), 70);
+	if (!is_array($r) || empty($r['content']) || !is_array($r['content'])) { return array('ok' => false, 'error' => 'Anthropic antwortet nicht.'); }
+	foreach ($r['content'] as $blk) {
+		if (isset($blk['type']) && $blk['type'] === 'tool_use' && isset($blk['input']) && is_array($blk['input'])) {
+			$d = $blk['input'];
+			foreach ($schema['required'] as $k) { if (!array_key_exists($k, $d)) { $d[$k] = in_array($k, array('items', 'other_fees', 'unclear'), true) ? array() : null; } }
+			return array('ok' => true, 'data' => $d, 'model' => 'anthropic:'.$model);
+		}
+	}
+	return array('ok' => false, 'error' => 'Anthropic hat keine Daten geliefert.');
+}
+
 /*
  * "Bestellt am" and "Lieferung bis" / "Fällig um" as they are printed ("October 6, 8:01 PM", "6. Oktober 2026 um 20:01", "9:49 PM"): the day and the time are taken out of the text here, the model
  * only copies the text (it once turned "October 6" into the 5th). Returns 'Y-m-d H:i' or null. Without a day in the text the day of $base ('Y-m-d') is taken, without a year the current one
@@ -197,6 +225,11 @@ function shop_uber_process($id, $force = false) {
 		if (!$r['ok']) { $errors[] = $tier.': '.$r['error']; continue; }
 		$best = array('read' => $r['data'], 'check' => shop_uber_check($r['data']), 'tier' => $tier, 'model' => $r['model'], 'read_at' => date('Y-m-d H:i:s'));
 		if ($best['check']['ok']) { break; }
+	}
+	if (!$best && shop_uber_claude_ready()) {
+		$r = shop_uber_call_claude($row['png']);
+		if ($r['ok']) { $best = array('read' => $r['data'], 'check' => shop_uber_check($r['data']), 'tier' => 'claude', 'model' => $r['model'], 'read_at' => date('Y-m-d H:i:s')); }
+		else { $errors[] = 'claude: '.$r['error']; }
 	}
 	if (!$best) { $best = array('error' => implode(' | ', $errors), 'read_at' => date('Y-m-d H:i:s')); }
 	$status = isset($best['check']) ? ($best['check']['ok'] ? 'read' : 'check') : 'error';

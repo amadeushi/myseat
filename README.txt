@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.47.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Uber-Eats-Bons haben jetzt einen zweiten Leser. Wenn n8n/OpenAI den Bon nicht lesen kann (zum Beispiel ein Serverfehler 500 bei OpenAI), liest mySeat ihn direkt mit Claude von Anthropic (Schlüssel des Bestell-Chats, Modell claude-sonnet-5-5, Einstellung uber_claude_model). Die Antwort läuft durch dieselbe Prüfung wie bisher (Summen, Zahlart, Frische); als Lesestufe steht "claude" am Bon. Abschalten mit uber_claude_fallback = 0.
+ * Neu: Bestellungen, Backend: "In Lieferung umwandeln" bei einer offenen Abholung (nicht online bezahlt). Das System sucht die Adresse und die Zone und addiert die Liefergebühr der Zone zur Summe; es lehnt ab bei einem Gutschein nur für Abholung, einem Warenwert unter dem Mindestbestellwert der Zone und einer Adresse außerhalb der Zonen. Eintrag im Bestell-Log.
+
 2026-10-12 == mySeat v6.46.3 == amadeushi - http://github.com/amadeushi/myseat
 
  * Korrigiert: Die weiße Kontur von Zeus war im Bild selbst unterbrochen (Ohr oben rechts, Schulter unten links), nicht erst durch den runden Rahmen. Für die Abzeichen gibt es jetzt ein eigenes Bild (order/zeus_badge.png) mit lückenloser weißer Kontur und etwas Rand; Zeus als Stempel, Fahrer auf der Karte und in den Mails bleibt unverändert.

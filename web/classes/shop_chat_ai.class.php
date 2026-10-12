@@ -38,14 +38,14 @@ function shop_chat_ai_ready() {
 }
 
 // ---- the request (raw HTTPS; the shared hosting has no package manager for the SDK). $GLOBALS['shop_chat_ai_transport'] replaces the network in tests.
-function shop_chat_ai_request($payload) {
+function shop_chat_ai_request($payload, $timeout = 25) {
 	if (!empty($GLOBALS['shop_chat_ai_transport'])) { return call_user_func($GLOBALS['shop_chat_ai_transport'], $payload); }
 	$ch = curl_init('https://api.anthropic.com/v1/messages');
 	$hdr = array('content-type: application/json', 'anthropic-version: 2023-06-01', 'x-api-key: '.shop_chat_ai_key());
 	// a key that is not tied to one workspace needs the workspace named in every request
 	$ws = trim((string)shop_setting('chat_ai_workspace'));
 	if ($ws !== '' && preg_match('/^[A-Za-z0-9_\-]{4,80}$/', $ws)) { $hdr[] = 'anthropic-workspace-id: '.$ws; }
-	curl_setopt_array($ch, array(CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_CONNECTTIMEOUT => 6, CURLOPT_TIMEOUT => 25, CURLOPT_FOLLOWLOCATION => false,
+	curl_setopt_array($ch, array(CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_CONNECTTIMEOUT => 6, CURLOPT_TIMEOUT => (int)$timeout, CURLOPT_FOLLOWLOCATION => false,
 		CURLOPT_HTTPHEADER => $hdr, CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE)));
 	$raw = curl_exec($ch); $http = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
 	if ($http !== 200 || !is_string($raw)) { error_log('mySeat chat AI: HTTP '.$http.(is_string($raw) ? ' '.substr(preg_replace('/\s+/', ' ', $raw), 0, 160) : '')); return null; }

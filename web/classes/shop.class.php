@@ -2888,6 +2888,33 @@ function shop_dispatch_edit_address($orderId, $in, $by) {
 	shop_log((int)$orderId, 'Adresse geändert', mb_substr($by.': '.trim((string)$o['street'].', '.$o['zip'].' '.$o['city']).' -> '.trim($street.', '.$zip.' '.$city).($note !== (string)$o['address_note'] ? ' | Hinweis: '.$note : '').($feeNote !== '' ? ' | '.$feeNote : ''), 0, 200));
 	return array('ok' => true, 'fee_note' => $feeNote);
 }
+// a pickup order that turns into a delivery afterwards (the guest rang and wants it brought): the zone of the new address sets the delivery fee, which is added to the total;
+// a coupon only valid for pickup, an order paid online and a basket below the minimum of the zone stay as they are (the answer says why)
+function shop_order_to_delivery($orderId, $in, $by) {
+	$o = shop_order($orderId);
+	if (!$o || $o['type'] !== 'pickup' || !in_array($o['status'], array('new', 'accepted', 'preparing', 'ready'), true)) { return array('ok' => false, 'error' => 'Nur eine offene Abholung lässt sich in eine Lieferung umwandeln.'); }
+	if ($o['payment_method'] === 'mollie') { return array('ok' => false, 'error' => 'Diese Bestellung wurde online bezahlt, die Liefergebühr lässt sich nicht nachträglich dazu buchen.'); }
+	$f = function ($k, $max) use ($in) { return trim(mb_substr((string)(isset($in[$k]) ? $in[$k] : ''), 0, $max)); };
+	$street = $f('street', 160); $zip = $f('zip', 10); $city = $f('city', 80); $note = $f('note', 200);
+	if ($street === '' || $city === '' || !preg_match('/\d/', $street)) { return array('ok' => false, 'error' => 'Bitte gib Straße mit Hausnummer und den Ort an.'); }
+	if ((string)$o['coupon_code'] !== '') {
+		$c = fb_row("SELECT applies FROM ".fb_t('tp_shop_coupons')." WHERE code = ?", 's', array($o['coupon_code']));
+		if ($c && $c['applies'] === 'pickup') { return array('ok' => false, 'error' => 'Der Gutschein '.$o['coupon_code'].' gilt nur für Abholung.'); }
+	}
+	$r = shop_pick_zone($in) ?: shop_find_zone($street, $zip, $city);
+	if (!$r['ok']) { return shop_zone_fail($r); }
+	$z = $r['zone'];
+	$min = $z['min_order_cents'] > 0 ? (int)$z['min_order_cents'] : shop_cents(shop_setting('min_order_delivery'));
+	$goods = (int)$o['subtotal_cents'] - (int)$o['discount_cents'];
+	if ($goods < $min) { return array('ok' => false, 'error' => 'Der Warenwert '.shop_money($goods).' liegt unter dem Mindestbestellwert '.shop_money($min).' dieser Zone.'); }
+	if ($zip === '' && !empty($r['postcode'])) { $zip = (string)$r['postcode']; }
+	$fee = (int)$z['fee_cents']; $total = (int)$o['total_cents'] - (int)$o['fee_cents'] + $fee;
+	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET type = 'delivery', street = ?, zip = ?, city = ?, address_note = ?, lat = ?, lng = ?, zone_id = ?, fee_cents = ?, total_cents = ?,
+		suburb = NULL, route_m = NULL, route_s = NULL, geo_at = NULL, updated_at = ? WHERE id = ? AND type = 'pickup'", 'ssssddiiisi',
+		array($street, $zip, $city, $note, $r['lat'], $r['lng'], (int)$z['id'], $fee, $total, date('Y-m-d H:i:s'), (int)$orderId));
+	shop_log((int)$orderId, 'Abholung in Lieferung umgewandelt', mb_substr($by.': '.trim($street.', '.$zip.' '.$city).', Liefergebühr '.shop_money($fee).', Summe '.shop_money($total), 0, 200));
+	return array('ok' => true, 'fee' => $fee, 'total' => $total);
+}
 function shop_dispatch_retry_order($orderId, $in, $by) {
 	$o = shop_order($orderId);
 	if (!$o || $o['type'] !== 'delivery' || $o['status'] !== 'failed') { return array('ok' => false, 'error' => 'Nur eine fehlgeschlagene Lieferung lässt sich zurückholen.'); }

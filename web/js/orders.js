@@ -93,7 +93,7 @@
 				'<ul>' + o.items.map(function (it) { return '<li>' + it.qty + '× ' + esc(it.title) + (it.variation ? ' (' + esc(it.variation) + ')' : '') + (it.options.length ? ' – ' + esc(it.options.join(', ')) : '') + (it.note ? ' <em>„' + esc(it.note) + '“</em>' : '') + ' <span>' + money(it.line) + '</span></li>'; }).join('') + '</ul>' +
 				(o.note ? '<p><em>Anmerkung: ' + esc(o.note) + '</em></p>' : '') +
 				'<p class="orders-totals">Zwischensumme ' + money(o.subtotal) + (o.discount ? ' · ' + (o.coupon ? 'Gutschein ' + esc(o.coupon) : 'Rabatt') + ' −' + money(o.discount) : '') + (o.offer ? ' · ' + esc(o.offer_note.replace(/ -[\d,]+ €$/, '') || 'Kombi-Vorteil') + ' −' + money(o.offer) : '') + (o.surcharge ? ' · Aufschlag +' + money(o.surcharge) : '') + (o.adjust ? ' (' + esc(o.adjust) + ')' : '') + (o.fee ? ' · Liefergebühr ' + money(o.fee) : '') + (o.tip ? ' · Trinkgeld ' + money(o.tip) : '') + ' · <strong>Gesamt ' + money(o.total) + '</strong></p>' +
-				'<p>' + (o.status !== 'done' && o.status !== 'cancelled' ? '<button type="button" class="offer-delete" data-status="cancelled">Stornieren</button> ' : '') + (o.test ? '<button type="button" class="offer-delete" data-delete="1">Testbestellung löschen</button>' : '') + '</p></div>';
+				'<p>' + (o.type === 'pickup' && ['new', 'accepted', 'preparing', 'ready'].indexOf(o.status) >= 0 && o.pay !== 'mollie' ? '<button type="button" class="button_dark" data-todelivery="1">In Lieferung umwandeln</button> ' : '') + (o.status !== 'done' && o.status !== 'cancelled' ? '<button type="button" class="offer-delete" data-status="cancelled">Stornieren</button> ' : '') + (o.test ? '<button type="button" class="offer-delete" data-delete="1">Testbestellung löschen</button>' : '') + '</p></div>';
 		}
 		return h + '</div>';
 	}
@@ -131,6 +131,33 @@
 	});
 	document.addEventListener('click', function (ev) { if (!ev.target.closest('.pause-item')) { pauseClose(); } });
 	document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') { pauseClose(); } });
+	// a pickup that becomes a delivery: ask for the address, the server looks up the zone and adds the fee of it
+	function toDelivery(id, pick) {
+		openDialog('In Lieferung umwandeln',
+			'<label>Straße + Hausnummer<br/><input type="text" id="od-street" required/></label>' +
+			'<label>PLZ<br/><input type="text" id="od-zip"/></label>' +
+			'<label>Ort<br/><input type="text" id="od-city" value="Hildesheim" required/></label>' +
+			'<label>Hinweis für den Fahrer<br/><input type="text" id="od-note" maxlength="200"/></label>' +
+			'<p>Die Liefergebühr der Zone wird zur Summe addiert.</p>', 'Umwandeln').then(function (f) {
+			if (!f) { return; }
+			send({ street: f.querySelector('#od-street').value.trim(), zip: f.querySelector('#od-zip').value.trim(), city: f.querySelector('#od-city').value.trim(), note: f.querySelector('#od-note').value.trim() });
+		});
+		function send(d) {
+			d.id = id;
+			post('to_delivery', d).then(function (r) {
+				if (r.ok) { note('Umgewandelt: Liefergebühr ' + money(r.fee) + ', Summe ' + money(r.total) + '.'); load(); return; }
+				if (r.reason === 'ambiguous' && r.candidates) {
+					openDialog('Welche Adresse?', r.candidates.map(function (c, i) { return '<label><input type="radio" name="od-pick" value="' + i + '"' + (i === 0 ? ' checked' : '') + '/> ' + esc(c.road + ', ' + c.postcode + ' ' + c.city) + '</label>'; }).join(''), 'Übernehmen').then(function (g) {
+						if (!g) { return; }
+						var c = r.candidates[parseInt(g.querySelector('input[name="od-pick"]:checked').value, 10)];
+						d.street = c.road; d.zip = c.postcode || d.zip; d.city = c.city || d.city; d.pick_lat = c.lat; d.pick_lng = c.lng; send(d);
+					});
+					return;
+				}
+				note(r.error || 'Das hat nicht geklappt.', true);
+			}).catch(function () { note('Keine Verbindung.', true); });
+		}
+	}
 	function load() {
 		fetch('ajax/shop_orders.php?op=day&date=' + DATE + '&filter=' + filter, { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (r) {
 			if (!r.ok) { note(r.error || 'Das hat nicht geklappt.', true); return; }
@@ -188,6 +215,7 @@
 			}
 			st.disabled = true; post('status', { id: id, status: st.dataset.status }).then(function (r) { if (!r.ok) { note(r.error || 'Das hat nicht geklappt.', true); } load(); }); return;
 		}
+		if (ev.target.closest('[data-todelivery]')) { toDelivery(id); return; }
 		if (ev.target.closest('[data-delete]')) {
 			confirmDialog('Testbestellung löschen', 'Diese Testbestellung endgültig löschen? Das kann nicht rückgängig gemacht werden.', 'Löschen').then(function (ok) {
 				if (!ok) { return; }
