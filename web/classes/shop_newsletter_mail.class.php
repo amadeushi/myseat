@@ -93,6 +93,7 @@ function shop_nlm_clean_blocks($b) {
 			case 'btn': $out[] = array('t' => 'btn', 'text' => shop_nlm_str(isset($x['text']) ? $x['text'] : '', 40), 'url' => shop_nlm_link(isset($x['url']) ? $x['url'] : '')); break;
 			case 'box': $out[] = array('t' => 'box', 'label' => shop_nlm_str(isset($x['label']) ? $x['label'] : '', 60), 'value' => shop_nlm_str(isset($x['value']) ? $x['value'] : '', 40), 'note' => shop_nlm_str(isset($x['note']) ? $x['note'] : '', 120)); break;
 			case 'hr': $out[] = array('t' => 'hr'); break;
+			case 'logo': $out[] = array('t' => 'logo'); break;
 		}
 	}
 	return $out;
@@ -138,6 +139,7 @@ function shop_nlm_render($c, $sub, $o = array()) {
 				.'<div style="'.$serif.'font-size:36px;line-height:1.1;color:#6b5330;">'.$h($b['value']).'</div><div style="'.$font.'font-size:13px;color:#7a6a45;padding-top:2px;">'.$h($b['note']).'</div></div></td></tr>';
 			$plain[] = trim(trim($b['label'].($b['value'] !== '' ? ': '.$b['value'] : '')).($b['note'] !== '' ? ' ('.$b['note'].')' : ''));
 		}
+		elseif ($b['t'] === 'logo') { $rows .= '<tr><td style="padding:26px 32px 0;"><a href="'.$h(shop_nl_base()).'"><img src="'.$h(shop_nl_base().'mail/logo-mail.png').'" width="110" height="40" alt="'.$h($brand).'" style="display:block;border:0;width:110px;height:auto;"></a></td></tr>'; }
 		elseif ($b['t'] === 'hr') { $rows .= '<tr><td style="padding:14px 32px 4px;"><div style="border-top:1px solid #e6e0d2;font-size:1px;line-height:1px;">&nbsp;</div></td></tr>'; $plain[] = '----------'; }
 	}
 	$legal = function_exists('bm_legal_lines') ? bm_legal_lines(array()) : array();
@@ -145,15 +147,15 @@ function shop_nlm_render($c, $sub, $o = array()) {
 	if (!empty($settings['imprintUrl'])) { $links[] = '<a href="'.$h($settings['imprintUrl']).'" style="color:#8a6d3b;">Impressum</a>'; }
 	if (!empty($settings['privacyUrl'])) { $links[] = '<a href="'.$h($settings['privacyUrl']).'" style="color:#8a6d3b;">Datenschutz</a>'; }
 	$footer = '<tr><td style="'.$font.'padding:16px 32px 24px;border-top:1px solid #e6e0d2;font-size:12px;line-height:1.6;color:#6e685c;">'
-		.'Du bekommst diese Mail, weil du dich für '.(isset($o['topic']) && $o['topic'] === 'stamps' ? 'Erinnerungen zu deiner Stempelkarte' : 'Neuigkeiten').' von '.$h($brand).' angemeldet hast. <a href="{abmelden}" style="color:#8a6d3b;">Abmelden oder Einstellungen ändern</a>'
+		.'Du bekommst diese Mail, weil du dich für '.(isset($o['topic']) && $o['topic'] === 'stamps' ? 'Erinnerungen zu deiner Stempelkarte' : 'Neuigkeiten').' vom '.$h($brand).' angemeldet hast. <a href="{abmelden}" style="color:#8a6d3b;">Abmelden oder Einstellungen ändern</a>'
 		.($legal ? '<br><br><strong>Angaben zum Anbieter</strong><br>'.implode('<br>', array_map($h, $legal)) : '').($links ? '<br>'.implode(' &middot; ', $links) : '').'</td></tr>';
 	$pre = trim((string)(isset($c['preheader']) ? $c['preheader'] : ''));
 	$html = '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'.$h(isset($c['subject']) ? $c['subject'] : '').'</title></head>'
 		.'<body style="margin:0;padding:0;background-color:#f4f1ea;">'.($pre !== '' ? '<div style="display:none;max-height:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;">'.$h($pre).'</div>' : '')
 		.'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f1ea;"><tr><td align="center" style="padding:24px 12px;">'
 		.'<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background-color:#ffffff;border:1px solid #e6e0d2;">'
-		.$rows.'<tr><td style="padding:14px 32px 22px;"><div style="'.$font.'font-size:14px;color:#555;line-height:1.6;">Dein Team von '.$h($brand).'</div></td></tr>'.$footer.'</table></td></tr></table></body></html>';
-	$text = implode("\r\n\r\n", $plain)."\r\n\r\nDein Team von ".$brand."\r\n\r\n-- \r\nAbmelden oder Einstellungen ändern: {abmelden}\r\n".($legal ? implode("\r\n", $legal)."\r\n" : '');
+		.$rows.'<tr><td style="padding:14px 32px 22px;"><div style="'.$font.'font-size:14px;color:#555;line-height:1.6;">Dein Team vom '.$h($brand).'</div></td></tr>'.$footer.'</table></td></tr></table></body></html>';
+	$text = implode("\r\n\r\n", $plain)."\r\n\r\nDein Team vom ".$brand."\r\n\r\n-- \r\nAbmelden oder Einstellungen ändern: {abmelden}\r\n".($legal ? implode("\r\n", $legal)."\r\n" : '');
 	$real = !empty($sub['token']);
 	$headers = array();
 	if ($real) { $headers[] = 'List-Unsubscribe: <'.shop_nl_base().'newsletter.php?m='.$sub['token'].'&oneclick=1>'; $headers[] = 'List-Unsubscribe-Post: List-Unsubscribe=One-Click'; $headers[] = 'Precedence: bulk'; }

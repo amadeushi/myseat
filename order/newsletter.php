@@ -67,7 +67,7 @@ $showStamps = $sub && (!empty($sub['stamps']) || !empty($sub['want_stamps']) || 
 		<h1 class="st-title"><?php echo shop_h(nl_t('Anmeldung bestätigen', 'Confirm your sign-up', $en)); ?></h1>
 		<p class="st-lead"><?php
 			$labels = array(); if (!empty($sub['want_news'])) { $labels[] = shop_nl_topic_label('news', $en ? 'en' : 'de'); } if (!empty($sub['want_stamps'])) { $labels[] = shop_nl_topic_label('stamps', $en ? 'en' : 'de'); }
-			echo shop_h(nl_t('Du bekommst von '.$brand.': ', 'You will get from '.$brand.': ', $en).implode($en ? ' and ' : ' und ', $labels).'.'); ?></p>
+			echo shop_h(nl_t('Du bekommst vom '.$brand.': ', 'You will get from '.$brand.': ', $en).implode($en ? ' and ' : ' und ', $labels).'.'); ?></p>
 		<p class="st-lead"><?php echo shop_h(nl_t('Tippe auf den Knopf, damit wir wissen, dass diese Adresse dir gehört. Abmelden kannst du dich jederzeit, in jeder Mail steht der Link dazu.', 'Tap the button so that we know this address is yours. You can unsubscribe at any time, every mail has the link.', $en)); ?></p>
 		<form method="post" action="newsletter.php" class="st-again">
 			<input type="hidden" name="t" value="<?php echo shop_h($ct); ?>"/>
@@ -83,16 +83,11 @@ $showStamps = $sub && (!empty($sub['stamps']) || !empty($sub['want_stamps']) || 
 		<p class="st-lead"><a href="newsletter.php?m=<?php echo shop_h($mt); ?>"><?php echo shop_h(nl_t('Einstellungen ändern oder abmelden', 'Change settings or unsubscribe', $en)); ?></a></p>
 	<?php elseif ($view === 'kept'): ?>
 			<h1 class="st-title"><?php echo shop_h(nl_t('Danke, wir bleiben in Kontakt', 'Thank you, we stay in touch', $en)); ?></h1>
-			<p class="st-lead"><?php echo shop_h(nl_t('Du bekommst weiter Neuigkeiten von '.$brand.'. Abmelden kannst du dich jederzeit.', 'You will keep getting news from '.$brand.'. You can unsubscribe at any time.', $en)); ?></p>
-			<p class="st-again"><a class="cart-go" href="./"><?php echo shop_h(nl_t('Zur Speisekarte', 'To the menu', $en)); ?></a></p>
-			<p class="st-lead"><a href="newsletter.php?m=<?php echo shop_h($mt); ?>"><?php echo shop_h(nl_t('Einstellungen ändern oder abmelden', 'Change settings or unsubscribe', $en)); ?></a></p>
-		<?php elseif ($view === 'kept'): ?>
-			<h1 class="st-title"><?php echo shop_h(nl_t('Danke, wir bleiben in Kontakt', 'Thank you, we stay in touch', $en)); ?></h1>
-			<p class="st-lead"><?php echo shop_h(nl_t('Du bekommst weiter Neuigkeiten von '.$brand.'. Abmelden kannst du dich jederzeit.', 'You will keep getting news from '.$brand.'. You can unsubscribe at any time.', $en)); ?></p>
+			<p class="st-lead"><?php echo shop_h(nl_t('Du bekommst weiter Neuigkeiten vom '.$brand.'. Abmelden kannst du dich jederzeit.', 'You will keep getting news from '.$brand.'. You can unsubscribe at any time.', $en)); ?></p>
 			<p class="st-again"><a class="cart-go" href="./"><?php echo shop_h(nl_t('Zur Speisekarte', 'To the menu', $en)); ?></a></p>
 			<p class="st-lead"><a href="newsletter.php?m=<?php echo shop_h($mt); ?>"><?php echo shop_h(nl_t('Einstellungen ändern oder abmelden', 'Change settings or unsubscribe', $en)); ?></a></p>
 		<?php elseif ($view === 'manage' || $view === 'saved'): ?>
-		<h1 class="st-title"><?php echo shop_h(nl_t('Deine Mails von '.$brand, 'Your mails from '.$brand, $en)); ?></h1>
+		<h1 class="st-title"><?php echo shop_h(nl_t('Deine Mails vom '.$brand, 'Your mails from '.$brand, $en)); ?></h1>
 		<?php if ($view === 'saved'): ?><p class="st-lead" role="status"><?php echo shop_h(nl_t('Gespeichert.', 'Saved.', $en)); ?></p><?php endif; ?>
 		<?php if ($err !== ''): ?><p class="st-lead" role="alert"><?php echo shop_h($err); ?></p><?php endif; ?>
 		<p class="st-lead"><?php echo shop_h(nl_t('Adresse: ', 'Address: ', $en).$sub['email']); ?></p>
@@ -100,7 +95,7 @@ $showStamps = $sub && (!empty($sub['stamps']) || !empty($sub['want_stamps']) || 
 			<form method="post" action="newsletter.php" class="st-again">
 				<input type="hidden" name="m" value="<?php echo shop_h($mt); ?>"/>
 				<input type="hidden" name="token" value="<?php echo shop_h($_SESSION['shop_token']); ?>"/>
-				<p class="st-lead"><?php echo shop_h(nl_t('Möchtest du weiter Neuigkeiten von '.$brand.' bekommen?', 'Would you like to keep getting news from '.$brand.'?', $en)); ?></p>
+				<p class="st-lead"><?php echo shop_h(nl_t('Möchtest du weiter Neuigkeiten vom '.$brand.' bekommen?', 'Would you like to keep getting news from '.$brand.'?', $en)); ?></p>
 				<button type="submit" name="do" value="keep" class="cart-go"><?php echo shop_h(nl_t('Ja, gerne weiter', 'Yes, please continue', $en)); ?></button>
 			</form>
 			<?php endif; ?>

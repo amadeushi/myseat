@@ -7,7 +7,7 @@
 	var TOKEN = page.dataset.token, live = document.getElementById('nlm-live');
 	var cur = null, saveTimer = null, saving = false, dirty = false, version = 0, lastField = null, pollTimer = null, recipients = 0, problems = [], fromMail = '';
 	var STATUS = { auto: 'Vorlage', draft: 'Entwurf', sending: 'Läuft', done: 'Versendet', cancelled: 'Abgebrochen' };
-	var BLOCKS = [['h', 'Überschrift'], ['p', 'Text'], ['img', 'Bild'], ['btn', 'Button'], ['box', 'Box'], ['hr', 'Trenner']];
+	var BLOCKS = [['h', 'Überschrift'], ['p', 'Text'], ['img', 'Bild'], ['btn', 'Button'], ['box', 'Box'], ['hr', 'Trenner'], ['logo', 'Logo']];
 	var ICON = {
 		up: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
 		down: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg>',
@@ -107,7 +107,7 @@
 		stopPoll(); say(''); fromAuto = !!auto; root = auto ? autoRoot : mailRoot;
 		get('mail_get', '&id=' + id).then(function (r) {
 			if (!r.ok) { say(r.error || 'Das hat nicht geklappt.'); if (fromAuto) { showAutos(); } else { showList(); } return; }
-			cur = r.mail; recipients = r.recipients; problems = r.mail.problems || []; dirty = false; version = 0; lastField = null; draw();
+			cur = r.mail; cur.base = r.base || ''; recipients = r.recipients; problems = r.mail.problems || []; dirty = false; version = 0; lastField = null; draw();
 			if (cur.status === 'sending') { pollTimer = setInterval(refreshStats, 8000); }
 		}).catch(fail);
 	}
@@ -202,6 +202,7 @@
 		}
 		if (b.t === 'btn') { return el('div', {}, [el('span', { class: 'nlm-btnprev', text: b.text || 'Button' }), field('Text auf dem Button', b.text, function (v) { b.text = v; }, { max: 40 }), field('Link', b.url, function (v) { b.url = v; }, { max: 500, ph: 'https://...' })]); }
 		if (b.t === 'box') { return el('div', { class: 'nlm-boxfields' }, [field('Kleiner Titel', b.label, function (v) { b.label = v; }, { max: 60, ph: 'Dein Gutschein' }), field('Große Zeile', b.value, function (v) { b.value = v; }, { max: 40, ph: '5 EUR' }), field('Hinweis darunter', b.note, function (v) { b.note = v; }, { max: 120, ph: 'gültig bis ...' })]); }
+		if (b.t === 'logo') { return el('div', {}, [el('img', { class: 'nlm-logoprev', src: (cur.base || '') + 'mail/logo-mail.png', alt: 'Amadeus', width: '110' }), el('p', { class: 'sh-help', text: 'Das Logo, klein und links. Es führt zum Shop. Am besten ganz oben.' })]); }
 		return el('hr', { class: 'nlm-hr' });
 	}
 	function drawPaper(focusIdx) {

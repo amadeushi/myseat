@@ -221,7 +221,7 @@ function shop_nl_mail_confirm($email, $name, $topics, $confirmToken, $lang) {
 			'lead' => 'Du hast dich bei '.$brand.' angemeldet für: '.$what.'. Bitte bestätige das mit einem Tipp, damit wir wissen, dass diese Adresse dir gehört.',
 			'image' => '', 'alt' => '', 'box' => null,
 			'after' => 'Du hast dich nicht angemeldet? Dann ignoriere diese Mail einfach, ohne deinen Tipp bekommst du nichts. Der Link gilt '.SHOP_NL_CONFIRM_DAYS.' Tage. Abmelden kannst du dich jederzeit.',
-			'btn' => 'Anmeldung bestätigen', 'url' => $url, 'signoff' => 'Dein Team von '.$brand));
+			'btn' => 'Anmeldung bestätigen', 'url' => $url, 'signoff' => 'Dein Team vom '.$brand));
 	} catch (Throwable $e) { error_log('mySeat newsletter mail: '.$e->getMessage()); }
 }
 

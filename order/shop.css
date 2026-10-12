@@ -239,6 +239,24 @@
 	.shop-item-img { width: 96px; height: 96px; }
 	.shop-item-buy { grid-column: 1; }
 }
+/* product dialog on a wide screen: wider, required choices as form rows (title left, choices right), extras with more chips per row */
+@media (min-width: 960px) {
+	.shop-dialog { width: min(920px, calc(100% - 64px)); }
+	.pd-head { padding: 20px 24px 8px; }
+	.pd-body { padding: 0 24px 20px; }
+	.pd-foot { padding-left: 24px; padding-right: 24px; }
+	.pd-desc, .pd-allergens { max-width: 72ch; }
+	.pd-required { padding: 4px 18px; }
+	.pd-req { display: grid; grid-template-columns: 150px minmax(0, 1fr); column-gap: 20px; align-items: start; }
+	.pd-req header { flex-direction: column; align-items: flex-start; gap: 6px; margin: 0; padding-top: 4px; }
+	.pd-req h3 { flex: none; }
+	.pd-chips { grid-template-columns: repeat(auto-fill, minmax(min(100%, 145px), 1fr)); }
+	.pd-chips.is-list { grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); }
+	.pd-chip-name { overflow-wrap: break-word; hyphens: auto; }
+	.pd-ext .pd-chips { grid-template-columns: repeat(auto-fill, minmax(min(100%, 138px), 1fr)); }
+	.pd-ext .pd-chips.is-list { grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); }
+	.pd-ext .pd-chip { min-height: 48px; }
+}
 @media (min-width: 1024px) {
 	.shop-layout { grid-template-columns: 190px minmax(0, 1fr) 340px; padding-bottom: 60px; }
 	.shop-top--menu { position: sticky; }

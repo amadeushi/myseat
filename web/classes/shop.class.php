@@ -3615,7 +3615,7 @@ function shop_stamp_mail($to, $m) {
 	$plain = $m['headline']."\r\n\r\n".$m['lead']."\r\n\r\n".(!empty($m['box']) ? $m['box']['label'].': '.$m['box']['value'].' ('.$m['box']['note'].")\r\n\r\n" : '').$m['after']."\r\n".($m['url'] !== '' ? "\r\n".$m['btn'].': '.$m['url']."\r\n" : '')."\r\n".$m['signoff']."\r\n";
 	bm_send_guest_mail($to, array('subject' => $m['subject'], 'plain' => $plain, 'html' => $html, 'ics' => '', 'ics_filename' => ''), $brand, $from);
 }
-function shop_stamp_signoff() { global $settings; return 'Guten Appetit wünscht dein Team von '.(!empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus'); }
+function shop_stamp_signoff() { global $settings; return 'Guten Appetit wünscht dein Team vom '.(!empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus'); }
 
 // after every stamp (not for the one that fills the card, that gets the voucher mail)
 function shop_stamp_notify_stamp($email, $name, $keys) {

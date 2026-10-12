@@ -2266,6 +2266,7 @@ button.orders-kitchen:disabled { opacity: .5; cursor: wait; }
 .nlm-imgbar { margin: 0 0 8px; }
 .nlm-btnprev { display: inline-block; margin: 0 0 8px; padding: 13px 24px; background: #8a6d3b; border-radius: 6px; color: #fff; font-weight: 700; font-size: 15px; }
 .nlm-boxfields { display: grid; gap: 8px; padding: 12px; background: #f8f2e4; border: 1px solid #e6d9b8; border-radius: 10px; }
+.nlm-logoprev { display: block; width: 110px; height: auto; margin: 4px 0 8px; }
 .nlm-hr { border: 0; border-top: 1px solid #d8d0bc; margin: 10px 0; }
 .nlm-emptyp { color: var(--text-muted); text-align: center; margin: 12px; }
 .nlm-side { display: grid; gap: 12px; }

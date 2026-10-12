@@ -52,6 +52,12 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-12 == mySeat v6.44.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Bestellseite am Desktop (ab 960 px): Das Produktfenster ist 920 statt 640 px breit, die Pflichtgruppen stehen als Formularzeilen (Titel und Pflicht-Hinweis links, Auswahl rechts), die Extras zeigen mehr Karten pro Reihe (bis zu 6, bei langen Namen 3) und etwas niedrigere Karten. Beim Grillfleisch schrumpft der Inhalt um rund ein Fünftel; lange Wörter werden getrennt statt mitten im Wort umgebrochen. Auf dem Handy unverändert.
+ * Neu: Newsletter-Editor: Block "Logo" (kleines Logo in der Markenfarbe, 110 px, links, führt zum Shop; order/mail/logo-mail.png).
+ * Korrigiert: Deutsche Grußformeln und Texte mit der Marke: "Dein Team vom Amadeus", "Neuigkeiten vom Amadeus" (Newsletter-Mails, Bestätigungsmail, Konto-Anmeldung, Stempelmails und öffentliche Newsletter-Seiten). Doppelten Zweig der Antwortseite "Ja, gerne weiter" entfernt.
+
 2026-10-12 == mySeat v6.44.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Newsletter, Schritt 4 (Automatiken). Neuer Reiter "Automatiken" auf der Seite "Newsletter" (p=14) mit sechs Automatiken, alle zunächst aus (Einschalten mit zweitem Tipp): Begrüßungsmail mit persönlichem, einmaligem Gutschein (an die E-Mail-Adresse gebunden, nicht für importierte Gäste), Stempelkarte fast voll, Stempel laufen ab, Gutschein läuft ab, "Wir vermissen dich" (optional mit Gutschein, danach 180 Tage Pause) und "Noch Interesse?" (nach langer Inaktivität eine Frage, ohne Antwort in 30 Tagen werden die Neuigkeiten ausgeschaltet). Jede Mail wird im Block-Editor bearbeitet; neue Platzhalter {gutschein}, {gutschein_wert}, {gutschein_bis}, {gutschein_ab}, {stempel_stand}, {stempel_fehlen}, {stempel_ziel}, {stempel_bis}, {halten}.
