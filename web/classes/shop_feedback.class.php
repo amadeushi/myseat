@@ -62,7 +62,7 @@ function shop_fb_mail_build($ctx) {
 	$intro = 'hoffentlich hat dir das Essen geschmeckt! Wir wollen es ehrlich wissen, und ein Tipp reicht schon.';
 	$ask = 'Wie hat es geschmeckt?'; $lo = 'nicht gut'; $hi = 'richtig lecker';
 	$after = 'Wenn etwas nicht gepasst hat, sag es uns einfach. Wir lesen alles selbst und melden uns gern bei dir.';
-	$sign = $who.' vom '.$brand.'-Team'; $thanks = 'Danke dir!';
+	$sign = 'Hamun und Zeus'; $thanks = 'Danke dir!';
 	$opt = 'Keine Feedback-Mails mehr'; $auto = 'Diese E-Mail kam automatisch, weil du bei uns bestellt hast.';
 	$font = 'font-family:Arial,Helvetica,sans-serif;';
 	$tiles = '';

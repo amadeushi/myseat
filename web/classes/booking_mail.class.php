@@ -273,14 +273,14 @@ function bm_build($d) {
 		$imprint_l = 'Impressum'; $privacy_l = 'Datenschutz';
 		if ($mode === 'pending') {
 			$subject  = 'Deine Anfrage für '.$pers_de.' ist bei uns angekommen';
-			$intro    = 'danke für deine Anfrage! Gruppen wie eure planen wir gern persönlich, damit am Abend alles passt. Wir melden uns so schnell wie möglich bei dir. Besondere Wünsche (Allergien, Kinderstühle, ein Anlass)? Antworte einfach auf diese Mail.';
+			$intro    = 'danke für deine Anfrage! Gruppen wie eure planen wir gern persönlich, damit alles passt. Wir melden uns so schnell wie möglich bei dir. Besondere Wünsche (Allergien, Kinderstühle, ein Anlass)? Antworte einfach auf diese Mail.';
 			$head     = 'Deine Anfrage';
 			$cancel_t = 'Hat sich etwas geändert? Du kannst deine Anfrage jederzeit zurückziehen:';
 			$cancel_l = 'Anfrage zurückziehen';
 			$auto     = 'Diese E-Mail wurde automatisch nach deiner Online-Anfrage versendet.';
 		} elseif ($mode === 'declined') {
 			$subject  = 'Zu deiner Anfrage für den '.$date_txt;
-			$intro    = 'danke für deine Anfrage. Für diesen Abend können wir eure Gruppe leider nicht unterbringen, das tut uns wirklich leid. Wir helfen gern weiter: Wenn du magst, suchen wir gemeinsam nach einem Ausweichtermin. Melde dich einfach bei uns.';
+			$intro    = 'danke für deine Anfrage. Zu diesem Termin können wir eure Gruppe leider nicht unterbringen, das tut uns wirklich leid. Wir helfen gern weiter: Wenn du magst, suchen wir gemeinsam nach einem Ausweichtermin. Melde dich einfach bei uns.';
 			$head     = 'Leider keine Zusage möglich';
 			$cancel_t = ''; $cancel_l = '';
 			$auto     = 'Diese E-Mail wurde automatisch nach der Bearbeitung deiner Online-Anfrage versendet.';
@@ -321,14 +321,14 @@ function bm_build($d) {
 		$imprint_l = 'Legal notice'; $privacy_l = 'Privacy policy';
 		if ($mode === 'pending') {
 			$subject  = 'Your request for '.$pers_en.' has reached us';
-			$intro    = 'thank you for your request! We like to plan groups like yours personally so that everything works on the night. We will get back to you as soon as possible. Special wishes (allergies, high chairs, an occasion)? Just reply to this email.';
+			$intro    = 'thank you for your request! We like to plan groups like yours personally so that everything works. We will get back to you as soon as possible. Special wishes (allergies, high chairs, an occasion)? Just reply to this email.';
 			$head     = 'Your request';
 			$cancel_t = 'Something changed? You can withdraw your request at any time:';
 			$cancel_l = 'Withdraw request';
 			$auto     = 'This email was sent automatically after your online request.';
 		} elseif ($mode === 'declined') {
 			$subject  = 'About your request for '.$date_txt;
-			$intro    = 'thank you for your request. Unfortunately we cannot fit your group in that evening, and we are truly sorry. We are happy to help: if you like, we can look for another date together. Just get in touch.';
+			$intro    = 'thank you for your request. Unfortunately we cannot fit your group in at that time, and we are truly sorry. We are happy to help: if you like, we can look for another date together. Just get in touch.';
 			$head     = 'No table available this time';
 			$cancel_t = ''; $cancel_l = '';
 			$auto     = 'This email was sent automatically after your online request was reviewed.';
@@ -508,17 +508,17 @@ function bm_build($d) {
 	$booker  = (!empty($form['reservation_booker_name']) && !$online) ? bm_clean($form['reservation_booker_name']) : '';
 	$a_subject = ($pending
 		? ($de ? 'Entscheidung nötig: ' : 'Decision needed: ')
-		: ($de ? 'Neue Reservierung: ' : 'New reservation: ')).$name.', '.$pax.($de ? ' Personen, ' : ' guests, ').$date_txt.', '.$time_txt;
+		: ($de ? 'Neue Reservierung: ' : 'New reservation: ')).$name.', '.($de ? $pers_de : $pers_en).', '.$date_txt.', '.$time_txt;
 
 	$L = $de
-		? array('badge_new' => 'Neue Reservierung', 'badge_req' => 'Entscheidung nötig', 'head_new' => 'Reservierung für '.$pax.' Personen', 'head_req' => 'Anfrage für '.$pax.' Personen',
+		? array('badge_new' => 'Neue Reservierung', 'badge_req' => 'Entscheidung nötig', 'head_new' => 'Reservierung für '.$pers_de, 'head_req' => 'Anfrage für '.$pers_de,
 			'date' => 'Datum', 'time' => 'Uhrzeit', 'pax' => 'Personen', 'guest' => 'Gast', 'phone' => 'Telefon', 'note' => 'Notiz des Gastes', 'nr' => 'Buchungsnummer',
 			'source' => 'Quelle', 'online' => 'Online-Formular', 'backend' => 'Backend', 'by' => 'Erfasst von',
 			'req_text' => 'Die Plätze sind für diese Anfrage bereits geblockt. Der Gast wartet auf deine Antwort: mit einem Klick bestätigst oder lehnst du ab, und er bekommt automatisch die passende Mail.',
 			'new_text' => 'Der Tisch ist zugesagt, der Gast hat seine Bestätigung bereits erhalten.',
 			'cta_req' => 'Anfrage ansehen & entscheiden', 'cta_new' => 'Im Backend öffnen', 'backend' => 'Backend', 'open_backend' => 'Oder direkt im Backend öffnen',
 			'foot' => 'Automatische Nachricht von mySeat. Wenn du auf diese Mail antwortest, geht die Antwort direkt an den Gast.', 'none' => '-')
-		: array('badge_new' => 'New reservation', 'badge_req' => 'Decision needed', 'head_new' => 'Reservation for '.$pax.' guests', 'head_req' => 'Request for '.$pax.' guests',
+		: array('badge_new' => 'New reservation', 'badge_req' => 'Decision needed', 'head_new' => 'Reservation for '.$pers_en, 'head_req' => 'Request for '.$pers_en,
 			'date' => 'Date', 'time' => 'Time', 'pax' => 'Guests', 'guest' => 'Guest', 'phone' => 'Phone', 'note' => 'Note from the guest', 'nr' => 'Booking number',
 			'source' => 'Source', 'online' => 'Online form', 'backend' => 'Backend', 'by' => 'Entered by',
 			'req_text' => 'The seats for this request are already blocked. The guest is waiting for your answer: confirm or decline with one click and they automatically get the matching email.',

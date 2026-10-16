@@ -52,6 +52,12 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-16 == mySeat v6.54.3 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neue Texte: Die Bitte um Feedback nach einer Reservierung fragt jetzt "Wie war dein Besuch bei uns?" und "Wie hat es dir bei uns gefallen?" (deutsch und englisch). Die Bewertungsbitte nach einer Bestellung endet mit "Hamun und Zeus".
+ * Korrigiert: In den Mails an Gäste stand fest "Abend", auch wenn der Besuch zu einer anderen Tageszeit war. Betroffen waren die Anfrage und die Absage einer größeren Gruppe: "damit alles passt" und "Zu diesem Termin können wir eure Gruppe leider nicht unterbringen" (deutsch und englisch).
+ * Korrigiert: In den Mails an das Restaurant über neue Reservierungen und Anfragen steht bei einer Person jetzt "1 Person" bzw. "1 guest" statt "1 Personen" (Betreff und Überschrift).
+
 2026-10-16 == mySeat v6.54.2 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neue Texte in den Reservierungsmails an Gäste (deutsch und englisch): die Anfrage einer größeren Gruppe ("Wir melden uns so schnell wie möglich bei dir" statt "mit einer festen Zusage") und die Erinnerung am Vortag ("dein Tisch wartet auf dich"). Korrigiert: Bei einer einzelnen Person heißt es jetzt "für 1 Person" bzw. "1 guest" statt "für 1 Personen" (Anfrage und Bestätigung). Die Mails an das Restaurant über neue Reservierungen sind unverändert.

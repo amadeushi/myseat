@@ -257,9 +257,9 @@ function fb_mail_build($ctx) {
 	$who = !empty($settings['mailSignName']) ? $settings['mailSignName'] : 'Hamun';
 
 	if ($de) {
-		$subject = 'Wie war dein Abend bei uns, '.$name.'?';
+		$subject = 'Wie war dein Besuch bei uns, '.$name.'?';
 		$greeting = 'Hallo '.$name.',';
-		$intro = 'schön, dass du bei uns warst! Uns interessiert ehrlich, wie es für dich war: was gut lief und was wir besser machen können. Beides hilft uns. Wenn etwas nicht gepasst hat, ist das keine Störung, sondern genau das, was wir wissen wollen.';
+		$intro = 'schön, dass du da warst! Wie hat es dir bei uns gefallen? Was gut lief, freut uns. Und was nicht, wollen wir erst recht wissen.';
 		$cta = 'Jetzt Feedback geben';
 		$note = 'Dauert nur eine Minute.';
 		$closing = 'Danke, dass du dir die Zeit nimmst.';
@@ -268,9 +268,9 @@ function fb_mail_build($ctx) {
 		$imprint_l = 'Impressum'; $privacy_l = 'Datenschutz';
 		$auto = 'Diese E-Mail wurde automatisch nach deinem Besuch versendet.';
 	} else {
-		$subject = 'How was your evening with us, '.$name.'?';
+		$subject = 'How was your visit with us, '.$name.'?';
 		$greeting = 'Hello '.$name.',';
-		$intro = 'it was lovely to have you! We honestly want to know how it was for you: what went well and what we can do better. Both help us. If something was not right, that is not a bother, it is exactly what we want to know.';
+		$intro = 'it was lovely to have you! How did you like it here? What went well makes us happy. And what did not, we want to know all the more.';
 		$cta = 'Give feedback';
 		$note = 'Takes only a minute.';
 		$closing = 'Thank you for taking the time.';
