@@ -3718,7 +3718,7 @@ function shop_stamp_mail($to, $m) {
 		.'<tr><td style="padding:14px 32px 30px;">'.$sign.'</td></tr>'
 		.$footer.'</table></td></tr></table></body></html>';
 	$plain = $m['headline']."\r\n\r\n".$m['lead']."\r\n\r\n".(!empty($m['box']) ? $m['box']['label'].': '.$m['box']['value'].' ('.$m['box']['note'].")\r\n\r\n" : '').$m['after']."\r\n".($m['url'] !== '' ? "\r\n".$m['btn'].': '.$m['url']."\r\n" : '')."\r\n".$m['signoff']."\r\n";
-	bm_send_guest_mail($to, array('subject' => $m['subject'], 'plain' => $plain, 'html' => $html, 'ics' => '', 'ics_filename' => ''), $brand, $from);
+	bm_send_guest_mail($to, array('subject' => $m['subject'], 'plain' => $plain, 'html' => $html, 'ics' => '', 'ics_filename' => '', 'purpose' => isset($m['purpose']) ? (string)$m['purpose'] : 'order'), $brand, $from);
 }
 function shop_stamp_signoff() { global $settings; return 'Guten Appetit wünscht dein Team vom '.(!empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus'); }
 

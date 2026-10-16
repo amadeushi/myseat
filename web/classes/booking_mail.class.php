@@ -595,23 +595,41 @@ function bm_build($d) {
 function bm_send_guest_mail($to_guest, $m, $brand, $admin_email) {
 	global $settings;
 	if ($to_guest === '' || !filter_var($to_guest, FILTER_VALIDATE_EMAIL) || $admin_email === '') { return false; }
+	// the sender by purpose ($m['purpose']: news | order | reservation, none = reservation): when the backend has a profile for it, its address, name, reply address and its own mail
+	// server are used (see web/classes/shop_mail_sender.class.php); without a saved profile everything goes as it always did
+	$reply_to = $admin_email; $own_smtp = null;
+	try {
+		require_once __DIR__.'/shop_mail_sender.class.php';
+		$sp = shop_sender_profile(isset($m['purpose']) ? (string)$m['purpose'] : 'reservation');
+		if ($sp) {
+			$admin_email = $sp['from']; $reply_to = $sp['reply'] !== '' ? $sp['reply'] : $sp['from'];
+			if ($sp['name'] !== '') { $brand = $sp['name']; }
+			if ($sp['host'] !== '') { $own_smtp = $sp; }
+		}
+	} catch (Throwable $e) { error_log('mySeat sender profile: '.$e->getMessage()); }
 
 	$subject_guest = mb_encode_mimeheader($m['subject'], 'UTF-8', 'B');
 	$from = mb_encode_mimeheader($brand, 'UTF-8', 'B').' <'.$admin_email.'>';
 
-	if (isset($settings['emailSMTP']) && $settings['emailSMTP'] != 'LOCAL') {
+	if ($own_smtp || (isset($settings['emailSMTP']) && $settings['emailSMTP'] != 'LOCAL')) {
 		require_once __DIR__ . '/phpmailer/class.phpmailer.php';
 		$mail = new PHPMailer();
-		if ($settings['emailSMTP'] == 'SMTP') { $mail->IsSMTP(); } else { $mail->IsSendmail(); }
+		if ($own_smtp || $settings['emailSMTP'] == 'SMTP') { $mail->IsSMTP(); } else { $mail->IsSendmail(); }
 		$mail->SMTPAuth      = true;
 		$mail->SMTPKeepAlive = true;
 		$mail->CharSet       = 'UTF-8';
-		$mail->Host          = $settings['emailHost'];
-		$mail->Port          = $settings['emailPort'];
-		$mail->Username      = $settings['emailUser'];
-		$mail->Password      = $settings['emailPass'];
+		if ($own_smtp) {
+			$mail->Host = $own_smtp['host']; $mail->Port = $own_smtp['port']; $mail->Username = $own_smtp['user']; $mail->Password = $own_smtp['pass'];
+			if ($own_smtp['secure'] === 'tls' || $own_smtp['secure'] === 'ssl') { $mail->SMTPSecure = $own_smtp['secure']; }
+			$mail->Timeout = 20;
+		} else {
+			$mail->Host          = $settings['emailHost'];
+			$mail->Port          = $settings['emailPort'];
+			$mail->Username      = $settings['emailUser'];
+			$mail->Password      = $settings['emailPass'];
+		}
 		$mail->SetFrom($admin_email, $brand);
-		$mail->AddReplyTo($admin_email, $brand);
+		$mail->AddReplyTo($reply_to, $brand);
 		$mail->Subject = $m['subject'];
 		$mail->AltBody = $m['plain'];
 		$mail->MsgHTML($m['html']);
@@ -620,7 +638,7 @@ function bm_send_guest_mail($to_guest, $m, $brand, $admin_email) {
 			$mail->AddStringAttachment($m['ics'], $m['ics_filename'], 'base64', 'text/calendar; method=PUBLISH; charset=UTF-8');
 		}
 		if (!empty($m['headers'])) { foreach ($m['headers'] as $hd) { $mail->AddCustomHeader($hd); } }
-		if (!$mail->Send()) { error_log('mySeat mail to guest failed: '.$mail->ErrorInfo); return false; }
+		if (!$mail->Send()) { error_log('mySeat mail to guest failed: '.$mail->ErrorInfo); $GLOBALS['bm_last_mail_error'] = $mail->ErrorInfo; return false; }
 		return true;
 	} else {
 		$alt_boundary = '=_'.md5(uniqid('', true));
@@ -628,7 +646,7 @@ function bm_send_guest_mail($to_guest, $m, $brand, $admin_email) {
 		$alt .= "--".$alt_boundary."\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n".chunk_split(base64_encode($m['html']));
 		$alt .= "--".$alt_boundary."--\r\n";
 
-		$headers  = "MIME-Version: 1.0\r\nFrom: ".$from."\r\nReply-To: ".$from."\r\nX-Mailer: mySeat\r\n";
+		$headers  = "MIME-Version: 1.0\r\nFrom: ".$from."\r\nReply-To: ".$reply_to."\r\nX-Mailer: mySeat\r\n";
 		if (!empty($m['headers'])) { foreach ($m['headers'] as $hd) { $headers .= preg_replace('/[\r\n]+/', ' ', $hd)."\r\n"; } }
 		if (!empty($m['ics'])) {
 			$mix_boundary = '=_'.md5(uniqid('', true));

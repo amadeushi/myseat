@@ -11,6 +11,7 @@ include('../classes/database.class.php');
 include('../classes/db_queries.db.php');
 include('../classes/business.class.php');
 require_once('../classes/shop.class.php');
+require_once('../classes/shop_mail_sender.class.php');
 date_default_timezone_set('Europe/Berlin');
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -58,7 +59,16 @@ if ($op === 'proof') {
 	foreach (shop_nl_proof($id) as $p) { $out[] = array('event' => $p['event'], 'topics' => $p['topics'], 'source' => $p['source'], 'ip' => $p['ip'], 'ua' => $p['ua'], 'detail' => $p['detail'], 'at' => date('d.m.Y H:i:s', strtotime($p['at']))); }
 	nl_out(array('ok' => true, 'proof' => $out));
 }
+if ($op === 'sender_list') { nl_out(array('ok' => true, 'senders' => shop_sender_view())); }
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['token']) || !hash_equals((string)$_SESSION['shop_admin_token'], (string)$_POST['token'])) { nl_out(array('ok' => false, 'error' => 'Die Sitzung ist abgelaufen. Bitte lade die Seite neu.')); }
+if ($op === 'sender_save') {
+	$r = shop_sender_save(isset($_POST['purpose']) ? (string)$_POST['purpose'] : '', $_POST);
+	nl_out($r['ok'] ? array('ok' => true, 'senders' => shop_sender_view()) : $r);
+}
+if ($op === 'sender_test') {
+	@set_time_limit(60);
+	nl_out(shop_sender_test(isset($_POST['purpose']) ? (string)$_POST['purpose'] : '', isset($_POST['to']) ? trim((string)$_POST['to']) : ''));
+}
 if ($op === 'auto_save') {
 	$p = json_decode(isset($_POST['params']) ? (string)$_POST['params'] : '{}', true);
 	nl_out(shop_nla_cfg_set(isset($_POST['kind']) ? (string)$_POST['kind'] : '', !empty($_POST['on']), is_array($p) ? $p : array()) ? array('ok' => true, 'autos' => shop_nla_overview()) : array('ok' => false, 'error' => 'Unbekannte Automatik.'));

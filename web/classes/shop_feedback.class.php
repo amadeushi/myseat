@@ -116,7 +116,7 @@ function shop_fb_run($limit = 5) {
 		$urls = array(); for ($i = 1; $i <= 5; $i++) { $urls[$i] = $base.'/api/feedback.php?token='.urlencode($token).'&r='.$i; }
 		$m = shop_fb_mail_build(array('brand' => $brand, 'first_name' => shop_stamp_first_name($o['customer_name']), 'summary' => shop_fb_summary((int)$o['id'], $o), 'urls' => $urls,
 			'optout_url' => $base.'/api/feedback.php?token='.urlencode($token).'&optout=1', 'legal' => bm_legal_lines($op[1]), 'imprint_url' => !empty($settings['imprintUrl']) ? $settings['imprintUrl'] : '', 'privacy_url' => !empty($settings['privacyUrl']) ? $settings['privacyUrl'] : ''));
-		bm_send_guest_mail(trim($o['email']), array('subject' => $m['subject'], 'plain' => $m['plain'], 'html' => $m['html'], 'ics' => '', 'ics_filename' => ''), $brand, $from);
+		bm_send_guest_mail(trim($o['email']), array('subject' => $m['subject'], 'plain' => $m['plain'], 'html' => $m['html'], 'ics' => '', 'ics_filename' => '', 'purpose' => 'order'), $brand, $from);
 		shop_log((int)$o['id'], 'feedback', 'Feedback-Mail verschickt'); $sent++;
 	}
 	return $sent;
@@ -147,6 +147,6 @@ function shop_fb_alert($f, $partial) {
 		$plain = preg_replace("/(\r\n){3,}/", "\r\n\r\n", implode("\r\n", $lines));
 		$subject = 'Feedback zu Bestellung #'.$o['day_no'].': '.($svc !== null ? min($food, $svc) : $food).' von 5';
 		$html = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#1c1a18;">'.nl2br(htmlspecialchars($plain, ENT_QUOTES, 'UTF-8')).'</div>';
-		bm_send_guest_mail($from, array('subject' => $subject, 'plain' => $plain, 'html' => $html, 'ics' => '', 'ics_filename' => ''), 'Amadeus', $from);
+		bm_send_guest_mail($from, array('subject' => $subject, 'plain' => $plain, 'html' => $html, 'ics' => '', 'ics_filename' => '', 'purpose' => 'order'), 'Amadeus', $from);
 	} catch (Throwable $e) { error_log('mySeat feedback alert: '.$e->getMessage()); }
 }

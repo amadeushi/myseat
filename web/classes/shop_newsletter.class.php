@@ -234,13 +234,13 @@ function shop_nl_mail_confirm($email, $name, $topics, $confirmToken, $lang) {
 		$subEn = $only === 'stamps' ? 'Please confirm: stamp card reminders from '.$brand : ($only === 'news' ? 'Please confirm: news from '.$brand : 'Please confirm your sign-up with '.$brand);
 		$subDe = $only === 'stamps' ? 'Bitte bestätige: Stempel-Erinnerungen vom '.$brand : ($only === 'news' ? 'Bitte bestätige: Neuigkeiten vom '.$brand : 'Bitte bestätige deine Anmeldung beim '.$brand);
 		shop_stamp_mail($email, $en ? array(
-			'subject' => $subEn, 'headline' => 'Almost done'.($first !== '' ? ', '.$first : '').'!',
+			'subject' => $subEn, 'purpose' => 'news', 'headline' => 'Almost done'.($first !== '' ? ', '.$first : '').'!',
 			'lead' => 'You signed up with '.$brand.' for: '.$what.'. Please confirm with one tap so that we know this address is yours.',
 			'image' => '', 'alt' => '', 'box' => null,
 			'after' => 'You did not sign up? Then just ignore this mail, without your tap you will not get anything. The link works for '.SHOP_NL_CONFIRM_DAYS.' days. You can unsubscribe at any time.',
 			'btn' => 'Confirm sign-up', 'url' => $url, 'zeus' => false, 'signoff' => 'Your team at '.$brand
 		) : array(
-			'subject' => $subDe, 'headline' => 'Fast geschafft'.($first !== '' ? ', '.$first : '').'!',
+			'subject' => $subDe, 'purpose' => 'news', 'headline' => 'Fast geschafft'.($first !== '' ? ', '.$first : '').'!',
 			'lead' => 'Du hast dich bei '.$brand.' angemeldet für: '.$what.'. Bitte bestätige das mit einem Tipp, damit wir wissen, dass diese Adresse dir gehört.',
 			'image' => '', 'alt' => '', 'box' => null,
 			'after' => 'Du hast dich nicht angemeldet? Dann ignoriere diese Mail einfach, ohne deinen Tipp bekommst du nichts. Der Link gilt '.SHOP_NL_CONFIRM_DAYS.' Tage. Abmelden kannst du dich jederzeit.',

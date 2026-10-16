@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-16 == mySeat v6.50.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Absender nach Zweck (Backend, Seite Newsletter, Tab "Absender"). Für Newsletter, Bestellung und Lieferung sowie Reservierung lässt sich je eine eigene Absenderadresse mit Anzeigename, Antwortadresse und eigenem Mailserver (SMTP: Server, Port, Verschlüsselung, Benutzer, Passwort) hinterlegen, dazu eine Testmail, die einen Fehler des Mailservers im Klartext zeigt. Die Mails gehen dann über das Postfach der Absenderadresse, damit Absender, DKIM und Domain zusammenpassen (eigener Ruf je Zweck, zum Beispiel hallo@news.<domain> für den Newsletter). Ohne gespeichertes Profil ändert sich nichts. Das Passwort wird verschlüsselt gespeichert und nie angezeigt. Neu: web/classes/shop_mail_sender.class.php, web/js/newsletter_sender.js; bm_send_guest_mail wählt das Profil über $m['purpose'] (news | order | reservation, ohne Angabe reservation), die Aufrufer der Shop- und Newsletter-Mails setzen den Zweck.
+
 2026-10-13 == mySeat v6.49.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Schneller Checkout für Gäste, die schon einmal auf diesem Gerät bestellt haben: Lieferart und Zahlart der letzten Bestellung sind vorgewählt (localStorage amadeusLastV1), und sind alle Angaben da (Adresse im Liefergebiet, Name, Telefon, "so schnell wie möglich", Zahlart), zeigt der Checkout nur die Karte "Deine Angaben" mit Anmerkungsfeld und dem Bestellknopf; "Angaben ändern" öffnet das ganze Formular, ein unvollständiger Stand öffnet es nach wenigen Sekunden von selbst. Der Satz "Lieferung an ... / Abholung bei uns" über dem Knopf bleibt. Neue Gäste wählen Lieferart und Zahlart einmal bewusst (hervorgehobene Knöpfe).

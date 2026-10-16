@@ -86,7 +86,7 @@ function shop_notify_order($o) {
 		$plain = 'Danke'.($first !== '' ? ', '.$first : '')."!\r\n\r\n".$lead."\r\n\r\n".($clock !== '' ? $timeLabel.' '.$clock." Uhr\r\n" : '').($delivery ? 'Lieferung an: ' : 'Abholung: ').$where."\r\n\r\nDeine Bestellung ".$o['number'].":\r\n";
 		foreach ($lines as $l) { $plain .= $l['head'].'  '.$l['price']."\r\n".($l['sub'] !== '' ? '   '.$l['sub']."\r\n" : '').($l['note'] !== '' ? '   Hinweis: '.$l['note']."\r\n" : ''); }
 		$plain .= "\r\nGesamt: ".$total."\r\n".$payLine."\r\n".($link !== '' ? "\r\nBestellung verfolgen: ".$link."\r\n" : '')."\r\nStimmt etwas nicht? Ruf uns kurz an".($phone !== '' ? ': '.$phone : '').".\r\nGuten Appetit wünscht dein Team vom ".$brand.".\r\n";
-		bm_send_guest_mail($o['email'], array('subject' => $subject, 'plain' => $plain, 'html' => $html, 'ics' => '', 'ics_filename' => ''), $brand, $from);
+		bm_send_guest_mail($o['email'], array('subject' => $subject, 'plain' => $plain, 'html' => $html, 'ics' => '', 'ics_filename' => '', 'purpose' => 'order'), $brand, $from);
 	}
 
 	// ---- restaurant
@@ -98,5 +98,5 @@ function shop_notify_order($o) {
 		.'<body style="margin:0;padding:0;background-color:#f4f1ea;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f1ea;"><tr><td align="center" style="padding:24px 12px;">'
 		.'<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background-color:#ffffff;border:1px solid #e6e0d2;"><tr><td style="'.$font.'padding:24px 28px;font-size:15px;line-height:1.6;color:#1c1a18;">'.nl2br($h($plain)).'</td></tr></table>'
 		.'</td></tr></table></body></html>';
-	bm_send_guest_mail($from, array('subject' => $admin_subject, 'plain' => $plain, 'html' => $htmlR, 'ics' => '', 'ics_filename' => ''), $brand, $from);
+	bm_send_guest_mail($from, array('subject' => $admin_subject, 'plain' => $plain, 'html' => $htmlR, 'ics' => '', 'ics_filename' => '', 'purpose' => 'order'), $brand, $from);
 }

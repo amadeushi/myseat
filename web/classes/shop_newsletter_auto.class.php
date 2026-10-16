@@ -156,7 +156,7 @@ function shop_nla_send($sub, $kind, $vars) {
 	$brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus'; $kinds = shop_nla_kinds();
 	$sub['vars'] = $vars;
 	$m = shop_nlm_render($tpl, $sub, array('topic' => $kinds[$kind]['topic']));
-	try { return bm_send_guest_mail($sub['email'], array('subject' => $m['subject'], 'plain' => $m['plain'], 'html' => $m['html'], 'ics' => '', 'ics_filename' => '', 'headers' => $m['headers']), $brand, $from) !== false; }
+	try { return bm_send_guest_mail($sub['email'], array('subject' => $m['subject'], 'plain' => $m['plain'], 'html' => $m['html'], 'ics' => '', 'ics_filename' => '', 'purpose' => 'news', 'headers' => $m['headers']), $brand, $from) !== false; }
 	catch (Throwable $e) { error_log('mySeat newsletter auto: '.$e->getMessage()); return false; }
 }
 // claim, then send: $make returns the variables (and may create a voucher); a second run finds the claim and does nothing

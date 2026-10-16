@@ -51,7 +51,7 @@
 	}
 
 	/* ---- tabs ---- */
-	var TABS = { subs: [document.getElementById('nl-tab-subs'), document.getElementById('nl-panel-subs')], mail: [document.getElementById('nl-tab-mail'), document.getElementById('nl-panel-mail')], auto: [document.getElementById('nl-tab-auto'), document.getElementById('nl-panel-auto')] };
+	var TABS = { subs: [document.getElementById('nl-tab-subs'), document.getElementById('nl-panel-subs')], mail: [document.getElementById('nl-tab-mail'), document.getElementById('nl-panel-mail')], auto: [document.getElementById('nl-tab-auto'), document.getElementById('nl-panel-auto')], sender: [document.getElementById('nl-tab-sender'), document.getElementById('nl-panel-sender')] };
 	function tab(which, focus) {
 		Object.keys(TABS).forEach(function (k) { var on = k === which; TABS[k][0].setAttribute('aria-selected', String(on)); TABS[k][0].tabIndex = on ? 0 : -1; TABS[k][1].hidden = !on; });
 		if (focus) { TABS[which][0].focus(); }
@@ -59,6 +59,7 @@
 		stopPoll();
 		if (which === 'mail') { root = mailRoot; fromAuto = false; if (!cur || cur.kind) { cur = null; showList(); } }
 		if (which === 'auto') { root = autoRoot; fromAuto = true; if (!cur || !cur.kind) { cur = null; showAutos(); } }
+		if (which === 'sender' && window.NlSender) { window.NlSender.show(); }
 	}
 	Object.keys(TABS).forEach(function (k, i, all) {
 		TABS[k][0].addEventListener('click', function () { tab(k); });
@@ -345,6 +346,6 @@
 		return el('section', { class: 'nlm-card nla-card' }, [head, el('p', { class: 'nla-when', text: a.when }), el('p', { class: 'sh-help', text: a.desc }), inputs, el('div', { class: 'nla-actions' }, [sw, edit]), stat]);
 	}
 
-	var want = 'subs'; try { want = ({ mail: 1, auto: 1 })[sessionStorage.getItem('nlTab')] ? sessionStorage.getItem('nlTab') : 'subs'; } catch (e) { /* optional */ }
+	var want = 'subs'; try { want = ({ mail: 1, auto: 1, sender: 1 })[sessionStorage.getItem('nlTab')] ? sessionStorage.getItem('nlTab') : 'subs'; } catch (e) { /* optional */ }
 	if (want !== 'subs') { tab(want); }
 })();

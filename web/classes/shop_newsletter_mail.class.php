@@ -235,7 +235,7 @@ function shop_nlm_send_test($id, $to) {
 	$kinds = function_exists('shop_nla_kinds') ? shop_nla_kinds() : array();
 	$m = shop_nlm_render($c, array('email' => $to, 'name' => 'Max Mustermann', 'token' => '', 'vars' => ($c['kind'] !== '' ? shop_nla_sample_vars() : array())), array('test' => true, 'topic' => ($c['kind'] !== '' && isset($kinds[$c['kind']])) ? $kinds[$c['kind']]['topic'] : 'news'));
 	global $settings; $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
-	$ok = bm_send_guest_mail($to, array('subject' => $m['subject'], 'plain' => $m['plain'], 'html' => $m['html'], 'ics' => '', 'ics_filename' => '', 'headers' => array()), $brand, shop_mail_from());
+	$ok = bm_send_guest_mail($to, array('subject' => $m['subject'], 'plain' => $m['plain'], 'html' => $m['html'], 'ics' => '', 'ics_filename' => '', 'purpose' => 'news', 'headers' => array()), $brand, shop_mail_from());
 	return $ok === false ? array('ok' => false, 'error' => 'Die Testmail konnte nicht verschickt werden.') : array('ok' => true);
 }
 
@@ -287,7 +287,7 @@ function shop_nlm_run($limit = SHOP_NLM_PER_RUN, $seconds = 25) {
 			if (!isset($camps[$q['campaign_id']])) { $camps[$q['campaign_id']] = shop_nlm_get($q['campaign_id']); }
 			$m = shop_nlm_render($camps[$q['campaign_id']], $sub);
 			$ok = false;
-			try { $ok = bm_send_guest_mail($sub['email'], array('subject' => $m['subject'], 'plain' => $m['plain'], 'html' => $m['html'], 'ics' => '', 'ics_filename' => '', 'headers' => $m['headers']), $brand, $from) !== false; }
+			try { $ok = bm_send_guest_mail($sub['email'], array('subject' => $m['subject'], 'plain' => $m['plain'], 'html' => $m['html'], 'ics' => '', 'ics_filename' => '', 'purpose' => 'news', 'headers' => $m['headers']), $brand, $from) !== false; }
 			catch (Throwable $e) { error_log('mySeat newsletter send: '.$e->getMessage()); }
 			fb_exec("UPDATE ".fb_t('tp_shop_nl_queue')." SET status = ?, error = ?, sent_at = ? WHERE id = ?", 'sssi', array($ok ? 'sent' : 'failed', $ok ? '' : 'Versand fehlgeschlagen', date('Y-m-d H:i:s'), (int)$q['id']));
 			if ($ok) { $sent++; }
