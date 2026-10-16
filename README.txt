@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-16 == mySeat v6.53.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Korrigiert: Bestellerfassung im Backend: Ein Gericht, das in der Dispo auf "heute aus" steht, ließ sich in den Warenkorb legen (der Server lehnte es erst beim Speichern ab). Die Kachel erscheint jetzt abgeblendet mit "HEUTE AUS" statt des Preises, ein Tipp legt nichts in den Warenkorb ("... ist heute aus."), und ein Gericht aus "Wie letztes Mal" oder einer früheren Bestellung wird nicht übernommen und in der Hinweiszeile genannt. Die offene Erfassung liest die Kennzeichen alle zwei Minuten neu, wenn die Dispo während des Tages ein Gericht abschaltet.
+
 2026-10-16 == mySeat v6.53.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geändert: Speisekarte im Shop: Die Filter (Neu, Beliebt, Vegetarisch, Vegan) stehen nicht mehr in der Rubrikenleiste, sondern in einem kleinen Fenster, das ein Knopf "Filter" im Suchfeld öffnet (am Handy nur das Symbol). Der Knopf zeigt die Zahl der aktiven Filter, ein Tipp daneben oder Esc schließt das Fenster. Die Rubriken haben wieder den ganzen Platz.

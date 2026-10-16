@@ -207,3 +207,8 @@ body.kx-mode #wrapper { margin: 10px 14px 0; }
 
 
 .kx .kx-vch { min-height: 34px; padding: 0 12px; margin-left: 6px; font-size: 14px; }
+
+/* a dish that is switched off for today: shown, but it does not go into the Bon */
+.kx .kx-item.is-out { opacity: 0.55; cursor: not-allowed; }
+.kx .kx-item.is-out:hover, .kx .kx-item.is-out:focus-visible { border-color: var(--border-soft); background: transparent; }
+.kx .kx-item-out { color: var(--danger, #e2867c); font-size: 14px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
