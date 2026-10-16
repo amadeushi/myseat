@@ -622,6 +622,8 @@ function bm_send_guest_mail($to_guest, $m, $brand, $admin_email) {
 			$mail->Host = $own_smtp['host']; $mail->Port = $own_smtp['port']; $mail->Username = $own_smtp['user']; $mail->Password = $own_smtp['pass'];
 			if ($own_smtp['secure'] === 'tls' || $own_smtp['secure'] === 'ssl') { $mail->SMTPSecure = $own_smtp['secure']; }
 			$mail->Timeout = 20;
+			// the host name of the message id and of the greeting is the domain of the sender (not the technical name of the server): the id of the mail then belongs to the same domain as the address
+			$sd = strrchr($admin_email, '@'); if ($sd !== false && strlen($sd) > 3) { $mail->Hostname = substr($sd, 1); }
 		} else {
 			$mail->Host          = $settings['emailHost'];
 			$mail->Port          = $settings['emailPort'];

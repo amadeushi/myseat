@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-16 == mySeat v6.50.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geändert: Mails über ein gespeichertes Absenderprofil mit eigenem Mailserver tragen jetzt die Domain der Absenderadresse in der Nachrichten-ID und im Begrüßungsnamen beim Mailserver (statt des technischen Servernamens), zum Beispiel <...@news.amadeus-hildesheim.de>. Alle anderen Mails bleiben unverändert.
+
 2026-10-16 == mySeat v6.50.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Absender nach Zweck (Backend, Seite Newsletter, Tab "Absender"). Für Newsletter, Bestellung und Lieferung sowie Reservierung lässt sich je eine eigene Absenderadresse mit Anzeigename, Antwortadresse und eigenem Mailserver (SMTP: Server, Port, Verschlüsselung, Benutzer, Passwort) hinterlegen, dazu eine Testmail, die einen Fehler des Mailservers im Klartext zeigt. Die Mails gehen dann über das Postfach der Absenderadresse, damit Absender, DKIM und Domain zusammenpassen (eigener Ruf je Zweck, zum Beispiel hallo@news.<domain> für den Newsletter). Ohne gespeichertes Profil ändert sich nichts. Das Passwort wird verschlüsselt gespeichert und nie angezeigt. Neu: web/classes/shop_mail_sender.class.php, web/js/newsletter_sender.js; bm_send_guest_mail wählt das Profil über $m['purpose'] (news | order | reservation, ohne Angabe reservation), die Aufrufer der Shop- und Newsletter-Mails setzen den Zweck.
