@@ -75,18 +75,6 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 	<?php if ($notice !== ''): ?><p class="shop-notice"><?php echo shop_h($notice); ?></p><?php endif; ?>
 	<?php if (!$shop_accepting): ?><p class="shop-notice">Wir nehmen gerade keine Bestellungen an. Du kannst dich schon in Ruhe umsehen.<?php echo $shop_staff ? ' (Vorschau für Mitarbeiter)' : ''; ?></p><?php endif; ?>
 
-	<?php if ($menu): ?>
-	<div class="shop-search-bar">
-		<div class="shop-search-in">
-			<svg class="shop-search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M20 20l-4.8-4.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-			<input type="search" id="shop-search" placeholder="Gericht oder Zutat suchen" aria-label="Speisekarte durchsuchen" autocomplete="off" enterkeyhint="search"/>
-			<button type="button" class="shop-search-clear" id="shop-search-clear" aria-label="Suche löschen" hidden>&times;</button>
-		</div>
-	</div>
-	<?php endif; ?>
-
-	<?php if ($acc_on): ?><section class="acc-favs" id="acc-favs" aria-label="Deine Favoriten" hidden></section><?php endif; ?>
-
 	<?php
 		// diet filter: only the marks that at least one dish has (the owner ticks them in the menu editor)
 		$diet_has = array();
@@ -96,9 +84,24 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 		foreach ($menu as $c0) { foreach ($c0['products'] as $p0) { if (empty($p0['out'])) { if (!empty($p0['isnew'])) { $diet_has['new'] = true; } if (!empty($p0['popular'])) { $diet_has['pop'] = true; } } } }
 		$diet_chips = array('new' => 'Neu', 'pop' => 'Beliebt', 'veg' => 'Vegetarisch', 'vegan' => 'Vegan');   // 'spicy' => 'Scharf' is switched off until more than a few dishes carry the mark
 	?>
+	<?php if ($menu): ?>
+	<div class="shop-search-bar">
+		<div class="shop-search-in">
+			<svg class="shop-search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M20 20l-4.8-4.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+			<input type="search" id="shop-search" placeholder="Gericht oder Zutat suchen" aria-label="Speisekarte durchsuchen" autocomplete="off" enterkeyhint="search"/>
+			<button type="button" class="shop-search-clear" id="shop-search-clear" aria-label="Suche löschen" hidden>&times;</button>
+			<?php if ($diet_has): ?>
+			<button type="button" class="shop-filter-btn" id="shop-filter-btn" aria-expanded="false" aria-controls="shop-filter-panel"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16l-6 7v6l-4 2v-8z"/></svg><span>Filter</span><b id="shop-filter-count" hidden></b></button>
+			<div class="shop-filter-panel" id="shop-filter-panel" role="group" aria-label="Filter" hidden><?php foreach ($diet_chips as $dk => $dl): if (isset($diet_has[$dk])): ?><button type="button" class="shop-diet-chip" data-diet="<?php echo $dk; ?>" aria-pressed="false"><?php echo $dl; ?></button><?php endif; endforeach; ?></div>
+			<?php endif; ?>
+		</div>
+	</div>
+	<?php endif; ?>
+
+	<?php if ($acc_on): ?><section class="acc-favs" id="acc-favs" aria-label="Deine Favoriten" hidden></section><?php endif; ?>
+
 	<div class="shop-layout">
 		<nav class="shop-cats" id="shop-cats" aria-label="Kategorien">
-			<?php if ($diet_has): ?><div class="shop-diets" role="group" aria-label="Filter"><?php foreach ($diet_chips as $dk => $dl): if (isset($diet_has[$dk])): ?><button type="button" class="shop-diet-chip" data-diet="<?php echo $dk; ?>" aria-pressed="false"><?php echo $dl; ?></button><?php endif; endforeach; ?></div><?php endif; ?>
 			<?php foreach ($menu as $c): ?><a href="#cat-<?php echo (int)$c['id']; ?>" data-cat="<?php echo (int)$c['id']; ?>"><?php echo shop_h(trim($c['name'])); ?></a><?php endforeach; ?>
 		</nav>
 

@@ -240,8 +240,17 @@
 		});
 		if (searchEmpty) { searchEmpty.hidden = !((qWords.length || dietOn) && !any); }
 		$$('#shop-cats').forEach(function (nav) { nav.classList.toggle('is-filtered', qWords.length > 0); });
+		var fb = $('#shop-filter-btn'), fc = $('#shop-filter-count'), n = Object.keys(diets).length;
+		if (fb && fc) { fc.hidden = !n; fc.textContent = n; fb.classList.toggle('is-on', n > 0); }
 	}
 	function initDiets() {
+		var fbtn = $('#shop-filter-btn'), fpanel = $('#shop-filter-panel');
+		if (fbtn && fpanel) {   // the filters sit in a small panel at the search field, so the categories keep the room
+			var closeF = function () { fpanel.hidden = true; fbtn.setAttribute('aria-expanded', 'false'); };
+			fbtn.addEventListener('click', function () { var open = fpanel.hidden; fpanel.hidden = !open; fbtn.setAttribute('aria-expanded', open ? 'true' : 'false'); });
+			document.addEventListener('click', function (ev) { if (!fpanel.hidden && !ev.target.closest('#shop-filter-panel, #shop-filter-btn')) { closeF(); } });
+			document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && !fpanel.hidden) { closeF(); fbtn.focus(); } });
+		}
 		$$('.shop-diet-chip').forEach(function (b) {
 			b.addEventListener('click', function () {
 				var k = b.dataset.diet, on = !diets[k]; if (on) { diets[k] = true; } else { delete diets[k]; }

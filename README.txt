@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-16 == mySeat v6.53.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geändert: Speisekarte im Shop: Die Filter (Neu, Beliebt, Vegetarisch, Vegan) stehen nicht mehr in der Rubrikenleiste, sondern in einem kleinen Fenster, das ein Knopf "Filter" im Suchfeld öffnet (am Handy nur das Symbol). Der Knopf zeigt die Zahl der aktiven Filter, ein Tipp daneben oder Esc schließt das Fenster. Die Rubriken haben wieder den ganzen Platz.
+
 2026-10-16 == mySeat v6.53.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Speisekarte im Shop: Filter-Schalter "Neu" und "Beliebt" neben "Vegetarisch" und "Vegan" (sie erscheinen nur, wenn es mindestens ein Gericht mit dem Kennzeichen gibt, ausverkaufte Gerichte zählen nicht). "Neu" und "Beliebt" zusammen zeigen Gerichte, die neu oder beliebt sind; mit Vegetarisch/Vegan müssen beide Bedingungen passen; sie wirken zusammen mit dem Suchfeld.

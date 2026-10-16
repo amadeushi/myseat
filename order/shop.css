@@ -80,7 +80,6 @@
 .shop-cats { position: sticky; top: calc(var(--shop-sticky-top, 0px) + var(--shop-search-h, 66px)); z-index: 20; display: flex; gap: 8px; overflow-x: auto; padding: 10px 16px; margin: 0 -16px; background: var(--bg); scrollbar-width: none; }
 .shop-cats::-webkit-scrollbar { display: none; }
 /* diet filter: three toggles at the start of the category bar (a column of their own above the categories on a wide screen) */
-.shop-diets { display: flex; flex: none; gap: 8px; padding-right: 10px; margin-right: 2px; border-right: 1px solid var(--border-soft); }
 .shop-diet-chip { flex: none; min-height: 44px; box-sizing: border-box; padding: 0 16px; border: 1px dashed var(--border); border-radius: var(--radius-pill); background: transparent; color: var(--text-muted); font: inherit; font-size: 14px; cursor: pointer; white-space: nowrap; }
 .shop-diet-chip:hover { color: var(--text); border-color: var(--gold); }
 .shop-diet-chip.is-on { border-style: solid; border-color: var(--gold); background: rgba(201, 162, 89, 0.16); color: var(--gold-strong); font-weight: 700; }
@@ -280,8 +279,6 @@
 	.shop-top--menu { position: sticky; }
 	.shop-cats { position: sticky; top: calc(var(--shop-sticky-top, 61px) + var(--shop-search-h, 66px) + 25px); align-self: start; flex-direction: column; overflow: visible; margin: 28px 0 0; padding: 0; background: transparent; gap: 2px; max-height: calc(100vh - var(--shop-sticky-top, 61px) - var(--shop-search-h, 66px) - 49px); overflow-y: auto; }
 	.shop-cats a { border: 0; border-radius: var(--radius-md); min-height: 44px; white-space: normal; }
-	.shop-diets { flex-direction: column; gap: 4px; padding: 0 0 10px; margin: 0 0 10px; border-right: 0; border-bottom: 1px solid var(--border-soft); }
-	.shop-diet-chip { border-radius: var(--radius-md); text-align: left; }
 	.shop-cats a.is-active { background: rgba(201, 162, 89, 0.16); color: var(--gold-strong); }
 	.shop-cat { scroll-margin-top: calc(var(--shop-sticky-top, 61px) + var(--shop-search-h, 66px) + 29px); }
 	.shop-menu { scroll-margin-top: calc(var(--shop-sticky-top, 61px) + var(--shop-search-h, 66px) + 29px); }
@@ -817,3 +814,14 @@ body.co-quick-wait .co-quick-list, body.co-quick-wait .co-quick-note, body.co-qu
 body.co-quick-wait #co-modesec, body.co-quick-wait #sec-address, body.co-quick-wait #sec-when, body.co-quick-wait #sec-data, body.co-quick-wait #co-paysec,
 body.co-quick-on #co-modesec, body.co-quick-on #sec-address, body.co-quick-on #sec-when, body.co-quick-on #sec-data { display: none; }
 body.co-quick-on #co-paysec > legend, body.co-quick-on #co-paysec .co-askhint, body.co-quick-on #co-pay { display: none; }
+
+/* the filters (Neu, Beliebt, Vegetarisch, Vegan): one small button in the search field, the chips in a panel below it - the categories keep the room */
+.shop-search-bar .shop-search-in.has-filter input, .shop-search-bar .shop-search-in:has(.shop-filter-btn) input { padding-right: 150px; }
+.shop-filter-btn { position: absolute; right: 50px; top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border: 1px solid var(--border-soft); border-radius: var(--radius-pill); background: transparent; color: var(--text-muted); font: inherit; font-size: 14px; cursor: pointer; }
+.shop-filter-btn:hover { color: var(--text); border-color: var(--gold); }
+.shop-filter-btn.is-on { border-color: var(--gold); background: rgba(201, 162, 89, 0.16); color: var(--gold-strong); font-weight: 700; }
+.shop-filter-btn b { min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; background: var(--gold); color: #1a1408; font-size: 12px; line-height: 18px; text-align: center; }
+.shop-filter-panel { position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; display: flex; flex-wrap: wrap; gap: 8px; max-width: min(100%, 420px); padding: 12px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); }
+.shop-filter-panel[hidden] { display: none; }
+.shop-filter-panel .shop-diet-chip { min-height: 40px; }
+@media (max-width: 420px) { .shop-filter-btn span { display: none; } .shop-search-bar .shop-search-in:has(.shop-filter-btn) input { padding-right: 104px; } }
