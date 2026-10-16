@@ -230,6 +230,8 @@ function bm_build($d) {
 	$outlet   = bm_clean($d['outlet']['outlet_name']);
 	$name     = bm_clean($form['reservation_guest_name']);
 	$pax      = (int)$form['reservation_pax'];
+	$pers_de  = $pax === 1 ? '1 Person' : $pax.' Personen';   // "für 1 Personen" reads wrong
+	$pers_en  = $pax === 1 ? '1 guest' : $pax.' guests';
 	$notes    = bm_clean(isset($form['reservation_notes']) ? $form['reservation_notes'] : '');
 	$phone    = bm_clean(isset($form['reservation_guest_phone']) ? $form['reservation_guest_phone'] : '');
 	$email    = bm_clean(isset($form['reservation_guest_email']) ? $form['reservation_guest_email'] : '');
@@ -270,8 +272,8 @@ function bm_build($d) {
 		$legal_h  = 'Angaben zum Anbieter';
 		$imprint_l = 'Impressum'; $privacy_l = 'Datenschutz';
 		if ($mode === 'pending') {
-			$subject  = 'Deine Anfrage für '.$pax.' Personen ist bei uns angekommen';
-			$intro    = 'danke für dein Vertrauen! Größere Gruppen planen wir gern persönlich, damit am Abend alles passt. Wir melden uns so schnell wie möglich mit einer festen Zusage. Wenn du besondere Wünsche hast (Allergien, Kinderstühle, ein Anlass), antworte einfach auf diese Mail.';
+			$subject  = 'Deine Anfrage für '.$pers_de.' ist bei uns angekommen';
+			$intro    = 'danke für deine Anfrage! Gruppen wie eure planen wir gern persönlich, damit am Abend alles passt. Wir melden uns so schnell wie möglich bei dir. Besondere Wünsche (Allergien, Kinderstühle, ein Anlass)? Antworte einfach auf diese Mail.';
 			$head     = 'Deine Anfrage';
 			$cancel_t = 'Hat sich etwas geändert? Du kannst deine Anfrage jederzeit zurückziehen:';
 			$cancel_l = 'Anfrage zurückziehen';
@@ -284,7 +286,7 @@ function bm_build($d) {
 			$auto     = 'Diese E-Mail wurde automatisch nach der Bearbeitung deiner Online-Anfrage versendet.';
 		} elseif ($mode === 'reminder') {
 			$subject  = 'Bis morgen! Dein Tisch um '.$time_txt;
-			$intro    = 'morgen ist es so weit, wir freuen uns auf dich! Hier noch einmal das Wichtigste für die Anreise.';
+			$intro    = 'morgen ist es so weit, dein Tisch wartet auf dich. Hier noch einmal das Wichtigste für den Weg zu uns.';
 			$head     = 'Bis morgen';
 			$cancel_t = 'Schaffst du es doch nicht? Dann sag uns bitte jetzt kurz Bescheid, damit wir den Tisch weitergeben können:';
 			$cancel_l = 'Reservierung stornieren';
@@ -298,7 +300,7 @@ function bm_build($d) {
 			$auto     = 'Diese E-Mail wurde automatisch nach der Bestätigung deiner Anfrage versendet.';
 		} else {
 			$subject  = 'Dein Tisch am '.$date_txt.' um '.$time_txt.' ist reserviert';
-			$intro    = 'schön, dass du kommst! Dein Tisch für '.$pax.' Personen ist reserviert, wir freuen uns auf dich.';
+			$intro    = 'schön, dass du kommst! Dein Tisch für '.$pers_de.' ist reserviert, wir freuen uns auf dich.';
 			$head     = 'Dein Tisch ist reserviert';
 			$cancel_t = 'Falls etwas dazwischenkommt, sag uns bitte kurz Bescheid, dann kann jemand anderes deinen Platz bekommen:';
 			$cancel_l = 'Reservierung stornieren';
@@ -318,8 +320,8 @@ function bm_build($d) {
 		$legal_h  = 'Provider information';
 		$imprint_l = 'Legal notice'; $privacy_l = 'Privacy policy';
 		if ($mode === 'pending') {
-			$subject  = 'Your request for '.$pax.' guests has reached us';
-			$intro    = 'thank you for your trust! We like to plan larger groups personally so that everything works on the night. We will get back to you as soon as possible with a firm answer. If you have special wishes (allergies, high chairs, an occasion), just reply to this email.';
+			$subject  = 'Your request for '.$pers_en.' has reached us';
+			$intro    = 'thank you for your request! We like to plan groups like yours personally so that everything works on the night. We will get back to you as soon as possible. Special wishes (allergies, high chairs, an occasion)? Just reply to this email.';
 			$head     = 'Your request';
 			$cancel_t = 'Something changed? You can withdraw your request at any time:';
 			$cancel_l = 'Withdraw request';
@@ -332,7 +334,7 @@ function bm_build($d) {
 			$auto     = 'This email was sent automatically after your online request was reviewed.';
 		} elseif ($mode === 'reminder') {
 			$subject  = 'See you tomorrow! Your table at '.$time_txt;
-			$intro    = 'tomorrow is the day, and we are looking forward to seeing you! Here is the most important information for getting here once more.';
+			$intro    = 'tomorrow is the day, your table is waiting for you. Here is the most important information for getting to us once more.';
 			$head     = 'See you tomorrow';
 			$cancel_t = 'Cannot make it after all? Please let us know now so we can pass the table on:';
 			$cancel_l = 'Cancel reservation';
@@ -346,7 +348,7 @@ function bm_build($d) {
 			$auto     = 'This email was sent automatically after your request was confirmed.';
 		} else {
 			$subject  = 'Your table on '.$date_txt.' at '.$time_txt.' is reserved';
-			$intro    = 'lovely that you are coming! Your table for '.$pax.' guests is reserved, and we are looking forward to seeing you.';
+			$intro    = 'lovely that you are coming! Your table for '.$pers_en.' is reserved, and we are looking forward to seeing you.';
 			$head     = 'Your table is reserved';
 			$cancel_t = 'If something comes up, please let us know so someone else can take your seat:';
 			$cancel_l = 'Cancel reservation';

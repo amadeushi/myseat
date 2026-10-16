@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-16 == mySeat v6.54.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neue Texte in den Reservierungsmails an Gäste (deutsch und englisch): die Anfrage einer größeren Gruppe ("Wir melden uns so schnell wie möglich bei dir" statt "mit einer festen Zusage") und die Erinnerung am Vortag ("dein Tisch wartet auf dich"). Korrigiert: Bei einer einzelnen Person heißt es jetzt "für 1 Person" bzw. "1 guest" statt "für 1 Personen" (Anfrage und Bestätigung). Die Mails an das Restaurant über neue Reservierungen sind unverändert.
+
 2026-10-16 == mySeat v6.54.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neue Texte: die Bestätigungsmail einer Bestellung (Einleitung ohne "frisch" und "gleich", bei Abholung steht die Bestellnummer in der Einleitung, Gruß "Guten Appetit, Hamun und Zeus"), und die Standardvorlagen der Automatiken "Wir vermissen dich" (jetzt "wann gibt es wieder Schnitzel?" mit Gutschein) und "Noch Interesse?" sowie die Vorschauzeile der Willkommensmail. Die gespeicherten Vorlagen im Backend waren schon aktualisiert, die Standardtexte gelten beim Zurücksetzen.
