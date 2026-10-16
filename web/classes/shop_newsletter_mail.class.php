@@ -150,7 +150,7 @@ function shop_nlm_render($c, $sub, $o = array()) {
 		.'Du bekommst diese Mail, weil du dich für '.(isset($o['topic']) && $o['topic'] === 'stamps' ? 'Erinnerungen zu deiner Stempelkarte' : 'Neuigkeiten').' vom '.$h($brand).' angemeldet hast. <a href="{abmelden}" style="color:#8a6d3b;">Abmelden oder Einstellungen ändern</a>'
 		.($legal ? '<br><br><strong>Angaben zum Anbieter</strong><br>'.implode('<br>', array_map($h, $legal)) : '').($links ? '<br>'.implode(' &middot; ', $links) : '').'</td></tr>';
 	$pre = trim((string)(isset($c['preheader']) ? $c['preheader'] : ''));
-	$html = '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'.$h(isset($c['subject']) ? $c['subject'] : '').'</title></head>'
+	$html = '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'.$h((!empty($o['test']) ? '[Test] ' : '').(isset($c['subject']) ? $c['subject'] : '')).'</title></head>'
 		.'<body style="margin:0;padding:0;background-color:#f4f1ea;">'.($pre !== '' ? '<div style="display:none;max-height:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;">'.$h($pre).'</div>' : '')
 		.'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f1ea;"><tr><td align="center" style="padding:24px 12px;">'
 		.'<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background-color:#ffffff;border:1px solid #e6e0d2;">'

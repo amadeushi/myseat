@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-16 == mySeat v6.50.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geändert: Mails, die über den Mailserver (PHPMailer) gehen, bekommen eine Nachrichten-ID mit Zeit und der Domain der Absenderadresse (<JJJJMMTTHHMMSS.zufall@domain>) statt 32 zufälliger Zeichen; Spamfilter (SpamAssassin: FONT_INVIS_MSGID, -2,5 Punkte zusammen mit der versteckten Vorschauzeile eines Newsletters) lesen die zufällige ID als "maschinell erzeugt".
+ * Geändert: Newsletter-Testmail: der HTML-Titel trägt jetzt denselben Zusatz "[Test] " wie der Betreff (SpamAssassin: HTML_TITLE_SUBJ_DIFF, -2,2 Punkte).
+
 2026-10-16 == mySeat v6.50.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geändert: Mails über ein gespeichertes Absenderprofil mit eigenem Mailserver tragen jetzt die Domain der Absenderadresse in der Nachrichten-ID und im Begrüßungsnamen beim Mailserver (statt des technischen Servernamens), zum Beispiel <...@news.amadeus-hildesheim.de>. Alle anderen Mails bleiben unverändert.
