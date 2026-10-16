@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-16 == mySeat v6.52.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geändert: Alle Mails von mySeat laufen jetzt über die Absenderprofile (Newsletter > Absender): die Bewertungsanfrage nach einem Reservierungsbesuch (web/cron/send_feedback_requests.php), die Antwort auf Gäste-Feedback (web/ajax/feedback_action.php) und die Benachrichtigung ans Restaurant bei einer neuen Reservierung (bm_send_admin_mail) gingen bisher direkt über PHP mail() beziehungsweise nur über die globale SMTP-Einstellung; sie kommen jetzt vom Absender des Zwecks "Reservierung" (mit dessen Mailserver, wenn einer gespeichert ist), bei der Restaurant-Mail bleibt der Gast die Antwortadresse. Ohne gespeichertes Profil ändert sich nichts. Übrig bleiben die Willkommensmail für neue Backend-Benutzer (confirmation.class.php, info@openmyseat.com) und der Gmail-Weg im n8n-Workflow der Gruppenbestellung.
+ * Neu: Einstellungen > Lieferservice, E-Mail-Adresse für Bestellungen: der Hinweis sagt jetzt, dass die Adresse nur noch die Benachrichtigung über neue Bestellungen empfängt und dass der Absender der Gästemails unter Newsletter > Absender eingestellt wird (mit Link).
+
 2026-10-16 == mySeat v6.51.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Gratis-Extras mit Variantenauswahl. Ein Produkt mit Varianten (zum Beispiel "Hausgemachtes Brot" mit "Kräuter" und "Knoblauch") lässt sich als Gratis-Extra eintragen (Einstellungen > Lieferservice > Angebote, Gratis-Extra 1 bis 3): jede Variante erscheint im Warenkorb als eigener Auswahlpunkt ("Hausgemachtes Brot, Kräuter"), die Bestellung führt die Zeile "Hausgemachtes Brot, Kräuter (gratis)" für 0 EUR. Die Auswahl hat die Form "<Produkt>-<Variante>" und gilt im Shop, im Checkout und im Bestell-Chat. Produkte mit Zusatzgruppen bleiben als Gratis-Extra ausgeschlossen.

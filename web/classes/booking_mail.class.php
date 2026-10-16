@@ -676,20 +676,35 @@ function bm_send_admin_mail($to_admin, $m, $brand) {
 	global $settings;
 	if ($to_admin === '' || !filter_var($to_admin, FILTER_VALIDATE_EMAIL)) { return; }
 	$reply = (!empty($m['reply_to']) && filter_var($m['reply_to'], FILTER_VALIDATE_EMAIL)) ? $m['reply_to'] : '';
+	// the notification comes from the sender of the purpose "reservation" (Newsletter > Absender) when one is saved - with its mail server -, else from the address of the restaurant as always
+	$from_addr = $to_admin; $own_smtp = null;
+	try {
+		require_once __DIR__.'/shop_mail_sender.class.php';
+		$sp = shop_sender_profile('reservation');
+		if ($sp) { $from_addr = $sp['from']; if ($sp['name'] !== '') { $brand = $sp['name']; } if ($sp['host'] !== '') { $own_smtp = $sp; } }
+	} catch (Throwable $e) { error_log('mySeat sender profile (restaurant mail): '.$e->getMessage()); }
 
-	if (isset($settings['emailSMTP']) && $settings['emailSMTP'] != 'LOCAL') {
+	if ($own_smtp || (isset($settings['emailSMTP']) && $settings['emailSMTP'] != 'LOCAL')) {
 		require_once __DIR__ . '/phpmailer/class.phpmailer.php';
 		$mail = new PHPMailer();
-		if ($settings['emailSMTP'] == 'SMTP') { $mail->IsSMTP(); } else { $mail->IsSendmail(); }
+		if ($own_smtp || $settings['emailSMTP'] == 'SMTP') { $mail->IsSMTP(); } else { $mail->IsSendmail(); }
 		$mail->SMTPAuth      = true;
 		$mail->SMTPKeepAlive = true;
 		$mail->CharSet       = 'UTF-8';
-		$mail->Host          = $settings['emailHost'];
-		$mail->Port          = $settings['emailPort'];
-		$mail->Username      = $settings['emailUser'];
-		$mail->Password      = $settings['emailPass'];
-		$mail->SetFrom($to_admin, $brand);
-		$mail->AddReplyTo($reply !== '' ? $reply : $to_admin, $reply !== '' ? '' : $brand);
+		if ($own_smtp) {
+			$mail->Host = $own_smtp['host']; $mail->Port = $own_smtp['port']; $mail->Username = $own_smtp['user']; $mail->Password = $own_smtp['pass'];
+			if ($own_smtp['secure'] === 'tls' || $own_smtp['secure'] === 'ssl') { $mail->SMTPSecure = $own_smtp['secure']; }
+			$mail->Timeout = 20;
+			$sdm = strrchr($from_addr, '@'); if ($sdm !== false && strlen($sdm) > 3) { $mail->Hostname = substr($sdm, 1); $mail->MessageID = '<'.date('YmdHis').'.'.bin2hex(random_bytes(6)).'@'.substr($sdm, 1).'>'; }
+		} else {
+			$mail->Host          = $settings['emailHost'];
+			$mail->Port          = $settings['emailPort'];
+			$mail->Username      = $settings['emailUser'];
+			$mail->Password      = $settings['emailPass'];
+		}
+		$mail->SetFrom($from_addr, $brand);
+		$mail->ClearReplyTos();   // SetFrom() has put the sender in as the reply address: only the guest (or, without one, the sender) stays
+		$mail->AddReplyTo($reply !== '' ? $reply : $from_addr, $reply !== '' ? '' : $brand);
 		$mail->Subject = $m['admin_subject'];
 		$mail->AltBody = $m['admin_text'];
 		$mail->MsgHTML($m['admin_html']);
@@ -697,7 +712,7 @@ function bm_send_admin_mail($to_admin, $m, $brand) {
 		if (!$mail->Send()) { error_log('mySeat mail to restaurant failed: '.$mail->ErrorInfo); }
 	} else {
 		$boundary = '=_'.md5(uniqid('', true));
-		$from = mb_encode_mimeheader($brand, 'UTF-8', 'B').' <'.$to_admin.'>';
+		$from = mb_encode_mimeheader($brand, 'UTF-8', 'B').' <'.$from_addr.'>';
 		$headers  = "MIME-Version: 1.0\r\nFrom: ".$from."\r\nReply-To: ".($reply !== '' ? $reply : $from)."\r\nX-Mailer: mySeat\r\n";
 		$headers .= "Content-Type: multipart/alternative; boundary=\"".$boundary."\"\r\n";
 		$body  = "--".$boundary."\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n".chunk_split(base64_encode($m['admin_text']));

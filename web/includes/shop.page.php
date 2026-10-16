@@ -315,7 +315,7 @@ $sh_secret = function ($label, $value, $hint = '') use ($sh_e) {
 	<section class="sh-group" id="sh-gaeste" aria-labelledby="sh-h-gaeste">
 		<h3 id="sh-h-gaeste">Gäste</h3>
 		<h4 class="sh-sub">Nachrichten an Gäste</h4>
-		<?php $sh_wide('sh-mail', 'notify_email', 'E-Mail-Adresse für Bestellungen', 'Von dieser Adresse gehen die Bestätigungen an Gäste, und hierhin kommt eine Mail bei jeder neuen Bestellung. Leer: Der Shop nimmt die E-Mail-Adresse aus den Stammdaten.', 'type="email" maxlength="160"'); ?>
+		<?php $sh_wide('sh-mail', 'notify_email', 'E-Mail-Adresse für Bestellungen', 'Hierhin kommt eine Mail bei jeder neuen Bestellung (und die Meldung zu Push und Rückfragen). Leer: Der Shop nimmt die E-Mail-Adresse aus den Stammdaten. <strong>Der Absender der Mails an die Gäste</strong> (Bestellbestätigung, Status, Stempelkarte, Codes) und der Weg über den Mailserver werden unter <a href="main_page.php?p=14">Newsletter &rsaquo; Absender</a> eingestellt, getrennt für Newsletter, Bestellung und Reservierung. Nur wenn dort für &bdquo;Bestellung und Lieferung&ldquo; nichts gespeichert ist, gehen diese Mails noch von dieser Adresse über den Server (PHP).', 'type="email" maxlength="160"'); ?>
 		<?php $sh_cb('sms_orders', 'SMS, wenn die Lieferung losfährt oder die Abholung bereit ist', 'Braucht eine Handynummer und eingerichteten SMS-Versand.'); ?>
 		<?php $sh_cb('feedback_on', 'Feedback-Mail nach der Bestellung', 'Zwei Stunden nach Abschluss, nur mit E-Mail-Adresse.'); ?>
 

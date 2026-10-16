@@ -55,14 +55,8 @@ if ($feedback_id > 0) {
 			));
 			$from_email = !empty($property['email']) ? $property['email'] : $settings['emailUser'];
 			$from = mb_encode_mimeheader($brand, 'UTF-8', 'B').' <'.$from_email.'>';
-			$subject = mb_encode_mimeheader($m['subject'], 'UTF-8', 'B');
-			$boundary = '=_'.md5(uniqid('', true));
-			$headers = "MIME-Version: 1.0\r\nFrom: ".$from."\r\nReply-To: ".$from."\r\nX-Mailer: mySeat\r\n";
-			$headers .= "Content-Type: multipart/alternative; boundary=\"".$boundary."\"\r\n";
-			$body  = "--".$boundary."\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n".chunk_split(base64_encode($m['plain']));
-			$body .= "--".$boundary."\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n".chunk_split(base64_encode($m['html']));
-			$body .= "--".$boundary."--\r\n";
-			if (!mail($f['guest_email'], $subject, $body, $headers)) {
+			// through the common sender (bm_send_guest_mail): the sender of the purpose "reservation" (Newsletter > Absender) when one is saved, else the server as before
+			if (!bm_send_guest_mail($f['guest_email'], array('subject' => $m['subject'], 'plain' => $m['plain'], 'html' => $m['html'], 'ics' => '', 'ics_filename' => '', 'purpose' => 'reservation'), $brand, $from_email)) {
 				error_log('mySeat feedback reply mail failed for feedback_id '.$feedback_id);
 			}
 		}
