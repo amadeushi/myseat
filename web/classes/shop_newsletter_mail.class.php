@@ -151,10 +151,13 @@ function shop_nlm_render($c, $sub, $o = array()) {
 		.($legal ? '<br><br><strong>Angaben zum Anbieter</strong><br>'.implode('<br>', array_map($h, $legal)) : '').($links ? '<br>'.implode(' &middot; ', $links) : '').'</td></tr>';
 	$pre = trim((string)(isset($c['preheader']) ? $c['preheader'] : ''));
 	$html = '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'.$h((!empty($o['test']) ? '[Test] ' : '').(isset($c['subject']) ? $c['subject'] : '')).'</title></head>'
-		.'<body style="margin:0;padding:0;background-color:#f4f1ea;">'.($pre !== '' ? '<div style="display:none;max-height:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;">'.$h($pre).'</div>' : '')
+		.'<body style="margin:0;padding:0;background-color:#f4f1ea;">'.($pre !== '' ? '<div style="display:none;mso-hide:all;">'.$h($pre).'</div>' : '')
 		.'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f1ea;"><tr><td align="center" style="padding:24px 12px;">'
 		.'<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background-color:#ffffff;border:1px solid #e6e0d2;">'
 		.$rows.'<tr><td style="padding:14px 32px 22px;"><div style="'.$font.'font-size:14px;color:#555;line-height:1.6;">Dein Team vom '.$h($brand).'</div></td></tr>'.$footer.'</table></td></tr></table></body></html>';
+	// the preview line stays hidden with display:none only (every mail program honours it); tiny font + opacity + a one-line html made SpamAssassin read the line as hidden spam text
+	// (FONT_INVIS_*: 5.0 points, the limit, in a test with the Postmark spam check). Line breaks keep the lines of the mail short.
+	$html = str_replace(array('</tr>', '</td>'), array("</tr>\n", "</td>\n"), $html);
 	$text = implode("\r\n\r\n", $plain)."\r\n\r\nDein Team vom ".$brand."\r\n\r\n-- \r\nAbmelden oder Einstellungen ändern: {abmelden}\r\n".($legal ? implode("\r\n", $legal)."\r\n" : '');
 	$real = !empty($sub['token']);
 	$headers = array();

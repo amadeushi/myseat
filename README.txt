@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-16 == mySeat v6.50.3 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Korrigiert: Die Newsletter-Mails (Mailings und Automatiken) wurden von SpamAssassin mit 5,0 Punkten (der Schwelle) bewertet: die versteckte Vorschauzeile (display:none + opacity:0 + Schriftgröße 1px) zusammen mit der einzeiligen HTML-Mail löste die Regeln FONT_INVIS_* aus (je 2,5). Die vorschauzeile ist jetzt nur noch mit display:none und mso-hide versteckt, und die HTML-Mail hat nach jeder Tabellenzeile einen Zeilenumbruch. Im Test mit der Postmark-Spamprüfung: 0,0 Punkte.
+
 2026-10-16 == mySeat v6.50.2 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geändert: Mails, die über den Mailserver (PHPMailer) gehen, bekommen eine Nachrichten-ID mit Zeit und der Domain der Absenderadresse (<JJJJMMTTHHMMSS.zufall@domain>) statt 32 zufälliger Zeichen; Spamfilter (SpamAssassin: FONT_INVIS_MSGID, -2,5 Punkte zusammen mit der versteckten Vorschauzeile eines Newsletters) lesen die zufällige ID als "maschinell erzeugt".
