@@ -16,7 +16,7 @@
 		return fetch('api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(data) }).then(function (r) { return r.json(); });
 	}
 	function load() {
-		try { var d = JSON.parse(localStorage.getItem(KEY) || '{}'); if (d && Array.isArray(d.cart)) { S.cart = d.cart; } if (d && (d.mode === 'pickup' || d.mode === 'delivery')) { S.mode = d.mode; } if (d && (d.extra === 'voucher' || +d.extra > 0)) { S.extra = d.extra; } } catch (e) {}
+		try { var d = JSON.parse(localStorage.getItem(KEY) || '{}'); if (d && Array.isArray(d.cart)) { S.cart = d.cart; } if (d && (d.mode === 'pickup' || d.mode === 'delivery')) { S.mode = d.mode; } if (d && (d.extra === 'voucher' || +d.extra > 0 || /^\d+-\d+$/.test(String(d.extra)))) { S.extra = d.extra; } } catch (e) {}
 	}
 	// the mode (Lieferung / Abholung) of an earlier visit is not taken over: it counts only when it was chosen in this browser session (on the menu or here); else the guest chooses, the button waits
 	var MKEY = 'myseat_mode_chosen';

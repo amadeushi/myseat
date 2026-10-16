@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-16 == mySeat v6.51.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Gratis-Extras mit Variantenauswahl. Ein Produkt mit Varianten (zum Beispiel "Hausgemachtes Brot" mit "Kräuter" und "Knoblauch") lässt sich als Gratis-Extra eintragen (Einstellungen > Lieferservice > Angebote, Gratis-Extra 1 bis 3): jede Variante erscheint im Warenkorb als eigener Auswahlpunkt ("Hausgemachtes Brot, Kräuter"), die Bestellung führt die Zeile "Hausgemachtes Brot, Kräuter (gratis)" für 0 EUR. Die Auswahl hat die Form "<Produkt>-<Variante>" und gilt im Shop, im Checkout und im Bestell-Chat. Produkte mit Zusatzgruppen bleiben als Gratis-Extra ausgeschlossen.
+
 2026-10-16 == mySeat v6.50.4 == amadeushi - http://github.com/amadeushi/myseat
 
  * Korrigiert: Mails über den Mailserver (PHPMailer) hatten zwei Antwortadressen, wenn im Absenderprofil eine abweichende Antwortadresse stand: die Absenderadresse (die PHPMailer beim Setzen des Absenders selbst als Antwortadresse einträgt) und die gewählte. Jetzt steht nur noch die gewählte in der Kopfzeile Reply-To.

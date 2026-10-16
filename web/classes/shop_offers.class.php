@@ -41,7 +41,12 @@ function shop_offers_kinds() {
 			else { $kind = 'main'; }
 		}
 		$price = ((int)$p['nvar'] > 0 && $p['vmin'] !== null) ? min((int)$p['price_cents'], (int)$p['vmin']) : (int)$p['price_cents'];
-		$map[(int)$p['id']] = array('kind' => $kind, 'title' => $p['title'], 'price' => $price, 'choices' => ((int)$p['nvar'] > 0 || (int)$p['ngroup'] > 0));
+		$map[(int)$p['id']] = array('kind' => $kind, 'title' => $p['title'], 'price' => $price, 'choices' => ((int)$p['nvar'] > 0 || (int)$p['ngroup'] > 0),
+			'vars' => array());   // 'vars': the sizes / variants of a product without option groups (a free extra with a choice: see shop_offers_eval)
+	}
+	foreach (fb_rows("SELECT v.id, v.product_id, v.title, v.price_cents FROM ".fb_t('tp_shop_variations')." v JOIN ".fb_t('tp_shop_products')." p ON p.id = v.product_id AND p.active = 1
+			WHERE NOT EXISTS (SELECT 1 FROM ".fb_t('tp_shop_product_groups')." pg WHERE pg.product_id = p.id) ORDER BY v.sort, v.id") as $v) {
+		if (isset($map[(int)$v['product_id']])) { $map[(int)$v['product_id']]['vars'][] = array('id' => (int)$v['id'], 'title' => $v['title'], 'price' => (int)$v['price_cents']); }
 	}
 	return $map;
 }
@@ -67,13 +72,17 @@ function shop_offers_eval($items, $choice = null) {
 		$out['threshold'] = $out['mains'] >= 3 ? $cfg['t'][2] : $cfg['t'][$out['mains'] - 1];
 		$out['reached'] = $sub >= $out['threshold']; $out['gap'] = max(0, $out['threshold'] - $sub);
 	}
+	// a free extra is a product (id) or, for a product with variants (bread: herbs / garlic), every variant as a choice of its own: id "<product>-<variant>", title "Bread, Herbs"
 	foreach ($cfg['extras'] as $pid) {
-		if (isset($kinds[$pid]) && !$kinds[$pid]['choices']) { $out['extras'][] = array('id' => $pid, 'title' => $kinds[$pid]['title'], 'price' => $kinds[$pid]['price']); }
+		if (!isset($kinds[$pid])) { continue; }
+		if (!$kinds[$pid]['choices']) { $out['extras'][] = array('id' => $pid, 'title' => $kinds[$pid]['title'], 'price' => $kinds[$pid]['price']); }
+		else { foreach ($kinds[$pid]['vars'] as $v) { $out['extras'][] = array('id' => $pid.'-'.$v['id'], 'title' => $kinds[$pid]['title'].', '.$v['title'], 'price' => $v['price']); } }
 	}
 	if ($choice === 'voucher') { $out['choice'] = 'voucher'; }
 	else {
-		$ids = array_map(function ($e) { return $e['id']; }, $out['extras']); $c = (int)$choice;
-		$out['choice'] = in_array($c, $ids, true) ? $c : ($ids ? $ids[0] : 0);
+		$ids = array_map(function ($e) { return (string)$e['id']; }, $out['extras']); $c = (string)$choice;
+		$pick = in_array($c, $ids, true) ? $c : ($ids ? $ids[0] : '');
+		$out['choice'] = $pick === '' ? 0 : (ctype_digit($pick) ? (int)$pick : $pick);
 	}
 	// pizza + drink: per pizza one drink costs less (never more than the drink itself)
 	if ($cfg['combo_cents'] > 0 && $out['pizzas'] > 0) {
@@ -110,7 +119,7 @@ function shop_offers_fillers($gap, $cartIds, $limit = 3) {
 function shop_offers_extra_line($eval) {
 	if (!$eval['on'] || !$eval['reached'] || !$eval['choice'] || $eval['choice'] === 'voucher') { return null; }
 	foreach ($eval['extras'] as $e) {
-		if ((int)$e['id'] === (int)$eval['choice']) {
+		if ((string)$e['id'] === (string)$eval['choice']) {
 			return array('product_id' => null, 'vid' => 0, 'title' => $e['title'].' (gratis)', 'variation' => '', 'options' => array(), 'qty' => 1, 'unit_cents' => 0, 'line_cents' => 0, 'note' => 'Gratis-Extra');
 		}
 	}

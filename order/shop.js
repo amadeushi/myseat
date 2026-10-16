@@ -14,7 +14,7 @@
 
 	// ---- storage
 	function load() {
-		try { var d = JSON.parse(localStorage.getItem(KEY) || '{}'); if (d && Array.isArray(d.cart)) { state.cart = d.cart; } if (d && (d.mode === 'pickup' || d.mode === 'delivery')) { state.mode = d.mode; } if (d && (d.extra === 'voucher' || +d.extra > 0)) { state.extra = d.extra; } } catch (e) {}
+		try { var d = JSON.parse(localStorage.getItem(KEY) || '{}'); if (d && Array.isArray(d.cart)) { state.cart = d.cart; } if (d && (d.mode === 'pickup' || d.mode === 'delivery')) { state.mode = d.mode; } if (d && (d.extra === 'voucher' || +d.extra > 0 || /^\d+-\d+$/.test(String(d.extra)))) { state.extra = d.extra; } } catch (e) {}
 	}
 	function save() { try { localStorage.setItem(KEY, JSON.stringify({ mode: state.mode, cart: state.cart, extra: state.extra })); } catch (e) {} chatPush(); }
 
@@ -842,7 +842,7 @@
 		var ed = t.closest('[data-edit]');
 		if (ed) { var el = state.cart[+ed.dataset.edit]; if (el) { openProduct(el.pid, { i: +ed.dataset.edit, line: el }); } return; }
 		var xe = t.closest('[data-extra]');
-		if (xe) { state.extra = xe.dataset.extra === 'voucher' ? 'voucher' : +xe.dataset.extra; save(); renderCart(); return; }
+		if (xe) { state.extra = xe.dataset.extra === 'voucher' ? 'voucher' : (/^\d+-\d+$/.test(xe.dataset.extra) ? xe.dataset.extra : +xe.dataset.extra); save(); renderCart(); return; }
 		var up = t.closest('[data-up]');
 		if (up) {
 			var uli = $('.shop-item[data-id="' + up.dataset.up + '"]');

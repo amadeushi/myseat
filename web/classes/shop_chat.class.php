@@ -417,14 +417,14 @@ function shop_chat_run_checkout(&$c, $out) {
 function shop_chat_offer(&$c, $out, $btn) {
 	$ctx = &$c['ctx'];
 	if ($btn === 'offer:skip') { $ctx['offer_done'] = 1; }
-	elseif ($btn !== null && strpos($btn, 'extra:') === 0) { $v = substr($btn, 6); $ctx['extra'] = ($v === 'voucher') ? 'voucher' : (int)$v; $ctx['offer_done'] = 1; }
+	elseif ($btn !== null && strpos($btn, 'extra:') === 0) { $v = substr($btn, 6); $ctx['extra'] = ($v === 'voucher') ? 'voucher' : (preg_match('/^\d+-\d+$/', $v) ? $v : (int)$v); $ctx['offer_done'] = 1; }
 	elseif ($btn !== null && strpos($btn, 'fill:') === 0) { return shop_chat_pick_product($c, $out, (int)substr($btn, 5)); }
 	$p = shop_chat_priced($ctx);
 	if (!$p['ok']) { $c['state'] = 'cat'; $out[] = shop_chat_ask_category($ctx, $p['error']); return shop_chat_finish($c, $out); }
 	$e = shop_offers_eval($p['items'], isset($ctx['extra']) ? $ctx['extra'] : null);
 	if ($e['on'] && empty($ctx['offer_done'])) {
 		if ($e['reached'] && $e['extras']) {
-			$b = array(); foreach ($e['extras'] as $x) { $b['extra:'.(int)$x['id']] = $x['title'].' gratis'; }
+			$b = array(); foreach ($e['extras'] as $x) { $b['extra:'.$x['id']] = $x['title'].' gratis'; }
 			if ($e['voucher_cents'] > 0) { $b['extra:voucher'] = 'Lieber '.shop_money($e['voucher_cents']).' Gutschein für das nächste Mal'; }
 			$out[] = shop_chat_msg('Ein Gratis-Extra gehört dir:', $b); return shop_chat_finish($c, $out);
 		}
@@ -648,7 +648,7 @@ function shop_chat_summary($ctx, $lead = '') {
 	$lines = array(($lead !== '' ? $lead."\n\n" : '').'Deine Bestellung');
 	foreach ($t['items'] as $it) { $lines[] = shop_chat_line_text($it); }
 	if ($t['combo'] > 0) { $lines[] = $t['combo_text'].' – −'.shop_money($t['combo']); }
-	if (isset($ctx['extra']) && $ctx['extra'] !== 'voucher' && $t['eval']['on'] && $t['eval']['reached']) { foreach ($t['eval']['extras'] as $x) { if ((int)$x['id'] === (int)$ctx['extra']) { $lines[] = $x['title'].' – gratis'; } } }
+	if (isset($ctx['extra']) && $ctx['extra'] !== 'voucher' && $t['eval']['on'] && $t['eval']['reached']) { foreach ($t['eval']['extras'] as $x) { if ((string)$x['id'] === (string)$ctx['extra']) { $lines[] = $x['title'].' – gratis'; } } }
 	if ($t['discount'] > 0) { $lines[] = 'Gutschein '.$t['coupon'].' – −'.shop_money($t['discount']); }
 	if ($ctx['type'] === 'delivery') { $lines[] = 'Lieferung – '.shop_money($t['fee']); }
 	$acc = shop_acc_current(); $voucher = ($acc && $t['discount'] <= 0) ? shop_stamp_voucher(shop_acc_keys($acc)) : null;

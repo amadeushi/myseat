@@ -340,11 +340,14 @@ $sh_secret = function ($label, $value, $hint = '') use ($sh_e) {
 		<?php $sh_row('sh-ot1', 'offer_t1', 'Bei 1 Hauptgericht', '€', '', '', 'decimal'); ?>
 		<?php $sh_row('sh-ot2', 'offer_t2', 'Bei 2 Hauptgerichten', '€', '', '', 'decimal'); ?>
 		<?php $sh_row('sh-ot3', 'offer_t3', 'Bei 3 und mehr Hauptgerichten', '€', '', '', 'decimal'); ?>
-		<?php $sh_ext = array_values(array_filter(array_map('intval', explode(',', (string)$sh['offer_extras'])))); $sh_pick = fb_rows("SELECT p.id, p.title, p.price_cents, c.name AS cat FROM ".fb_t('tp_shop_products')." p LEFT JOIN ".fb_t('tp_shop_categories')." c ON c.id = p.category_id WHERE p.active = 1 AND NOT EXISTS (SELECT 1 FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id) AND NOT EXISTS (SELECT 1 FROM ".fb_t('tp_shop_product_groups')." g WHERE g.product_id = p.id) AND p.price_cents <= 900 ORDER BY c.sort, p.sort, p.id");
+		<?php $sh_ext = array_values(array_filter(array_map('intval', explode(',', (string)$sh['offer_extras'])))); $sh_pick = fb_rows("SELECT p.id, p.title, COALESCE((SELECT MIN(v.price_cents) FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id), p.price_cents) AS price_cents, c.name AS cat,
+			(SELECT GROUP_CONCAT(v3.title ORDER BY v3.sort, v3.id SEPARATOR ', ') FROM ".fb_t('tp_shop_variations')." v3 WHERE v3.product_id = p.id) AS vars
+		FROM ".fb_t('tp_shop_products')." p LEFT JOIN ".fb_t('tp_shop_categories')." c ON c.id = p.category_id WHERE p.active = 1 AND NOT EXISTS (SELECT 1 FROM ".fb_t('tp_shop_product_groups')." g WHERE g.product_id = p.id)
+			AND COALESCE((SELECT MAX(v2.price_cents) FROM ".fb_t('tp_shop_variations')." v2 WHERE v2.product_id = p.id), p.price_cents) <= 900 ORDER BY c.sort, p.sort, p.id");   // products with variants too: each variant becomes a choice of its own
 		for ($sh_i = 0; $sh_i < 3; $sh_i++): ?>
 		<div class="sh-row sh-wide"><div class="sh-text"><label class="sh-label" for="sh-ox<?php echo $sh_i; ?>">Gratis-Extra <?php echo $sh_i + 1; ?><?php echo $sh_i === 0 ? ' (ist vorgewählt)' : ''; ?></label></div>
 			<select id="sh-ox<?php echo $sh_i; ?>" name="offer_extra_<?php echo $sh_i; ?>"<?php echo $F; ?>><option value="0">(keins)</option>
-				<?php foreach ($sh_pick as $sh_p): ?><option value="<?php echo (int)$sh_p['id']; ?>"<?php echo (isset($sh_ext[$sh_i]) && $sh_ext[$sh_i] === (int)$sh_p['id']) ? ' selected' : ''; ?>><?php echo $sh_e($sh_p['title'].' ('.$sh_p['cat'].', '.number_format($sh_p['price_cents'] / 100, 2, ',', '').' €)'); ?></option><?php endforeach; ?>
+				<?php foreach ($sh_pick as $sh_p): ?><option value="<?php echo (int)$sh_p['id']; ?>"<?php echo (isset($sh_ext[$sh_i]) && $sh_ext[$sh_i] === (int)$sh_p['id']) ? ' selected' : ''; ?>><?php echo $sh_e($sh_p['title'].($sh_p['vars'] !== null && $sh_p['vars'] !== '' ? ' - Auswahl: '.$sh_p['vars'] : '').' ('.$sh_p['cat'].', '.($sh_p['vars'] !== null && $sh_p['vars'] !== '' ? 'ab ' : '').number_format($sh_p['price_cents'] / 100, 2, ',', '').' €)'); ?></option><?php endforeach; ?>
 			</select></div>
 		<?php endfor; ?>
 		<h5 class="sh-sub2">Gutschein statt Extra</h5>
