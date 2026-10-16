@@ -73,18 +73,28 @@ function shop_nla_cfg_set($kind, $on, $params) {
 function shop_nla_default($kind) {
 	$btn = array('t' => 'btn', 'text' => 'Jetzt bestellen', 'url' => shop_stamp_shop_url());
 	switch ($kind) {
-		case 'welcome': return array('subject' => 'Willkommen! Dein Gutschein über {gutschein_wert}', 'blocks' => array(
-			array('t' => 'h', 'text' => 'Willkommen, {vorname|Gast}!'), array('t' => 'p', 'html' => 'Schön, dass du bei uns dabei bist. Als Dankeschön für deine Anmeldung schenken wir dir einen Gutschein für deine nächste Bestellung.'),
+		case 'welcome': return array('subject' => 'Zwei Bestellungen am Tag: so hat unsere Lieferung angefangen', 'preheader' => 'Wie aus ein, zwei Bestellungen am Tag eine Lieferung durch ganz Hildesheim wurde.', 'blocks' => array(
+			array('t' => 'h', 'text' => 'Willkommen, {vorname|Gast}'),
+			array('t' => 'p', 'html' => 'April 2020. Im Amadeus ist es dunkel und still, an den Tischen sitzt niemand, im Hintergrund läuft keine Musik. Wir sind zu dritt: ein Koch, ich am Telefon, der die Bestellungen annimmt, und einer, der sie ausfährt. Mehr als ein, zwei Bestellungen am Tag sind es nicht.'),
+			array('t' => 'p', 'html' => 'Ein Auto hatten wir nicht, also liehen wir uns Lastenräder beim <a href="https://hilde-lastenrad.de/">Hilde Lastenradverleih</a>. Das Hildesheimer Pflaster hat die Bestellungen ordentlich durchgeschüttelt, und trotzdem kamen sie an.'),
+			array('t' => 'p', 'html' => 'Wir haben schnell dazugelernt. Ein paar Monate später sind wir in jede Ecke des Landkreises gefahren, sogar bis nach Sarstedt. Heute liefern wir im Stadtgebiet von Hildesheim, dafür ohne Umwege und mit warmem Essen.'),
+			array('t' => 'p', 'html' => 'Dass du jetzt dabei bist, freut mich. Dafür bekommst du von mir einen Gutschein:'),
 			array('t' => 'box', 'label' => 'Dein persönlicher Gutschein', 'value' => '{gutschein_wert}', 'note' => 'Code {gutschein}, gültig bis {gutschein_bis}, ab {gutschein_ab} Warenwert'),
-			array('t' => 'p', 'html' => 'Gib den Code im Warenkorb ein. Er gilt nur für dich, mit dieser E-Mail-Adresse, und nur einmal.'), $btn));
-		case 'stamp_almost': return array('subject' => 'Fast geschafft: noch {stempel_fehlen} bis zu deinem Gutschein', 'blocks' => array(
-			array('t' => 'h', 'text' => 'Fast geschafft, {vorname|Gast}!'), array('t' => 'p', 'html' => 'Auf deiner Stempelkarte sind {stempel_stand} von {stempel_ziel} Stempeln. Noch {stempel_fehlen}, dann schenken wir dir einen Gutschein.'), $btn));
-		case 'stamp_expiry': return array('subject' => 'Deine Stempel laufen bald ab', 'blocks' => array(
-			array('t' => 'h', 'text' => 'Deine Stempel verfallen bald'), array('t' => 'p', 'html' => 'Dein ältester Stempel gilt nur noch bis zum {stempel_bis}. Du hast {stempel_stand} von {stempel_ziel} Stempeln. Bestelle bis dahin, damit nichts verfällt.'), $btn));
-		case 'voucher_expiry': return array('subject' => 'Dein Gutschein über {gutschein_wert} läuft bald ab', 'blocks' => array(
+			array('t' => 'p', 'html' => 'Gib den Code im Warenkorb ein. Er gilt nur für dich, mit dieser E-Mail-Adresse, und nur einmal.'),
+			array('t' => 'p', 'html' => 'Wenn du nicht weißt, was du nehmen sollst: Nichts verkaufen wir häufiger als unsere Schnitzel.'), $btn,
+			array('t' => 'p', 'html' => 'Zeus, meine Deutsche Dogge und unser Maskottchen, steht für Freundlichkeit, Wärme und Verlässlichkeit. So wollen wir auch bei dir ankommen.'),
+			array('t' => 'zeus', 'text' => 'Bis bald, Hamun und Zeus')));
+		case 'stamp_almost': return array('subject' => 'Noch {stempel_fehlen} Stempel, {vorname|Gast}, dann bist du dran', 'preheader' => '{stempel_stand} von {stempel_ziel} Stempeln sind voll.', 'blocks' => array(
+			array('t' => 'h', 'text' => 'Fast geschafft!'), array('t' => 'p', 'html' => '{stempel_stand} von {stempel_ziel} Stempeln sind voll, noch {stempel_fehlen}. Dann schenken wir dir einen Gutschein, den wir bei der nächsten Bestellung automatisch abziehen.'), $btn,
+			array('t' => 'zeus', 'text' => 'Guten Appetit, Hamun und Zeus')));
+		case 'stamp_expiry': return array('subject' => 'Dein ältester Stempel zählt noch bis {stempel_bis}', 'preheader' => 'Du hast {stempel_stand} von {stempel_ziel} Stempeln.', 'blocks' => array(
+			array('t' => 'h', 'text' => 'Dein Stempel wartet noch'), array('t' => 'p', 'html' => 'Bis zum {stempel_bis} gilt dein ältester Stempel noch. Du hast {stempel_stand} von {stempel_ziel}. Fehlt dir nur noch einer, dann ist jetzt der richtige Moment, deine Karte voll zu machen.'), $btn,
+			array('t' => 'zeus', 'text' => 'Guten Appetit, Hamun und Zeus')));
+		case 'voucher_expiry': return array('subject' => 'Dein Gutschein über {gutschein_wert} wartet bis {gutschein_bis}', 'preheader' => 'Wir ziehen ihn bei deiner nächsten Bestellung automatisch ab.', 'blocks' => array(
 			array('t' => 'h', 'text' => 'Dein Gutschein wartet noch, {vorname|Gast}'),
 			array('t' => 'box', 'label' => 'Dein Gutschein', 'value' => '{gutschein_wert}', 'note' => 'gültig bis {gutschein_bis}'),
-			array('t' => 'p', 'html' => 'Wir ziehen ihn bei deiner nächsten Bestellung automatisch ab. Danach verfällt er.'), $btn));
+			array('t' => 'p', 'html' => 'Wir ziehen ihn bei deiner nächsten Bestellung automatisch ab. Du musst nichts eingeben. Nach dem {gutschein_bis} verfällt er.'), $btn,
+			array('t' => 'zeus', 'text' => 'Guten Appetit, Hamun und Zeus')));
 		case 'winback': return array('subject' => 'Wir vermissen dich, {vorname|Gast}', 'blocks' => array(
 			array('t' => 'h', 'text' => 'Schön, dich bald wiederzusehen'), array('t' => 'p', 'html' => 'Du warst schon länger nicht mehr bei uns. Wir würden uns freuen, dich bald wieder zu sehen, zum Essen vor Ort oder bei dir zu Hause.'),
 			array('t' => 'box', 'label' => 'Ein Dankeschön für dich', 'value' => '{gutschein_wert}', 'note' => 'Code {gutschein}, gültig bis {gutschein_bis}'), $btn));
@@ -99,8 +109,8 @@ function shop_nla_template($kind) {
 	$r = fb_row("SELECT * FROM ".fb_t('tp_shop_nl_campaigns')." WHERE kind = ? LIMIT 1", 's', array($kind));
 	if ($r) { return $r; }
 	$d = shop_nla_default($kind); $now = date('Y-m-d H:i:s');
-	fb_exec("INSERT INTO ".fb_t('tp_shop_nl_campaigns')." (name, subject, preheader, blocks, status, kind, created_at, updated_at) VALUES (?, ?, '', ?, 'auto', ?, ?, ?)", 'ssssss',
-		array($kinds[$kind]['title'], $d['subject'], json_encode($d['blocks'], JSON_UNESCAPED_UNICODE), $kind, $now, $now));
+	fb_exec("INSERT INTO ".fb_t('tp_shop_nl_campaigns')." (name, subject, preheader, blocks, status, kind, created_at, updated_at) VALUES (?, ?, ?, ?, 'auto', ?, ?, ?)", 'sssssss',
+		array($kinds[$kind]['title'], $d['subject'], isset($d['preheader']) ? $d['preheader'] : '', json_encode($d['blocks'], JSON_UNESCAPED_UNICODE), $kind, $now, $now));
 	return fb_row("SELECT * FROM ".fb_t('tp_shop_nl_campaigns')." WHERE kind = ? LIMIT 1", 's', array($kind));
 }
 function shop_nla_sample_vars() {

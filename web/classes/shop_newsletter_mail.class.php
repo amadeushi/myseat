@@ -94,6 +94,7 @@ function shop_nlm_clean_blocks($b) {
 			case 'box': $out[] = array('t' => 'box', 'label' => shop_nlm_str(isset($x['label']) ? $x['label'] : '', 60), 'value' => shop_nlm_str(isset($x['value']) ? $x['value'] : '', 40), 'note' => shop_nlm_str(isset($x['note']) ? $x['note'] : '', 120)); break;
 			case 'hr': $out[] = array('t' => 'hr'); break;
 			case 'logo': $out[] = array('t' => 'logo'); break;
+			case 'zeus': $out[] = array('t' => 'zeus', 'text' => shop_nlm_str(isset($x['text']) ? $x['text'] : '', 160)); break;
 		}
 	}
 	return $out;
@@ -140,6 +141,10 @@ function shop_nlm_render($c, $sub, $o = array()) {
 			$plain[] = trim(trim($b['label'].($b['value'] !== '' ? ': '.$b['value'] : '')).($b['note'] !== '' ? ' ('.$b['note'].')' : ''));
 		}
 		elseif ($b['t'] === 'logo') { $rows .= '<tr><td style="padding:26px 32px 0;"><a href="'.$h(shop_nl_base()).'"><img src="'.$h(shop_nl_base().'mail/logo-mail.png').'" width="110" height="40" alt="'.$h($brand).'" style="display:block;border:0;width:110px;height:auto;"></a></td></tr>'; }
+		elseif ($b['t'] === 'zeus' && $b['text'] !== '') {
+			$line = '<div style="'.$font.'font-size:15px;color:#555;line-height:1.6;">'.$h($b['text']).'</div>';
+			$rows .= '<tr><td style="padding:14px 32px 4px;">'.(function_exists('bm_mail_with_zeus') ? bm_mail_with_zeus($line) : $line).'</td></tr>'; $plain[] = $b['text'];
+		}
 		elseif ($b['t'] === 'hr') { $rows .= '<tr><td style="padding:14px 32px 4px;"><div style="border-top:1px solid #e6e0d2;font-size:1px;line-height:1px;">&nbsp;</div></td></tr>'; $plain[] = '----------'; }
 	}
 	$legal = function_exists('bm_legal_lines') ? bm_legal_lines(array()) : array();

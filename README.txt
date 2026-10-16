@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-16 == mySeat v6.54.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Im Mail-Baukasten (Newsletter, Mailings und Automatiken) gibt es den Block "Gruß mit Zeus": ein Gruß als Text und rechts daneben Zeus als kleines Bild (wie in den Stempelmails). Die Texte sind auf 160 Zeichen begrenzt, das Bild kommt aus dem Shop-Ordner (zeus_dot.png).
+ * Neue Texte, im Ton von Hamun und mit Zeus am Ende: die Willkommensmail (kurze Geschichte der Lieferung, Gutschein, Zeus), die drei Erinnerungen (Stempelkarte fast voll, Stempel laufen ab, Gutschein läuft ab) und die zwei Stempelmails des Shops (Stempel gutgeschrieben, Karte voll). Der Gruß der Stempelmails und der Angebotsmail lautet jetzt "Guten Appetit, Hamun und Zeus". Die Mail "Stempel gutgeschrieben" bleibt eine reine Information ohne Knopf und ohne Aufforderung. Die Standardvorlagen der Automatiken enthalten die neuen Texte und eine Vorschauzeile.
+
 2026-10-16 == mySeat v6.53.2 == amadeushi - http://github.com/amadeushi/myseat
 
  * Korrigiert: Bestellerfassung im Backend: Ein Gericht, das in der Dispo auf "heute aus" steht, ließ sich in den Warenkorb legen (der Server lehnte es erst beim Speichern ab). Die Kachel erscheint jetzt abgeblendet mit "HEUTE AUS" statt des Preises, ein Tipp legt nichts in den Warenkorb ("... ist heute aus."), und ein Gericht aus "Wie letztes Mal" oder einer früheren Bestellung wird nicht übernommen und in der Hinweiszeile genannt. Die offene Erfassung liest die Kennzeichen alle zwei Minuten neu, wenn die Dispo während des Tages ein Gericht abschaltet.

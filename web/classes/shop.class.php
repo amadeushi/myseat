@@ -3720,7 +3720,7 @@ function shop_stamp_mail($to, $m) {
 	$plain = $m['headline']."\r\n\r\n".$m['lead']."\r\n\r\n".(!empty($m['box']) ? $m['box']['label'].': '.$m['box']['value'].' ('.$m['box']['note'].")\r\n\r\n" : '').$m['after']."\r\n".($m['url'] !== '' ? "\r\n".$m['btn'].': '.$m['url']."\r\n" : '')."\r\n".$m['signoff']."\r\n";
 	bm_send_guest_mail($to, array('subject' => $m['subject'], 'plain' => $plain, 'html' => $html, 'ics' => '', 'ics_filename' => '', 'purpose' => isset($m['purpose']) ? (string)$m['purpose'] : 'order'), $brand, $from);
 }
-function shop_stamp_signoff() { global $settings; return 'Guten Appetit wünscht dein Team vom '.(!empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus'); }
+function shop_stamp_signoff() { return 'Guten Appetit, Hamun und Zeus'; }
 
 // after every stamp (not for the one that fills the card, that gets the voucher mail): a status mail about the card, as part of the stamp program the guest takes part in.
 // It is pure information (what was booked, where the card stands, how long the stamps count): no reminder, no offer, no button. That keeps it a notice of the contract
@@ -3732,9 +3732,9 @@ function shop_stamp_notify_stamp($email, $name, $keys, $manual = false) {
 		$st = shop_stamp_state($keys);
 		$n = (int)$st['count']; $goal = (int)$st['goal']; $left = max(0, $goal - $n); $first = shop_stamp_first_name($name);
 		shop_stamp_mail(trim($email), array(
-			'subject' => 'Dein Stempel '.$n.' von '.$goal.($first !== '' ? ', '.$first : '').'!',
+			'subject' => 'Stempel '.$n.' von '.$goal.($first !== '' ? ', '.$first : '').': noch '.$left.' bis zum Gutschein',
 			'headline' => $manual ? 'Ein Stempel für dich' : ($first !== '' ? 'Danke, '.$first.'!' : 'Danke!'),
-			'lead' => $manual ? 'Wir haben dir einen Stempel auf deine Karte geschrieben.' : 'Für deine Bestellung ist ein Stempel auf deiner Karte eingetragen.',
+			'lead' => $manual ? 'Wir haben dir einen Stempel auf deine Karte geschrieben.' : 'Deine Bestellung ist bei dir angekommen, der Stempel auf deiner Karte auch.',
 			'image' => shop_stamp_card_image($n, $goal), 'alt' => 'Deine Stempelkarte: '.$n.' von '.$goal.' Stempeln', 'box' => null,
 			'after' => 'Stand deiner Karte: '.$n.' von '.$goal.' Stempeln, noch '.$left.' bis zum Gutschein.'.($st['until'] !== '' ? ' Deine Stempel gelten bis zum '.$st['until'].'.' : '').' Das ist eine Information zu deiner Stempelkarte.',
 			'btn' => '', 'url' => '', 'signoff' => shop_stamp_signoff()));
@@ -3748,9 +3748,9 @@ function shop_stamp_notify_voucher($phone, $email, $value, $until, $name = '', $
 			shop_stamp_mail(trim($email), array(
 				'subject' => 'Geschafft'.($first !== '' ? ', '.$first : '').': dein Gutschein über '.shop_money($value),
 				'headline' => 'Geschafft'.($first !== '' ? ', '.$first : '').'!',
-				'lead' => 'Deine Stempelkarte ist voll. Zur Belohnung schenken wir dir einen Gutschein.',
+				'lead' => 'Deine Stempelkarte ist voll. Dafür bekommst du von uns einen Gutschein.',
 				'image' => shop_stamp_card_image($cfg['goal'], $cfg['goal']), 'alt' => 'Deine volle Stempelkarte', 'box' => array('label' => 'Dein Gutschein', 'value' => shop_money($value), 'note' => 'gültig bis '.date('d.m.Y', $until).' · ab '.shop_money($value).' Warenwert'),
-				'after' => 'Wir ziehen ihn bei deiner nächsten Bestellung automatisch ab, du musst nichts eingeben. Er gilt für eine Bestellung ab '.shop_money($value).' Warenwert und wird dann komplett abgezogen.'.($code !== '' ? ' Falls du ihn lieber selbst eingibst: '.$code : ''),
+				'after' => 'Wir ziehen ihn bei deiner nächsten Bestellung automatisch ab, du musst nichts eingeben. Er gilt für eine Bestellung ab '.shop_money($value).' Warenwert bis '.date('d.m.Y', $until).' und wird dann komplett abgezogen.'.($code !== '' ? ' Falls du ihn lieber selbst eingibst: '.$code : ''),
 				'btn' => 'Jetzt bestellen', 'url' => shop_stamp_shop_url(), 'signoff' => shop_stamp_signoff()));
 			return;
 		}
