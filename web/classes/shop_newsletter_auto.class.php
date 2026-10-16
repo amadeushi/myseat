@@ -73,7 +73,7 @@ function shop_nla_cfg_set($kind, $on, $params) {
 function shop_nla_default($kind) {
 	$btn = array('t' => 'btn', 'text' => 'Jetzt bestellen', 'url' => shop_stamp_shop_url());
 	switch ($kind) {
-		case 'welcome': return array('subject' => 'Zwei Bestellungen am Tag: so hat unsere Lieferung angefangen', 'preheader' => 'Wie aus ein, zwei Bestellungen am Tag eine Lieferung durch ganz Hildesheim wurde.', 'blocks' => array(
+		case 'welcome': return array('subject' => 'Zwei Bestellungen am Tag: so hat unsere Lieferung angefangen', 'preheader' => 'Mit Lastenrädern über das Hildesheimer Pflaster. Und dein Gutschein ist auch da.', 'blocks' => array(
 			array('t' => 'h', 'text' => 'Willkommen, {vorname|Gast}'),
 			array('t' => 'p', 'html' => 'April 2020. Im Amadeus ist es dunkel und still, an den Tischen sitzt niemand, im Hintergrund läuft keine Musik. Wir sind zu dritt: ein Koch, ich am Telefon, der die Bestellungen annimmt, und einer, der sie ausfährt. Mehr als ein, zwei Bestellungen am Tag sind es nicht.'),
 			array('t' => 'p', 'html' => 'Ein Auto hatten wir nicht, also liehen wir uns Lastenräder beim <a href="https://hilde-lastenrad.de/">Hilde Lastenradverleih</a>. Das Hildesheimer Pflaster hat die Bestellungen ordentlich durchgeschüttelt, und trotzdem kamen sie an.'),
@@ -95,12 +95,19 @@ function shop_nla_default($kind) {
 			array('t' => 'box', 'label' => 'Dein Gutschein', 'value' => '{gutschein_wert}', 'note' => 'gültig bis {gutschein_bis}'),
 			array('t' => 'p', 'html' => 'Wir ziehen ihn bei deiner nächsten Bestellung automatisch ab. Du musst nichts eingeben. Nach dem {gutschein_bis} verfällt er.'), $btn,
 			array('t' => 'zeus', 'text' => 'Guten Appetit, Hamun und Zeus')));
-		case 'winback': return array('subject' => 'Wir vermissen dich, {vorname|Gast}', 'blocks' => array(
-			array('t' => 'h', 'text' => 'Schön, dich bald wiederzusehen'), array('t' => 'p', 'html' => 'Du warst schon länger nicht mehr bei uns. Wir würden uns freuen, dich bald wieder zu sehen, zum Essen vor Ort oder bei dir zu Hause.'),
-			array('t' => 'box', 'label' => 'Ein Dankeschön für dich', 'value' => '{gutschein_wert}', 'note' => 'Code {gutschein}, gültig bis {gutschein_bis}'), $btn));
-		case 'sunset': return array('subject' => 'Möchtest du weiter Post von uns?', 'blocks' => array(
-			array('t' => 'h', 'text' => 'Bleiben wir in Kontakt?'), array('t' => 'p', 'html' => 'Wir haben lange nichts von dir gehört. Damit wir dir nur Mails schicken, die du auch willst: Tippe auf den Knopf, wenn du weiter Neuigkeiten von uns möchtest. Sonst melden wir dich in '.SHOP_NLA_SUNSET_WAIT_DAYS.' Tagen automatisch ab.'),
-			array('t' => 'btn', 'text' => 'Ja, gerne weiter', 'url' => '{halten}')));
+		case 'winback': return array('subject' => '{vorname|Gast}, wann gibt es wieder Schnitzel?', 'preheader' => 'Ein kurzer Gruß von Hamun, und etwas für deine nächste Bestellung.', 'blocks' => array(
+			array('t' => 'h', 'text' => 'Schön, wenn du wieder vorbeischaust'),
+			array('t' => 'p', 'html' => 'Wir haben uns lange nicht gesehen. Das ist völlig in Ordnung, ich wollte mich trotzdem kurz melden.'),
+			array('t' => 'p', 'html' => 'Bei uns brennt noch Licht in der Küche, und die Schnitzel gehen nach wie vor am besten. Komm vorbei, wenn dir danach ist, oder lass dir das Essen im Hildesheimer Stadtgebiet nach Hause bringen. Ich freue mich auf dich.'),
+			array('t' => 'p', 'html' => 'Als kleines Willkommen zurück:'),
+			array('t' => 'box', 'label' => 'Dein Gutschein', 'value' => '{gutschein_wert}', 'note' => 'Code {gutschein}, gültig bis {gutschein_bis}'), $btn,
+			array('t' => 'zeus', 'text' => 'Bis bald, Hamun und Zeus')));
+		case 'sunset': return array('subject' => 'Möchtest du weiter Post von uns, {vorname|Gast}?', 'preheader' => 'Ein Tipp genügt, sonst höre ich in '.SHOP_NLA_SUNSET_WAIT_DAYS.' Tagen auf.', 'blocks' => array(
+			array('t' => 'h', 'text' => 'Bleiben wir in Kontakt?'),
+			array('t' => 'p', 'html' => 'Wir haben lange nichts voneinander gehört, {vorname|Gast}. Bevor meine Mails bei dir nur noch Platz im Postfach wegnehmen, frage ich lieber einmal nach.'),
+			array('t' => 'p', 'html' => 'Wenn du weiter Neuigkeiten aus dem Amadeus möchtest, tippe auf den Knopf. Sonst höre ich in '.SHOP_NLA_SUNSET_WAIT_DAYS.' Tagen von selbst auf, dir zu schreiben. Mails zu deinen Bestellungen bekommst du natürlich weiterhin.'),
+			array('t' => 'btn', 'text' => 'Ja, gerne weiter', 'url' => '{halten}'),
+			array('t' => 'zeus', 'text' => 'Alles Gute, Hamun und Zeus')));
 	}
 	return array('subject' => '', 'blocks' => array());
 }

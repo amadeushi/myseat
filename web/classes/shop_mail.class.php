@@ -41,9 +41,9 @@ function shop_notify_order($o) {
 		if ($o['payment_method'] === 'mollie') { $payLine = 'Bezahlt, danke dir!'; }
 		elseif ($o['payment_method'] === 'cash') { $payLine = 'Bitte halte '.$total.' bereit ('.($delivery ? 'bar bei Lieferung' : 'bar bei Abholung').'), möglichst passend.'; }
 		else { $payLine = $delivery ? 'Du zahlst '.$total.' mit Karte bei Lieferung, wir bringen das Kartengerät mit.' : 'Du zahlst '.$total.' mit Karte bei Abholung.'; }
-		$lead = $delivery ? 'Wir haben deine Bestellung bekommen und legen los. Frisch aus der Küche ist sie gleich bei dir.' : 'Wir haben deine Bestellung bekommen und legen los. Alles ist frisch und warm für dich bereit, wenn du kommst.';
+		$lead = $delivery ? 'Deine Bestellung ist bei uns angekommen, und die Küche legt los. Unten siehst du, wann du mit uns rechnen kannst.' : 'Deine Bestellung ist bei uns angekommen, und die Küche legt los. Nenne beim Abholen einfach deine Bestellnummer '.$o['number'].'.';
 		$subject = $o['scheduled_at'] ? 'Deine Vorbestellung für '.$clock.' Uhr ist eingegangen ('.$o['number'].')' : 'Bestellung '.$o['number'].': '.($delivery ? 'Lieferung gegen ' : 'abholbereit gegen ').$clock.' Uhr';
-		$where = $delivery ? $o['customer_name'].', '.$o['street'].', '.$o['zip'].' '.$o['city'].($o['address_note'] !== '' ? ' ('.$o['address_note'].')' : '') : 'Bei uns im '.$brand.'. Nenne beim Abholen deine Bestellnummer '.$o['number'].'.';
+		$where = $delivery ? $o['customer_name'].', '.$o['street'].', '.$o['zip'].' '.$o['city'].($o['address_note'] !== '' ? ' ('.$o['address_note'].')' : '') : 'Bei uns im '.$brand.'.';
 		$cell = 'font-size:15px;color:#1c1a18;padding:9px 0;border-bottom:1px solid #eee7d8;';
 		$rows = '';
 		foreach ($lines as $l) {
@@ -80,12 +80,12 @@ function shop_notify_order($o) {
 			.'<tr><td style="padding:16px 32px 4px;"><div style="'.$font.'font-size:13px;color:#6e6e6e;text-transform:uppercase;letter-spacing:.06em;padding-bottom:4px;">Deine Bestellung '.$h($o['number']).'</div>'
 			.'<table role="presentation" width="100%" cellpadding="0" cellspacing="0">'.$rows.$sums.'</table><div style="'.$font.'font-size:14px;color:#1c1a18;padding-top:12px;">'.$h($payLine).'</div></td></tr>'
 			.($link !== '' ? '<tr><td style="padding:16px 32px 6px;"><a href="'.$h($link).'" style="'.$font.'display:inline-block;padding:13px 24px;background:#8a6d3b;border-radius:6px;font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;">Bestellung verfolgen</a></td></tr>' : '')
-			.'<tr><td style="padding:14px 32px 30px;">'.bm_mail_with_zeus('<div style="'.$font.'font-size:14px;color:#555;line-height:1.6;">Stimmt etwas nicht? Ruf uns kurz an'.($phone !== '' ? ': <a href="tel:'.$h(preg_replace('/\s+/', '', $phone)).'" style="color:#6b5330;">'.$h($phone).'</a>' : '').'.<br>Guten Appetit wünscht dein Team vom '.$h($brand).'.</div>').'</td></tr>'
+			.'<tr><td style="padding:14px 32px 30px;">'.bm_mail_with_zeus('<div style="'.$font.'font-size:14px;color:#555;line-height:1.6;">Stimmt etwas nicht? Ruf uns kurz an'.($phone !== '' ? ': <a href="tel:'.$h(preg_replace('/\s+/', '', $phone)).'" style="color:#6b5330;">'.$h($phone).'</a>' : '').'.<br>Guten Appetit, Hamun und Zeus</div>').'</td></tr>'
 			.$footer_html
 			.'</table></td></tr></table></body></html>';
 		$plain = 'Danke'.($first !== '' ? ', '.$first : '')."!\r\n\r\n".$lead."\r\n\r\n".($clock !== '' ? $timeLabel.' '.$clock." Uhr\r\n" : '').($delivery ? 'Lieferung an: ' : 'Abholung: ').$where."\r\n\r\nDeine Bestellung ".$o['number'].":\r\n";
 		foreach ($lines as $l) { $plain .= $l['head'].'  '.$l['price']."\r\n".($l['sub'] !== '' ? '   '.$l['sub']."\r\n" : '').($l['note'] !== '' ? '   Hinweis: '.$l['note']."\r\n" : ''); }
-		$plain .= "\r\nGesamt: ".$total."\r\n".$payLine."\r\n".($link !== '' ? "\r\nBestellung verfolgen: ".$link."\r\n" : '')."\r\nStimmt etwas nicht? Ruf uns kurz an".($phone !== '' ? ': '.$phone : '').".\r\nGuten Appetit wünscht dein Team vom ".$brand.".\r\n";
+		$plain .= "\r\nGesamt: ".$total."\r\n".$payLine."\r\n".($link !== '' ? "\r\nBestellung verfolgen: ".$link."\r\n" : '')."\r\nStimmt etwas nicht? Ruf uns kurz an".($phone !== '' ? ': '.$phone : '').".\r\nGuten Appetit, Hamun und Zeus\r\n";
 		bm_send_guest_mail($o['email'], array('subject' => $subject, 'plain' => $plain, 'html' => $html, 'ics' => '', 'ics_filename' => '', 'purpose' => 'order'), $brand, $from);
 	}
 

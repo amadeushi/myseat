@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-16 == mySeat v6.54.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neue Texte: die Bestätigungsmail einer Bestellung (Einleitung ohne "frisch" und "gleich", bei Abholung steht die Bestellnummer in der Einleitung, Gruß "Guten Appetit, Hamun und Zeus"), und die Standardvorlagen der Automatiken "Wir vermissen dich" (jetzt "wann gibt es wieder Schnitzel?" mit Gutschein) und "Noch Interesse?" sowie die Vorschauzeile der Willkommensmail. Die gespeicherten Vorlagen im Backend waren schon aktualisiert, die Standardtexte gelten beim Zurücksetzen.
+
 2026-10-16 == mySeat v6.54.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Im Mail-Baukasten (Newsletter, Mailings und Automatiken) gibt es den Block "Gruß mit Zeus": ein Gruß als Text und rechts daneben Zeus als kleines Bild (wie in den Stempelmails). Die Texte sind auf 160 Zeichen begrenzt, das Bild kommt aus dem Shop-Ordner (zeus_dot.png).
