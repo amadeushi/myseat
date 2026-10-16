@@ -631,6 +631,7 @@ function bm_send_guest_mail($to_guest, $m, $brand, $admin_email) {
 			$mail->Password      = $settings['emailPass'];
 		}
 		$mail->SetFrom($admin_email, $brand);
+		$mail->ClearReplyTos();   // SetFrom() has already put the sender in as the reply address: only the chosen one stays (otherwise a reply goes to two mailboxes)
 		$mail->AddReplyTo($reply_to, $brand);
 		// a message id with the time in it and the domain of the sender: the id PHPMailer makes by itself is 32 random characters, which spam filters read as "machine made"
 		// (together with the hidden preview line of a newsletter it costs 2.5 points at SpamAssassin)
