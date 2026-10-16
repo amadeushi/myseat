@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-17 == mySeat v6.54.4 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Korrigiert: Mails, die über den eigenen Mailserver eines Absender-Postfachs (Newsletter > Absender) verschickt werden, kamen ohne Betreff an, wenn der Betreff Sonderzeichen enthielt (zum Beispiel "€", "ü", "ö" oder "’"): zum Beispiel "Neue Bestellung ... (Lieferung, 24,50 €)", "Hat’s geschmeckt?", "Geschafft ... Gutschein über 5,00 €" und Betreffs mit Umlauten. Ursache: Die mitgelieferte Mail-Bibliothek (PHPMailer 5.2, Funktion EncodeQ) nutzte den Modifikator /e von preg_replace, den es seit PHP 7 nicht mehr gibt. Jetzt preg_replace_callback. Der Inhalt der Mails war nicht betroffen.
+
 2026-10-16 == mySeat v6.54.3 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neue Texte: Die Bitte um Feedback nach einer Reservierung fragt jetzt "Wie war dein Besuch bei uns?" und "Wie hat es dir bei uns gefallen?" (deutsch und englisch). Die Bewertungsbitte nach einer Bestellung endet mit "Hamun und Zeus".
