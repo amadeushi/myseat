@@ -220,9 +220,13 @@
 		return qWords.every(function (q) { return words.some(function (w) { return wordMatches(q, w); }); });
 	}
 	var searchIn = $('#shop-search'), searchClear = $('#shop-search-clear'), searchEmpty = $('#shop-search-empty');
-	// diet filter chips (vegetarian, vegan, spicy): all chosen marks must be on the dish; vegan counts as vegetarian
+	// filter chips: the diet marks (vegetarian, vegan, spicy) must all be on the dish, vegan counts as vegetarian; "Neu" and "Beliebt" are an either-or (a dish that is new or popular)
 	var diets = {};
-	function dietOk(li) { var d = ',' + (li.dataset.diet || '') + ','; return Object.keys(diets).every(function (k) { return d.indexOf(',' + k + ',') >= 0 || (k === 'veg' && d.indexOf(',vegan,') >= 0); }); }
+	function dietOk(li) {
+		var d = ',' + (li.dataset.diet || '') + ',', keys = Object.keys(diets), marks = keys.filter(function (k) { return k === 'new' || k === 'pop'; });
+		var has = function (k) { return d.indexOf(',' + k + ',') >= 0; };
+		return keys.filter(function (k) { return k !== 'new' && k !== 'pop'; }).every(function (k) { return has(k) || (k === 'veg' && has('vegan')); }) && (!marks.length || marks.some(has));
+	}
 	function applySearch(q) {
 		var qWords = wordsOf(q), any = false, dietOn = Object.keys(diets).length > 0;
 		$$('.shop-cat').forEach(function (sec) {

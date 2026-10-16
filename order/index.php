@@ -92,7 +92,9 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 		$diet_has = array();
 		foreach ($menu as $c0) { foreach ($c0['products'] as $p0) { foreach (array_filter(explode(',', (string)$p0['diet'])) as $f0) { $diet_has[$f0] = true; } } }
 		if (isset($diet_has['vegan'])) { $diet_has['veg'] = true; }
-		$diet_chips = array('veg' => 'Vegetarisch', 'vegan' => 'Vegan');   // 'spicy' => 'Scharf' is switched off until more than a few dishes carry the mark
+		// the marks "Neu" and "Beliebt" (of the dishes that are not sold out today) filter like the diet chips; they go into data-diet of the dish, the diet text of the dish stays as it is
+		foreach ($menu as $c0) { foreach ($c0['products'] as $p0) { if (empty($p0['out'])) { if (!empty($p0['isnew'])) { $diet_has['new'] = true; } if (!empty($p0['popular'])) { $diet_has['pop'] = true; } } } }
+		$diet_chips = array('new' => 'Neu', 'pop' => 'Beliebt', 'veg' => 'Vegetarisch', 'vegan' => 'Vegan');   // 'spicy' => 'Scharf' is switched off until more than a few dishes carry the mark
 	?>
 	<div class="shop-layout">
 		<nav class="shop-cats" id="shop-cats" aria-label="Kategorien">
@@ -114,7 +116,7 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 						$choices = ((int)$p['nvar'] > 0 || (int)$p['nmod'] > 0);
 						$from = ((int)$p['nvar'] > 0) ? min((int)$p['price_cents'], (int)$p['vmin']) : (int)$p['price_cents'];
 					?>
-					<li class="shop-item<?php echo !empty($p['out']) ? ' is-out' : ''; ?>" data-diet="<?php echo shop_h((string)$p['diet']); ?>" data-id="<?php echo (int)$p['id']; ?>" data-choices="<?php echo $choices ? '1' : '0'; ?>" data-title="<?php echo shop_h($p['title']); ?>" data-price="<?php echo (int)$p['price_cents']; ?>">
+					<li class="shop-item<?php echo !empty($p['out']) ? ' is-out' : ''; ?>" data-diet="<?php echo shop_h(trim((string)$p['diet'].(empty($p['out']) && !empty($p['isnew']) ? ',new' : '').(empty($p['out']) && !empty($p['popular']) ? ',pop' : ''), ',')); ?>" data-id="<?php echo (int)$p['id']; ?>" data-choices="<?php echo $choices ? '1' : '0'; ?>" data-title="<?php echo shop_h($p['title']); ?>" data-price="<?php echo (int)$p['price_cents']; ?>">
 						<div class="shop-item-text">
 							<h3><?php echo shop_h($p['title']); ?><?php if (!empty($p['out'])): ?> <span class="shop-mark is-out">heute aus</span><?php else: ?><?php if (!empty($p['isnew'])): ?> <span class="shop-mark is-new">Neu</span><?php endif; ?><?php if (!empty($p['popular'])): ?> <span class="shop-mark is-pop">Beliebt</span><?php endif; ?><?php endif; ?></h3>
 							<?php if (trim($p['description']) !== ''): ?><p><?php echo shop_h($p['description']); ?></p><?php endif; ?>

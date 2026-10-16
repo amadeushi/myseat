@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-16 == mySeat v6.53.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Speisekarte im Shop: Filter-Schalter "Neu" und "Beliebt" neben "Vegetarisch" und "Vegan" (sie erscheinen nur, wenn es mindestens ein Gericht mit dem Kennzeichen gibt, ausverkaufte Gerichte zählen nicht). "Neu" und "Beliebt" zusammen zeigen Gerichte, die neu oder beliebt sind; mit Vegetarisch/Vegan müssen beide Bedingungen passen; sie wirken zusammen mit dem Suchfeld.
+
 2026-10-16 == mySeat v6.52.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geändert: Alle Mails von mySeat laufen jetzt über die Absenderprofile (Newsletter > Absender): die Bewertungsanfrage nach einem Reservierungsbesuch (web/cron/send_feedback_requests.php), die Antwort auf Gäste-Feedback (web/ajax/feedback_action.php) und die Benachrichtigung ans Restaurant bei einer neuen Reservierung (bm_send_admin_mail) gingen bisher direkt über PHP mail() beziehungsweise nur über die globale SMTP-Einstellung; sie kommen jetzt vom Absender des Zwecks "Reservierung" (mit dessen Mailserver, wenn einer gespeichert ist), bei der Restaurant-Mail bleibt der Gast die Antwortadresse. Ohne gespeichertes Profil ändert sich nichts. Übrig bleiben die Willkommensmail für neue Backend-Benutzer (confirmation.class.php, info@openmyseat.com) und der Gmail-Weg im n8n-Workflow der Gruppenbestellung.
