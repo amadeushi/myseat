@@ -462,10 +462,14 @@
 		function rnd(n) { return Math.floor(Math.random() * n); }
 		function randomIds() {
 			var ids = [];
+			var MEAT = { ham: 1, salami: 1, sucuk: 1, chicken: 1, tuna: 1, shrimp: 1, nugget: 1, patty: 1 };
 			p.groups.forEach(function (g) {
-				var its = g.items.slice(), a = its.length ? artOf(its[0]) : null, kind = a ? a.t : 'piece', cap = g.max > 0 ? g.max : its.length, n;
+				// the vegan Pizzaschmelz only goes with the spelt-rye dough (that one is the vegan dough)
+				var its = g.items.filter(function (it) { var x = artOf(it); return !(x && x.t === 'melt' && /vegan/i.test(it.title) && !wholeGrain()); });
+				var a = its.length ? artOf(its[0]) : null, kind = a ? a.t : 'piece', cap = g.max > 0 ? g.max : its.length, n;
 				if (!its.length) { return; }
-				n = kind === 'side' ? rnd(3) : (kind === 'sauce' || kind === 'melt' ? rnd(2) : 1 + rnd(3));
+				// one kind of meat (or of vegan meat substitute) at most: the group with meat gives exactly one
+				n = its.some(function (it) { return MEAT[it.icon]; }) ? 1 : (kind === 'side' ? rnd(3) : (kind === 'sauce' || kind === 'melt' ? rnd(2) : 1 + rnd(3)));
 				n = Math.max(g.min, Math.min(n, cap, its.length));
 				while (n-- > 0) { var k = rnd(its.length); ids.push(its[k].id); its.splice(k, 1); }
 			});

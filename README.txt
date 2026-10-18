@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-19 == mySeat v6.59.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geändert (Pizzakonfigurator, Zeus würfelt): Es kommt genau eine Fleischsorte (oder ein veganer Fleischersatz) auf die Pizza, und der vegane Pizzaschmelz wird nur gewürfelt, wenn der Dinkel-Roggen-Teig (vegan) gewählt ist.
+
 2026-10-19 == mySeat v6.59.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu (Pizzakonfigurator): "Zeus würfelt". Der Knopf oben im Dialog legt eine zufällige Belegung auf den Teig (höchstens eine Soße und ein Käse, ein bis drei Beläge je Gruppe, bis zu zwei Dips; der Teig bleibt, wie der Gast ihn gewählt hat). Die Beläge fallen nacheinander auf die Pizza. Ein kurzer Hinweis sagt, dass Zeus gewürfelt hat; er verschwindet mit dem nächsten Antippen.
