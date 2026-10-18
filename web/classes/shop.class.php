@@ -534,6 +534,11 @@ function shop_product_detail($id) {
 function shop_item_icon_rules() {
 	return array(
 		array('/zum dippen/', 'dip', '"zum Dippen"'),
+		// the "extra ..." sauces of the dip list (a cup next to the pizza, not a swirl on it); "extra Chiliflocken" and "extra Knoblauch-Öl" are not sauces
+		array('/^extra\s.*ketchup/u', 'dip_ketchup', 'extra Ketchup'), array('/^extra\s.*(vayo|vegane mayo)/u', 'dip_vayo', 'extra Vayonaise'), array('/^extra\s.*mayo/u', 'dip_mayo', 'extra Mayonnaise'),
+		array('/^extra\s.*(kräuter|quark)/u', 'dip_quark', 'extra Kräuterquark'), array('/^extra\s.*champignon/u', 'dip_cream', 'extra Champignonrahmsoße'), array('/^extra\s.*chili\s*so/u', 'dip_chili', 'extra Chilisoße'),
+		array('/^extra\s.*korean/u', 'dip_korean', 'extra Sticky Korean BBQ'), array('/^extra\s.*sambal/u', 'dip_sambal', 'extra Sambal Hollandaise'), array('/^extra\s.*hollandaise/u', 'dip_hollandaise', 'extra Sauce Hollandaise'),
+		array('/^extra\s.*(barbecue|bbq)/u', 'dip_bbq', 'extra Barbecue Soße'), array('/^extra\s.*knoblauch\s*so/u', 'dip_garlic', 'extra Knoblauchsoße'), array('/^extra\s.*curry\s*so/u', 'dip_curry', 'extra Currysoße'),
 		array('/korean/', 'sauce_korean', 'Korean'), array('/sambal/', 'sauce_sambal', 'Sambal'), array('/hollandaise/', 'sauce_hollandaise', 'Hollandaise'),
 		array('/creme fra|crème fra/u', 'sauce_creme', 'Creme fraiche, Crème fraîche'), array('/barbecue|bbq/', 'sauce_bbq', 'Barbecue, BBQ'),
 		array('/knoblauch\s*so/u', 'sauce_garlic', 'Knoblauchsoße'), array('/curry\s*so/u', 'sauce_curry', 'Currysoße'), array('/so(ß|ss)e/u', 'sauce_other', 'Soße, Sosse'),
@@ -554,7 +559,7 @@ function shop_item_icon_labels() {
 		'artichoke' => 'Artischocke', 'pineapple' => 'Ananas', 'sundried' => 'Getrocknete Tomate', 'arugula' => 'Rucola', 'caper' => 'Kapern', 'mushroom' => 'Champignon', 'melt' => 'Geschmolzener Käse',
 		'parmesan' => 'Parmesan', 'gorgonzola' => 'Gorgonzola', 'mozzarella' => 'Mozzarella', 'feta' => 'Schafskäse', 'ham' => 'Schinken', 'salami' => 'Salami', 'sucuk' => 'Sucuk', 'chicken' => 'Hähnchen',
 		'tuna' => 'Thunfisch', 'shrimp' => 'Garnele', 'nugget' => 'Nugget', 'patty' => 'Patty', 'sauce_hollandaise' => 'Soße Hollandaise', 'sauce_sambal' => 'Soße Sambal', 'sauce_creme' => 'Soße Crème fraîche',
-		'sauce_bbq' => 'Soße BBQ', 'sauce_korean' => 'Soße Korean BBQ', 'sauce_garlic' => 'Soße Knoblauch', 'sauce_curry' => 'Soße Curry', 'sauce_other' => 'Soße (andere)', 'dip' => 'Dip (Beilage)');
+		'sauce_bbq' => 'Soße BBQ', 'sauce_korean' => 'Soße Korean BBQ', 'sauce_garlic' => 'Soße Knoblauch', 'sauce_curry' => 'Soße Curry', 'sauce_other' => 'Soße (andere)', 'dip' => 'Dip (Beilage)', 'dip_hollandaise' => 'Dip Hollandaise', 'dip_sambal' => 'Dip Sambal', 'dip_cream' => 'Dip Champignonrahm', 'dip_quark' => 'Dip Kräuterquark', 'dip_garlic' => 'Dip Knoblauch', 'dip_curry' => 'Dip Curry', 'dip_chili' => 'Dip Chili', 'dip_bbq' => 'Dip BBQ', 'dip_korean' => 'Dip Korean BBQ', 'dip_ketchup' => 'Dip Ketchup', 'dip_mayo' => 'Dip Mayonnaise', 'dip_vayo' => 'Dip Vayonaise');
 }
 function shop_item_icon($title, $icon = '') {
 	$icon = (string)$icon;

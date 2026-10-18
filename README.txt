@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-19 == mySeat v6.58.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Behoben (Pizzakonfigurator): Die Dip-Soßen hießen nach dem Zusammenführen "extra ..." und wurden deshalb als Soße auf die Pizza gemalt statt als Dip-Schälchen daneben. Jede der zwölf Dip-Soßen (Sambal Hollandaise, Sauce Hollandaise, Knoblauch, Curry, Barbecue, Sticky Korean BBQ, Champignonrahm, Chili, Kräuterquark, Ketchup, Mayonnaise, vegane Vayonaise) hat jetzt ein eigenes Schälchen mit der passenden Farbe. Die Symbole stehen auch in der Auswahl des Menü-Editors.
+
 2026-10-19 == mySeat v6.58.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geändert (Bestellseite): Gerichte, die gerade aus oder gesperrt sind, rücken ans Ende ihrer Kategorie (auch in der Rubrik "Unsere Bestseller" und im Bestell-Chat; die Kasse behält die feste Reihenfolge). Namen in den Auswahl-Kacheln brechen nicht mehr mitten im Wort um, der Preis rutscht stattdessen in die zweite Zeile; nach einem Schrägstrich darf umgebrochen werden. Der Knopf "Per Chat bestellen" sitzt unter 1024 px Breite in der Kopfzeile statt schwebend über der Liste (er verdeckte die "Wählen"-Knöpfe); auf dem Desktop bleibt er unten rechts.

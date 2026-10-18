@@ -12,6 +12,10 @@
 		return '<path d="M32 7c11 14 19 23 19 33a19 19 0 0 1-38 0c0-10 8-19 19-33z" fill="' + f + '" stroke="' + s + '" stroke-width="3" stroke-linejoin="round"/>' +
 			'<path d="M21 41a11 11 0 0 0 9 10" fill="none" stroke="#fff" stroke-opacity=".65" stroke-width="3" stroke-linecap="round"/>';
 	}
+	// a dip cup (a side next to the pizza, not on it) with the sauce in it: top = colour of the sauce, hi = its highlight, extra = flecks on it
+	function cup(top, hi, extra) {
+		return '<path d="M11 25h42l-4 27a6 6 0 0 1-6 5H21a6 6 0 0 1-6-5z" fill="#efe4cc" stroke="#8a7551" stroke-width="3" stroke-linejoin="round"/><ellipse cx="32" cy="25" rx="21" ry="7" fill="' + top + '" stroke="#8a7551" stroke-width="3"/><path d="M19 23c7 3 19 3 26 0" stroke="' + hi + '" stroke-width="3" fill="none" stroke-linecap="round"/>' + (extra || '');
+	}
 	var ART = {
 		tomato: { t: 'piece', o: 1, k: 1.05, g: '<circle cx="32" cy="32" r="24" fill="#d8402e" stroke="#8d2316" stroke-width="3"/><circle cx="32" cy="32" r="17" fill="#ee6a52"/><g fill="#f6cf5a" stroke="#c98a2a" stroke-width="1"><ellipse cx="32" cy="22" rx="3.5" ry="5"/><ellipse cx="22" cy="36" rx="3.5" ry="5" transform="rotate(-60 22 36)"/><ellipse cx="42" cy="36" rx="3.5" ry="5" transform="rotate(60 42 36)"/></g><path d="M18 24a16 16 0 0 1 12-9" stroke="#ffb4a0" stroke-width="3" fill="none" stroke-linecap="round"/>' },
 		spinach: { t: 'piece', o: 1, k: 1.1, g: '<path d="M32 6c14 6 22 20 14 34-4 7-10 12-14 18-4-6-10-11-14-18C10 26 18 12 32 6z" fill="#4c8a38" stroke="#2c5a22" stroke-width="3" stroke-linejoin="round"/><path d="M32 12v44M32 26l-9-6M32 34l10-7M32 42l-8-5" stroke="#8cc86a" stroke-width="2.4" fill="none" stroke-linecap="round"/>' },
@@ -51,6 +55,18 @@
 		sauce_curry: { t: 'sauce', c: '#e2a626', g: drop('#e2a626', '#8f6410') },
 		sauce_other: { t: 'sauce', c: '#d4a762', g: drop('#d4a762', '#8a6528') },
 		dip: { t: 'side', g: '<path d="M11 25h42l-4 27a6 6 0 0 1-6 5H21a6 6 0 0 1-6-5z" fill="#efe4cc" stroke="#8a7551" stroke-width="3" stroke-linejoin="round"/><ellipse cx="32" cy="25" rx="21" ry="7" fill="#d9a43a" stroke="#8a7551" stroke-width="3"/><path d="M19 23c7 3 19 3 26 0" stroke="#f4cf72" stroke-width="3" fill="none" stroke-linecap="round"/>' },
+		dip_hollandaise: { t: 'side', g: cup('#f0d35c', '#fbe9a0') },
+		dip_sambal: { t: 'side', g: cup('#efb55c', '#f8d596', '<g fill="#c4402b"><circle cx="24" cy="25" r="1.5"/><circle cx="31" cy="27" r="1.4"/><circle cx="38" cy="24" r="1.4"/><circle cx="44" cy="26" r="1.2"/><circle cx="28" cy="23" r="1.1"/></g>') },
+		dip_cream: { t: 'side', g: cup('#d8c19a', '#ecdcbc', '<g fill="#8a6a46"><circle cx="25" cy="26" r="1.6"/><circle cx="33" cy="24" r="1.4"/><circle cx="40" cy="26" r="1.5"/><circle cx="30" cy="27" r="1.1"/></g>') },
+		dip_quark: { t: 'side', g: cup('#eef1da', '#fbfdee', '<g fill="#5f9a3a"><circle cx="24" cy="25" r="1.4"/><circle cx="30" cy="27" r="1.3"/><circle cx="36" cy="24" r="1.4"/><circle cx="42" cy="26" r="1.3"/><circle cx="33" cy="26" r="1"/></g>') },
+		dip_garlic: { t: 'side', g: cup('#f4ecd6', '#fffaea') },
+		dip_curry: { t: 'side', g: cup('#e2a626', '#f3cb62') },
+		dip_chili: { t: 'side', g: cup('#cf3a22', '#ee7a63', '<g fill="#7a1c10"><circle cx="26" cy="25" r="1.2"/><circle cx="34" cy="26" r="1.1"/><circle cx="41" cy="24" r="1.1"/></g>') },
+		dip_bbq: { t: 'side', g: cup('#9a3d20', '#c4704f') },
+		dip_korean: { t: 'side', g: cup('#4a2a1b', '#8a5a3e', '<g fill="#f6eedc"><circle cx="26" cy="25" r="1.3"/><circle cx="33" cy="27" r="1.2"/><circle cx="39" cy="24" r="1.3"/><circle cx="44" cy="26" r="1.1"/></g>') },
+		dip_ketchup: { t: 'side', g: cup('#c8281d', '#ee6a5c') },
+		dip_mayo: { t: 'side', g: cup('#f8f2da', '#ffffff') },
+		dip_vayo: { t: 'side', g: cup('#f3efc4', '#ffffff', '<path d="M32 21c3 0 6 2 6 5-3 0-6-2-6-5z" fill="#5f9a3a"/>') },
 		plus: { t: 'side', g: '<circle cx="32" cy="32" r="22" fill="#e7d6b0" stroke="#8a7551" stroke-width="3"/><path d="M32 20v24M20 32h24" stroke="#6b5532" stroke-width="5" stroke-linecap="round"/>' }
 	};
 
