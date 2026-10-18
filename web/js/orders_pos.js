@@ -104,10 +104,20 @@
 	function pickDefaultCat() {
 		var pc = pseudoCats(); activeCat = pc.length ? pc[0].id : (catalog.length ? catalog[0].id : null);
 	}
+	// the structure of the menu as the cash desk holds it: every dish with the ids of its variations and options (the choices of a Bon refer to these ids)
+	function menuSig(cats) {
+		var s = [];
+		cats.forEach(function (c) { c.products.forEach(function (p) {
+			s.push(p.id + ':' + (p.variations || []).map(function (v) { return v.id; }).join(',') + ':' + (p.groups || []).map(function (g) { return g.items.map(function (i) { return i.id; }).join(','); }).join(';'));
+		}); });
+		return s.join('|');
+	}
+	var catalogSig = '';
 	function loadMenu() {
 		get('menu').then(function (r) {
 			if (!r.ok) { $('#pos-products').innerHTML = '<p class="kx-empty">Speisekarte konnte nicht geladen werden.</p>'; return; }
 			catalog = r.categories.map(function (c) { return { id: +c.id, name: c.name, products: c.products.map(function (p) { return Object.assign({}, p, { id: +p.id }); }) }; });
+			catalogSig = menuSig(catalog);
 			get('popular').then(function (pr) { if (pr.ok) { S.popular = pr.ids; } }).catch(function () {}).then(function () { pickDefaultCat(); renderCats(); renderProducts(); });
 		});
 	}
@@ -116,13 +126,25 @@
 		if (document.hidden) { return; }
 		get('menu').then(function (r) {
 			if (!r || !r.ok) { return; }
+			// the menu itself changed (a dish, a choice or an option was added, removed or moved): take over the new one, but never while a dialog is open
+			var fresh = r.categories.map(function (c) { return { id: +c.id, name: c.name, products: c.products.map(function (p) { return Object.assign({}, p, { id: +p.id }); }) }; });
+			if (menuSig(fresh) !== catalogSig) {
+				if (document.querySelector('dialog[open]')) { return; }
+				catalog = fresh; catalogSig = menuSig(fresh);
+				if (!pseudoCats().concat(catalog).some(function (c) { return c.id === activeCat; })) { pickDefaultCat(); }
+				renderCats(); renderProducts();
+				var stale = cart.filter(function (l) { var p = findProduct(l.pid); if (!p) { return true; } var ids = {}; (p.groups || []).forEach(function (g) { g.items.forEach(function (i) { ids[i.id] = true; }); }); return Object.keys(l.opts || {}).some(function (k) { return +l.opts[k] > 0 && !ids[k]; }); }).map(function (l) { return l.title; });
+				setMsg(stale.length ? 'Die Speisekarte wurde geändert. Bitte neu eintragen: ' + stale.join(', ') + '.' : 'Die Speisekarte wurde aktualisiert.', stale.length ? 'warn' : 'ok');
+				return;
+			}
 			var out = {}, blk = {}; r.categories.forEach(function (c) { c.products.forEach(function (p) { out[+p.id] = !!p.out; blk[+p.id] = !!p.blocked; }); });
 			var changed = false;
 			catalog.forEach(function (c) { c.products.forEach(function (p) { var o = !!out[p.id]; if (!!p.out !== o || !!p.blocked !== !!blk[p.id]) { p.out = o; p.blocked = !!blk[p.id]; changed = true; } }); });
 			if (changed && !document.querySelector('dialog[open]')) { renderProducts(); }
 		}).catch(function () {});
 	}
-	setInterval(refreshOut, 120000);
+	setInterval(refreshOut, 60000);
+	document.addEventListener('visibilitychange', function () { if (!document.hidden) { refreshOut(); } });   // a screen that was asleep checks at once
 	// a dish without choices goes straight into the Bon (the same dish again raises the quantity); one with choices opens the dialog
 	function addProduct(p) {
 		if (p.out) { setMsg('„' + p.title + '“ ist ' + (p.blocked ? 'gesperrt' : 'heute aus') + '.', 'warn'); return; }   // switched off for today in the dispatch: it cannot go into the Bon (the server would refuse it as well)

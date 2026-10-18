@@ -620,6 +620,9 @@ function shop_price_line($l) {
 		if ($sum < $g['min']) { return array('ok' => false, 'error' => 'Bitte bei "'.$p['title'].'" mindestens '.$g['min'].' aus "'.$g['title'].'" wählen.'); }
 		if ($g['max'] > 0 && $sum > $g['max']) { return array('ok' => false, 'error' => 'Bei "'.$p['title'].'" sind höchstens '.$g['max'].' aus "'.$g['title'].'" möglich.'); }
 	}
+	// a chosen option that the dish does not have (any more) must not vanish silently: the menu changed since the guest or the cash desk picked it
+	$known = array(); foreach ($p['groups'] as $g) { foreach ($g['items'] as $it) { $known[(int)$it['id']] = true; } }
+	foreach ($opts as $oid => $oq) { if ((int)$oq > 0 && !isset($known[(int)$oid])) { return array('ok' => false, 'error' => '„'.$p['title'].'“: Eine gewählte Zutat oder Soße gibt es nicht mehr, weil sich die Speisekarte geändert hat. Bitte nimm das Gericht heraus und wähle es neu.'); } }
 	$unit = $base + (int)round($extras * $mult);
 	return array('ok' => true, 'line' => array('product_id' => $pid, 'vid' => $vtitle !== '' ? (int)$found['id'] : 0, 'title' => $p['title'], 'variation' => $vtitle, 'options' => $chosen, 'qty' => $qty, 'unit_cents' => $unit,
 		'line_cents' => $unit * $qty, 'note' => mb_substr(trim((string)(isset($l['note']) ? $l['note'] : '')), 0, 200)));

@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-19 == mySeat v6.58.3 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Behoben: Wenn sich die Speisekarte ändert (zum Beispiel eine Soße oder eine ganze Liste zusammengelegt wird), ließ der Server eine Zutat oder Soße in einer offenen Kasse oder einem vollen Warenkorb stillschweigend weg. Jetzt lehnt er die Zeile ab mit "Eine gewählte Zutat oder Soße gibt es nicht mehr, weil sich die Speisekarte geändert hat. Bitte nimm das Gericht heraus und wähle es neu." (Bestellseite, Kasse, Chat, geteilte Bestellungen).
+ * Neu (Kasse): Die Kasse prüft jede Minute und sobald der Bildschirm wieder aufwacht, ob sich Gerichte, Wahlmöglichkeiten oder Optionen geändert haben, und übernimmt die neue Karte (nicht bei offenem Dialog). Gerichte auf dem Bon, deren Auswahl nicht mehr passt, werden genannt.
+
 2026-10-19 == mySeat v6.58.2 == amadeushi - http://github.com/amadeushi/myseat
 
  * Behoben (Pizzakonfigurator): Mit v6.58.1 standen die gewählten Dips nicht mehr als Schälchen neben der Pizza, weil der Konfigurator nur das Symbol "dip" kannte. Jetzt gilt jedes Symbol "dip_..." als Dip. Die Schälchen neben der Pizza haben auch für Ketchup, Mayonnaise und vegane Vayonaise eine eigene Farbe.
