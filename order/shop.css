@@ -875,3 +875,8 @@ body.co-quick-on #co-paysec > legend, body.co-quick-on #co-paysec .co-askhint, b
 .dv .dv-here { margin-top: 16px; width: 100%; }
 .dv .dv-here-done { margin: 16px 0 0; color: var(--success); font-weight: 700; }
 .dv .dv-here-msg { margin: 8px 0 0; color: var(--danger); min-height: 1.2em; }
+
+/* Lieferando-Bestellung auf der Fahrerseite: Anruf und "Ich bin vor Ort" laufen über die Courier App */
+.dv .cart-go.is-off, .dv .cart-go.is-off:hover { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+.dv .dv-platform { margin: 10px 0 0; color: var(--text-muted); font-size: 15px; }
+.dv .dv-here-msg.is-hint { color: var(--text-muted); }

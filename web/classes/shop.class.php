@@ -3058,6 +3058,7 @@ function shop_driver_here_order($driverId, $orderId) {
 	if (!shop_flag('driver_here_on')) { return array('ok' => false, 'error' => 'Diese Funktion ist nicht eingeschaltet.'); }
 	$o = fb_row("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE id = ? AND driver_id = ?", 'ii', array((int)$orderId, (int)$driverId));
 	if (!$o || $o['status'] !== 'delivering' || $o['type'] !== 'delivery') { return array('ok' => false, 'error' => 'Diese Lieferung ist nicht unterwegs.'); }
+	if ($o['source'] === 'lieferando') { return array('ok' => false, 'error' => 'Bei Lieferando-Bestellungen meldest du dich über die Lieferando Courier App.'); }
 	if ($o['driver_here_at'] !== null) { return array('ok' => true); }
 	if (shop_flag('driver_here_gps') && $o['lat'] !== null && $o['lng'] !== null && ((float)$o['lat'] != 0 || (float)$o['lng'] != 0)) {
 		$p = fb_row("SELECT lat, lng, updated_at FROM ".fb_t('tp_shop_driver_positions')." WHERE driver_id = ?", 'i', array((int)$driverId));
@@ -3088,7 +3089,7 @@ function shop_driver_order_view($o) {
 	$pay = ($o['payment_method'] === 'mollie' || $o['payment_status'] === 'paid') ? 'Bezahlt, nichts zu kassieren' :
 		(($o['payment_method'] === 'cash' ? 'BAR kassieren: ' : 'KARTE kassieren: ').shop_money((int)$o['total_cents']));
 	return array_merge(shop_driver_card($o), array('id' => (int)$o['id'], 'day_no' => (int)$o['day_no'], 'address' => $addr, 'address_note' => $o['address_note'], 'route_dest' => $routeDest,
-		'here_on' => shop_flag('driver_here_on') ? 1 : 0, 'here_at' => !empty($o['driver_here_at']) ? substr($o['driver_here_at'], 11, 5) : '', 'customer_name' => $o['customer_name'], 'phone' => $o['phone'], 'pay' => $pay, 'pay_with' => !empty($o['pay_with_cents']) && $o['payment_method'] === 'cash' ? (int)$o['pay_with_cents'] : 0, 'note' => $o['note'], 'since' => !empty($o['updated_at']) ? strtotime($o['updated_at']) : null,
+		'platform' => $o['source'] === 'lieferando' ? 'lieferando' : '', 'here_on' => shop_flag('driver_here_on') ? 1 : 0, 'here_at' => !empty($o['driver_here_at']) ? substr($o['driver_here_at'], 11, 5) : '', 'customer_name' => $o['customer_name'], 'phone' => $o['phone'], 'pay' => $pay, 'pay_with' => !empty($o['pay_with_cents']) && $o['payment_method'] === 'cash' ? (int)$o['pay_with_cents'] : 0, 'note' => $o['note'], 'since' => !empty($o['updated_at']) ? strtotime($o['updated_at']) : null,
 		'items' => shop_driver_lines($items)));
 }
 // the dishes of an order for the driver: quantity, title, size, the options as one text, the note of the guest

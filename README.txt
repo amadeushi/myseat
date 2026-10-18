@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-18 == mySeat v6.55.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geändert: Bei einer Lieferando-Bestellung sind auf der Fahrerseite der Anruf-Knopf ("Anrufen über Lieferando") und "Ich bin vor Ort" ausgegraut, mit dem Hinweis auf die Lieferando Courier App. Der Server lehnt "Ich bin vor Ort" bei Lieferando-Bestellungen ebenfalls ab.
+
 2026-10-18 == mySeat v6.55.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: "Alles dabei?" nach einer Lieferung. Auf der Statusseite kann der Gast bis 90 Minuten nach der Zustellung melden, dass etwas fehlt (zum Beispiel Beilagensalat oder Soße), den Fahrer direkt anrufen und wählen, ob nachgeliefert werden soll oder eine Gutschrift reicht. Eine Gutschrift bis 10 Euro (ein persönlicher Gutschein) wird sofort ausgestellt, darüber und ab der dritten Meldung in 30 Tagen gibt die Disposition frei. Eine Nachlieferung legt die Disposition als kostenlose Folgebestellung an (zählt nicht für Stempel, Bewertung und Tagesumsatz). Die Meldungen erscheinen als Karten in der Disposition und bei dem Fahrer, der geliefert hat. Aus, bis es unter Einstellungen > Gäste > "Meldung „Es fehlt etwas“" eingeschaltet wird.

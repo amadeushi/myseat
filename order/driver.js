@@ -143,9 +143,9 @@
 			'<p class="dv-street dv-street--big">' + esc(o.street) + '</p><p class="dv-city">' + esc(o.address.replace(o.street + ', ', '')) + '</p>' +
 			(o.address_note ? '<p class="dv-door"><span>Hinweis</span> ' + esc(o.address_note) + '</p>' : '') +
 			'<div class="dv-links"><a class="cart-go dv-route" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&amp;travelmode=driving&amp;destination=' + encodeURIComponent(o.route_dest) + '">' + icon('route', 22) + 'Route öffnen</a>' +
-			'<a class="cart-go dv-alt" href="tel:' + esc(String(o.phone).replace(/[^0-9+]/g, '')) + '">' + icon('phone', 20) + esc(o.customer_name) + ' anrufen</a></div>' +
+			(o.platform ? '<span class="cart-go dv-alt is-off" role="link" aria-disabled="true">' + icon('phone', 20) + 'Anrufen über Lieferando</span>' : '<a class="cart-go dv-alt" href="tel:' + esc(String(o.phone).replace(/[^0-9+]/g, '')) + '">' + icon('phone', 20) + esc(o.customer_name) + ' anrufen</a>') + '</div>' + (o.platform ? '<p class="dv-platform">Lieferando-Bestellung: Anrufen und „Ich bin da“ laufen über die Lieferando Courier App.</p>' : '') +
 			money + '<h4 class="dv-h4">Bestellung</h4>' + itemsHtml(o.items) + (o.note ? '<p class="dv-onote"><span>Anmerkung</span> ' + esc(o.note) + '</p>' : '') +
-			(o.here_on ? (o.here_at ? '<p class="dv-here-done" role="status">Gast ist informiert (' + esc(o.here_at) + ' Uhr).</p>' : '<button type="button" class="cart-go dv-here" id="dv-here">Ich bin vor Ort</button><p class="dv-here-msg" id="dv-here-msg" role="status" aria-live="polite"></p>') : '') +
+			(o.here_on && o.platform ? '<button type="button" class="cart-go dv-here is-off" disabled aria-disabled="true">Ich bin vor Ort</button><p class="dv-here-msg is-hint">In der Lieferando Courier App melden.</p>' : o.here_on ? (o.here_at ? '<p class="dv-here-done" role="status">Gast ist informiert (' + esc(o.here_at) + ' Uhr).</p>' : '<button type="button" class="cart-go dv-here" id="dv-here">Ich bin vor Ort</button><p class="dv-here-msg" id="dv-here-msg" role="status" aria-live="polite"></p>') : '') +
 			'<div class="dv-swipe-slot"></div>' +
 			'<details class="dv-more"><summary>Mehr</summary>' +
 			(hasQueue ? '<button type="button" class="cart-go dv-alt" id="dv-pause">Pausieren (andere Lieferung starten)</button>' : '') +
