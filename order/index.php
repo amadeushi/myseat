@@ -12,8 +12,8 @@ if (!$shop_public) {
 }
 $menu = $shop_public ? shop_menu(true, true) : array();
 // pizza configurator: its stylesheet and script only travel when a dish has it switched on
-$has_conf = false;
-foreach ($menu as $c0) { foreach ($c0['products'] as $p0) { if (!empty($p0['configurator'])) { $has_conf = true; } } }
+$has_conf = false; $has_sn = false;   // $has_sn: a dish with the Schnitzel configurator (3) needs schnitzel.js / .css as well
+foreach ($menu as $c0) { foreach ($c0['products'] as $p0) { if (!empty($p0['configurator'])) { $has_conf = true; if ((int)$p0['configurator'] === 3) { $has_sn = true; } } } }
 $notice = (string)shop_setting('notice');
 $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order history, favorites, stamp card (konto.js)
 ?>
@@ -29,6 +29,7 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 	<link rel="stylesheet" href="../web/fonts/fonts.css"/>
 	<link rel="stylesheet" href="shop.css?v=<?php echo @filemtime(__DIR__.'/shop.css'); ?>"/>
 	<?php if ($has_conf): ?><link rel="stylesheet" href="pizza.css?v=<?php echo @filemtime(__DIR__.'/pizza.css'); ?>"/><?php endif; ?>
+	<?php if ($has_sn): ?><link rel="stylesheet" href="schnitzel.css?v=<?php echo @filemtime(__DIR__.'/schnitzel.css'); ?>"/><?php endif; ?>
 	<?php if ($acc_on): ?><link rel="stylesheet" href="stempel.css?v=<?php echo @filemtime(__DIR__.'/stempel.css'); ?>"/><link rel="stylesheet" href="konto.css?v=<?php echo @filemtime(__DIR__.'/konto.css'); ?>"/><?php endif; ?>
 <link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -129,8 +130,8 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 						<?php if ($p['image_url'] !== ''): ?><?php $t240 = shop_img_thumb($p['image_url'], 240); $t480 = shop_img_thumb($p['image_url'], 480); ?><img class="shop-item-img" src="<?php echo shop_h($t240); ?>"<?php if ($t240 !== $p['image_url']): ?> srcset="<?php echo shop_h($t240); ?> 240w, <?php echo shop_h($t480); ?> 480w" sizes="(min-width: 1024px) 96px, 80px"<?php endif; ?> alt="" loading="lazy" decoding="async" width="80" height="80"/><?php endif; ?>
 						<div class="shop-item-buy">
 							<span class="shop-price"><?php echo ($choices && (int)$p['nvar'] > 0) ? 'ab ' : ''; ?><?php echo shop_money($from); ?></span>
-							<?php $conf = !empty($p['configurator']); ?>
-							<?php if (!empty($p['out'])): ?><span class="shop-out-note"><?php echo !empty($p['blocked']) ? 'Leider nicht verfügbar' : 'Heute leider aus'; ?></span><?php elseif ($shop_accepting): ?><button type="button" class="shop-add" aria-label="<?php echo shop_h($p['title']); ?> <?php echo $conf ? 'selbst belegen' : ($choices ? 'auswählen' : 'hinzufügen'); ?>"><?php echo $conf ? 'Belegen' : ($choices ? 'Wählen' : '+'); ?></button><?php endif; ?>
+							<?php $conf = !empty($p['configurator']); $sn = ((int)$p['configurator'] === 3); ?>
+							<?php if (!empty($p['out'])): ?><span class="shop-out-note"><?php echo !empty($p['blocked']) ? 'Leider nicht verfügbar' : 'Heute leider aus'; ?></span><?php elseif ($shop_accepting): ?><button type="button" class="shop-add" aria-label="<?php echo shop_h($p['title']); ?> <?php echo $sn ? 'zusammenstellen' : ($conf ? 'selbst belegen' : ($choices ? 'auswählen' : 'hinzufügen')); ?>"><?php echo $sn ? 'Zusammenstellen' : ($conf ? 'Belegen' : ($choices ? 'Wählen' : '+')); ?></button><?php endif; ?>
 						</div>
 					</li>
 					<?php endforeach; ?>
@@ -171,6 +172,7 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 	<?php if ($acc_on): ?><dialog class="gb-dialog acc-dialog" id="acc-dialog" aria-labelledby="acc-title"></dialog><?php endif; ?>
 	<div class="shop-toast" id="shop-toast" role="status" aria-live="polite"></div>
 	<?php if ($has_conf): ?><script src="pizza.js?v=<?php echo @filemtime(__DIR__.'/pizza.js'); ?>"></script><?php endif; ?>
+	<?php if ($has_sn): ?><script src="schnitzel.js?v=<?php echo @filemtime(__DIR__.'/schnitzel.js'); ?>"></script><?php endif; ?>
 	<script src="dragscroll.js?v=<?php echo @filemtime(__DIR__.'/dragscroll.js'); ?>"></script>
 	<script src="shop.js?v=<?php echo @filemtime(__DIR__.'/shop.js'); ?>"></script>
 	<?php if ($acc_on): ?><script src="stempel.js?v=<?php echo @filemtime(__DIR__.'/stempel.js'); ?>"></script><script src="konto.js?v=<?php echo @filemtime(__DIR__.'/konto.js'); ?>"></script><?php endif; ?>

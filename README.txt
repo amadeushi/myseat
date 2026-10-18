@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-19 == mySeat v6.59.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Schnitzel nach Wunsch (Baukasten für die Bestellseite). Der gezeichnete Teller von amadeus.delivery/schnitzel-nach-wunsch/ hängt jetzt am echten Gericht: Sorte (Sambal, Jäger, Toskana) als Gruppe "Sorte", das Fleisch als Variante, die Beilage aus der Gruppe "Beilagen", die Dips aus "Soßen zum Dippen" (jetzt zwölf, mit Champignonrahm und Sticky Korean BBQ), eine Salatbeilage ist immer dabei. "Zeus würfelt" stellt einen zufälligen Teller zusammen. Der Dialog ist der des Pizzakonfigurators, die Preise kommen vom Server. Im Menü-Editor gibt es dafür den Konfigurator "Schnitzel nach Wunsch (Teller)" (Wert 3). Neue Dateien: order/schnitzel.js, order/schnitzel.css, order/zeus-stamp.png.
+ * Speisekarte (Daten): neues Gericht "Schnitzel nach Wunsch" in Fleischgerichte (16,90 €, Hähnchenfleisch 17,90 €) und an erster Stelle in "Unsere Bestseller".
+
 2026-10-19 == mySeat v6.58.3 == amadeushi - http://github.com/amadeushi/myseat
 
  * Behoben: Wenn sich die Speisekarte ändert (zum Beispiel eine Soße oder eine ganze Liste zusammengelegt wird), ließ der Server eine Zutat oder Soße in einer offenen Kasse oder einem vollen Warenkorb stillschweigend weg. Jetzt lehnt er die Zeile ab mit "Eine gewählte Zutat oder Soße gibt es nicht mehr, weil sich die Speisekarte geändert hat. Bitte nimm das Gericht heraus und wähle es neu." (Bestellseite, Kasse, Chat, geteilte Bestellungen).

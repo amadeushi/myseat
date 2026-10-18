@@ -601,7 +601,8 @@
 		fetch('api.php?op=product&id=' + encodeURIComponent(id), { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) {
 			if (!r.ok) { toast(r.error || 'Das hat nicht geklappt.'); return; }
 			// a dish with the configurator switched on opens the pizza table instead (order/pizza.js); without it, or if it fails to load, the normal dialog does the same job
-			if (r.product.configurator && window.PizzaLab && window.PizzaLab.open(r.product, edit, { fmt: fmt, esc: esc, cleanTitle: cleanTitle, add: addLine, replace: replaceLine })) { return; }
+			var lab = r.product.configurator === 3 ? window.SchnitzelLab : window.PizzaLab;   // 3 = Schnitzel nach Wunsch (order/schnitzel.js)
+			if (r.product.configurator && lab && lab.open(r.product, edit, { fmt: fmt, esc: esc, cleanTitle: cleanTitle, add: addLine, replace: replaceLine })) { return; }
 			buildDialog(r.product, edit);
 		}).catch(function () { toast('Das hat nicht geklappt.'); });
 	}

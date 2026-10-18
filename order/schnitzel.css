@@ -1,0 +1,29 @@
+/* Schnitzel nach Wunsch (order/schnitzel.js): the stage with the plate. The bars, the tray and the buttons are the ones of the pizza table (order/pizza.css, class pz-*). */
+.sn-stage { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto auto; justify-items: center; min-height: 0; overflow: hidden; }
+.sn-table { position: absolute; inset: 0; background:
+	repeating-linear-gradient(90deg, rgba(0, 0, 0, .13) 0 2px, transparent 2px 92px),
+	radial-gradient(ellipse at 50% 42%, #6b4527 0%, #4a2f1a 58%, #2d1b0e 100%); }
+.sn-art { position: relative; grid-row: 1; width: 100%; min-height: 0; display: grid; place-items: center; padding: 8px 12px 0; }
+.sn-art svg { display: block; height: 100%; width: auto; max-width: 100%; max-height: 100%; aspect-ratio: 560 / 430; filter: drop-shadow(0 12px 14px rgba(0, 0, 0, .5)); }
+.sn-art .fade { animation: sn-in 220ms ease both; }
+@keyframes sn-in { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
+.sn-zeus { position: relative; z-index: 1; grid-row: 2; margin: 0 12px 6px; padding: 5px 12px; border-radius: 10px; background: rgba(21, 19, 18, .88); color: var(--cream); font-size: 13px; line-height: 1.35; text-align: center; }
+.sn-zeus[hidden] { display: none; }
+.sn-stage .pz-sum { grid-row: 3; }
+
+.sn-dice { display: inline-flex; align-items: center; gap: 8px; padding-left: 10px; }
+.sn-dice img { display: block; height: 26px; width: auto; border-radius: 50%; }
+.sn-dice:disabled { opacity: .75; cursor: progress; }
+
+.sn-ico { width: 60px; height: 54px; }
+.sn-grid--sorte { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.sn-grid--sorte .sn-ico { width: 104px; height: 70px; }
+.sn-what { font-size: 12px; line-height: 1.3; color: var(--ink-2); text-align: center; }
+
+@media (max-width: 480px) {
+	.sn-ico { width: 52px; height: 48px; }
+	.sn-grid--sorte { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); }
+	.sn-grid--sorte .sn-ico { width: 88px; height: 60px; }
+	.sn-dice span { font-size: 13px; }
+}
+@media (prefers-reduced-motion: reduce) { .sn-art .fade { animation: none; } }
