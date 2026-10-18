@@ -10,7 +10,7 @@ if (!$shop_public) {
 	http_response_code(503);
 	header('Retry-After: 3600');
 }
-$menu = $shop_public ? shop_menu(true) : array();
+$menu = $shop_public ? shop_menu(true, true) : array();
 // pizza configurator: its stylesheet and script only travel when a dish has it switched on
 $has_conf = false;
 foreach ($menu as $c0) { foreach ($c0['products'] as $p0) { if (!empty($p0['configurator'])) { $has_conf = true; } } }
@@ -51,6 +51,7 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 			</div>
 			<p class="shop-status" id="shop-status" role="status" aria-live="polite"></p>
 			<?php if ($shop_accepting): ?><button type="button" class="shop-group-btn" id="gb-top" data-gb-new hidden>Gemeinsam bestellen</button><?php endif; ?>
+			<?php if (shop_flag('chat_on')): ?><a class="shop-chat-inline" href="chat.php"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 5.500A2.500 2.500 0 0 1 6.500 3h11A2.500 2.500 0 0 1 20 5.500v8a2.500 2.500 0 0 1-2.500 2.500H10l-4.500 4v-4H6.500A2.500 2.500 0 0 1 4 13.500z" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linejoin="round"/></svg><span>Per Chat bestellen</span></a><?php endif; ?>
 			<?php if ($acc_on): ?><button type="button" class="acc-btn" id="acc-btn" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="8.500" r="3.800" fill="none" stroke="currentColor" stroke-width="1.700"/><path d="M4.500 20c.7-3.700 3.700-5.700 7.500-5.700s6.800 2 7.500 5.700" fill="none" stroke="currentColor" stroke-width="1.700" stroke-linecap="round"/></svg><span id="acc-btn-label">Anmelden</span></button><?php endif; ?>
 			<div class="shop-zone" id="shop-zone">
 				<button type="button" class="shop-zone-toggle" id="shop-zone-toggle" aria-expanded="false" aria-controls="shop-zone-box">Liefert ihr zu mir?</button>

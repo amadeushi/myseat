@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-19 == mySeat v6.58.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geändert (Bestellseite): Gerichte, die gerade aus oder gesperrt sind, rücken ans Ende ihrer Kategorie (auch in der Rubrik "Unsere Bestseller" und im Bestell-Chat; die Kasse behält die feste Reihenfolge). Namen in den Auswahl-Kacheln brechen nicht mehr mitten im Wort um, der Preis rutscht stattdessen in die zweite Zeile; nach einem Schrägstrich darf umgebrochen werden. Der Knopf "Per Chat bestellen" sitzt unter 1024 px Breite in der Kopfzeile statt schwebend über der Liste (er verdeckte die "Wählen"-Knöpfe); auf dem Desktop bleibt er unten rechts.
+ * Speisekarte (Daten, nicht im Code): Durchmesser 30,5cm bei Pizza-Kategorien und Pizzabrot, Leerzeichen am Trenner, einheitliche Schreibweisen (Couscous, Tomatensoße, Cocktailtomaten, Parmigiano Reggiano, Hinterschinken, Rinderhackfleisch), Bandnudeln I vor II, Literpreis und Pfand aus den Getränketexten entfernt.
+
 2026-10-19 == mySeat v6.57.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: "Unsere Bestseller" als Auswahl statt Kopien. Im Menü-Editor hat jedes Gericht das Häkchen "Auch unter ‚Unsere Bestseller‘ zeigen" mit einer Position (1 = zuerst). Die Bestellseite zeigt die Rubrik an erster Stelle, dasselbe Gericht steht zusätzlich in seiner Kategorie. Es ist ein einziges Gericht: Preis, Zubehör, "heute aus" und "gesperrt" gelten an beiden Stellen. Name und Kurztext der Rubrik kommen aus den Einstellungen featured_title und featured_desc (Standard: "Unsere Bestseller"). Bestell-Chat und Kasse zeigen die Rubrik nicht, sie arbeiten mit den normalen Kategorien. Neue Spalte products.featured (wird automatisch angelegt).

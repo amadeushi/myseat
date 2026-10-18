@@ -1194,7 +1194,8 @@ function shop_find_zone_w3w($words) {
 const SHOP_FEATURED_CAT = 9999;   // id of the rubric "Unsere Bestseller" on the order page (not a row of tp_shop_categories)
 // ---- light menu for the list page: products per category with a flag for "has choices" and the lowest price
 // $featured: the order page also gets the rubric "Unsere Bestseller" first (the same dishes again, by position); the chat and the cash desk work on the plain categories
-function shop_menu($featured = false) {
+// $outLast: a dish that is out (today or blocked) moves to the end of its category and of the rubric, so the dishes that can be ordered come first (the order page and the chat; the cash desk keeps the fixed order)
+function shop_menu($featured = false, $outLast = false) {
 	shop_ensure_schema();
 	$cats = fb_rows("SELECT id, name, description FROM ".fb_t('tp_shop_categories')." WHERE active = 1 ORDER BY sort, id");
 	$prods = fb_rows("SELECT p.id, p.category_id, p.title, p.description, p.image_url, p.price_cents, p.configurator, p.diet, p.sold_out_on, p.added_at, p.featured,
@@ -1208,7 +1209,8 @@ function shop_menu($featured = false) {
 		$by[(int)$p['category_id']][] = $p;
 	}
 	$out = array();
-	foreach ($cats as $c) { if (!empty($by[(int)$c['id']])) { $c['products'] = $by[(int)$c['id']]; $out[] = $c; } }
+	$outEnd = function ($list) { $in = array(); $gone = array(); foreach ($list as $p) { if (!empty($p['out'])) { $gone[] = $p; } else { $in[] = $p; } } return array_merge($in, $gone); };
+	foreach ($cats as $c) { if (!empty($by[(int)$c['id']])) { $c['products'] = $outLast ? $outEnd($by[(int)$c['id']]) : $by[(int)$c['id']]; $out[] = $c; } }
 	if ($featured) {
 		$catIds = array(); foreach ($cats as $c) { $catIds[(int)$c['id']] = true; }
 		$fp = array(); foreach ($prods as $p) { if ($p['featured'] !== null && isset($catIds[(int)$p['category_id']])) { $fp[] = $p; } }
@@ -1216,7 +1218,7 @@ function shop_menu($featured = false) {
 			usort($fp, function ($a, $b) { return ((int)$a['featured'] - (int)$b['featured']) ?: ((int)$a['id'] - (int)$b['id']); });
 			$cp = array(); $pop2 = $pop; foreach ($fp as $p) { $p['out'] = shop_out_today($p['sold_out_on']); $p['blocked'] = shop_out_blocked($p['sold_out_on']); $p['popular'] = in_array((int)$p['id'], $pop2, true); $p['isnew'] = shop_is_new($p['added_at']); $cp[] = $p; }
 			$ft = trim((string)shop_setting('featured_title'));
-			array_unshift($out, array('id' => SHOP_FEATURED_CAT, 'name' => $ft !== '' ? $ft : 'Unsere Bestseller', 'description' => trim((string)shop_setting('featured_desc')), 'products' => $cp));
+			array_unshift($out, array('id' => SHOP_FEATURED_CAT, 'name' => $ft !== '' ? $ft : 'Unsere Bestseller', 'description' => trim((string)shop_setting('featured_desc')), 'products' => $outLast ? $outEnd($cp) : $cp));
 		}
 	}
 	return $out;

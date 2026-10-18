@@ -93,7 +93,7 @@ function shop_chat_msg($text, $buttons = array(), $input = '', $links = array())
 function shop_chat_menu() {
 	static $m = null;
 	if ($m !== null) { return $m; }
-	$m = shop_menu();
+	$m = shop_menu(false, true);
 	$norm = function ($t) { return preg_replace('/\s+/u', ' ', mb_strtolower(trim((string)$t), 'UTF-8')); };
 	$show = function ($cat) { return (bool)preg_match('/best\s*seller|beliebt|empfehl|favorit|top\s*\d|aktion|angebot/iu', (string)$cat['name']); };
 	$elsewhere = array();

@@ -180,7 +180,8 @@
 .pd-chips.is-list { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
 .pd-chip { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; padding: 8px 12px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface-2); color: var(--text); font-size: 14px; font-weight: 600; text-align: left; line-height: 1.25; transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease; }
 .pd-chip:hover:not(:disabled) { border-color: var(--border); }
-.pd-chip-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.pd-chip:not(.has-step) { flex-wrap: wrap; row-gap: 2px; }
+.pd-chip-name { flex: 1 1 auto; min-width: 0; overflow-wrap: break-word; word-break: normal; hyphens: auto; }
 .pd-chip-price { flex: none; color: var(--text-muted); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .pd-chip .pd-check { display: none; flex: none; width: 16px; height: 16px; color: var(--gold-strong); }
 .pd-chip[aria-pressed="true"], .pd-chip.is-on { border-color: var(--gold); background: rgba(201, 162, 89, 0.16); color: var(--gold-strong); }
@@ -208,7 +209,7 @@
 .shop-shell .pd-limit { color: var(--text-muted); font-size: 13px; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
 .pd-ext .pd-chips { grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); }
 .pd-ext .pd-chips.is-list { grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); }
-.pd-ext .pd-chip { position: relative; flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; min-height: 52px; padding-right: 32px; }
+.pd-ext .pd-chip { flex-wrap: nowrap; position: relative; flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; min-height: 52px; padding-right: 32px; }
 .pd-ext .pd-chip-name { flex: none; width: 100%; overflow-wrap: break-word; hyphens: auto; }
 .pd-ext .pd-chip .pd-check { position: absolute; top: 10px; right: 10px; }
 .pd-ext .pd-chip.has-step { grid-column: 1 / -1; flex-direction: row; align-items: center; padding-right: 6px; }
@@ -763,6 +764,12 @@
 .shop-shell a.shop-chat-fab, .shop-shell a.shop-chat-fab:visited { color: #1a1408; }
 .shop-shell a.shop-chat-fab:hover { background: var(--gold-strong); color: #1a1408; }
 .shop-chat-fab:active { transform: scale(0.97); }
+/* below 1024px the chat button sits in the top bar (.shop-chat-inline): a floating button there covered the "Wählen" buttons of the rows */
+@media (max-width: 1023.98px) { .shop-chat-fab { display: none; } }
+.shop-chat-inline { display: none; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: var(--radius-pill); background: var(--gold); color: #1a1408; font-size: 14px; font-weight: 700; white-space: nowrap; text-decoration: none; }
+.shop-shell a.shop-chat-inline, .shop-shell a.shop-chat-inline:visited { color: #1a1408; }
+.shop-shell a.shop-chat-inline:hover { background: var(--gold-strong); color: #1a1408; }
+@media (max-width: 1023.98px) { .shop-chat-inline { display: inline-flex; } }
 .shop-cartbar:not([hidden]) ~ .shop-chat-fab { bottom: calc(84px + env(safe-area-inset-bottom)); }
 /* wide screens: the button keeps its own width and ends on the right edge of the cart column (the layout is 1240px wide with 16px padding), so it does not hang out over the column */
 @media (min-width: 1024px) { .shop-chat-fab, .shop-cartbar:not([hidden]) ~ .shop-chat-fab { bottom: 24px; right: max(16px, calc((100% - 1240px) / 2 + 16px)); } }

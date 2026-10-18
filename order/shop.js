@@ -10,6 +10,8 @@
 	function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
 	function fmt(c) { return (c / 100).toFixed(2).replace('.', ',') + ' €'; }
 	function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+	// a name of a choice: a line may break after a slash ("Schweinefleisch/Hähnchenfleisch"), never in the middle of a word
+	function brk(s) { return esc(s).replace(/\//g, '/&#8203;'); }
 	function toast(t) { var el = $('#shop-toast'); el.textContent = t; el.classList.add('is-on'); clearTimeout(toast.t); toast.t = setTimeout(function () { el.classList.remove('is-on'); }, 1800); }
 
 	// ---- storage
@@ -635,10 +637,10 @@
 		function chip(g, it) {
 			var single = g.max === 1;
 			if (it.max > 1) {
-				return '<div class="pd-chip has-step" data-g="' + g.id + '" data-id="' + it.id + '"><span class="pd-chip-name">' + esc(it.title) + '</span><span class="pd-chip-price" data-price="' + it.price + '"></span>' +
+				return '<div class="pd-chip has-step" data-g="' + g.id + '" data-id="' + it.id + '"><span class="pd-chip-name">' + brk(it.title) + '</span><span class="pd-chip-price" data-price="' + it.price + '"></span>' +
 					'<span class="pd-step"><button type="button" class="qty-btn" data-d="-1" aria-label="Weniger ' + esc(it.title) + '">&minus;</button><span class="qty-num">0</span><button type="button" class="qty-btn" data-d="1" aria-label="Mehr ' + esc(it.title) + '">+</button></span></div>';
 			}
-			return '<button type="button" class="pd-chip" data-g="' + g.id + '" data-id="' + it.id + '" aria-pressed="false"' + (single && g.min > 0 ? ' data-radio="1"' : '') + '><span class="pd-chip-name">' + esc(shown(g, it)) + '</span><span class="pd-chip-price" data-price="' + it.price + '"></span>' + ICON_CHECK + '</button>';
+			return '<button type="button" class="pd-chip" data-g="' + g.id + '" data-id="' + it.id + '" aria-pressed="false"' + (single && g.min > 0 ? ' data-radio="1"' : '') + '><span class="pd-chip-name">' + brk(shown(g, it)) + '</span><span class="pd-chip-price" data-price="' + it.price + '"></span>' + ICON_CHECK + '</button>';
 		}
 		function chips(g) { return '<div class="pd-chips' + (isWide(g) ? ' is-list' : '') + '" role="group" aria-label="' + esc(cleanTitle(g.title)) + '">' + g.items.map(function (it) { return chip(g, it); }).join('') + '</div>'; }
 		function badge() { return '<span class="pd-badge" data-badge>Pflicht</span>'; }
@@ -650,7 +652,7 @@
 			h += '<div class="pd-required">';
 			if (p.variations.length) {
 				h += '<section class="pd-req" data-var="1"><header><h3>Variante</h3>' + badge() + '</header><div class="pd-chips' + (p.variations.length > 6 || p.variations.some(function (v) { return v.title.length > 24; }) ? ' is-list' : '') + '" role="group" aria-label="Variante">' +
-					p.variations.map(function (v) { return '<button type="button" class="pd-chip" data-v="' + v.id + '" aria-pressed="false" data-radio="1"><span class="pd-chip-name">' + esc(v.title) + '</span><span class="pd-chip-price">' + fmt(v.price) + '</span>' + ICON_CHECK + '</button>'; }).join('') + '</div></section>';
+					p.variations.map(function (v) { return '<button type="button" class="pd-chip" data-v="' + v.id + '" aria-pressed="false" data-radio="1"><span class="pd-chip-name">' + brk(v.title) + '</span><span class="pd-chip-price">' + fmt(v.price) + '</span>' + ICON_CHECK + '</button>'; }).join('') + '</div></section>';
 			}
 			req.forEach(function (g) {
 				h += '<section class="pd-req" data-g="' + g.id + '"><header><h3>' + esc(cleanTitle(g.title)) + '</h3><span class="pd-need" data-need></span>' + badge() + '</header>' + chips(g) + '</section>';
