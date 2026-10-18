@@ -559,6 +559,125 @@
 		setTimeout(function () { if (row.parentNode) { row.remove(); } }, opts.action ? 20000 : (opts.kind === 'ok' ? 9000 : 14000));
 	}
 
+	// ---- "Alles dabei?": reports of guests that something is missing after a delivery (board answer: issues). The staff decides here: credit (the amount can be changed), redelivery with minutes, take a credit back, close.
+	var issueSeen = null, issueHtml = '', issueChat = false, issueUnread = {}, threads = {}, threadTimer = null;
+	var QUICK = ['Entschuldige bitte, das tut uns leid.', 'Welche Soße hat gefehlt?', 'Wir bringen es dir gleich vorbei.', 'Wir schreiben dir eine Gutschrift.'];
+	function msgHtml(m) {
+		var who = m.side === 'guest' ? 'Gast' : (m.side === 'ai' ? 'Automatische Antwort' : (m.by || 'Disposition'));
+		return '<p class="ki-msg is-' + esc(m.side) + '"><span class="ki-who">' + esc(who) + ' · ' + esc(m.at) + '</span> ' + esc(m.text) + '</p>';
+	}
+	function threadHtml(i) {
+		var t = threads[i.id], head = '';
+		if (i.needs_human) { head += '<p class="ki-human">Braucht einen Menschen: bitte übernehmen.</p>'; }
+		if (!issueChat) { return head; }
+		var badge = (!t || !t.open) && i.unread ? ' <span class="ki-badge" aria-label="' + i.unread + ' ungelesen">' + i.unread + '</span>' : '';
+		var btn = '<button type="button" class="k-go secondary" data-ia="chat" aria-expanded="' + (t && t.open ? 'true' : 'false') + '">Chat' + badge + '</button>';
+		if (!t || !t.open) { return head + '<div class="ki-chatrow">' + btn + '</div>'; }
+		var aiOff = t.ai_off !== undefined ? t.ai_off : i.ai_off;
+		return head + '<div class="ki-chatrow">' + btn + '</div><div class="ki-thread"><div class="ki-log" role="log" aria-live="polite" aria-label="Nachrichten">' + t.msgs.map(msgHtml).join('') + '</div>' +
+			'<p class="ki-pres">' + (t.guest_here ? 'Gast ist auf der Seite.' : 'Gast ist nicht auf der Seite: du bekommst keine schnelle Antwort, er bekommt eine SMS.') + ' Automatische Antwort: ' + (aiOff ? 'aus' : 'an') +
+			' <button type="button" class="k-go secondary" data-ia="ai" data-off="' + (aiOff ? 0 : 1) + '">' + (aiOff ? 'Wieder einschalten' : 'Übernehmen') + '</button></p>' +
+			'<div class="ki-quick">' + QUICK.map(function (q) { return '<button type="button" class="k-chip" data-q="' + esc(q) + '">' + esc(q) + '</button>'; }).join('') + '</div>' +
+			'<form class="ki-reply"><input class="ki-text" maxlength="400" autocomplete="off" aria-label="Antwort an den Gast" value="' + esc(t.draft || '') + '"/><button type="submit" class="k-go">Senden</button></form></div>';
+	}
+	function threadLoad(id, full) {
+		var t = threads[id]; if (!t) { return Promise.resolve(); }
+		return fetch('ajax/shop_orders.php?op=issue_thread&id=' + id + '&since=' + (full ? 0 : t.last), { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (r) {
+			if (!r.ok || !threads[id]) { return; }
+			if (full) { t.msgs = []; t.last = 0; }
+			var card = document.querySelector('.ki-card[data-id="' + id + '"]'), log = card && card.querySelector('.ki-log'), changed = r.msgs.length > 0 || t.ai_off !== r.ai_off || t.guest_here !== r.guest_here;
+			r.msgs.forEach(function (m) { t.msgs.push(m); t.last = Math.max(t.last, m.id); });
+			t.ai_off = r.ai_off; t.guest_here = r.guest_here;
+			if (r.msgs.length && r.msgs.some(function (m) { return m.side === 'guest'; }) && !full) { sound.notify(); }
+			if (changed && card) {
+				var active = card.contains(document.activeElement) && document.activeElement.classList.contains('ki-text'), keep = active ? document.activeElement.value : null;
+				var th = card.querySelector('.ki-thread');
+				if (th && log && !full) { r.msgs.forEach(function (m) { log.insertAdjacentHTML('beforeend', msgHtml(m)); }); log.scrollTop = log.scrollHeight; var pr = card.querySelector('.ki-pres'); if (pr) { pr.firstChild.textContent = t.guest_here ? 'Gast ist auf der Seite.' : 'Gast ist nicht auf der Seite: du bekommst keine schnelle Antwort, er bekommt eine SMS.'; } }
+				else { drawIssues(lastIssues, true); var l2 = document.querySelector('.ki-card[data-id="' + id + '"] .ki-log'); if (l2) { l2.scrollTop = l2.scrollHeight; } }
+			}
+		}).catch(function () {});
+	}
+	function threadsPoll() {
+		clearInterval(threadTimer); threadTimer = null;
+		var open = Object.keys(threads).filter(function (k) { return threads[k].open; });
+		if (!open.length) { return; }
+		threadTimer = setInterval(function () { if (!document.hidden) { Object.keys(threads).forEach(function (k) { if (threads[k].open) { threadLoad(k, false); } }); } }, 3000);
+	}
+	var lastIssues = [];
+	function issueCard(i) {
+		var acts = '', st = i.status;
+		var what = '<p class="ki-what"><strong>Fehlt:</strong> ' + i.items.map(esc).join(', ') + (i.value_text ? ' <span class="ki-val">(' + esc(i.value_text) + ')</span>' : '') + '</p>' + (i.note ? '<p class="ki-note">„' + esc(i.note) + '“</p>' : '');
+		var wish = (st === 'new' || st === 'approval') ? '<p class="ki-wish">Wunsch: ' + (i.wish === 'redeliver' ? 'nachliefern' : 'Gutschrift') + (st === 'approval' ? ' · braucht Freigabe' : '') + '</p>' : '';
+		if (st === 'new' || st === 'approval') {
+			var amt = i.value !== null ? (i.value / 100).toFixed(2).replace('.', ',') : '';
+			acts += '<label class="ki-f">Betrag € <input class="ki-amt" inputmode="decimal" value="' + amt + '" aria-label="Betrag der Gutschrift in Euro"/></label><button type="button" class="k-go secondary" data-ia="credit">' + (st === 'approval' ? 'Freigeben' : 'Gutschrift ausstellen') + '</button>';
+			acts += '<label class="ki-f">in <input class="ki-min" inputmode="numeric" value="20" aria-label="Minuten bis zur Nachlieferung"/> Min</label><button type="button" class="k-go" data-ia="redeliver">Nachliefern</button>';
+		} else if (st === 'credit') {
+			acts += '<p class="ki-done">Gutschrift ' + esc(i.credit_text) + (i.auto ? ' (automatisch)' : '') + ', Code ' + esc(i.code) + '</p><button type="button" class="k-go secondary" data-ia="revoke">Zurücknehmen</button>';
+		} else if (st === 'redelivery') {
+			acts += '<p class="ki-done">Nachlieferung Nr. ' + i.redelivery_no + (i.eta ? ' gegen ' + esc(i.eta) + ' Uhr' : '') + '</p>';
+		}
+		if (i.phone) { acts += '<a class="k-go secondary" href="tel:' + esc(String(i.phone).replace(/[^\d+]/g, '')) + '">Gast anrufen</a>'; }
+		acts += '<button type="button" class="k-go secondary" data-ia="close">Erledigt</button>';
+		return '<article class="ki-card is-' + esc(st) + '" data-id="' + i.id + '"><h3>Nr. ' + i.day_no + ' ' + esc(i.name) + '</h3><p class="ki-meta">' + esc(i.at) + ' · vor ' + i.age_min + ' Min' + (i.driver ? ' · ' + esc(i.driver) : '') + '</p>' + what + wish + '<div class="ki-acts">' + acts + '</div>' + threadHtml(i) + '</article>';
+	}
+	function drawIssues(list, force) {
+		var box = $('#k-issues'); if (!box) { return; }
+		var ids = list.filter(function (i) { return i.status === 'new' || i.status === 'approval'; }).map(function (i) { return i.id; });
+		if (issueSeen !== null && ids.some(function (id) { return issueSeen.indexOf(id) < 0; })) { sound.notify(); }
+		issueSeen = ids; lastIssues = list;
+		var more = false; list.forEach(function (i) { if ((issueUnread[i.id] === undefined ? 0 : issueUnread[i.id]) < i.unread && !(threads[i.id] && threads[i.id].open)) { more = true; } issueUnread[i.id] = i.unread; });
+		if (more && issueChat) { sound.notify(); }
+		var html = list.map(issueCard).join('');
+		if (html === issueHtml) { return; }
+		if (!force && box.contains(document.activeElement) && document.activeElement.tagName === 'INPUT') { return; }   // somebody is typing an amount: do not wipe it
+		issueHtml = html; box.innerHTML = html; box.hidden = !list.length;
+	}
+	(function () {
+		var box = $('#k-issues'); if (!box) { return; }
+		box.addEventListener('click', function (ev) {
+			var b = ev.target.closest('[data-ia]'); if (!b) { return; }
+			var card = b.closest('.ki-card'), a = b.dataset.ia, f = { op: 'issue_' + a, id: card.dataset.id };
+			if (a === 'chat') {
+				var tid = card.dataset.id, t = threads[tid] || (threads[tid] = { open: false, msgs: [], last: 0, draft: '' });
+				t.open = !t.open;
+				if (t.open) { threadLoad(tid, true).then(function () { drawIssues(lastIssues, true); var l = document.querySelector('.ki-card[data-id="' + tid + '"] .ki-text'); if (l) { l.focus(); } }); }
+				else { drawIssues(lastIssues, true); }
+				threadsPoll(); return;
+			}
+			if (a === 'ai') { f.off = b.dataset.off; }
+			if (a === 'credit') { f.cents = $('.ki-amt', card).value; if (!String(f.cents).trim()) { notify('Bitte einen Betrag eintragen.'); return; } }
+			if (a === 'redeliver') { f.minutes = $('.ki-min', card).value; }
+			b.disabled = true;
+			post(f).then(function (r) {
+				if (r.issues) { drawIssues(r.issues, true); }
+				if (a === 'ai' && r.ok) { var tt = threads[card.dataset.id]; if (tt) { tt.ai_off = +b.dataset.off; } drawIssues(r.issues, true); return; }
+				var ok = { credit: 'Gutschrift ausgestellt.', redeliver: 'Nachlieferung angelegt: sie erscheint in der Spalte „In der Küche“.', revoke: 'Gutschrift zurückgenommen.', close: 'Erledigt.' }[a];
+				notify(r.ok ? ok : (r.error || 'Das hat nicht geklappt.'), { kind: r.ok ? 'ok' : 'error' });
+				if (!r.ok) { b.disabled = false; } else if (a === 'redeliver') { load(); }
+			}).catch(function () { b.disabled = false; notify('Keine Verbindung. Bitte noch einmal versuchen.'); });
+		});
+	}());
+
+	(function () {
+		var box = $('#k-issues'); if (!box) { return; }
+		box.addEventListener('click', function (ev) {
+			var q = ev.target.closest('[data-q]'); if (!q) { return; }
+			var inp = q.closest('.ki-card').querySelector('.ki-text'); inp.value = q.dataset.q; inp.focus(); threads[q.closest('.ki-card').dataset.id].draft = inp.value;
+		});
+		box.addEventListener('input', function (ev) { if (ev.target.classList.contains('ki-text')) { var t = threads[ev.target.closest('.ki-card').dataset.id]; if (t) { t.draft = ev.target.value; } } });
+		box.addEventListener('submit', function (ev) {
+			ev.preventDefault();
+			var card = ev.target.closest('.ki-card'), inp = card.querySelector('.ki-text'), id = card.dataset.id, text = inp.value.trim(); if (!text) { return; }
+			inp.disabled = true;
+			post({ op: 'issue_reply', id: id, text: text }).then(function (r) {
+				if (!r.ok) { inp.disabled = false; notify(r.error || 'Das hat nicht geklappt.'); return; }
+				if (threads[id]) { threads[id].draft = ''; threads[id].ai_off = 1; }
+				threadLoad(id, false).then(function () { drawIssues(r.issues || lastIssues, true); var l = document.querySelector('.ki-card[data-id="' + id + '"] .ki-text'); if (l) { l.focus(); } });
+			}).catch(function () { inp.disabled = false; notify('Keine Verbindung. Bitte noch einmal versuchen.'); });
+		});
+	}());
+
 	// ---- board loop
 	function load() {
 		fetch('ajax/shop_orders.php?op=board', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) {
@@ -568,7 +687,7 @@
 			if (!r.ok) { throw new Error('bad'); }
 			$('#k-offline').hidden = true; lastOk = Date.now();
 			var ids = r.orders.filter(function (o) { return o.status === 'new'; }).map(function (o) { return o.id; });
-			autoPrintCheck(r.orders);
+			issueChat = !!r.issue_chat; autoPrintCheck(r.orders); drawIssues(r.issues || []);
 			current = r.orders; toursOn = !!r.tours_on; drivers = r.drivers || []; pause = r.pause || pause; driveMin = r.drive_min !== undefined ? r.drive_min : driveMin;
 			Object.keys(acked).forEach(function (k) { if (ids.indexOf(+k) < 0) { delete acked[k]; } });
 			var fresh = seen !== null && ids.some(function (id) { return seen.indexOf(id) < 0; });

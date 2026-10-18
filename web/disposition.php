@@ -66,6 +66,7 @@ $dp_pause = shop_pause_state();
 	</header>
 	<p class="k-offline" id="k-offline" role="alert" hidden>Keine Verbindung. Ich versuche es weiter ...</p>
 	<div class="k-msgs" id="k-msgs" role="status" aria-live="polite"></div>
+	<section class="k-issues" id="k-issues" aria-label="Meldungen der Gäste: etwas fehlt" hidden></section>
 	<main class="k-board" id="main" tabindex="-1">
 		<section class="k-col" data-col="fail" id="sec-fail" aria-labelledby="kc-fail" hidden><h2 id="kc-fail">Fehlgeschlagen <span class="k-n" id="n-fail">0</span></h2><div class="k-list" id="col-fail"></div></section>
 		<section class="k-col" data-col="new" id="sec-new" aria-labelledby="kc-new"><h2 id="kc-new">Neu <span class="k-n" id="n-new">0</span></h2><div class="k-list" id="col-new"></div><div class="k-bandnav" id="nav-new" hidden></div><p class="k-overflow" id="of-new" role="status" hidden></p></section>

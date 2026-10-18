@@ -131,6 +131,9 @@ function shop_ensure_schema() {
 	// the drive time of this one order (minutes), set by the dispatch when the standard (setting kitchen_drive_min) does not fit: NULL = standard
 	$dcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'drive_min'");
 	if (!$dcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `drive_min` TINYINT UNSIGNED NULL"); }
+	// delivery: the driver tapped "Ich bin vor Ort" (shop_driver_here_order)
+	$hcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'driver_here_at'");
+	if (!$hcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `driver_here_at` DATETIME NULL"); }
 	$acol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'arrived_at'");
 	if (!$acol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `arrived_at` DATETIME NULL, ADD `driver_rating` TINYINT NULL, ADD `driver_rated_at` DATETIME NULL"); }
 	// diet marks of a dish, ticked in the menu editor: 'veg', 'vegan' (implies veg), 'spicy', comma separated; NULL = nobody has looked at this dish yet (nothing is shown to guests)
@@ -260,6 +263,8 @@ function shop_ensure_schema() {
 		if (!fb_rows("SHOW INDEX FROM ".fb_t('tp_shop_orders')." WHERE Key_name = '$kn'")) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD KEY `$kn` (`$kc`)"); }
 	}
 	shop_nl_schema($db, $opts);   // subscribers of the newsletter and the log of their consent (shop_newsletter.class.php)
+	shop_issue_schema($db, $opts);   // reports "es fehlt etwas" after a delivery (shop_issue.class.php)
+	shop_issue_chat_schema($db, $opts);   // chat about such a report (shop_issue_chat.class.php)
 	$done = true;
 	shop_migrate_groups();
 }
@@ -337,6 +342,9 @@ function shop_defaults() {
 		'chat_on' => '0',           // order by chat (test): guided conversation at order/chat.php (web/classes/shop_chat.class.php)
 		'tours_on' => '0',          // tours (test): the dispatch groups deliveries that leave the kitchen together (web/classes/shop_tours.class.php)
 		'push_on' => '1',           // push messages for the status page of an order (web/classes/shop_push.class.php)
+		'driver_here_on' => '0', 'driver_here_gps' => '1', 'driver_here_m' => '150', // "Ich bin vor Ort" of the driver (shows the guest a card + push); only with the phone's GPS within this many metres of the address
+		'issue_on' => '0',          // "Alles dabei?": the guest reports on the status page that something is missing after a delivery (web/classes/shop_issue.class.php); off until the owner switches it on
+		'issue_window_min' => '90', 'issue_cap' => '10', 'issue_valid_days' => '60', 'issue_auto_30d' => '2', 'issue_chat_on' => '0', 'issue_ai_on' => '0', 'issue_keep_days' => '60', 'issue_sms_driver' => '1', // chat with the dispatch about a report (off), the model answers first (off, needs the key of the order chat), days the messages are kept; minutes after the delivery, credit issued at once up to this many euro, days valid, automatic credits per guest in 30 days, SMS to the driver's company phone
 		'offers_on' => '1',         // offers without a code: free extra above a threshold that grows with the main dishes, pizza + drink (web/classes/shop_offers.class.php)
 		'offer_t1' => '22', 'offer_t2' => '38', 'offer_t3' => '55', // threshold in euro for one / two / three or more main dishes
 		'offer_extras' => '',       // product ids (without choices) the guest can take as the free extra, comma separated
@@ -1948,7 +1956,7 @@ function shop_day_stats($date) {
 	$r = fb_row("SELECT COUNT(*) AS n, COALESCE(SUM(total_cents), 0) AS sum, COALESCE(SUM(type = 'delivery'), 0) AS deliveries, COALESCE(SUM(type = 'pickup'), 0) AS pickups,
 			COALESCE(SUM(status IN ('new', 'accepted', 'preparing', 'ready', 'delivering')), 0) AS open_n,
 			COALESCE(SUM(payment_method = 'mollie' AND payment_status = 'paid'), 0) AS paid_online
-		FROM ".fb_t('tp_shop_orders')." WHERE order_date = ? AND status NOT IN ('pending', 'cancelled', 'failed') AND is_test = 0 AND source <> 'courier'", 's', array($date));
+		FROM ".fb_t('tp_shop_orders')." WHERE order_date = ? AND status NOT IN ('pending', 'cancelled', 'failed') AND is_test = 0 AND source NOT IN ('courier', 'redelivery')", 's', array($date));
 	$prep = fb_row("SELECT AVG(TIMESTAMPDIFF(MINUTE, created_at, ready_at)) AS m FROM ".fb_t('tp_shop_orders')." WHERE order_date = ? AND ready_at IS NOT NULL AND is_test = 0", 's', array($date));
 	return array('orders' => (int)$r['n'], 'revenue' => (int)$r['sum'], 'deliveries' => (int)$r['deliveries'], 'pickups' => (int)$r['pickups'], 'open' => (int)$r['open_n'], 'paid_online' => (int)$r['paid_online'],
 		'avg_ready_min' => ($prep && $prep['m'] !== null) ? (int)round($prep['m']) : null);
@@ -2719,7 +2727,7 @@ function shop_driver_start_order($driverId, $orderId) {
 function shop_driver_pause_order($driverId, $orderId) {
 	$o = fb_row("SELECT id, status FROM ".fb_t('tp_shop_orders')." WHERE id = ? AND driver_id = ?", 'ii', array((int)$orderId, (int)$driverId));
 	if (!$o || $o['status'] !== 'delivering') { return array('ok' => false, 'error' => 'Diese Lieferung ist nicht unterwegs.'); }
-	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET driver_lat = NULL, driver_lng = NULL, driver_at = NULL WHERE id = ?", 'i', array((int)$orderId));
+	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET driver_lat = NULL, driver_lng = NULL, driver_at = NULL, driver_here_at = NULL WHERE id = ?", 'i', array((int)$orderId));
 	if (!shop_set_status((int)$orderId, 'ready', 'Fahrer: pausiert')) { return array('ok' => false, 'error' => 'Die Lieferung konnte nicht pausiert werden.'); }
 	return array('ok' => true);
 }
@@ -2730,7 +2738,7 @@ function shop_driver_fail_order($driverId, $orderId, $reason) {
 	if (!$o || $o['status'] !== 'delivering') { return array('ok' => false, 'error' => 'Diese Lieferung ist nicht unterwegs.'); }
 	$reason = trim(mb_substr((string)$reason, 0, 255));
 	if ($reason === '') { return array('ok' => false, 'error' => 'Bitte kurz beschreiben, was das Problem war.'); }
-	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET driver_lat = NULL, driver_lng = NULL, driver_at = NULL, fail_reason = ? WHERE id = ?", 'si', array($reason, (int)$orderId));
+	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET driver_lat = NULL, driver_lng = NULL, driver_at = NULL, driver_here_at = NULL, fail_reason = ? WHERE id = ?", 'si', array($reason, (int)$orderId));
 	if (!shop_set_status((int)$orderId, 'failed', 'Fahrer: '.$reason)) { return array('ok' => false, 'error' => 'Die Meldung konnte nicht gespeichert werden.'); }
 	return array('ok' => true);
 }
@@ -2779,7 +2787,7 @@ function shop_driver_state($driverId) {
 	}
 	if ($view) { $view['near'] = $near($view); }
 	return array('current' => $view, 'queued' => $queued, 'open' => $open, 'soon' => $soon, 'gps' => array('age' => $gpsAge, 'lat' => ($pos && $gpsAge <= 900) ? (float)$pos['lat'] : null, 'lng' => ($pos && $gpsAge <= 900) ? (float)$pos['lng'] : null),
-		'origin' => $origin ? array('lat' => $origin[0], 'lng' => $origin[1]) : null, 'shift' => shop_driver_shift($driverId));
+		'origin' => $origin ? array('lat' => $origin[0], 'lng' => $origin[1]) : null, 'shift' => shop_driver_shift($driverId), 'issues' => shop_issue_driver_list($driverId));
 }
 // what this driver did since midnight: deliveries, kilometres from the restaurant, cash and card payments collected at the door
 function shop_driver_shift($driverId) {
@@ -2794,7 +2802,7 @@ function shop_driver_shift($driverId) {
 // shared by the driver's own "Zurück in den Pool" and the dispatch override below - puts a claimed
 // delivery back to unassigned/ready so any driver (the same one or another) can take it again
 function shop_order_release_to_pool($orderId, $by) {
-	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET driver_id = NULL, driver_lat = NULL, driver_lng = NULL, driver_at = NULL WHERE id = ?", 'i', array((int)$orderId));
+	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET driver_id = NULL, driver_lat = NULL, driver_lng = NULL, driver_at = NULL, driver_here_at = NULL WHERE id = ?", 'i', array((int)$orderId));
 	if (!shop_set_status((int)$orderId, 'ready', $by)) { return array('ok' => false, 'error' => 'Die Lieferung konnte nicht zurückgegeben werden.'); }
 	return array('ok' => true);
 }
@@ -3010,7 +3018,7 @@ function shop_dispatch_retry_order($orderId, $in, $by) {
 	foreach (array('street' => $street, 'zip' => $zip, 'city' => $city, 'address_note' => $note, 'phone' => $phone) as $k => $v) { if ($v !== (string)$o[$k] && !($k === 'phone' && $phone === '')) { $diff[] = $k.': "'.$o[$k].'" -> "'.$v.'"'; } }
 	if ($phone === '') { $phone = (string)$o['phone']; }
 	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET street = ?, zip = ?, city = ?, address_note = ?, phone = ?, lat = ?, lng = ?, zone_id = ?, fail_reason = '', driver_id = NULL,
-		driver_lat = NULL, driver_lng = NULL, driver_at = NULL, done_at = NULL WHERE id = ?", 'sssssddii', array($street, $zip, $city, $note, $phone, $lat, $lng, $zone, (int)$orderId));
+		driver_lat = NULL, driver_lng = NULL, driver_at = NULL, driver_here_at = NULL, done_at = NULL WHERE id = ?", 'sssssddii', array($street, $zip, $city, $note, $phone, $lat, $lng, $zone, (int)$orderId));
 	shop_coupon_reclaim($orderId);
 	if (!shop_set_status((int)$orderId, 'ready', $by.': Zustellung wiederholt')) { return array('ok' => false, 'error' => 'Die Lieferung konnte nicht zurückgeholt werden.'); }
 	shop_log((int)$orderId, 'Zurückgeholt', mb_substr(($diff ? implode('; ', $diff) : 'Adresse unverändert').($feeNote !== '' ? ' | '.$feeNote : '').' | Grund vorher: '.$o['fail_reason'], 0, 200));
@@ -3044,6 +3052,26 @@ function shop_driver_complete_order($driverId, $orderId) {
 	if (!shop_set_status((int)$orderId, 'done', 'Fahrer')) { return array('ok' => false, 'error' => 'Die Lieferung konnte nicht abgeschlossen werden.'); }
 	return array('ok' => true);
 }
+// "Ich bin vor Ort": the driver tells the guest he is at the door. Needs the setting; with driver_here_gps the last position of his phone (not older than 3 minutes) must be within driver_here_m metres of the address
+// (no coordinates for the address or no recent position: the tap is allowed, the driver must not be locked out). The status page shows a card, a push goes to everybody who allowed notifications.
+function shop_driver_here_order($driverId, $orderId) {
+	if (!shop_flag('driver_here_on')) { return array('ok' => false, 'error' => 'Diese Funktion ist nicht eingeschaltet.'); }
+	$o = fb_row("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE id = ? AND driver_id = ?", 'ii', array((int)$orderId, (int)$driverId));
+	if (!$o || $o['status'] !== 'delivering' || $o['type'] !== 'delivery') { return array('ok' => false, 'error' => 'Diese Lieferung ist nicht unterwegs.'); }
+	if ($o['driver_here_at'] !== null) { return array('ok' => true); }
+	if (shop_flag('driver_here_gps') && $o['lat'] !== null && $o['lng'] !== null && ((float)$o['lat'] != 0 || (float)$o['lng'] != 0)) {
+		$p = fb_row("SELECT lat, lng, updated_at FROM ".fb_t('tp_shop_driver_positions')." WHERE driver_id = ?", 'i', array((int)$driverId));
+		if ($p && time() - strtotime($p['updated_at']) < 180) {
+			$m = (int)round(shop_haversine_m((float)$p['lat'], (float)$p['lng'], (float)$o['lat'], (float)$o['lng']));
+			$max = max(50, min(1000, (int)shop_setting('driver_here_m') ?: 150));
+			if ($m > $max) { return array('ok' => false, 'error' => 'Du bist noch etwa '.$m.' m von der Adresse entfernt. Der Knopf geht ab '.$max.' m. Fahr näher heran und tippe noch einmal.'); }
+		}
+	}
+	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET driver_here_at = ? WHERE id = ? AND driver_here_at IS NULL", 'si', array(date('Y-m-d H:i:s'), (int)$orderId));
+	shop_log((int)$orderId, 'driver_here', 'Fahrer ist vor Ort');
+	shop_push_status((int)$orderId, 'driver_here');
+	return array('ok' => true);
+}
 // the one delivery (if any) this driver currently has - the detail view shown instead of the open list
 function shop_driver_current_order($driverId) {
 	return fb_row("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE driver_id = ? AND status = 'delivering' LIMIT 1", 'i', array((int)$driverId));
@@ -3060,7 +3088,7 @@ function shop_driver_order_view($o) {
 	$pay = ($o['payment_method'] === 'mollie' || $o['payment_status'] === 'paid') ? 'Bezahlt, nichts zu kassieren' :
 		(($o['payment_method'] === 'cash' ? 'BAR kassieren: ' : 'KARTE kassieren: ').shop_money((int)$o['total_cents']));
 	return array_merge(shop_driver_card($o), array('id' => (int)$o['id'], 'day_no' => (int)$o['day_no'], 'address' => $addr, 'address_note' => $o['address_note'], 'route_dest' => $routeDest,
-		'customer_name' => $o['customer_name'], 'phone' => $o['phone'], 'pay' => $pay, 'pay_with' => !empty($o['pay_with_cents']) && $o['payment_method'] === 'cash' ? (int)$o['pay_with_cents'] : 0, 'note' => $o['note'], 'since' => !empty($o['updated_at']) ? strtotime($o['updated_at']) : null,
+		'here_on' => shop_flag('driver_here_on') ? 1 : 0, 'here_at' => !empty($o['driver_here_at']) ? substr($o['driver_here_at'], 11, 5) : '', 'customer_name' => $o['customer_name'], 'phone' => $o['phone'], 'pay' => $pay, 'pay_with' => !empty($o['pay_with_cents']) && $o['payment_method'] === 'cash' ? (int)$o['pay_with_cents'] : 0, 'note' => $o['note'], 'since' => !empty($o['updated_at']) ? strtotime($o['updated_at']) : null,
 		'items' => shop_driver_lines($items)));
 }
 // the dishes of an order for the driver: quantity, title, size, the options as one text, the note of the guest
@@ -3580,7 +3608,7 @@ function shop_stamp_award($orderId) {
 	if (!$cfg['on']) { return; }
 	$o = shop_order((int)$orderId);
 	if (!$o || !empty($o['is_test'])) { return; }
-	if (in_array($o['source'], array('lieferando', 'uber_eats'), true)) { return; }   // orders of a platform do not collect stamps
+	if (in_array($o['source'], array('lieferando', 'uber_eats', 'redelivery'), true)) { return; }   // orders of a platform and a free redelivery do not collect stamps
 	$keys = shop_coupon_guest_keys($o['phone'], $o['email']);
 	// stamps are only collected with a guest account: the order must have been placed signed in, and then the account's keys count
 	if (shop_flag('account_on')) {
@@ -3649,7 +3677,7 @@ function shop_stamp_issue($keys, $value, $validUntil, $parentId, $note) {
 function shop_stamp_voucher($keys) {
 	if (!shop_stamp_has_keys($keys)) { return null; }
 	shop_ensure_schema();
-	return fb_row("SELECT * FROM ".fb_t('tp_shop_coupons')." WHERE source IN ('stamp', 'offer') AND active = 1 AND used < max_uses AND (valid_until IS NULL OR valid_until > ?) AND ".shop_stamp_match()." ORDER BY valid_until, id LIMIT 1",
+	return fb_row("SELECT * FROM ".fb_t('tp_shop_coupons')." WHERE source IN ('stamp', 'offer', 'issue') AND active = 1 AND used < max_uses AND (valid_until IS NULL OR valid_until > ?) AND ".shop_stamp_match()." ORDER BY valid_until, id LIMIT 1",
 		'sss', array(date('Y-m-d H:i:s'), $keys[0], $keys[1]));
 }
 
@@ -3764,3 +3792,5 @@ require_once __DIR__.'/shop_tours.class.php';
 require_once __DIR__.'/shop_flags.class.php';
 require_once __DIR__.'/shop_offers.class.php';
 require_once __DIR__.'/shop_push.class.php';
+require_once __DIR__.'/shop_issue.class.php';
+require_once __DIR__.'/shop_issue_chat.class.php';

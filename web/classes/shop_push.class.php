@@ -69,6 +69,7 @@ function shop_push_text($o, $status) {
 		'accepted' => array('Bestellung bestätigt', 'Wir kümmern uns um deine Bestellung.'),
 		'preparing' => array('Wird zubereitet', 'Dein Essen ist in der Küche.'),
 		'ready' => $pickup ? array('Abholbereit', 'Dein Essen ist fertig und wartet auf dich.') : array('Fertig', 'Dein Essen ist fertig, gleich geht es los.'),
+		'driver_here' => array('Dein Fahrer ist da', 'Er steht vor deiner Tür. Bitte mach auf oder komm kurz raus.'),
 		'delivering' => array('Unterwegs zu dir', 'Dein Fahrer ist auf dem Weg. Auf der Karte siehst du, wo er ist.'),
 		'done' => array('Guten Appetit', 'Danke für deine Bestellung!'),
 		'cancelled' => array('Bestellung storniert', 'Deine Bestellung wurde storniert. Bitte ruf uns an, wenn du Fragen hast.'),

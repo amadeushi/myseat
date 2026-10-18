@@ -145,6 +145,7 @@
 			'<div class="dv-links"><a class="cart-go dv-route" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&amp;travelmode=driving&amp;destination=' + encodeURIComponent(o.route_dest) + '">' + icon('route', 22) + 'Route öffnen</a>' +
 			'<a class="cart-go dv-alt" href="tel:' + esc(String(o.phone).replace(/[^0-9+]/g, '')) + '">' + icon('phone', 20) + esc(o.customer_name) + ' anrufen</a></div>' +
 			money + '<h4 class="dv-h4">Bestellung</h4>' + itemsHtml(o.items) + (o.note ? '<p class="dv-onote"><span>Anmerkung</span> ' + esc(o.note) + '</p>' : '') +
+			(o.here_on ? (o.here_at ? '<p class="dv-here-done" role="status">Gast ist informiert (' + esc(o.here_at) + ' Uhr).</p>' : '<button type="button" class="cart-go dv-here" id="dv-here">Ich bin vor Ort</button><p class="dv-here-msg" id="dv-here-msg" role="status" aria-live="polite"></p>') : '') +
 			'<div class="dv-swipe-slot"></div>' +
 			'<details class="dv-more"><summary>Mehr</summary>' +
 			(hasQueue ? '<button type="button" class="cart-go dv-alt" id="dv-pause">Pausieren (andere Lieferung starten)</button>' : '') +
@@ -164,7 +165,7 @@
 
 	function skeleton() {
 		if (built) { return; }
-		root.innerHTML = '<div id="dv-current"></div>' +
+		root.innerHTML = '<div id="dv-issues"></div><div id="dv-current"></div>' +
 			'<details class="dv-mapbox" id="dv-mapbox"><summary>' + icon('map', 20) + '<span>Karte</span></summary><div class="dv-mapin"><div id="dv-map" class="st-map dv-map" role="img" aria-label="Karte der Lieferungen"></div>' +
 			'<p class="dv-legend">Leerer Kreis: Restaurant · Pulsierend: du · Gold gefüllt: offen · Gold umrandet: deine Warteliste · Gestrichelt: noch in der Küche · Grün: aktiv · Die Zahl ist die Bestellnummer.</p><button type="button" class="dv-textbtn" id="dv-fit">Alles zeigen</button></div></details>' +
 			'<h2 class="dv-section" id="dv-queue-h" hidden></h2><p class="dv-hint" id="dv-queue-hint" hidden>Reihenfolge nach kürzestem Weg: immer die nächste Adresse zuerst.</p><div class="dv-list" id="dv-queue"></div>' +
@@ -198,6 +199,11 @@
 			const b = $('#' + id, W.current); if (!b) { return; }
 			armable(b, confirmText, idleText, () => post(op, { order_id: cur.id }).then(r => { if (r.ok) { render(r); } else { msg(r.error); } }).catch(() => msg('Keine Verbindung.')));
 		};
+		const hb = $('#dv-here', W.current);
+		if (hb) { hb.addEventListener('click', () => {
+			hb.disabled = true; const hm = $('#dv-here-msg', W.current);
+			post('driver_here', { order_id: cur.id }).then(r => { if (r.ok) { render(r); toast('Gast ist informiert.'); } else { hb.disabled = false; hm.textContent = r.error || 'Das hat nicht geklappt.'; } }).catch(() => { hb.disabled = false; hm.textContent = 'Keine Verbindung. Bitte nochmal tippen.'; });
+		}); }
 		bind('dv-release', 'Wirklich zurückgeben?', 'Zurück in den Pool', 'driver_release');
 		bind('dv-pause', 'Wirklich pausieren?', 'Pausieren (andere Lieferung starten)', 'driver_pause');
 		const failBtn = $('#dv-fail-btn', W.current);
@@ -399,10 +405,28 @@
 		else if (!on && lock) { lock.release().catch(() => {}); lock = null; }
 	}
 
+	/* ---- "Alles dabei?": a guest of one of his deliveries reports that something is missing: what, what the guest wishes and what the dispatch has decided; call the guest from here ---- */
+	let issueSig = '', issueSeen = null;
+	function drawIssues(list) {
+		const box = $('#dv-issues'); if (!box) { return; }
+		const sig = JSON.stringify(list);
+		const open = list.filter(i => i.status === 'new' || i.status === 'approval').map(i => i.id);
+		if (issueSeen !== null && open.some(id => issueSeen.indexOf(id) < 0) && snd.on) { beep(); }
+		issueSeen = open;
+		if (sig === issueSig) { return; }
+		issueSig = sig;
+		const decided = i => i.status === 'redelivery' ? 'Nachlieferung gegen ' + esc(i.eta) + ' Uhr' : (i.status === 'credit' ? 'Gutschrift ist ausgestellt' : 'Die Disposition entscheidet gleich');
+		box.innerHTML = list.length ? '<section class="st-box dv-issues" aria-label="Meldungen der Gäste"><h2 class="dv-section">Gast meldet etwas</h2>' + list.map(i =>
+			'<article class="dv-issue"><p><strong>Nr. ' + i.day_no + ' ' + esc(i.name) + '</strong>' + (i.street ? ', ' + esc(i.street) : '') + '</p>' +
+			'<p>Fehlt: ' + i.items.map(esc).join(', ') + '</p>' + (i.note ? '<p class="dv-hint">„' + esc(i.note) + '“</p>' : '') +
+			'<p class="dv-hint">Wunsch: ' + (i.wish === 'redeliver' ? 'nachliefern' : 'Gutschrift') + ' · ' + decided(i) + '</p>' +
+			(i.phone ? '<a class="cart-go is-quiet" href="tel:' + esc(String(i.phone).replace(/[^\d+]/g, '')) + '">Gast anrufen</a>' : '') + '</article>').join('') + '</section>' : '';
+	}
+
 	/* ---- the whole page ---- */
 	let known = null, held = {};
 	function render(r) {
-		data = r; polledAt = Date.now(); skeleton();
+		data = r; polledAt = Date.now(); skeleton(); drawIssues(r.issues || []);
 		updateCurrent(r.current, r.queued.length > 0);
 		renderLists(r); shift(r.shift); mapDraw(false);
 		say(r.current ? 'Du bist unterwegs.' : (r.queued.length ? 'Bereit zum Start' : 'Offene Lieferungen'));

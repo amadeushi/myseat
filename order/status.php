@@ -16,7 +16,7 @@ if ($order) {
 }
 if (isset($_GET['json'])) {
 	header('Content-Type: application/json; charset=utf-8'); header('Cache-Control: no-store');
-	echo json_encode($order ? array('ok' => true, 'status' => $order['status'], 'payment' => $order['payment_status'], 'driver' => shop_driver_position($order)) : array('ok' => false));
+	echo json_encode($order ? array('ok' => true, 'status' => $order['status'], 'payment' => $order['payment_status'], 'driver' => shop_driver_position($order), 'here' => (int)($order['status'] === 'delivering' && !empty($order['driver_here_at']))) : array('ok' => false));
 	exit;
 }
 $phone = !empty($settings['mailPhone']) ? $settings['mailPhone'] : '';
@@ -89,6 +89,13 @@ $delivery = $order && $order['type'] === 'delivery';
 			$late = ($eta && time() > $eta + 300 && !in_array($st, array('pending', 'done', 'cancelled', 'failed', 'ready'), true));
 		?>
 		<?php if (isset($sub[$st])): ?><p class="st-sub"><?php echo shop_h($sub[$st]); ?></p><?php endif; ?>
+		<?php if ($delivery && $st === 'delivering' && !empty($order['driver_here_at'])): $hd = shop_issue_driver($order); ?>
+		<div class="st-box st-driverhere" id="st-driverhere" role="alert">
+			<h2>Dein Fahrer ist da</h2>
+			<p>Er steht vor deiner Tür oder gleich davor. Bitte mach auf oder komm kurz raus.</p>
+			<?php if ($hd && $hd['phone'] !== ''): ?><a class="cart-go" href="tel:<?php echo shop_h(preg_replace('/[^\d+]/', '', $hd['phone'])); ?>"><span><?php echo shop_h($hd['name'] !== '' ? $hd['name'].' anrufen' : 'Fahrer anrufen'); ?></span></a><?php endif; ?>
+		</div>
+		<?php endif; ?>
 		<?php if ($eta && !in_array($st, array('pending', 'done', 'cancelled', 'failed'), true)): ?>
 		<div class="st-eta" aria-label="Voraussichtliche Zeit">
 			<span><?php echo $delivery ? ($order['scheduled_at'] ? 'Lieferung um' : 'Voraussichtlich bei dir um') : ($order['scheduled_at'] ? 'Abholung um' : 'Abholbereit gegen'); ?></span>
@@ -150,6 +157,13 @@ $delivery = $order && $order['type'] === 'delivery';
 		</div>
 		<script src="push.js?v=<?php echo @filemtime(__DIR__.'/push.js'); ?>"></script>
 		<?php endif; ?>
+		<?php if ($st === 'done' && $delivery):
+			// "Alles dabei?": after the delivery, for a while: call the driver, or report what is missing (web/classes/shop_issue.class.php, order/issue.js); the box is drawn by the script from this state
+			$issueState = shop_issue_public($order, $phone);
+			if (!empty($issueState['show'])): ?>
+		<div class="st-box st-issue" id="st-issue" data-order="<?php echo shop_h($token); ?>" data-state="<?php echo shop_h(json_encode($issueState, JSON_UNESCAPED_UNICODE)); ?>"><noscript><h2>Alles dabei?</h2><p>Wenn etwas fehlt, ruf uns bitte an<?php echo $tel !== '' ? ': '.$tel : ''; ?>.</p></noscript></div>
+		<script src="issue.js?v=<?php echo @filemtime(__DIR__.'/issue.js'); ?>"></script>
+		<?php endif; endif; ?>
 		<?php if ($st === 'done' && $delivery):
 			// one tap on the stars for the delivery (the driver, when he is known by name): saved at once, asked once
 			$drvName = ''; if (!empty($order['driver_id'])) { $dm = shop_drivers_name_map(); $drvName = isset($dm[(int)$order['driver_id']]) ? trim((string)strtok(trim((string)$dm[(int)$order['driver_id']]), ' ')) : ''; }
@@ -308,7 +322,7 @@ $delivery = $order && $order['type'] === 'delivery';
 			var done = <?php echo json_encode(in_array($st, array('done', 'cancelled', 'failed'), true)); ?>;
 			var lateIn = <?php echo json_encode($eta ? max(0, $eta + 301 - time()) : 0); ?>;
 			if (!done && lateIn > 0 && lateIn < 10800) { setTimeout(function () { location.reload(); }, lateIn * 1000); }
-			if (!done) { setInterval(function () { fetch('status.php?t=' + t + '&json=1', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) { if (r.ok && (r.status + '|' + r.payment) !== status) { location.reload(); return; } if (r.ok && window.StatusMap) { window.StatusMap.update(r.driver); } }).catch(function () {}); }, <?php echo $st === 'delivering' ? 6000 : 12000; ?>); }
+			if (!done) { setInterval(function () { fetch('status.php?t=' + t + '&json=1', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) { if (r.ok && (r.status + '|' + r.payment) !== status) { location.reload(); return; } if (r.ok && r.here && !document.getElementById('st-driverhere')) { location.reload(); return; } if (r.ok && window.StatusMap) { window.StatusMap.update(r.driver); } }).catch(function () {}); }, <?php echo $st === 'delivering' ? 6000 : 12000; ?>); }
 			// "Ich bin da" (pickup) and the stars for the delivery: one tap, saved at once
 			function post(op, extra) {
 				return fetch('api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(Object.assign({ op: op, token: TOKEN, order: t }, extra || {})) }).then(function (r) { return r.json(); });

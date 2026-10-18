@@ -29,15 +29,15 @@ shop_ensure_schema();
 $op = isset($_POST['op']) ? (string)$_POST['op'] : '';
 
 if ($op === 'save') {
-	foreach (array('public', 'accepting', 'test_mode', 'allow_cash', 'allow_card_door', 'allow_online', 'tip_enabled', 'sms_orders', 'stamp_on', 'offers_on', 'tours_on', 'chat_on', 'chat_ai_on', 'account_on', 'account_sms', 'feedback_on', 'places_suggest') as $flag) {
+	foreach (array('public', 'accepting', 'test_mode', 'allow_cash', 'allow_card_door', 'allow_online', 'tip_enabled', 'sms_orders', 'stamp_on', 'offers_on', 'tours_on', 'chat_on', 'chat_ai_on', 'account_on', 'account_sms', 'feedback_on', 'places_suggest', 'issue_on', 'issue_sms_driver', 'issue_chat_on', 'issue_ai_on', 'driver_here_on', 'driver_here_gps') as $flag) {
 		shop_setting_set($flag, !empty($_POST[$flag]) ? '1' : '0');
 	}
 	foreach (array('eta_delivery_min' => array(10, 240), 'kitchen_drive_min' => array(0, 60), 'lead_pickup_min' => array(0, 240), 'slot_min' => array(5, 60), 'days_ahead' => array(0, 14),
-		'stamp_percent' => array(1, 100), 'stamp_goal' => array(2, 12), 'stamp_months' => array(1, 60), 'voucher_days' => array(7, 730), 'account_sms_daily' => array(1, 5000), 'track_days' => array(0, 30), 'last_order_min' => array(0, 240), 'chat_ai_daily' => array(10, 5000)) as $k => $range) {
+		'stamp_percent' => array(1, 100), 'stamp_goal' => array(2, 12), 'stamp_months' => array(1, 60), 'voucher_days' => array(7, 730), 'account_sms_daily' => array(1, 5000), 'track_days' => array(0, 30), 'last_order_min' => array(0, 240), 'chat_ai_daily' => array(10, 5000), 'issue_window_min' => array(30, 1440), 'issue_valid_days' => array(7, 365), 'issue_auto_30d' => array(0, 20), 'issue_keep_days' => array(7, 365), 'driver_here_m' => array(50, 1000)) as $k => $range) {
 		if (isset($_POST[$k])) { shop_setting_set($k, (string)max($range[0], min($range[1], (int)$_POST[$k]))); }
 	}
 	// offers: amounts in euro, the days, and up to three free extras (products without choices)
-	foreach (array('offer_t1' => 500, 'offer_t2' => 500, 'offer_t3' => 500, 'offer_voucher' => 100, 'offer_voucher_min' => 500, 'offer_combo' => 20) as $k => $max) {
+	foreach (array('offer_t1' => 500, 'offer_t2' => 500, 'offer_t3' => 500, 'offer_voucher' => 100, 'offer_voucher_min' => 500, 'offer_combo' => 20, 'issue_cap' => 100) as $k => $max) {
 		if (isset($_POST[$k])) { shop_setting_set($k, number_format(max(0, min($max, (float)str_replace(',', '.', $_POST[$k]))), 2, '.', '')); }
 	}
 	if (isset($_POST['offer_voucher_days'])) { shop_setting_set('offer_voucher_days', (string)max(7, min(365, (int)$_POST['offer_voucher_days']))); }

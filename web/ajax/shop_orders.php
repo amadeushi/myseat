@@ -36,7 +36,8 @@ if ($op === 'uber_retry') {   // the open pages ask for it when a receipt failed
 	so_out(array('ok' => true, 'tried' => shop_uber_retry(1), 'uber_alert' => shop_uber_alert()));
 }
 if ($op === 'board') {
-	so_out(array('ok' => true, 'uber_alert' => shop_uber_alert(), 'out_n' => shop_out_count(), 'now' => date('H:i'), 'tours_on' => shop_tours_on(), 'orders' => shop_board(), 'drivers' => shop_dispatch_drivers(), 'pause' => shop_pause_state(), 'drive_min' => max(0, min(60, (int)shop_setting('kitchen_drive_min')))));
+	shop_issue_staff_ping(); shop_issue_chat_purge();
+	so_out(array('ok' => true, 'uber_alert' => shop_uber_alert(), 'issues' => shop_issue_open_list(), 'issue_chat' => shop_issue_chat_cfg()['chat'], 'out_n' => shop_out_count(), 'now' => date('H:i'), 'tours_on' => shop_tours_on(), 'orders' => shop_board(), 'drivers' => shop_dispatch_drivers(), 'pause' => shop_pause_state(), 'drive_min' => max(0, min(60, (int)shop_setting('kitchen_drive_min')))));
 }
 if ($op === 'kitchen') {
 	so_out(array('ok' => true, 'uber_alert' => shop_uber_alert(), 'now' => date('H:i'), 'orders' => shop_kitchen_board(), 'done' => shop_kitchen_done()));
@@ -61,9 +62,30 @@ if ($op === 'drivers_live') {
 	so_out(array('ok' => true, 'origin' => shop_origin(), 'drivers' => shop_drivers_live()));
 }
 
+// the thread of one report (read only; marks the messages as read)
+if ($op === 'issue_thread') { so_out(shop_issue_thread(isset($_GET['id']) ? (int)$_GET['id'] : 0, isset($_GET['since']) ? (int)$_GET['since'] : 0)); }
+
 // everything below changes something: POST with the token
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['token']) || empty($_SESSION['shop_admin_token']) || !hash_equals($_SESSION['shop_admin_token'], (string)$_POST['token'])) {
 	so_out(array('ok' => false, 'error' => 'Die Sitzung ist abgelaufen. Bitte lade die Seite neu.'));
+}
+// "Alles dabei?": the reports of the guests about something missing after a delivery (web/classes/shop_issue.class.php): credit (release or other amount), redelivery with a time, take a credit back, close
+if ($op === 'issue_reply' || $op === 'issue_ai') {
+	$iid = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+	$by = isset($_SESSION['valid_user']) && is_string($_SESSION['valid_user']) ? $_SESSION['valid_user'] : 'Disposition';
+	$r = $op === 'issue_reply' ? shop_issue_staff_say($iid, isset($_POST['text']) ? (string)$_POST['text'] : '', $by) : shop_issue_ai_toggle($iid, !empty($_POST['off']));
+	so_out(array_merge($r, array('issues' => shop_issue_open_list())));
+}
+if (in_array($op, array('issue_credit', 'issue_redeliver', 'issue_revoke', 'issue_close'), true)) {
+	$iid = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+	$by = isset($_SESSION['valid_user']) && is_string($_SESSION['valid_user']) ? $_SESSION['valid_user'] : 'Disposition';
+	if ($op === 'issue_credit') {
+		$cents = isset($_POST['cents']) ? (int)round((float)str_replace(',', '.', (string)$_POST['cents']) * 100) : 0;
+		$r = shop_issue_credit($iid, $cents, $by);
+	} elseif ($op === 'issue_redeliver') { $r = shop_issue_redeliver($iid, isset($_POST['minutes']) ? (int)$_POST['minutes'] : 20, $by); }
+	elseif ($op === 'issue_revoke') { $r = shop_issue_revoke($iid, $by); }
+	else { $r = shop_issue_close($iid, $by); }
+	so_out(array_merge($r, array('issues' => shop_issue_open_list())));
 }
 if ($op === 'pause_set') {
 	$kind = (isset($_POST['kind']) && $_POST['kind'] === 'pickup') ? 'pickup' : 'delivery';

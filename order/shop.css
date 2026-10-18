@@ -503,6 +503,32 @@
 .st-ratemsg { margin: 0; min-height: 22px; color: var(--text-muted); }
 @media (prefers-reduced-motion: reduce) { .st-pin-driver span { animation: none; } .st-star svg { transition: none; } .st-star:hover:not(:disabled) svg { transform: none; } }
 
+/* "Alles dabei?" after a delivery (order/issue.js): call the driver, or report what is missing */
+.cart-go.is-quiet, .shop-shell a.cart-go.is-quiet { background: transparent; color: var(--gold); border: 1px solid var(--border); }
+.cart-go.is-quiet:hover, .shop-shell a.cart-go.is-quiet:hover { background: var(--surface-2); color: var(--gold-strong); }
+.st-issue .cart-go { margin-top: 0; }
+.st-issue-text { color: var(--text-muted); }
+.st-issue-items + .st-issue-text { margin-top: 14px; }
+.st-issue-text + .cart-go, .st-issue-code + .cart-go { margin-top: 16px; }
+.st-issue-actions { display: grid; gap: 10px; margin-top: 14px; }
+.st-issue-hint { margin-top: 10px; color: var(--text-muted); font-size: 13px; }
+.st-issue-form { display: grid; gap: 16px; margin-top: 18px; }
+.st-issue-set { margin: 0; padding: 0; border: 0; min-width: 0; }
+.st-issue-set legend { padding: 0; margin-bottom: 4px; font-weight: 700; font-size: 15px; }
+.st-issue-row { display: flex; align-items: center; gap: 12px; min-height: 48px; border-bottom: 1px solid var(--border-soft); }
+.st-issue-row:last-child { border-bottom: 0; }
+.st-issue-row input { flex: none; width: 22px; height: 22px; margin: 0; accent-color: var(--gold); }
+.st-issue-row label { flex: 1; align-self: stretch; display: flex; align-items: center; cursor: pointer; }
+.st-issue-label { display: block; margin-bottom: 6px; font-weight: 700; }
+.st-issue-form textarea { width: 100%; min-height: 72px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-2); color: var(--text); font: inherit; font-size: 16px; resize: vertical; caret-color: var(--gold); }
+.st-issue-form textarea::placeholder { color: var(--text-muted); }
+.st-issue-msg { min-height: 22px; color: var(--text-muted); }
+.st-issue-items { display: grid; gap: 4px; margin: 8px 0 12px; }
+.st-issue-items li { display: flex; gap: 10px; align-items: baseline; }
+.st-issue-items li::before { content: ""; flex: none; width: 6px; height: 6px; margin-top: 8px; border-radius: 50%; background: var(--gold); }
+.st-issue-code { margin-top: 10px; }
+.st-issue-code strong { font-family: var(--font-display); font-size: 26px; font-weight: 500; letter-spacing: .04em; color: var(--gold-strong); }
+
 /* driver page (order/driver.php): a phone in one hand, in a car or on the street, in sun or at night. Big touch targets, the district and the
    distance first, and nothing that a tap in a pocket could trigger: finishing and starting need a swipe, the risky buttons sit behind "Mehr". */
 .dv { touch-action: manipulation; -webkit-tap-highlight-color: transparent; font-size: 16px; }
@@ -825,3 +851,27 @@ body.co-quick-on #co-paysec > legend, body.co-quick-on #co-paysec .co-askhint, b
 .shop-filter-panel[hidden] { display: none; }
 .shop-filter-panel .shop-diet-chip { min-height: 40px; }
 @media (max-width: 420px) { .shop-filter-btn span { display: none; } .shop-search-bar .shop-search-in:has(.shop-filter-btn) input { padding-right: 104px; } }
+
+/* Alles dabei?: chat with the dispatch */
+.st-chat { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-soft); display: grid; gap: 10px; }
+.st-chat h3 { margin: 0; font-family: var(--font-display); font-size: 22px; font-weight: 600; }
+.st-chat-presence { margin: 0; color: var(--text-muted); font-size: 15px; }
+.st-chat-log { display: grid; gap: 8px; max-height: 260px; overflow-y: auto; }
+.st-chat-log:empty { display: none; }
+.st-chat-msg { margin: 0; padding: 8px 12px; border-radius: var(--radius-md); background: var(--surface-3); max-width: 90%; display: grid; gap: 2px; }
+.st-chat-msg.is-guest { justify-self: end; background: var(--surface-2); border: 1px solid var(--border); }
+.st-chat-who { font-size: 13px; color: var(--text-muted); }
+.st-chat-text { overflow-wrap: anywhere; }
+.st-chat-form { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.st-chat-form[hidden] { display: none; }
+.st-chat-form input { min-height: 48px; padding: 0 12px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); color: var(--text); font: inherit; font-size: 16px; min-width: 0; }
+.st-chat-form .cart-go { margin-top: 0; width: auto; padding-inline: 20px; }
+
+/* Fahrer ist vor Ort */
+.st-driverhere { border-color: var(--gold); text-align: center; display: grid; gap: 10px; }
+.st-driverhere h2 { margin: 0; font-family: var(--font-display); font-size: 28px; color: var(--gold-strong); }
+.st-driverhere p { margin: 0; }
+.st-driverhere .cart-go { margin-top: 4px; }
+.dv .dv-here { margin-top: 16px; width: 100%; }
+.dv .dv-here-done { margin: 16px 0 0; color: var(--success); font-weight: 700; }
+.dv .dv-here-msg { margin: 8px 0 0; color: var(--danger); min-height: 1.2em; }

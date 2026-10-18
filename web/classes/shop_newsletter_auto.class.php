@@ -225,7 +225,7 @@ function shop_nla_run($budget = 20, $seconds = 20) {
 				if (!$room()) { break; }
 				$keys = shop_nla_keys($s); if (!shop_stamp_has_keys($keys)) { continue; }
 				if (!empty($cfg['voucher_expiry']['on'])) {
-					$v = fb_row("SELECT * FROM ".fb_t('tp_shop_coupons')." WHERE source IN ('stamp', 'offer') AND active = 1 AND used < max_uses AND valid_until > ? AND valid_until < ? AND ".shop_stamp_match()." ORDER BY valid_until LIMIT 1",
+					$v = fb_row("SELECT * FROM ".fb_t('tp_shop_coupons')." WHERE source IN ('stamp', 'offer', 'issue') AND active = 1 AND used < max_uses AND valid_until > ? AND valid_until < ? AND ".shop_stamp_match()." ORDER BY valid_until LIMIT 1",
 						'ssss', array($now, date('Y-m-d H:i:s', time() + (int)$cfg['voucher_expiry']['days'] * 86400), $keys[0], $keys[1]));
 					if ($v && shop_nla_try($s, 'voucher_expiry', $v['code'], function () use ($v) { return array('gutschein' => $v['code'], 'gutschein_wert' => shop_money((int)$v['value']), 'gutschein_bis' => date('d.m.Y', strtotime($v['valid_until']))); })) { $sent++; continue; }
 				}

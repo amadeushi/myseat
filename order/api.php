@@ -126,6 +126,40 @@ if ($op === 'arrived' || $op === 'rate_driver') {
 	api_out($op === 'arrived' ? shop_order_arrived($order) : shop_order_rate_driver($order, isset($body['rating']) ? $body['rating'] : 0));
 }
 
+// "Alles dabei?" on the status page after a delivery: what the box shows (GET, polled while the guest waits for an answer) and the report of the guest (POST); the order is found by its secret token
+if ($op === 'issue_state' || $op === 'issue_create') {
+	$tok = $op === 'issue_state' ? (isset($_GET['order']) ? (string)$_GET['order'] : '') : (isset($body['order']) ? (string)$body['order'] : '');
+	$order = shop_order_by_token($tok);
+	if (!$order) { api_out(array('ok' => false, 'error' => 'Bestellung nicht gefunden.'), 404); }
+	$restPhone = !empty($settings['mailPhone']) ? (string)$settings['mailPhone'] : '';
+	if ($op === 'issue_state') { api_out(array_merge(array('ok' => true), shop_issue_public($order, $restPhone))); }
+	// a few tries per visitor and hour (a typing mistake or two), not a hundred
+	$_SESSION['shop_issue_hits'] = isset($_SESSION['shop_issue_hits']) ? $_SESSION['shop_issue_hits'] : array();
+	$_SESSION['shop_issue_hits'] = array_values(array_filter($_SESSION['shop_issue_hits'], function ($t) { return $t > time() - 3600; }));
+	if (count($_SESSION['shop_issue_hits']) >= 8) { api_out(array('ok' => false, 'error' => 'Zu viele Versuche. Bitte ruf uns kurz an.')); }
+	$_SESSION['shop_issue_hits'][] = time();
+	$r = shop_issue_create($order, isset($body['items']) ? $body['items'] : array(), isset($body['note']) ? (string)$body['note'] : '', isset($body['wish']) ? (string)$body['wish'] : 'credit');
+	api_out($r['ok'] ? array_merge(array('ok' => true), shop_issue_public(shop_order_by_token($tok), $restPhone)) : $r);
+}
+
+// the chat about the report: new messages (GET, every few seconds while the chat is on screen) and a message of the guest (POST)
+if ($op === 'issue_chat' || $op === 'issue_msg') {
+	$tok = $op === 'issue_chat' ? (isset($_GET['order']) ? (string)$_GET['order'] : '') : (isset($body['order']) ? (string)$body['order'] : '');
+	$order = shop_order_by_token($tok);
+	if (!$order) { api_out(array('ok' => false, 'error' => 'Bestellung nicht gefunden.'), 404); }
+	if ($op === 'issue_chat') {
+		$c = shop_issue_chat_state(shop_issue_by_order((int)$order['id']), isset($_GET['since']) ? (int)$_GET['since'] : 0);
+		api_out(array('ok' => true, 'chat' => $c));
+	}
+	$_SESSION['shop_issue_msg_hits'] = isset($_SESSION['shop_issue_msg_hits']) ? $_SESSION['shop_issue_msg_hits'] : array();
+	$_SESSION['shop_issue_msg_hits'] = array_values(array_filter($_SESSION['shop_issue_msg_hits'], function ($t) { return $t > time() - 600; }));
+	if (count($_SESSION['shop_issue_msg_hits']) >= 30) { api_out(array('ok' => false, 'error' => 'Das waren schon viele Nachrichten. Bitte ruf uns kurz an.')); }
+	$_SESSION['shop_issue_msg_hits'][] = time();
+	$r = shop_issue_guest_say($order, isset($body['text']) ? (string)$body['text'] : '');
+	$r['chat'] = shop_issue_chat_state(shop_issue_by_order((int)$order['id']), isset($body['since']) ? (int)$body['since'] : 0, false);
+	api_out($r);
+}
+
 // notifications for the status page: the public key of the shop (the browser needs it to subscribe) and the subscription of this browser for one order
 if ($op === 'push_key') {
 	if (!shop_flag('push_on')) { api_out(array('ok' => false)); }
@@ -157,7 +191,7 @@ if ($op === 'repay') {
 // the credential, mapped to a name in Einstellungen > Lieferservice). GPS itself arrives separately and
 // continuously at order/driver_gps.php from the Traccar app in the background; these ops are the open
 // pool, his own queue (claimed, not yet started), claiming/starting/pausing/releasing/failing/completing one.
-if (in_array($op, array('driver_list', 'driver_claim', 'driver_start', 'driver_pause', 'driver_fail', 'driver_release', 'driver_complete'), true)) {
+if (in_array($op, array('driver_list', 'driver_claim', 'driver_start', 'driver_pause', 'driver_fail', 'driver_release', 'driver_complete', 'driver_here'), true)) {
 	$driver = shop_driver_by_device(isset($body['device']) ? $body['device'] : '');
 	if (!$driver) { api_out(array('ok' => false, 'error' => 'Dieses Gerät ist keinem Fahrer zugeordnet.'), 403); }
 	$driverId = (int)$driver['id'];
@@ -170,6 +204,7 @@ if (in_array($op, array('driver_list', 'driver_claim', 'driver_start', 'driver_p
 	if ($op === 'driver_fail') { $r = shop_driver_fail_order($driverId, $orderId, isset($body['reason']) ? (string)$body['reason'] : ''); }
 	if ($op === 'driver_release') { $r = shop_driver_release_order($driverId, $orderId); }
 	if ($op === 'driver_complete') { $r = shop_driver_complete_order($driverId, $orderId); }
+	if ($op === 'driver_here') { $r = shop_driver_here_order($driverId, $orderId); }
 	if (!$r['ok']) { api_out($r); }
 	api_out(array_merge(array('ok' => true), shop_driver_state($driverId)));
 }

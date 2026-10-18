@@ -307,6 +307,11 @@ $sh_secret = function ($label, $value, $hint = '') use ($sh_e) {
 		<?php $sh_help('Die Fahrerkarte zeigt die Spur, die ein Fahrer gefahren ist. Die Punkte werden so viele Tage aufbewahrt und danach gelöscht.', '0 heißt: Es wird nichts gespeichert, die Karte zeigt dann nur die aktuelle Position. Bitte informiert die Fahrer darüber.'); ?>
 		<?php $sh_row('sh-trk', 'track_days', 'Aufbewahrung', 'Tage', '0 bis 30.'); ?>
 
+		<h4 class="sh-sub">„Ich bin vor Ort“ des Fahrers</h4>
+		<?php $sh_cb('driver_here_on', 'Knopf „Ich bin vor Ort“ in der Fahrer-Übersicht', 'Der Gast sieht auf der Statusseite „Dein Fahrer ist da“ und bekommt eine Push-Meldung, wenn er sie erlaubt hat.'); ?>
+		<?php $sh_cb('driver_here_gps', 'Nur in der Nähe der Adresse', 'Der Knopf geht nur, wenn die letzte GPS-Position des Fahrerhandys (nicht älter als 3 Minuten) in der Nähe liegt. Fehlt die Position, ist der Knopf nicht gesperrt.'); ?>
+		<?php $sh_row('sh-hm', 'driver_here_m', 'Entfernung bis', 'Meter', '50 bis 1000.'); ?>
+
 		<h4 class="sh-sub">Touren <span class="sh-chip">in Erprobung</span></h4>
 		<?php $sh_help('Die Disposition fasst Lieferungen, die zusammen aus der Küche gehen, zu einer Tour zusammen (Tour A und B).', 'Der Küchenmonitor zeigt sie in einem gemeinsamen Rahmen mit einer gemeinsamen Zeit, auf dem Bon steht die Tour. Ausgeschaltet bleibt alles wie bisher.'); ?>
 		<?php $sh_cb('tours_on', 'Touren einschalten'); ?>
@@ -318,6 +323,18 @@ $sh_secret = function ($label, $value, $hint = '') use ($sh_e) {
 		<?php $sh_wide('sh-mail', 'notify_email', 'E-Mail-Adresse für Bestellungen', 'Hierhin kommt eine Mail bei jeder neuen Bestellung (und die Meldung zu Push und Rückfragen). Leer: Der Shop nimmt die E-Mail-Adresse aus den Stammdaten. <strong>Der Absender der Mails an die Gäste</strong> (Bestellbestätigung, Status, Stempelkarte, Codes) und der Weg über den Mailserver werden unter <a href="main_page.php?p=14">Newsletter &rsaquo; Absender</a> eingestellt, getrennt für Newsletter, Bestellung und Reservierung. Nur wenn dort für &bdquo;Bestellung und Lieferung&ldquo; nichts gespeichert ist, gehen diese Mails noch von dieser Adresse über den Server (PHP).', 'type="email" maxlength="160"'); ?>
 		<?php $sh_cb('sms_orders', 'SMS, wenn die Lieferung losfährt oder die Abholung bereit ist', 'Braucht eine Handynummer und eingerichteten SMS-Versand.'); ?>
 		<?php $sh_cb('feedback_on', 'Feedback-Mail nach der Bestellung', 'Zwei Stunden nach Abschluss, nur mit E-Mail-Adresse.'); ?>
+
+		<h4 class="sh-sub">Meldung „Es fehlt etwas“ <span class="sh-chip">in Erprobung</span></h4>
+		<?php $sh_help('Nach einer Lieferung erscheint auf der Statusseite des Gastes für eine Weile die Box „Alles dabei?“: Fahrer anrufen oder melden, was fehlt (Beilagensalat, Soße ...), mit dem Wunsch nach Nachlieferung oder Gutschrift.', 'Eine Gutschrift bis zum eingestellten Betrag stellt das System sofort aus (persönlicher Gutschein, wird bei der nächsten Bestellung abgezogen). Alles darüber, Posten ohne Preis und mehr als die erlaubten Sofort-Gutschriften warten in der Disposition auf deine Freigabe. Eine Nachlieferung entscheidet die Disposition: Sie legt einen kostenlosen Folgeauftrag an, den Küche und Fahrer wie jeden anderen sehen.'); ?>
+		<?php $sh_cb('issue_on', 'Meldung nach der Lieferung einschalten'); ?>
+		<?php $sh_row('sh-iw', 'issue_window_min', 'Meldung möglich für', 'Minuten', '30 bis 1440, ab „Geliefert“.'); ?>
+		<?php $sh_row('sh-ic', 'issue_cap', 'Gutschrift sofort bis', '€', 'Darüber gibt die Disposition frei.', '', 'decimal'); ?>
+		<?php $sh_row('sh-iv', 'issue_valid_days', 'Gutschein gilt', 'Tage'); ?>
+		<?php $sh_row('sh-ia', 'issue_auto_30d', 'Sofort-Gutschriften je Gast', 'in 30 Tagen', 'Die weiteren Meldungen gehen zur Freigabe.'); ?>
+		<?php $sh_cb('issue_chat_on', 'Chat mit der Disposition zur Meldung', 'Der Gast schreibt auf der Statusseite, die Disposition antwortet in der Meldungskarte. Antwortet er nicht mehr auf der Seite, bekommt er höchstens zwei SMS je Meldung.'); ?>
+		<?php $sh_cb('issue_ai_on', 'Automatische Antwort zuerst', 'Braucht den Schlüssel und das Tageslimit des Bestell-Chats. Sie entscheidet nichts: Gutschrift und Nachlieferung bleiben bei der Disposition, bei Allergie, Beschwerde oder Geld zurück übernimmt immer ein Mensch.'); ?>
+		<?php $sh_row('sh-ik', 'issue_keep_days', 'Chat-Nachrichten löschen nach', 'Tagen', '7 bis 365.'); ?>
+		<?php $sh_cb('issue_sms_driver', 'SMS an das Betriebshandy des Fahrers bei einer Meldung', 'Braucht die Nummer des Fahrers (Fahrerliste) und eingerichteten SMS-Versand.'); ?>
 
 		<h4 class="sh-sub">Kundenkonto</h4>
 		<?php $sh_help('Gäste melden sich ohne Passwort mit E-Mail-Adresse oder Handynummer an, mit einem 6-stelligen Code. Danach sehen sie ihre früheren Bestellungen, können sie nachbestellen und sehen ihre Stempelkarte.', 'Sie bekommen einen Code und einen Link (bei SMS ein Kurzlink über YOURLS, wenn dort „Kurzlink“ eingerichtet ist). Das Konto ist die bestätigte Nummer oder Adresse, die Bestellungen werden darüber gefunden. Der Code per SMS braucht eingerichteten SMS-Versand, per Mail die E-Mail-Adresse oben.'); ?>

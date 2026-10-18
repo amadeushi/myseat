@@ -1,0 +1,10 @@
+# DMARC aggregate reports received by e-mail (kept locally, not part of the code)
+dmarc/
+
+# secrets (never commit)
+config/sipgate_webhook_key.php
+
+# local material and generated files
+lieferando belege/
+__pycache__/
+.DS_Store
