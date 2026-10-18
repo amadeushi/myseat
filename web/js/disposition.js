@@ -152,9 +152,13 @@
 	function drawOut() {
 		var list = $('#k-outlist'), q = ($('#k-outq').value || '').trim().toLowerCase(); if (!list) { return; }
 		var rows = outProducts.filter(function (p) { return !q || p.title.toLowerCase().indexOf(q) >= 0 || p.cat.toLowerCase().indexOf(q) >= 0; });
-		var outs = rows.filter(function (p) { return p.out; }), rest = rows.filter(function (p) { return !p.out; }), cat = null;
-		function row(p) { return '<label class="k-outrow' + (p.out ? ' is-out' : '') + '"><span class="k-outname">' + esc(p.title) + '</span><span class="k-pause-switch"><input type="checkbox" role="switch" data-out="' + p.id + '" aria-label="' + esc(p.title) + ' heute aus"' + (p.out ? ' checked' : '') + '/><span class="k-pause-track" aria-hidden="true"></span><span class="k-outstate">' + (p.out ? 'heute aus' : 'da') + '</span></span></label>'; }
+		var blocked = rows.filter(function (p) { return p.blocked; }), outs = rows.filter(function (p) { return p.out && !p.blocked; }), rest = rows.filter(function (p) { return !p.out; }), cat = null;
+		function row(p) {
+			var lock = p.blocked ? '' : '<button type="button" class="k-outlock" data-lock="' + p.id + '" aria-label="' + esc(p.title) + ' auf unbestimmte Zeit sperren" title="Auf unbestimmte Zeit sperren">Sperren</button>';
+			return '<div class="k-outrow' + (p.out ? ' is-out' : '') + (p.blocked ? ' is-blocked' : '') + '"><label class="k-outlbl"><span class="k-outname">' + esc(p.title) + '</span><span class="k-pause-switch"><input type="checkbox" role="switch" data-out="' + p.id + '" aria-label="' + esc(p.title) + (p.blocked ? ' gesperrt, ausschalten gibt es wieder frei' : ' heute aus') + '"' + (p.out ? ' checked' : '') + '/><span class="k-pause-track" aria-hidden="true"></span><span class="k-outstate">' + (p.blocked ? 'gesperrt' : (p.out ? 'heute aus' : 'da')) + '</span></span></label>' + lock + '</div>';
+		}
 		var h = '';
+		if (blocked.length) { h += '<h3 class="k-outh">Gesperrt, bis du es freigibst (' + blocked.length + ')</h3>' + blocked.map(row).join(''); }
 		if (outs.length) { h += '<h3 class="k-outh">Heute aus (' + outs.length + ')</h3>' + outs.map(row).join(''); }
 		rest.forEach(function (p) { if (p.cat !== cat) { cat = p.cat; h += '<h3 class="k-outh">' + esc(cat || 'Sonstiges') + '</h3>'; } h += row(p); });
 		list.innerHTML = h || '<p class="k-outempty">Kein Gericht gefunden.</p>';
@@ -176,11 +180,23 @@
 			var id = +inp.dataset.out, want = inp.checked; inp.disabled = true;
 			post({ op: 'out_set', id: id, out: want ? 1 : 0 }).then(function (r) {
 				if (!r.ok) { inp.checked = !want; inp.disabled = false; notify(r.error || 'Das hat nicht geklappt.'); return; }
-				outProducts.forEach(function (p) { if (p.id === id) { p.out = want; } });
+				outProducts.forEach(function (p) { if (p.id === id) { p.out = want; p.blocked = false; } });
 				setOutN(r.out_n); var keep = $('#k-outlist').scrollTop; drawOut(); $('#k-outlist').scrollTop = keep;
 				var again = $('#k-outlist [data-out="' + id + '"]'); if (again) { again.focus(); }
 				notify('\u201e' + r.title + '\u201c ist ' + (want ? 'heute aus' : 'wieder da') + '.', { kind: 'ok' });
 			}).catch(function () { inp.checked = !want; inp.disabled = false; notify('Keine Verbindung.'); });
+		});
+		// "Sperren": off until somebody releases it (the switch of a blocked dish releases it)
+		$('#k-outlist').addEventListener('click', function (ev) {
+			var b = ev.target.closest('[data-lock]'); if (!b) { return; }
+			var id = +b.dataset.lock; b.disabled = true;
+			post({ op: 'out_set', id: id, out: 1, mode: 'always' }).then(function (r) {
+				if (!r.ok) { b.disabled = false; notify(r.error || 'Das hat nicht geklappt.'); return; }
+				outProducts.forEach(function (p) { if (p.id === id) { p.out = true; p.blocked = true; } });
+				setOutN(r.out_n); var keep = $('#k-outlist').scrollTop; drawOut(); $('#k-outlist').scrollTop = keep;
+				var again = $('#k-outlist [data-out="' + id + '"]'); if (again) { again.focus(); }
+				notify('\u201e' + r.title + '\u201c ist gesperrt, bis du es wieder freigibst.', { kind: 'ok' });
+			}).catch(function () { b.disabled = false; notify('Keine Verbindung.'); });
 		});
 	})();
 	// ---- a Lieferando receipt (PDF) from this computer becomes an order, like the one the Pi sends from the tablet

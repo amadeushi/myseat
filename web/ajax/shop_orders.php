@@ -126,8 +126,8 @@ if ($op === 'tour_ready') {
 }
 if ($op === 'out_set') {
 	$who2 = isset($_SESSION['valid_user']) && is_string($_SESSION['valid_user']) ? $_SESSION['valid_user'] : 'Disposition';
-	$r = shop_out_set((int)(isset($_POST['id']) ? $_POST['id'] : 0), !empty($_POST['out']), $who2);
-	so_out($r['ok'] ? array('ok' => true, 'out' => $r['out'], 'title' => $r['title'], 'out_n' => shop_out_count()) : $r);
+	$r = shop_out_set((int)(isset($_POST['id']) ? $_POST['id'] : 0), !empty($_POST['out']), $who2, isset($_POST['mode']) && $_POST['mode'] === 'always' ? 'always' : 'today');
+	so_out($r['ok'] ? array('ok' => true, 'out' => $r['out'], 'blocked' => $r['blocked'], 'title' => $r['title'], 'out_n' => shop_out_count()) : $r);
 }
 if ($op === 'courier_job') {
 	$who0 = isset($_SESSION['valid_user']) && is_string($_SESSION['valid_user']) ? $_SESSION['valid_user'] : 'Disposition';

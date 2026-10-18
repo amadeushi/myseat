@@ -250,7 +250,7 @@ function shop_chat_run(&$c, $out, $st, $kind, $val) {
 				if ((int)$cat['id'] !== $cid) { continue; }
 				$b = array(); $gone = array();
 				foreach ($cat['products'] as $p) { if (!empty($p['out'])) { $gone[] = $p['title']; } else { $b['prod:'.(int)$p['id']] = shop_chat_product_label($p); } }
-				$out[] = shop_chat_msg('Das gibt es bei „'.trim($cat['name']).'“:'.($gone ? "\nHeute leider aus: ".implode(', ', $gone).'.' : ''), $b + array('more' => 'Andere Kategorie'));
+				$out[] = shop_chat_msg('Das gibt es bei „'.trim($cat['name']).'“:'.($gone ? "\nGerade nicht verfügbar: ".implode(', ', $gone).'.' : ''), $b + array('more' => 'Andere Kategorie'));
 			}
 			$c['state'] = 'prod'; return shop_chat_finish($c, $out);
 		}
@@ -310,11 +310,11 @@ function shop_chat_search(&$c, $out, $text) {
 	}
 	$c['state'] = 'prod';
 	$gone = array(); $hits = array_values(array_filter($hits, function ($p) use (&$gone) { if (!empty($p['out'])) { $gone[] = $p['title']; return false; } return true; }));
-	if (!$hits && $gone) { $out[] = shop_chat_msg('„'.$gone[0].'“ ist heute leider aus. Etwas anderes?', shop_chat_browse_buttons(), shop_chat_free_kind()); return shop_chat_finish($c, $out); }
+	if (!$hits && $gone) { $out[] = shop_chat_msg('„'.$gone[0].'“ ist gerade leider nicht verfügbar. Etwas anderes?', shop_chat_browse_buttons(), shop_chat_free_kind()); return shop_chat_finish($c, $out); }
 	if (!$hits) { $out[] = shop_chat_msg('Dazu finde ich nichts. Anderer Begriff oder eine Kategorie?', shop_chat_browse_buttons(), 'text'); return shop_chat_finish($c, $out); }
 	$b = array();
 	foreach (array_slice($hits, 0, 8) as $p) { $b['prod:'.(int)$p['id']] = shop_chat_product_label($p); }
-	$out[] = shop_chat_msg((count($hits) > 8 ? 'Die ersten acht Treffer:' : 'Meinst du eins davon?').($gone ? "\nHeute leider aus: ".implode(', ', $gone).'.' : ''), $b + array('more' => 'Andere Kategorie'), 'text');
+	$out[] = shop_chat_msg((count($hits) > 8 ? 'Die ersten acht Treffer:' : 'Meinst du eins davon?').($gone ? "\nGerade nicht verfügbar: ".implode(', ', $gone).'.' : ''), $b + array('more' => 'Andere Kategorie'), 'text');
 	return shop_chat_finish($c, $out);
 }
 
@@ -322,7 +322,7 @@ function shop_chat_search(&$c, $out, $text) {
 function shop_chat_pick_product(&$c, $out, $pid, $pre = null) {
 	$p = shop_catalog_product($pid);
 	if (!$p) { $c['state'] = 'cat'; $out[] = shop_chat_ask_category($c['ctx'], 'Das Gericht gibt es leider nicht mehr.'); return shop_chat_finish($c, $out); }
-	if (!empty($p['out'])) { $c['state'] = 'cat'; $out[] = shop_chat_ask_category($c['ctx'], '„'.$p['title'].'“ ist heute leider aus.'); return shop_chat_finish($c, $out); }
+	if (!empty($p['out'])) { $c['state'] = 'cat'; $out[] = shop_chat_ask_category($c['ctx'], '„'.$p['title'].'“ ist gerade leider nicht verfügbar.'); return shop_chat_finish($c, $out); }
 	$c['ctx']['pend'] = array('pid' => $pid, 'vid' => 0, 'opts' => array(), 'gi' => 0, 'pre' => array());
 	if (is_array($pre)) {
 		foreach ($p['variations'] as $v) { if ((int)$v['id'] === (int)(isset($pre['vid']) ? $pre['vid'] : 0)) { $c['ctx']['pend']['vid'] = (int)$v['id']; } }

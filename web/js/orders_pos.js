@@ -72,7 +72,7 @@
 	}
 	function itemHtml(p) {
 		var price = p.variations.length ? Math.min.apply(null, p.variations.map(function (v) { return v.price; })) : p.price;
-		return '<button type="button" class="kx-item' + (p.out ? ' is-out' : '') + '" data-product="' + p.id + '"' + (p.out ? ' aria-disabled="true"' : '') + '><span class="kx-item-t">' + esc(p.title) + '</span><span class="kx-item-p">' + (p.out ? '<span class="kx-item-out">heute aus</span>' : (p.variations.length ? 'ab ' : '') + money(price)) + '</span></button>';
+		return '<button type="button" class="kx-item' + (p.out ? ' is-out' : '') + '" data-product="' + p.id + '"' + (p.out ? ' aria-disabled="true"' : '') + '><span class="kx-item-t">' + esc(p.title) + '</span><span class="kx-item-p">' + (p.out ? '<span class="kx-item-out">' + (p.blocked ? 'gesperrt' : 'heute aus') + '</span>' : (p.variations.length ? 'ab ' : '') + money(price)) + '</span></button>';
 	}
 	function productsOf(catId) {
 		if (catId === 'pop' || catId === 'fav') {
@@ -116,16 +116,16 @@
 		if (document.hidden) { return; }
 		get('menu').then(function (r) {
 			if (!r || !r.ok) { return; }
-			var out = {}; r.categories.forEach(function (c) { c.products.forEach(function (p) { out[+p.id] = !!p.out; }); });
+			var out = {}, blk = {}; r.categories.forEach(function (c) { c.products.forEach(function (p) { out[+p.id] = !!p.out; blk[+p.id] = !!p.blocked; }); });
 			var changed = false;
-			catalog.forEach(function (c) { c.products.forEach(function (p) { var o = !!out[p.id]; if (!!p.out !== o) { p.out = o; changed = true; } }); });
+			catalog.forEach(function (c) { c.products.forEach(function (p) { var o = !!out[p.id]; if (!!p.out !== o || !!p.blocked !== !!blk[p.id]) { p.out = o; p.blocked = !!blk[p.id]; changed = true; } }); });
 			if (changed && !document.querySelector('dialog[open]')) { renderProducts(); }
 		}).catch(function () {});
 	}
 	setInterval(refreshOut, 120000);
 	// a dish without choices goes straight into the Bon (the same dish again raises the quantity); one with choices opens the dialog
 	function addProduct(p) {
-		if (p.out) { setMsg('„' + p.title + '“ ist heute aus.', 'warn'); return; }   // switched off for today in the dispatch: it cannot go into the Bon (the server would refuse it as well)
+		if (p.out) { setMsg('„' + p.title + '“ ist ' + (p.blocked ? 'gesperrt' : 'heute aus') + '.', 'warn'); return; }   // switched off for today in the dispatch: it cannot go into the Bon (the server would refuse it as well)
 		if (p.variations.length || p.groups.length) { buildPosDialog(p); return; }
 		var same = cart.filter(function (l) { return l.pid === p.id && !l.note; })[0];
 		if (same) { same.qty = Math.min(50, same.qty + 1); } else { cart.push({ pid: p.id, vid: 0, opts: {}, qty: 1, note: '', title: p.title, variation: '', options: [], unit: p.price }); }
@@ -581,7 +581,7 @@
 			var prod = null;
 			catalog.forEach(function (c) { c.products.forEach(function (p) { if (p.title.toLowerCase() === hi.title.toLowerCase()) { prod = p; } }); });
 			if (!prod) { skipped.push(hi.title); return; }
-			if (prod.out) { skipped.push(hi.title + ' (heute aus)'); return; }
+			if (prod.out) { skipped.push(hi.title + ' (nicht verfügbar)'); return; }
 			var vid = 0;
 			if (hi.variation) { var v = prod.variations.filter(function (x) { return x.title.toLowerCase() === hi.variation.toLowerCase(); })[0]; if (v) { vid = v.id; } else { skipped.push(hi.title + ' (' + hi.variation + ')'); return; } }
 			var opts = {};

@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-18 == mySeat v6.56.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: Artikel auf unbestimmte Zeit sperren. In der Disposition (Dialog "Heute aus") hat jede Zeile einen Knopf "Sperren": der Artikel bleibt aus, bis er dort wieder freigegeben wird (Schalter ausschalten), auch über Mitternacht. Gesperrte Artikel stehen in einer eigenen Gruppe oben. Gäste sehen "nicht verfügbar" statt "heute aus", die Kasse "gesperrt". Texte im Bestell-Chat und der Kasse sagen jetzt "gerade nicht verfügbar", wenn ein Gericht nicht bestellbar ist. Keine Datenbankänderung (die Sperre ist das Datum 31.12.9999 in der Spalte der Tagessperre).
+
 2026-10-18 == mySeat v6.55.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geändert: Bei einer Lieferando-Bestellung sind auf der Fahrerseite der Anruf-Knopf ("Anrufen über Lieferando") und "Ich bin vor Ort" ausgegraut, mit dem Hinweis auf die Lieferando Courier App. Der Server lehnt "Ich bin vor Ort" bei Lieferando-Bestellungen ebenfalls ab.

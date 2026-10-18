@@ -565,7 +565,7 @@ function shop_catalog_product($id) {
 	$p = fb_row("SELECT id, category_id, title, description, image_url, price_cents, allergens, configurator, sold_out_on FROM ".fb_t('tp_shop_products')." WHERE id = ? AND active = 1", 'i', array((int)$id));
 	if (!$p) { return null; }
 	$p['configurator'] = (int)$p['configurator'];
-	$p['out'] = shop_out_today($p['sold_out_on']); unset($p['sold_out_on']);
+	$p['out'] = shop_out_today($p['sold_out_on']); $p['blocked'] = shop_out_blocked($p['sold_out_on']); unset($p['sold_out_on']);
 	$p['variations'] = array();
 	foreach (fb_rows("SELECT id, title, price_cents, multiplier FROM ".fb_t('tp_shop_variations')." WHERE product_id = ? ORDER BY sort, id", 'i', array((int)$id)) as $v) {
 		$p['variations'][] = array('id' => (int)$v['id'], 'title' => $v['title'], 'price' => (int)$v['price_cents'], 'mult' => (float)$v['multiplier']);
@@ -589,7 +589,7 @@ function shop_price_line($l) {
 	$qty = max(1, min(50, (int)(isset($l['qty']) ? $l['qty'] : 1)));
 	$p = shop_catalog_product($pid);
 	if (!$p) { return array('ok' => false, 'error' => 'Ein Gericht im Warenkorb ist nicht mehr verfügbar.'); }
-	if (!empty($p['out'])) { return array('ok' => false, 'error' => '„'.$p['title'].'“ ist heute leider aus. Bitte nimm es aus dem Warenkorb.'); }
+	if (!empty($p['out'])) { return array('ok' => false, 'error' => '„'.$p['title'].'“ ist gerade leider nicht verfügbar. Bitte nimm es aus dem Warenkorb.'); }
 	$base = $p['price']; $mult = 1.0; $vtitle = '';
 	if ($p['variations']) {
 		$vid = (int)(isset($l['vid']) ? $l['vid'] : 0); $found = null;
@@ -1198,7 +1198,7 @@ function shop_menu() {
 		FROM ".fb_t('tp_shop_products')." p WHERE p.active = 1 ORDER BY p.sort, p.id");
 	$by = array(); $pop = shop_popular_ids();
 	foreach ($prods as $p) {
-		$p['out'] = shop_out_today($p['sold_out_on']); $p['popular'] = in_array((int)$p['id'], $pop, true); $p['isnew'] = shop_is_new($p['added_at']);   // marks of the order page and the chat
+		$p['out'] = shop_out_today($p['sold_out_on']); $p['blocked'] = shop_out_blocked($p['sold_out_on']); $p['popular'] = in_array((int)$p['id'], $pop, true); $p['isnew'] = shop_is_new($p['added_at']);   // marks of the order page and the chat
 		$by[(int)$p['category_id']][] = $p;
 	}
 	$out = array();

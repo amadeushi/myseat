@@ -76,7 +76,7 @@ $dp_pause = shop_pause_state();
 	</main>
 	<dialog class="fk-dialog k-outdlg" id="k-outdlg" aria-labelledby="k-outdlg-t">
 		<h2 id="k-outdlg-t">Heute aus</h2>
-		<p class="fk-job-hint">Was heute nicht mehr geht. Gäste sehen "heute aus" und können es nicht bestellen, morgen ist alles wieder da.</p>
+		<p class="fk-job-hint">Was heute nicht mehr geht. Gäste sehen "heute aus" und können es nicht bestellen, morgen ist alles wieder da. Mit "Sperren" bleibt ein Gericht aus, bis du es wieder freigibst.</p>
 		<input type="search" id="k-outq" class="k-outq" placeholder="Gericht suchen" aria-label="Gericht suchen" autocomplete="off"/>
 		<div class="k-outlist" id="k-outlist" role="group" aria-label="Gerichte"></div>
 		<div class="k-outfoot"><button type="button" class="k-go secondary k-icbtn" id="k-outclose" aria-label="Schließen" title="Schließen"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round"/></svg></button></div>
