@@ -302,6 +302,9 @@
 			if (/curry/.test(t)) { return { c: '#e2a626' }; }
 			if (/chili/.test(t)) { return { c: '#c8321f', f: '#f1a08a' }; }
 			if (/barbecue|bbq/.test(t)) { return { c: '#9a3d20' }; }
+			if (/ketchup/.test(t)) { return { c: '#c8281d', f: '#ee6a5c' }; }
+			if (/vayo|vegane mayo/.test(t)) { return { c: '#f1ecc4', f: '#5f9a3a' }; }
+			if (/mayo/.test(t)) { return { c: '#f8f2da' }; }
 			if (/champignon|rahm/.test(t)) { return { c: '#d9c7a6', f: '#8c7447' }; }
 			return { c: '#d4a762' };
 		}
@@ -331,7 +334,7 @@
 			var box = $('.pz-dips'), want = {};
 			Object.keys(sel.opts).map(Number).forEach(function (id) {
 				var it = items[id].it;
-				if (it.icon !== 'dip') { return; }
+				if (!/^dip/.test(it.icon || '')) { return; }   // 'dip' and the sauce cups 'dip_...'
 				var q = Math.min(sel.opts[id], 3);
 				want[id] = q;
 				var cur = dipNodes[id];

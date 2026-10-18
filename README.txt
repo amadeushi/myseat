@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-19 == mySeat v6.58.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Behoben (Pizzakonfigurator): Mit v6.58.1 standen die gewählten Dips nicht mehr als Schälchen neben der Pizza, weil der Konfigurator nur das Symbol "dip" kannte. Jetzt gilt jedes Symbol "dip_..." als Dip. Die Schälchen neben der Pizza haben auch für Ketchup, Mayonnaise und vegane Vayonaise eine eigene Farbe.
+
 2026-10-19 == mySeat v6.58.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Behoben (Pizzakonfigurator): Die Dip-Soßen hießen nach dem Zusammenführen "extra ..." und wurden deshalb als Soße auf die Pizza gemalt statt als Dip-Schälchen daneben. Jede der zwölf Dip-Soßen (Sambal Hollandaise, Sauce Hollandaise, Knoblauch, Curry, Barbecue, Sticky Korean BBQ, Champignonrahm, Chili, Kräuterquark, Ketchup, Mayonnaise, vegane Vayonaise) hat jetzt ein eigenes Schälchen mit der passenden Farbe. Die Symbole stehen auch in der Auswahl des Menü-Editors.
