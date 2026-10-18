@@ -191,10 +191,10 @@
 		}).join('') + '</div>' : '';
 		dlg.innerHTML =
 			'<header class="pz-top"><button type="button" class="pz-back" aria-label="Zurück zur Speisekarte"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
-			'<h2 id="pz-title">' + esc(p.title) + '</h2><button type="button" class="pz-reset" hidden>Neu belegen</button></header>' +
+			'<h2 id="pz-title">' + esc(p.title) + '</h2><button type="button" class="pz-dice"><img src="zeus-stamp.png" width="20" height="27" alt=""><span>Zeus würfelt</span></button><button type="button" class="pz-reset" hidden>Neu belegen</button></header>' +
 			'<div class="pz-stage"><svg class="pz-wood" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' + wood() + '</svg>' +
 			'<svg class="pz-pizza" viewBox="-124 -124 248 248" role="img" aria-label="Deine Pizza von oben"></svg>' +
-			'<div class="pz-dips" aria-hidden="true"></div><p class="pz-sum"></p></div>' +
+			'<div class="pz-dips" aria-hidden="true"></div><p class="pz-zeus" hidden><strong>Zeus hat gewürfelt.</strong> Gefällt dir die Belegung nicht? Tipp einfach etwas anderes an.</p><p class="pz-sum"></p></div>' +
 			'<section class="pz-bench">' + teig + '<div class="pz-tabs" role="tablist" aria-label="Zutaten">' + tabs + '</div><div class="pz-panel" id="pz-panel" role="tabpanel"></div></section>' +
 			'<footer class="pz-foot"><span class="pz-step"><button type="button" class="pz-qty" id="pz-minus" aria-label="Weniger">&minus;</button><span class="pz-qnum" id="pz-qnum">1</span><button type="button" class="pz-qty" id="pz-plus" aria-label="Mehr">+</button></span>' +
 			'<button type="button" class="pz-add" id="pz-add"><span id="pz-add-label"></span><span id="pz-add-price"></span></button></footer><p class="pz-live" role="status" aria-live="polite"></p>';
@@ -455,7 +455,42 @@
 			$('#pz-add-price').textContent = miss ? '' : fmt(unit() * sel.qty);
 		}
 
+		/* the dice of Zeus: a random topping, as the guest could tap it together himself (one sauce at most, one cheese at most, a few toppings, up to two dips); the dough stays as chosen.
+		   The pieces fall onto the dough one after the other (all at once with a reduced-motion setting); the note disappears after a few seconds or with the next tap. */
+		var rolling = false, zeusTimer = 0, reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		function hideZeus() { clearTimeout(zeusTimer); var z = $('.pz-zeus'); if (z) { z.hidden = true; } }
+		function rnd(n) { return Math.floor(Math.random() * n); }
+		function randomIds() {
+			var ids = [];
+			p.groups.forEach(function (g) {
+				var its = g.items.slice(), a = its.length ? artOf(its[0]) : null, kind = a ? a.t : 'piece', cap = g.max > 0 ? g.max : its.length, n;
+				if (!its.length) { return; }
+				n = kind === 'side' ? rnd(3) : (kind === 'sauce' || kind === 'melt' ? rnd(2) : 1 + rnd(3));
+				n = Math.max(g.min, Math.min(n, cap, its.length));
+				while (n-- > 0) { var k = rnd(its.length); ids.push(its[k].id); its.splice(k, 1); }
+			});
+			return ids;
+		}
+		function rollPizza() {
+			if (rolling) { return; }
+			var ids = randomIds(), tries = 0, key = function (a) { return a.slice().sort().join(','); }, now = Object.keys(sel.opts).sort().join(',');
+			while (key(ids) === now && tries++ < 20) { ids = randomIds(); }
+			Object.keys(sel.opts).forEach(function (k) { delete sel.opts[k]; });
+			syncPizza(0); refresh(); hideZeus();
+			function finish() {
+				rolling = false; $('.pz-dice').disabled = false; var z = $('.pz-zeus'); z.hidden = false; clearTimeout(zeusTimer); zeusTimer = setTimeout(hideZeus, 6000);
+				say('Zeus hat gewürfelt. ' + $('.pz-sum').textContent);
+			}
+			if (reduce || !ids.length) { ids.forEach(function (id) { sel.opts[id] = 1; }); syncPizza(0); refresh(); finish(); return; }
+			rolling = true; $('.pz-dice').disabled = true;
+			var i = 0;
+			(function next() {
+				if (i < ids.length) { var id = ids[i++]; sel.opts[id] = 1; syncPizza(id); refresh(); setTimeout(next, 150); } else { finish(); }
+			})();
+		}
+
 		function change(id, d) {
+			hideZeus();
 			var e = items[id], q = sel.opts[id] || 0, g = e.g, it = e.it, nq = Math.max(0, Math.min(it.max, q + d));
 			if (d > 0 && q === 0 && g.max === 1) { g.items.forEach(function (x) { delete sel.opts[x.id]; }); }
 			else if (d > 0 && g.max > 0 && groupSum(g) >= g.max) { say('Höchstens ' + g.max + ' aus „' + gtitle(g) + '“.'); return; }
@@ -471,6 +506,7 @@
 		dlg.onclick = function (ev) {
 			var t = ev.target;
 			if (t.closest('.pz-back')) { dlg.close(); return; }
+			if (t.closest('.pz-dice')) { rollPizza(); return; }
 			var tb = t.closest('.pz-tab'); if (tb) { tab = +tb.dataset.tab; renderPanel(); return; }
 			var ch = t.closest('.pz-chip');
 			if (ch) {
@@ -481,7 +517,7 @@
 			var ls = t.closest('.pz-less'); if (ls) { change(+ls.dataset.less, -1); return; }
 			var tile = t.closest('.pz-tile');
 			if (tile) { var id = +tile.dataset.id; if (items[id].it.max === 1 && sel.opts[id]) { if (items[id].g.min > 0) { return; } change(id, -1); } else { change(id, 1); } return; }
-			if (t.closest('.pz-reset')) { Object.keys(sel.opts).forEach(function (k) { delete sel.opts[k]; }); syncPizza(0); refresh(); say('Der Teig ist wieder leer.'); return; }
+			if (t.closest('.pz-reset')) { hideZeus(); Object.keys(sel.opts).forEach(function (k) { delete sel.opts[k]; }); syncPizza(0); refresh(); say('Der Teig ist wieder leer.'); return; }
 			if (t.closest('#pz-minus')) { sel.qty = Math.max(1, sel.qty - 1); refresh(); return; }
 			if (t.closest('#pz-plus')) { sel.qty = Math.min(50, sel.qty + 1); refresh(); return; }
 			if (t.closest('#pz-add')) {

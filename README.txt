@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-19 == mySeat v6.59.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu (Pizzakonfigurator): "Zeus würfelt". Der Knopf oben im Dialog legt eine zufällige Belegung auf den Teig (höchstens eine Soße und ein Käse, ein bis drei Beläge je Gruppe, bis zu zwei Dips; der Teig bleibt, wie der Gast ihn gewählt hat). Die Beläge fallen nacheinander auf die Pizza. Ein kurzer Hinweis sagt, dass Zeus gewürfelt hat; er verschwindet mit dem nächsten Antippen.
+ * Speisekarte (Daten): "Schnitzel nach Wunsch" nutzt das Foto vom Sambalschnitzel; das Sambalschnitzel ist aus "Unsere Bestseller" entfernt.
+
 2026-10-19 == mySeat v6.59.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Schnitzel nach Wunsch (Baukasten für die Bestellseite). Der gezeichnete Teller von amadeus.delivery/schnitzel-nach-wunsch/ hängt jetzt am echten Gericht: Sorte (Sambal, Jäger, Toskana) als Gruppe "Sorte", das Fleisch als Variante, die Beilage aus der Gruppe "Beilagen", die Dips aus "Soßen zum Dippen" (jetzt zwölf, mit Champignonrahm und Sticky Korean BBQ), eine Salatbeilage ist immer dabei. "Zeus würfelt" stellt einen zufälligen Teller zusammen. Der Dialog ist der des Pizzakonfigurators, die Preise kommen vom Server. Im Menü-Editor gibt es dafür den Konfigurator "Schnitzel nach Wunsch (Teller)" (Wert 3). Neue Dateien: order/schnitzel.js, order/schnitzel.css, order/zeus-stamp.png.

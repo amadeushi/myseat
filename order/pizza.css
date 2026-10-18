@@ -148,3 +148,12 @@
 .pz-count, .pz-badge { background: var(--s); color: var(--g2); box-shadow: 0 0 0 1.5px var(--g); }
 .pz-tile[aria-pressed="true"] { border-color: #a8873f; box-shadow: inset 0 0 0 2px #a8873f; }
 .pz-tile[aria-pressed="true"] .pz-ico-wrap::after { background-color: var(--s); }
+
+/* the dice of Zeus (order/pizza.js): button in the top bar, a short note on the table after a roll */
+.pz-dice { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px 0 10px; border: 1px solid var(--gl); border-radius: 999px; background: transparent; color: var(--g2); font-size: 14px; font-weight: 700; cursor: pointer; }
+.pz-dice img { display: block; height: 26px; width: auto; border-radius: 50%; }
+.pz-dice:hover { border-color: var(--g); background: rgba(201, 162, 89, .1); color: var(--g2); }
+.pz-dice:disabled { opacity: .75; cursor: progress; }
+.pz-zeus { position: absolute; z-index: 2; top: 8px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 24px); margin: 0; padding: 6px 14px; border-radius: 12px; background: rgba(21, 19, 18, .92); color: var(--cream); font-size: 13px; line-height: 1.35; text-align: center; pointer-events: none; }
+.pz-zeus[hidden] { display: none; }
+@media (max-width: 480px) { .pz-dice span { font-size: 13px; } }
