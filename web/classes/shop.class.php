@@ -134,6 +134,9 @@ function shop_ensure_schema() {
 	// delivery: the driver tapped "Ich bin vor Ort" (shop_driver_here_order)
 	$hcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'driver_here_at'");
 	if (!$hcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `driver_here_at` DATETIME NULL"); }
+	// "Unsere Bestseller": a dish carries a position here (1 = first) and the order page shows it in that rubric as well as in its own category; NULL = not in the rubric
+	$fcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_products')." LIKE 'featured'");
+	if (!$fcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_products')." ADD `featured` INT NULL DEFAULT NULL"); }
 	$acol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'arrived_at'");
 	if (!$acol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `arrived_at` DATETIME NULL, ADD `driver_rating` TINYINT NULL, ADD `driver_rated_at` DATETIME NULL"); }
 	// diet marks of a dish, ticked in the menu editor: 'veg', 'vegan' (implies veg), 'spicy', comma separated; NULL = nobody has looked at this dish yet (nothing is shown to guests)
@@ -342,6 +345,7 @@ function shop_defaults() {
 		'chat_on' => '0',           // order by chat (test): guided conversation at order/chat.php (web/classes/shop_chat.class.php)
 		'tours_on' => '0',          // tours (test): the dispatch groups deliveries that leave the kitchen together (web/classes/shop_tours.class.php)
 		'push_on' => '1',           // push messages for the status page of an order (web/classes/shop_push.class.php)
+		'featured_title' => 'Unsere Bestseller', 'featured_desc' => '',   // name and short text of the rubric with the dishes the owner picked (the order page only)
 		'driver_here_on' => '0', 'driver_here_gps' => '1', 'driver_here_m' => '150', // "Ich bin vor Ort" of the driver (shows the guest a card + push); only with the phone's GPS within this many metres of the address
 		'issue_on' => '0',          // "Alles dabei?": the guest reports on the status page that something is missing after a delivery (web/classes/shop_issue.class.php); off until the owner switches it on
 		'issue_window_min' => '90', 'issue_cap' => '10', 'issue_valid_days' => '60', 'issue_auto_30d' => '2', 'issue_chat_on' => '0', 'issue_ai_on' => '0', 'issue_keep_days' => '60', 'issue_sms_driver' => '1', // chat with the dispatch about a report (off), the model answers first (off, needs the key of the order chat), days the messages are kept; minutes after the delivery, credit issued at once up to this many euro, days valid, automatic credits per guest in 30 days, SMS to the driver's company phone
@@ -1187,11 +1191,13 @@ function shop_find_zone_w3w($words) {
 	return array('ok' => true, 'zone' => $zone, 'lat' => $pos[0], 'lng' => $pos[1], 'words' => trim((string)$words, "/ \t\n\r\0\x0B"));
 }
 
+const SHOP_FEATURED_CAT = 9999;   // id of the rubric "Unsere Bestseller" on the order page (not a row of tp_shop_categories)
 // ---- light menu for the list page: products per category with a flag for "has choices" and the lowest price
-function shop_menu() {
+// $featured: the order page also gets the rubric "Unsere Bestseller" first (the same dishes again, by position); the chat and the cash desk work on the plain categories
+function shop_menu($featured = false) {
 	shop_ensure_schema();
 	$cats = fb_rows("SELECT id, name, description FROM ".fb_t('tp_shop_categories')." WHERE active = 1 ORDER BY sort, id");
-	$prods = fb_rows("SELECT p.id, p.category_id, p.title, p.description, p.image_url, p.price_cents, p.configurator, p.diet, p.sold_out_on, p.added_at,
+	$prods = fb_rows("SELECT p.id, p.category_id, p.title, p.description, p.image_url, p.price_cents, p.configurator, p.diet, p.sold_out_on, p.added_at, p.featured,
 			(SELECT COUNT(*) FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id) AS nvar,
 			(SELECT MIN(v.price_cents) FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id) AS vmin,
 			(SELECT COUNT(*) FROM ".fb_t('tp_shop_product_groups')." pg WHERE pg.product_id = p.id) AS nmod
@@ -1203,6 +1209,16 @@ function shop_menu() {
 	}
 	$out = array();
 	foreach ($cats as $c) { if (!empty($by[(int)$c['id']])) { $c['products'] = $by[(int)$c['id']]; $out[] = $c; } }
+	if ($featured) {
+		$catIds = array(); foreach ($cats as $c) { $catIds[(int)$c['id']] = true; }
+		$fp = array(); foreach ($prods as $p) { if ($p['featured'] !== null && isset($catIds[(int)$p['category_id']])) { $fp[] = $p; } }
+		if ($fp) {
+			usort($fp, function ($a, $b) { return ((int)$a['featured'] - (int)$b['featured']) ?: ((int)$a['id'] - (int)$b['id']); });
+			$cp = array(); $pop2 = $pop; foreach ($fp as $p) { $p['out'] = shop_out_today($p['sold_out_on']); $p['blocked'] = shop_out_blocked($p['sold_out_on']); $p['popular'] = in_array((int)$p['id'], $pop2, true); $p['isnew'] = shop_is_new($p['added_at']); $cp[] = $p; }
+			$ft = trim((string)shop_setting('featured_title'));
+			array_unshift($out, array('id' => SHOP_FEATURED_CAT, 'name' => $ft !== '' ? $ft : 'Unsere Bestseller', 'description' => trim((string)shop_setting('featured_desc')), 'products' => $cp));
+		}
+	}
 	return $out;
 }
 
@@ -2055,9 +2071,9 @@ function shop_diet_clean($list) {
 function shop_me_products($onlyId = 0) {
 	$where = $onlyId ? "WHERE id = ".(int)$onlyId : '';
 	$out = array();
-	foreach (fb_rows("SELECT p.id, p.category_id, p.title, p.description, p.image_url, p.price_cents, p.allergens, p.active, p.configurator, p.diet, c.name AS cat FROM ".fb_t('tp_shop_products')." p LEFT JOIN ".fb_t('tp_shop_categories')." c ON c.id = p.category_id ".str_replace('WHERE id', 'WHERE p.id', $where)." ORDER BY p.sort, p.id") as $p) {
+	foreach (fb_rows("SELECT p.id, p.category_id, p.title, p.description, p.image_url, p.price_cents, p.allergens, p.active, p.configurator, p.diet, p.featured, c.name AS cat FROM ".fb_t('tp_shop_products')." p LEFT JOIN ".fb_t('tp_shop_categories')." c ON c.id = p.category_id ".str_replace('WHERE id', 'WHERE p.id', $where)." ORDER BY p.sort, p.id") as $p) {
 		$out[(int)$p['id']] = array('id' => (int)$p['id'], 'category_id' => (int)$p['category_id'], 'title' => $p['title'], 'description' => $p['description'], 'image_url' => $p['image_url'],
-			'price' => (int)$p['price_cents'], 'allergens' => $p['allergens'], 'active' => (int)$p['active'], 'configurator' => (int)$p['configurator'], 'variations' => array(), 'groups' => array(),
+			'price' => (int)$p['price_cents'], 'allergens' => $p['allergens'], 'active' => (int)$p['active'], 'configurator' => (int)$p['configurator'], 'featured' => $p['featured'] === null ? 0 : (int)$p['featured'], 'variations' => array(), 'groups' => array(),
 			'diet' => $p['diet'] === null ? array() : array_values(array_filter(explode(',', $p['diet']))), 'diet_set' => $p['diet'] !== null, 'diet_suggest' => shop_diet_suggest($p['title'], $p['description'], $p['cat']));
 	}
 	if ($out) {
@@ -2162,6 +2178,9 @@ function shop_me_save_product($d) {
 		fb_exec("INSERT INTO ".fb_t('tp_shop_products')." (category_id, title, description, image_url, price_cents, allergens, active, configurator, sort, added_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())", 'isssisiid', array($cat, $title, $desc, $image, $price, $all, $active, $conf, (float)$max['m'] + 1));
 		$id = (int)mysqli_insert_id(fb_db());
 	}
+	// the rubric "Unsere Bestseller": a position (1 = first) or nothing
+	$feat = !empty($d['featured']) ? max(1, min(99, (int)$d['featured'])) : null;
+	fb_exec("UPDATE ".fb_t('tp_shop_products')." SET featured = ? WHERE id = ?", 'ii', array($feat, $id));
 	// the diet marks the owner ticked: saving a dish marks it as looked at (an empty tick list is an answer, too)
 	if (array_key_exists('diet', $d)) { fb_exec("UPDATE ".fb_t('tp_shop_products')." SET diet = ? WHERE id = ?", 'si', array(shop_diet_clean($d['diet']), $id)); }
 	if ($oldImg && $oldImg['image_url'] !== '' && $oldImg['image_url'] !== $image) { shop_img_release($oldImg['image_url']); }

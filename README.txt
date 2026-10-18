@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-19 == mySeat v6.57.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: "Unsere Bestseller" als Auswahl statt Kopien. Im Menü-Editor hat jedes Gericht das Häkchen "Auch unter ‚Unsere Bestseller‘ zeigen" mit einer Position (1 = zuerst). Die Bestellseite zeigt die Rubrik an erster Stelle, dasselbe Gericht steht zusätzlich in seiner Kategorie. Es ist ein einziges Gericht: Preis, Zubehör, "heute aus" und "gesperrt" gelten an beiden Stellen. Name und Kurztext der Rubrik kommen aus den Einstellungen featured_title und featured_desc (Standard: "Unsere Bestseller"). Bestell-Chat und Kasse zeigen die Rubrik nicht, sie arbeiten mit den normalen Kategorien. Neue Spalte products.featured (wird automatisch angelegt).
+
 2026-10-18 == mySeat v6.56.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Artikel auf unbestimmte Zeit sperren. In der Disposition (Dialog "Heute aus") hat jede Zeile einen Knopf "Sperren": der Artikel bleibt aus, bis er dort wieder freigegeben wird (Schalter ausschalten), auch über Mitternacht. Gesperrte Artikel stehen in einer eigenen Gruppe oben. Gäste sehen "nicht verfügbar" statt "heute aus", die Kasse "gesperrt". Texte im Bestell-Chat und der Kasse sagen jetzt "gerade nicht verfügbar", wenn ein Gericht nicht bestellbar ist. Keine Datenbankänderung (die Sperre ist das Datum 31.12.9999 in der Spalte der Tagessperre).

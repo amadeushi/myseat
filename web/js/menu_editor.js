@@ -167,6 +167,9 @@
 			dietBlock(d) +
 			'<span class="me-l">Bild</span><div id="me-imgwrap">' + imgBlock(d.image_url) + '</div>' +
 			'<label class="offer-check"><input type="checkbox" id="me-active"' + (d.active ? ' checked' : '') + '/> Im Shop sichtbar</label>' +
+			'<label class="offer-check"><input type="checkbox" id="me-feat"' + (d.featured ? ' checked' : '') + '/> Auch unter "Unsere Bestseller" zeigen</label>' +
+			'<label class="me-l" for="me-featpos">Position in den Bestsellern (1 = zuerst)</label><input id="me-featpos" type="number" min="1" max="99" value="' + (d.featured || '') + '"/>' +
+			'<p class="me-help">Das Gericht bleibt in seiner Kategorie und erscheint zusätzlich oben in der Rubrik. Es ist ein einziges Gericht: Preis, Zubehör und "heute aus" gelten an beiden Stellen.</p>' +
 			'<label class="me-l" for="me-conf">Wunschpizza-Konfigurator</label><select id="me-conf"><option value="0"' + (!d.configurator ? ' selected' : '') + '>Aus (normale Auswahl)</option><option value="1"' + (d.configurator === 1 ? ' selected' : '') + '>Pizza (rund)</option><option value="2"' + (d.configurator === 2 ? ' selected' : '') + '>Flammkuchen (oval, extra dünn, Holzbrett)</option></select>' +
 			'<p class="me-help">Der Gast belegt einen rohen Teigling selbst: er tippt Zutaten an, sie verteilen sich gleichmäßig auf der Pizza. Die Zutaten sind die Optionen der Zubehörgruppen unten, ihre Preise gelten wie sonst auch. Beim Flammkuchen sind Tomatensoße und Käse inklusive.</p>' +
 			'<h5 class="me-sub">Varianten <small>Größen oder Sorten mit eigenem Preis</small></h5>' +
@@ -186,7 +189,7 @@
 	}
 	function readDish() {
 		return { id: sel.draft.id || 0, title: $('#me-title').value, category_id: +$('#me-cat').value, price: $('#me-price').value, description: $('#me-desc').value, allergens: $('#me-all').value,
-			diet: $$('[data-diet]').filter(function (c) { return c.checked; }).map(function (c) { return c.dataset.diet; }), image_url: $('#me-img').value, active: $('#me-active').checked ? 1 : 0, configurator: +$('#me-conf').value || 0, groups: sel.draft.groups.slice(),
+			diet: $$('[data-diet]').filter(function (c) { return c.checked; }).map(function (c) { return c.dataset.diet; }), image_url: $('#me-img').value, active: $('#me-active').checked ? 1 : 0, featured: $('#me-feat').checked ? (+$('#me-featpos').value || 99) : 0, configurator: +$('#me-conf').value || 0, groups: sel.draft.groups.slice(),
 			variations: $$('.me-var').map(function (r) { return { id: +r.dataset.id || 0, title: $('.v-t', r).value, price: $('.v-p', r).value, mult: $('.v-m', r).value }; }) };
 	}
 

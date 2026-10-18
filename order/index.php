@@ -10,7 +10,7 @@ if (!$shop_public) {
 	http_response_code(503);
 	header('Retry-After: 3600');
 }
-$menu = $shop_public ? shop_menu() : array();
+$menu = $shop_public ? shop_menu(true) : array();
 // pizza configurator: its stylesheet and script only travel when a dish has it switched on
 $has_conf = false;
 foreach ($menu as $c0) { foreach ($c0['products'] as $p0) { if (!empty($p0['configurator'])) { $has_conf = true; } } }
