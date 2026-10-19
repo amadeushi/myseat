@@ -158,12 +158,12 @@
 		if (!dlg) { return false; }
 		sprite();
 		var sel = { vid: p.variations.length ? p.variations[0].id : 0, opts: {}, qty: 1 };
-		var items = {}, alloc = {}, ringOf = {}, tried = false, tab = 0, editing = !!edit;
+		var items = {}, alloc = {}, ringOf = {}, tried = false, tab = 0, editing = !!edit && !edit.prefill;   // edit.prefill: the choices come from a link ("Genau so bestellen" of amadeus.delivery), it is a new line, not an edit
 		var oval = p.configurator === 2, ORB = oval ? ORBITS_OVAL : ORBITS;          // 2 = Flammkuchen: oval, extra thin, on a long board
 		function $$(s, r) { return Array.prototype.slice.call((r || dlg).querySelectorAll(s)); }
 		function $(s) { return dlg.querySelector(s); }
 		p.groups.forEach(function (g) { g.items.forEach(function (it) { items[it.id] = { it: it, g: g }; }); });
-		if (editing) {
+		if (edit && edit.line) {
 			var ln = edit.line;
 			if (p.variations.some(function (v) { return v.id === ln.vid; })) { sel.vid = ln.vid; }
 			Object.keys(ln.opts || {}).forEach(function (k) { if (items[k]) { sel.opts[k] = Math.min(+ln.opts[k], items[k].it.max); } });
@@ -191,7 +191,7 @@
 		}).join('') + '</div>' : '';
 		dlg.innerHTML =
 			'<header class="pz-top"><button type="button" class="pz-back" aria-label="Zurück zur Speisekarte"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
-			'<h2 id="pz-title">' + esc(p.title) + '</h2><button type="button" class="pz-dice"><img src="zeus-stamp.png" width="20" height="27" alt=""><span>Zeus würfelt</span></button><button type="button" class="pz-reset" hidden>Neu belegen</button></header>' +
+			'<h2 id="pz-title">' + esc(p.title) + '</h2><button type="button" class="pz-dice"><img src="' + (api.zeus || 'zeus-stamp.png') + '" width="20" height="27" alt=""><span>Zeus würfelt</span></button><button type="button" class="pz-reset" hidden>Neu belegen</button></header>' +
 			'<div class="pz-stage"><svg class="pz-wood" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' + wood() + '</svg>' +
 			'<svg class="pz-pizza" viewBox="-124 -124 248 248" role="img" aria-label="Deine Pizza von oben"></svg>' +
 			'<div class="pz-dips" aria-hidden="true"></div><p class="pz-zeus" hidden><strong>Zeus hat gewürfelt.</strong> Gefällt dir die Belegung nicht? Tipp einfach etwas anderes an.</p><p class="pz-sum"></p></div>' +

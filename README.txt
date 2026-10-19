@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-19 == mySeat v6.60.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: "Genau so bestellen" von amadeus.delivery. Der Link der Pizza- und Schnitzel-Seite trägt die Zusammenstellung hinter dem # (#bau=..., das geht an keinen Server). Die Bestellseite öffnet das Gericht in seinem Konfigurator schon so belegt; der Gast tippt selbst auf "In den Warenkorb" (Preis, Teig und Rest sind vor ihm). Gericht und Zutaten werden über ihre Namen gefunden (die Karte hat andere Nummern als die Demo); eine Zutat, die es nicht mehr gibt, wird weggelassen und genannt; ist der Shop zu oder das Gericht aus, kommt ein Hinweis. In order/shop.js (bau()) und als edit.prefill in pizza.js und schnitzel.js. Dazu: das Bild des Zeus-Würfels in der Pizza-Demo der Website lässt sich über api.zeus setzen.
+
 2026-10-19 == mySeat v6.59.2 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geändert (Pizzakonfigurator, Zeus würfelt): Es kommt genau eine Fleischsorte (oder ein veganer Fleischersatz) auf die Pizza, und der vegane Pizzaschmelz wird nur gewürfelt, wenn der Dinkel-Roggen-Teig (vegan) gewählt ist.

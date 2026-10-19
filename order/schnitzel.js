@@ -225,14 +225,28 @@
 		var gr = p.groups.map(function (g) { return { g: g, role: roleOf(g) }; });
 		var byRole = {}; gr.forEach(function (x) { if (!byRole[x.role]) { byRole[x.role] = x.g; } });
 		if (!byRole.sorte || !byRole.beilage || !p.variations.length) { return false; }
-		var sel = { vid: p.variations[0].id, opts: {}, qty: 1 }, items = {}, tab = 0, editing = !!edit, tried = false, rolling = false;
+		var sel = { vid: p.variations[0].id, opts: {}, qty: 1 }, items = {}, tab = 0, editing = !!edit && !edit.prefill, tried = false, rolling = false;
 		var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 		function $(s) { return dlg.querySelector(s); }
 		function $$(s) { return Array.prototype.slice.call(dlg.querySelectorAll(s)); }
 		p.groups.forEach(function (g) { g.items.forEach(function (it) { items[it.id] = { it: it, g: g }; }); });
 		// like the demo of the website: it starts with a complete plate (first kind, first meat, first side), the guest changes it
 		gr.forEach(function (x) { if (x.role !== 'dip' && x.g.min > 0 && x.g.items.length) { sel.opts[x.g.items[0].id] = 1; } });
-		if (editing) {
+		// "Genau so bestellen" of the website: the state of the demo plate { sorte, fleisch, beilage, dips } becomes the choices (what the dish does not have any more is left out)
+		function applyState(st) {
+			Object.keys(sel.opts).forEach(function (k) { delete sel.opts[k]; });
+			function one(g, rx, id) { var it = g.items.filter(function (x) { return idOf(rx, x.title, '') === id; })[0] || g.items[0]; if (it) { sel.opts[it.id] = 1; } }
+			one(byRole.sorte, SORT_RX, st.sorte); one(byRole.beilage, BEIL_RX, st.beilage);
+			var v = p.variations.filter(function (x) { return (/h(ä|ae)hnchen/i.test(x.title) ? 'haehnchen' : 'schwein') === st.fleisch; })[0]; if (v) { sel.vid = v.id; }
+			if (byRole.dip && Array.isArray(st.dips)) {
+				st.dips.forEach(function (id) {
+					var it = byRole.dip.items.filter(function (x) { return idOf(DIP_RX, x.title, '') === id; })[0];
+					if (it && (byRole.dip.max < 1 || groupSum(byRole.dip) < byRole.dip.max)) { sel.opts[it.id] = 1; }
+				});
+			}
+		}
+		if (edit && edit.state && typeof edit.state === 'object') { applyState(edit.state); }
+		else if (editing) {
 			var ln = edit.line;
 			if (p.variations.some(function (v) { return v.id === ln.vid; })) { sel.vid = ln.vid; }
 			Object.keys(sel.opts).forEach(function (k) { delete sel.opts[k]; });

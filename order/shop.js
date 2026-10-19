@@ -596,10 +596,11 @@
 	if (dlg) { dlg.addEventListener('close', function () { if (dlgTrigger && typeof dlgTrigger.focus === 'function') { dlgTrigger.focus(); } dlgTrigger = null; }); }
 	var pizzaDlg = $('#pizza-dialog');
 	if (pizzaDlg) { pizzaDlg.addEventListener('close', function () { if (dlgTrigger && typeof dlgTrigger.focus === 'function') { dlgTrigger.focus(); } dlgTrigger = null; }); }
-	function openProduct(id, edit) {
+	function openProduct(id, edit, bau) {
 		dlgTrigger = document.activeElement;
 		fetch('api.php?op=product&id=' + encodeURIComponent(id), { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) {
 			if (!r.ok) { toast(r.error || 'Das hat nicht geklappt.'); return; }
+			if (bau) { edit = bauEdit(r.product, bau); }
 			// a dish with the configurator switched on opens the pizza table instead (order/pizza.js); without it, or if it fails to load, the normal dialog does the same job
 			var lab = r.product.configurator === 3 ? window.SchnitzelLab : window.PizzaLab;   // 3 = Schnitzel nach Wunsch (order/schnitzel.js)
 			if (r.product.configurator && lab && lab.open(r.product, edit, { fmt: fmt, esc: esc, cleanTitle: cleanTitle, add: addLine, replace: replaceLine })) { return; }
@@ -913,6 +914,36 @@
 		}
 		measure(); window.addEventListener('resize', measure); window.addEventListener('load', measure);
 		if ('ResizeObserver' in window) { var ro = new ResizeObserver(measure); ro.observe(top); ro.observe(search); }
+	})();
+	/* "Genau so bestellen" of amadeus.delivery: the link carries the configuration behind the # (#bau=<JSON>, so it never goes to a server): {t:'pizza', d:dish, v:dough, o:[options]} or
+	   {t:'schnitzel', d:dish, s:{sorte, fleisch, beilage, dips}}. The dish opens in its configurator with the choices already made; the guest taps "In den Warenkorb" himself, so the price,
+	   the dough and everything else are in front of him. Dishes and options are found by their names (the menu has other numbers than the demo of the website). */
+	function bauKey(t) {
+		var s = String(t).toLowerCase(), kind = /auf pizza/.test(s) ? 'p' : (/zum dippen|^extra /.test(s) ? 'd' : '');
+		return kind + '|' + s.replace(/\([^)]*\)/g, '').replace(/\b(extra|zum dippen|auf pizza)\b/g, '').replace(/[^a-zäöüß0-9]+/g, '');
+	}
+	function bauEdit(p, spec) {
+		if (spec.t === 'schnitzel') { return { prefill: true, state: spec.s || {} }; }
+		var line = { vid: 0, opts: {}, qty: 1 }, miss = 0, kv = bauKey(spec.v || '');
+		if (spec.v) { p.variations.forEach(function (v) { if (bauKey(v.title) === kv) { line.vid = v.id; } }); }
+		(Array.isArray(spec.o) ? spec.o : []).forEach(function (t) {
+			var k = bauKey(t), hit = null;
+			p.groups.forEach(function (g) { g.items.forEach(function (it) { if (!hit && bauKey(it.title) === k) { hit = it; } }); });
+			if (hit) { line.opts[hit.id] = 1; } else { miss++; }
+		});
+		if (miss) { toast(miss === 1 ? 'Eine Zutat gibt es nicht mehr und wurde nicht übernommen.' : miss + ' Zutaten gibt es nicht mehr und wurden nicht übernommen.'); }
+		return { prefill: true, line: line };
+	}
+	(function bau() {
+		var m = /[#&]bau=([^&]*)/.exec(location.hash), spec = null;
+		if (!m) { return; }
+		try { spec = JSON.parse(decodeURIComponent(m[1])); } catch (e) { return; }
+		try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}   // a reload does not open it again
+		if (!spec || typeof spec !== 'object' || !spec.d || !ACCEPT) { return; }
+		var want = bauKey(spec.d), item = null, gone = null;
+		$$('.shop-item').forEach(function (li) { if (bauKey(li.dataset.title) === want) { if (li.classList.contains('is-out')) { gone = gone || li; } else if (!item) { item = li; } } });
+		if (!item) { toast(gone ? 'Dieses Gericht ist gerade leider nicht verfügbar.' : 'Dieses Gericht gibt es leider nicht mehr auf der Karte.'); return; }
+		openProduct(+item.dataset.id, null, spec);
 	})();
 	initShopZone();
 	loadState();
