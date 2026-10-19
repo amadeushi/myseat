@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-20 == mySeat v6.60.3 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Behoben (Disposition, Dialog "Heute aus"): Beim Freischalten oder Sperren eines Gerichts weit unten in der Liste scrollte der ganze Dialog ans Ende, zeigte nur eine leere Fläche, und das Schließen-Kreuz lag außerhalb des Bildschirms (erst Hochscrollen brachte den Inhalt zurück). Ursache: der unsichtbare Schalter jeder Zeile hatte keinen eigenen Bezugsrahmen und lag deshalb tausende Pixel unterhalb im Dialog; der Fokus darauf scrollte den Dialog dorthin. Jetzt bleibt der Schalter in seiner Zeile, der Fokus scrollt nicht mehr, die Position der Liste bleibt erhalten, und der Dialog öffnet immer oben.
+ * Behoben: Das Schließen durch Tipp neben das Fenster (v6.60.2) gilt nur noch für Klicks, die das Fenster selbst oder den dunklen Rand treffen, nicht für Klicks, die ein Name an seinen Schalter weitergibt.
+
 2026-10-19 == mySeat v6.60.2 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geändert (Disposition): Der Dialog "Heute aus" lässt sich auch mit einem Tipp auf den dunklen Bereich neben dem Fenster schließen (auf dem Touchscreen gibt es kein Esc, und ein Fenster ohne sichtbares X darf den Bildschirm nicht blockieren). Eine Meldung oben (zum Beispiel "... ist wieder da") verschwindet auch mit einem Tipp auf die Meldung selbst, nicht nur mit dem X.

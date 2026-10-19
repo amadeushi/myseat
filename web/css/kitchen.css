@@ -198,7 +198,7 @@ body.ks { box-sizing: border-box; padding-bottom: var(--bottom-safe, 57px); }
 .k-pause { display: flex; flex-wrap: wrap; gap: 10px; }
 .k-pause-item { display: flex; align-items: center; gap: 8px 10px; padding: 2px 12px; min-height: 48px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
 .k-pause-item.is-paused { border-color: var(--amber); }
-.k-pause-switch { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-size: 16px; font-weight: 700; cursor: pointer; }
+.k-pause-switch { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-size: 16px; font-weight: 700; cursor: pointer; }
 .k-pause-switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .k-pause-track { position: relative; width: 46px; height: 26px; flex: none; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); }
 .k-pause-track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--muted); }

@@ -170,13 +170,14 @@
 			fetch('ajax/shop_orders.php?op=out_list', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) {
 				btn.disabled = false;
 				if (!r.ok) { notify(r.error || 'Die Liste konnte nicht geladen werden.'); return; }
-				outProducts = r.products; $('#k-outq').value = ''; drawOut(); dlg.showModal(); $('#k-outq').focus();
+				outProducts = r.products; $('#k-outq').value = ''; drawOut(); dlg.showModal(); dlg.scrollTop = 0; $('#k-outq').focus();
 			}).catch(function () { btn.disabled = false; notify('Keine Verbindung.'); });
 		});
 		$('#k-outq').addEventListener('input', drawOut);
 		$('#k-outclose').addEventListener('click', function () { dlg.close(); btn.focus(); });
 		// a tap beside the window (on the dark area around it) closes it as well: on a touch screen there is no Esc key, and a window that shows no close button must not trap the screen
 		dlg.addEventListener('click', function (ev) {
+			if (ev.target !== dlg) { return; }   // only a click on the window itself or its dark surround (never the clicks that a label sends on to its switch)
 			var r = dlg.getBoundingClientRect();
 			if (ev.clientX < r.left || ev.clientX > r.right || ev.clientY < r.top || ev.clientY > r.bottom) { dlg.close(); btn.focus(); }
 		});
@@ -187,7 +188,7 @@
 				if (!r.ok) { inp.checked = !want; inp.disabled = false; notify(r.error || 'Das hat nicht geklappt.'); return; }
 				outProducts.forEach(function (p) { if (p.id === id) { p.out = want; p.blocked = false; } });
 				setOutN(r.out_n); var keep = $('#k-outlist').scrollTop; drawOut(); $('#k-outlist').scrollTop = keep;
-				var again = $('#k-outlist [data-out="' + id + '"]'); if (again) { again.focus(); }
+				var again = $('#k-outlist [data-out="' + id + '"]'); if (again) { again.focus({ preventScroll: true }); }
 				notify('\u201e' + r.title + '\u201c ist ' + (want ? 'heute aus' : 'wieder da') + '.', { kind: 'ok' });
 			}).catch(function () { inp.checked = !want; inp.disabled = false; notify('Keine Verbindung.'); });
 		});
@@ -199,7 +200,7 @@
 				if (!r.ok) { b.disabled = false; notify(r.error || 'Das hat nicht geklappt.'); return; }
 				outProducts.forEach(function (p) { if (p.id === id) { p.out = true; p.blocked = true; } });
 				setOutN(r.out_n); var keep = $('#k-outlist').scrollTop; drawOut(); $('#k-outlist').scrollTop = keep;
-				var again = $('#k-outlist [data-out="' + id + '"]'); if (again) { again.focus(); }
+				var again = $('#k-outlist [data-out="' + id + '"]'); if (again) { again.focus({ preventScroll: true }); }
 				notify('\u201e' + r.title + '\u201c ist gesperrt, bis du es wieder freigibst.', { kind: 'ok' });
 			}).catch(function () { b.disabled = false; notify('Keine Verbindung.'); });
 		});
