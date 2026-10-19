@@ -189,7 +189,7 @@
 	function dips(list) {
 		var s = '';
 		for (var i = 0; i < list.length; i++) {
-			var d = by(DIPS, list[i]), x = 280 + (i % 5 - 2) * 48, y = 352 + Math.floor(i / 5) * 40;
+			var d = by(DIPS, list[i]), per = list.length > 10 ? 6 : 5, x = 280 + (i % per - (per - 1) / 2) * (per > 5 ? 46 : 48), y = 352 + Math.floor(i / per) * 40;
 			s += '<g transform="translate(' + x + ' ' + y + ')"><title>' + esc(d.title) + '</title>' + bowl(d) + '</g>';
 		}
 		return s;
