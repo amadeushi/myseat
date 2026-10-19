@@ -175,6 +175,11 @@
 		});
 		$('#k-outq').addEventListener('input', drawOut);
 		$('#k-outclose').addEventListener('click', function () { dlg.close(); btn.focus(); });
+		// a tap beside the window (on the dark area around it) closes it as well: on a touch screen there is no Esc key, and a window that shows no close button must not trap the screen
+		dlg.addEventListener('click', function (ev) {
+			var r = dlg.getBoundingClientRect();
+			if (ev.clientX < r.left || ev.clientX > r.right || ev.clientY < r.top || ev.clientY > r.bottom) { dlg.close(); btn.focus(); }
+		});
 		$('#k-outlist').addEventListener('change', function (ev) {
 			var inp = ev.target.closest('[data-out]'); if (!inp) { return; }
 			var id = +inp.dataset.out, want = inp.checked; inp.disabled = true;
@@ -571,6 +576,7 @@
 		var t = document.createElement('span'); t.className = 'k-msg-t'; t.textContent = text; row.appendChild(t);
 		if (opts.action) { var ab = document.createElement('button'); ab.type = 'button'; ab.className = 'k-go secondary'; ab.textContent = opts.action.label; ab.addEventListener('click', function () { row.remove(); opts.action.fn(); }); row.appendChild(ab); }
 		var x = document.createElement('button'); x.type = 'button'; x.className = 'k-icon k-msg-x'; x.setAttribute('aria-label', 'Meldung schlie\u00dfen'); x.title = 'Schlie\u00dfen'; x.innerHTML = ICON_X; x.addEventListener('click', function () { row.remove(); }); row.appendChild(x);
+		row.addEventListener('click', function (ev) { if (!ev.target.closest('button')) { row.remove(); } });   // a tap on the message itself also dismisses it
 		box.appendChild(row); while (box.children.length > 4) { box.firstElementChild.remove(); }
 		setTimeout(function () { if (row.parentNode) { row.remove(); } }, opts.action ? 20000 : (opts.kind === 'ok' ? 9000 : 14000));
 	}

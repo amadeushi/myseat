@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-19 == mySeat v6.60.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geändert (Disposition): Der Dialog "Heute aus" lässt sich auch mit einem Tipp auf den dunklen Bereich neben dem Fenster schließen (auf dem Touchscreen gibt es kein Esc, und ein Fenster ohne sichtbares X darf den Bildschirm nicht blockieren). Eine Meldung oben (zum Beispiel "... ist wieder da") verschwindet auch mit einem Tipp auf die Meldung selbst, nicht nur mit dem X.
+
 2026-10-19 == mySeat v6.60.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geändert (Schnitzel nach Wunsch): Der Teller zeigt bis zu 12 Dip-Schälchen in zwei Reihen (bisher passten nur 10 in die Zeichnung).
