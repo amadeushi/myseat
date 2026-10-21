@@ -690,6 +690,8 @@
 .co-coupon-row { display: flex; gap: 8px; }
 .co-coupon-row input { flex: 1; min-width: 0; min-height: 48px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface-2); color: var(--text); font: inherit; font-size: 16px; letter-spacing: 0.06em; text-transform: uppercase; padding: 0 12px; }
 .co-coupon-row input:focus { border-color: var(--gold); outline: none; box-shadow: 0 0 0 2px rgba(201, 162, 89, 0.3); }
+.co-gv-in { width: 100%; min-height: 48px; margin: 0 0 10px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface-2); color: var(--text); font: inherit; font-size: 16px; padding: 0 14px; letter-spacing: .04em; }
+.co-gv-in:focus { border-color: var(--gold); outline: none; box-shadow: 0 0 0 2px rgba(201, 162, 89, 0.3); }
 .co-coupon-go { min-height: 48px; padding: 0 18px; border: 1px solid var(--gold); border-radius: var(--radius-md); background: transparent; color: var(--gold-strong); font-size: 15px; font-weight: 700; }
 .co-coupon-go:hover { background: rgba(201, 162, 89, 0.14); }
 .shop-shell .co-coupon-msg { margin-top: 8px; font-size: 14px; color: var(--text-muted); }

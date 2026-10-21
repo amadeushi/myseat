@@ -212,3 +212,9 @@ body.kx-mode #wrapper { margin: 10px 14px 0; }
 .kx .kx-item.is-out { opacity: 0.55; cursor: not-allowed; }
 .kx .kx-item.is-out:hover, .kx .kx-item.is-out:focus-visible { border-color: var(--border-soft); background: transparent; }
 .kx .kx-item-out { color: var(--danger, #e2867c); font-size: 14px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+/* gift voucher at the till: number + security code of the caller */
+.kx-gv { margin: 10px 0 0; }
+.kx-gv-box { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end; margin: 10px 0 0; }
+.kx-gv-box[hidden] { display: none; }
+.kx-gv-msg { margin: 8px 0 0; min-height: 18px; font-size: 14px; color: var(--text-muted, #a89e8c); }
+.kx-gv-msg.is-bad { color: var(--danger, #e2867c); }

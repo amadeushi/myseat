@@ -75,7 +75,8 @@
 		document.getElementById('orders-stats').innerHTML = cells.map(function (c) { return '<div class="orders-stat"><span>' + c[0] + '</span><strong>' + c[1] + '</strong></div>'; }).join('');
 	}
 	function row(o) {
-		var n = next(o), pay = o.pay === 'mollie' ? (o.pay_status === 'paid' ? 'online bezahlt' : 'online offen') : (o.pay === 'cash' ? 'bar' : 'Karte') + (o.pay_status === 'paid' ? ', kassiert' : ', offen');
+		var n = next(o), pay = o.pay === 'voucher' ? 'mit Gutschein bezahlt' : o.pay === 'mollie' ? (o.pay_status === 'paid' ? 'online bezahlt' : 'online offen') : (o.pay === 'cash' ? 'bar' : 'Karte') + (o.pay_status === 'paid' ? ', kassiert' : ', offen');
+		if (o.voucher > 0) { pay += ' · Gutschein ' + (o.voucher / 100).toFixed(2).replace('.', ',') + ' €'; }
 		var h = '<div class="orders-row st-' + esc(o.status) + '" data-id="' + o.id + '"><div class="orders-main">' +
 			'<button type="button" class="orders-toggle" aria-expanded="' + (open[o.id] ? 'true' : 'false') + '" aria-label="' + (open[o.id] ? 'Details ausblenden' : 'Details anzeigen') + '">' + (open[o.id] ? '−' : '+') + '</button>' +
 			'<span class="orders-no">#' + o.day_no + '</span><span class="orders-time">' + esc(o.scheduled ? o.scheduled + ' geplant' : o.created) + '</span>' +

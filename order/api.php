@@ -105,6 +105,13 @@ if ($op === 'quote') {
 	api_out(array('ok' => true, 'lines' => $out, 'subtotal' => $sub));
 }
 
+// gift voucher (Wertgutschein) in the checkout: number + security code -> balance; wrong pairs are counted per address (gv_lookup_guest). The order checks the pair again.
+if ($op === 'gvcheck') {
+	if (!shop_flag('gv_pay_on')) { api_out(array('ok' => false, 'error' => 'Geschenkgutscheine lassen sich gerade nicht einlösen.')); }
+	$err = '';
+	$v = gv_pay_check(mb_substr((string)(isset($body['number']) ? $body['number'] : ''), 0, 30), (string)(isset($body['code']) ? $body['code'] : ''), $err);
+	api_out($v ? array('ok' => true, 'number' => $v['number'], 'balance' => (int)$v['balance_cents'], 'until' => $v['valid_until'] ? date('d.m.Y', strtotime($v['valid_until'])) : '') : array('ok' => false, 'error' => $err));
+}
 if ($op === 'coupon') {
 	// preview for the guest: does the code work for this cart? (the order checks it again; guessing codes is limited per visitor)
 	$_SESSION['shop_coupon_hits'] = isset($_SESSION['shop_coupon_hits']) ? $_SESSION['shop_coupon_hits'] : array();

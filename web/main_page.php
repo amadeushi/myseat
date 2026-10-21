@@ -23,7 +23,7 @@ This file is part of mySeat.
 /** Login **/
 // ** set configuration
 	//Software version - http://github.com/apmuthu/myseat
-	$sw_version = 'v6.60.3';
+	$sw_version = 'v6.61.0';
 	
 	include('../config/config.general.php');
 	
@@ -206,6 +206,14 @@ echo "<body>";
 			// newsletter: subscribers with the proof of their consent
 			if ( current_user_can( 'Settings-General' ) ){
 				include('content/newsletter.page.php');
+			}else{
+				redeclare_access();
+			}
+		break;
+		case '15':
+			// gift vouchers: redeem with PIN, stock, blanks, import
+			if ( current_user_can( 'Settings-General' ) ){
+				include('content/gutscheine.page.php');
 			}else{
 				redeclare_access();
 			}

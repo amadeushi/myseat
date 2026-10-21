@@ -1,0 +1,81 @@
+/* Voucher pages of the guests (order/gutschein*.php): the "Gutschein-Atelier" and its status, withdrawal and terms pages. Same dark and gold world as the shop (tokens of shop.css). */
+.gv-atelier { max-width: 1120px; margin: 0 auto; padding: 16px 16px 40px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px 48px; align-items: start; }
+.gv-intro h1 { font-family: var(--font-display); font-weight: 400; font-size: 40px; line-height: 1.1; text-wrap: balance; }
+.gv-intro p { margin-top: 8px; color: var(--text-muted); max-width: 54ch; }
+.gv-notice { margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--gold); border-radius: var(--radius-md); background: var(--surface-2); color: var(--gold-strong); font-size: 14px; }
+.gv-prev { margin: 0; }
+.gv-prev-frame { position: relative; border-radius: 14px; overflow: hidden; background: var(--surface-2); aspect-ratio: 3 / 2; box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--border-soft); }
+.gv-prev-frame img { display: block; width: 100%; height: 100%; object-fit: cover; transition: opacity .2s ease; }
+.gv-prev-frame.is-busy img { opacity: .55; }
+.gv-prev figcaption { margin-top: 10px; font-size: 13px; color: var(--text-muted); }
+.gv-form { min-width: 0; }
+.gv-form .co-sec:first-child { margin-top: 0; }
+.gv-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.gv-chip { position: relative; }
+.gv-chip input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.gv-chip span { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; min-width: 76px; padding: 0 18px; border: 1px solid var(--border-soft); border-radius: var(--radius-pill); background: var(--surface-2); color: var(--text); font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.gv-chip input:checked + span { background: var(--gold); border-color: var(--gold); color: #1a1408; }
+.gv-chip input:focus-visible + span { outline: 2px solid var(--gold-strong); outline-offset: 2px; }
+.gv-custom { margin-top: 12px; display: flex; align-items: center; gap: 8px; }
+.gv-custom label { font-size: 13px; color: var(--text-muted); }
+.gv-custom input { width: 110px; min-height: 48px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface-2); color: var(--text); font: inherit; font-size: 16px; padding: 0 14px; }
+.gv-custom input:focus { border-color: var(--gold); outline: none; box-shadow: 0 0 0 2px rgba(201, 162, 89, 0.3); }
+.gv-motif-group { margin: 0 0 14px; }
+.gv-motif-group > h3 { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 8px; }
+.gv-motifs { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; }
+.gv-motif { position: relative; display: block; border-radius: var(--radius-md); overflow: hidden; background: var(--surface-2); cursor: pointer; box-shadow: 0 0 0 1px var(--border-soft); }
+.gv-motif input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; z-index: 2; }
+.gv-motif img { display: block; width: 100%; aspect-ratio: 3 / 2; object-fit: cover; }
+.gv-motif span { display: block; padding: 6px 8px 7px; font-size: 12px; color: var(--text-muted); }
+.gv-motif:has(input:checked) { box-shadow: 0 0 0 2px var(--gold); }
+.gv-motif:has(input:checked) span { color: var(--gold-strong); font-weight: 600; }
+.gv-motif:has(input:focus-visible) { outline: 2px solid var(--gold-strong); outline-offset: 2px; }
+.gv-own { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 100%; aspect-ratio: 3 / 2.75; border: 1px dashed var(--border); border-radius: var(--radius-md); background: transparent; color: var(--gold-strong); font-size: 13px; font-weight: 600; text-align: center; padding: 8px; cursor: pointer; }
+.gv-own:hover { background: var(--surface-2); }
+.gv-own input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+.gv-own:focus-within { outline: 2px solid var(--gold-strong); outline-offset: 2px; }
+.gv-own small { color: var(--text-muted); font-weight: 500; font-size: 12px; }
+.gv-own-msg { margin-top: 8px; min-height: 20px; font-size: 14px; color: var(--text-muted); }
+.gv-own-msg.is-error { color: var(--danger); }
+.gv-form textarea { width: 100%; min-height: 84px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface-2); color: var(--text); font: inherit; font-size: 16px; padding: 12px 14px; resize: vertical; }
+.gv-form textarea:focus { border-color: var(--gold); outline: none; box-shadow: 0 0 0 2px rgba(201, 162, 89, 0.3); }
+.gv-count { font-size: 12px; color: var(--text-muted); text-align: right; }
+.gv-ship[hidden], .gv-lapse[hidden], .gv-custom[hidden], .gv-sum-row[hidden] { display: none; }
+.gv-sum { margin-top: 20px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-2); }
+.gv-sum-row { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--text-muted); padding: 2px 0; }
+.gv-sum-row.is-total { margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--border-soft); color: var(--text); font-size: 20px; font-family: var(--font-display); font-weight: 500; }
+.gv-sum-row output { font-variant-numeric: tabular-nums; }
+.gv-legal { margin-top: 14px; font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+.gv-howto { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border-soft); color: var(--text-muted); font-size: 14px; max-width: 60ch; }
+.gv-howto h2 { font-family: var(--font-display); font-weight: 500; font-size: 24px; color: var(--text); margin-bottom: 6px; }
+.gv-err { color: var(--danger); font-size: 15px; margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--danger); border-radius: var(--radius-md); }
+.gv-field-err { border-color: var(--danger) !important; }
+.gv-foot { border-top: 1px solid var(--border-soft); margin-top: 24px; padding: 18px 16px 40px; }
+.gv-foot-in { max-width: 1120px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; }
+.gv-withdraw { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border: 1px solid var(--gold); border-radius: var(--radius-pill); color: var(--gold-strong); font-weight: 600; text-decoration: none; }
+.gv-withdraw:hover { background: var(--gold); color: #1a1408; }
+.gv-foot-links { display: flex; flex-wrap: wrap; gap: 6px 20px; }
+.gv-foot-links a { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; color: var(--text-muted); }
+.gv-page { max-width: 720px; margin: 0 auto; padding: 24px 16px 20px; }
+.gv-page h1 { font-family: var(--font-display); font-weight: 400; font-size: 40px; line-height: 1.1; margin-bottom: 10px; text-wrap: balance; }
+.gv-page h2 { font-family: var(--font-display); font-weight: 500; font-size: 26px; margin: 28px 0 6px; }
+.gv-page p, .gv-page li { color: var(--text-muted); max-width: 66ch; margin-top: 8px; }
+.gv-page li { margin-left: 18px; list-style: disc; }
+.gv-page strong { color: var(--text); }
+.gv-card { margin: 18px 0; padding: 16px 18px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-2); }
+.gv-card dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; font-size: 14px; }
+.gv-card dt { color: var(--text-muted); }
+.gv-card dd { margin: 0; color: var(--text); }
+.gv-stateline { font-size: 18px; color: var(--text); margin-top: 6px; }
+.gv-stateline.is-ok { color: var(--success); }
+.gv-stateline.is-bad { color: var(--danger); }
+.gv-page .co-f { margin-top: 14px; max-width: 420px; }
+.gv-draft { margin: 0 0 18px; padding: 10px 14px; border: 1px dashed var(--gold); border-radius: var(--radius-md); color: var(--gold-strong); font-size: 14px; }
+.gv-trap { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+@media (min-width: 960px) {
+	.gv-atelier { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); padding-top: 28px; }
+	.gv-intro { grid-column: 1 / -1; }
+	.gv-prev { position: sticky; top: 84px; }
+}
+@media (max-width: 520px) { .gv-intro h1, .gv-page h1 { font-size: 32px; } .gv-motifs { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { .gv-prev-frame img { transition: none; } }

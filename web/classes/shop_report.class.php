@@ -19,12 +19,12 @@ function shop_report_method_label($m) {
 
 function shop_report_data($date) {
 	shop_ensure_schema();
-	$rows = fb_rows("SELECT id, type, status, source, payment_method, payment_status, pay_detail, total_cents, fee_cents, tip_cents, discount_cents, surcharge_cents, pay_with_cents,
+	$rows = fb_rows("SELECT id, type, status, source, payment_method, payment_status, pay_detail, total_cents, fee_cents, tip_cents, discount_cents, surcharge_cents, pay_with_cents, voucher_cents,
 			driver_id, route_m, created_at, ready_at FROM ".fb_t('tp_shop_orders')." WHERE order_date = ? AND is_test = 0", 's', array($date));
 	$names = array();
 	foreach (fb_rows("SELECT id, name FROM ".fb_t('tp_shop_drivers')) as $dr) { $names[(int)$dr['id']] = $dr['name']; }
 	$z = function () { return array('n' => 0, 'sum' => 0); };
-	$d = array('date' => $date, 'orders' => 0, 'revenue' => 0, 'cash_rev' => 0, 'card_rev' => 0, 'online_rev' => 0,
+	$d = array('date' => $date, 'orders' => 0, 'revenue' => 0, 'cash_rev' => 0, 'card_rev' => 0, 'online_rev' => 0, 'voucher_rev' => 0,
 		'cash' => array('done' => $z(), 'open' => $z(), 'delivery' => $z(), 'pickup' => $z(), 'nodriver' => $z(), 'lieferando' => $z(), 'uber' => $z(), 'change' => 0, 'storno' => $z(), 'fee' => 0, 'tip' => 0, 'discount' => 0, 'surcharge' => 0),
 		'card' => array('done' => $z(), 'open' => $z(), 'storno' => $z()),
 		'drivers' => array(),
@@ -47,7 +47,9 @@ function shop_report_data($date) {
 			else { $add($d['cash']['storno'], $t); }
 			continue;
 		}
-		$d['orders']++; $d['revenue'] += $t;
+		$vc = (int)$o['voucher_cents'];   // the part a gift voucher paid: a sale of the shop (the tax arises now), but no money comes in
+		$d['orders']++; $d['revenue'] += $t + $vc; $d['voucher_rev'] += $vc;
+		if ($m === 'voucher') { continue; }
 		if (in_array($st, $openStates, true)) { $d['open_n']++; }
 		$h = (int)substr($o['created_at'], 11, 2); $d['hours'][$h] = (isset($d['hours'][$h]) ? $d['hours'][$h] : 0) + 1;
 		if (!empty($o['ready_at'])) { $d['ready_sum'] += max(0, (strtotime($o['ready_at']) - strtotime($o['created_at'])) / 60); $d['ready_n']++; }
@@ -109,6 +111,7 @@ function shop_report_rows($kind, $d, $now = null) {
 	$r[] = array('row', 'davon bar', $m($d['cash_rev']));
 	$r[] = array('row', 'davon Karte an der Tür', $m($d['card_rev']));
 	$r[] = array('row', 'davon online', $m($d['online_rev']));
+	if ($d['voucher_rev'] > 0) { $r[] = array('row', 'davon mit Geschenkgutschein bezahlt', $m($d['voucher_rev'])); }
 	$r[] = array('rule');
 	if ($kind === 'cash') {
 		$c = $d['cash'];

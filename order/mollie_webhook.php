@@ -9,5 +9,9 @@ $id = isset($_POST['id']) ? (string)$_POST['id'] : '';
 if (preg_match('/^tr_[A-Za-z0-9]{6,40}$/', $id)) {
 	$order = fb_row("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE mollie_id = ? LIMIT 1", 's', array($id));
 	if ($order) { shop_mollie_sync($order); }
+	else {   // not a food order: the payment of a voucher order (order/gutschein.php)
+		$gvo = fb_row("SELECT * FROM ".fb_t('tp_gv_orders')." WHERE mollie_id = ? LIMIT 1", 's', array($id));
+		if ($gvo) { gv_order_sync($gvo); }
+	}
 }
 echo 'ok';

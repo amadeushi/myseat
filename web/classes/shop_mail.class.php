@@ -27,7 +27,8 @@ function shop_notify_order($o) {
 	$base = function_exists('shop_base_url') ? shop_base_url() : '';
 	$link = $base !== '' ? $base.'/order/status.php?t='.$o['token'] : '';
 	$when = $o['scheduled_at'] ? 'zur gewünschten Zeit um '.date('H:i', strtotime($o['scheduled_at'])).' Uhr' : ($o['eta_at'] ? 'gegen '.date('H:i', strtotime($o['eta_at'])).' Uhr' : '');
-	$pay = $o['payment_method'] === 'mollie' ? 'online bezahlt' : (($o['payment_method'] === 'cash' ? 'bar' : 'mit Karte').($delivery ? ' bei Lieferung' : ' bei Abholung'));
+	$vc = (int)(isset($o['voucher_cents']) ? $o['voucher_cents'] : 0);   // paid in part or fully with a gift voucher: total_cents is then what is still to be paid
+	$pay = $o['payment_method'] === 'voucher' ? 'mit Geschenkgutschein bezahlt' : ($o['payment_method'] === 'mollie' ? 'online bezahlt' : (($o['payment_method'] === 'cash' ? 'bar' : 'mit Karte').($delivery ? ' bei Lieferung' : ' bei Abholung')));
 	$font = 'font-family:Arial,Helvetica,sans-serif;';
 
 	// ---- guest: a warm confirmation with the time in big letters, what was ordered, how it is paid, and where to follow it
@@ -38,7 +39,8 @@ function shop_notify_order($o) {
 		$timeLabel = $o['scheduled_at'] ? ($delivery ? 'Lieferung zur Wunschzeit um' : 'Abholung zur Wunschzeit um') : ($delivery ? 'Voraussichtlich bei dir um' : 'Abholbereit gegen');
 		$phone = !empty($settings['mailPhone']) ? trim($settings['mailPhone']) : '';
 		$total = shop_money($o['total_cents']);
-		if ($o['payment_method'] === 'mollie') { $payLine = 'Bezahlt, danke dir!'; }
+		if ($o['payment_method'] === 'voucher') { $payLine = 'Mit deinem Geschenkgutschein bezahlt, danke dir!'; }
+		elseif ($o['payment_method'] === 'mollie') { $payLine = 'Bezahlt, danke dir!'; }
 		elseif ($o['payment_method'] === 'cash') { $payLine = 'Bitte halte '.$total.' bereit ('.($delivery ? 'bar bei Lieferung' : 'bar bei Abholung').'), möglichst passend.'; }
 		else { $payLine = $delivery ? 'Du zahlst '.$total.' mit Karte bei Lieferung, wir bringen das Kartengerät mit.' : 'Du zahlst '.$total.' mit Karte bei Abholung.'; }
 		$lead = $delivery ? 'Deine Bestellung ist bei uns angekommen, und die Küche legt los. Unten siehst du, wann du mit uns rechnen kannst.' : 'Deine Bestellung ist bei uns angekommen, und die Küche legt los. Nenne beim Abholen einfach deine Bestellnummer '.$o['number'].'.';
@@ -54,7 +56,7 @@ function shop_notify_order($o) {
 			$st = $font.'font-size:'.($big ? '17px;color:#1c1a18;font-weight:bold;padding-top:8px;' : '14px;color:#777;padding-top:4px;');
 			return '<tr><td style="'.$st.'">'.$h($label).'</td><td align="right" style="'.$st.'">'.$h($value).'</td></tr>';
 		};
-		$sums = $sumRow('Zwischensumme', shop_money($o['subtotal_cents'])).((int)$o['discount_cents'] > 0 ? $sumRow('Gutschein '.$o['coupon_code'], '-'.shop_money($o['discount_cents'])) : '').((int)$o['offer_cents'] > 0 ? $sumRow('Kombi Pizza + Getränk', '-'.shop_money($o['offer_cents'])) : '').($delivery ? $sumRow('Liefergebühr', shop_money($o['fee_cents'])) : '').($o['tip_cents'] > 0 ? $sumRow('Trinkgeld', shop_money($o['tip_cents'])) : '').$sumRow('Gesamt', $total, true);
+		$sums = $sumRow('Zwischensumme', shop_money($o['subtotal_cents'])).((int)$o['discount_cents'] > 0 ? $sumRow('Gutschein '.$o['coupon_code'], '-'.shop_money($o['discount_cents'])) : '').((int)$o['offer_cents'] > 0 ? $sumRow('Kombi Pizza + Getränk', '-'.shop_money($o['offer_cents'])) : '').($delivery ? $sumRow('Liefergebühr', shop_money($o['fee_cents'])) : '').($o['tip_cents'] > 0 ? $sumRow('Trinkgeld', shop_money($o['tip_cents'])) : '').($vc > 0 ? $sumRow('Gesamt', shop_money((int)$o['total_cents'] + $vc)).$sumRow('Geschenkgutschein', '-'.shop_money($vc)).$sumRow($o['payment_method'] === 'voucher' ? 'Noch zu zahlen' : 'Noch zu zahlen', $total, true) : $sumRow('Gesamt', $total, true));
 		$legal = bm_legal_lines(array());
 		$imprint_url = !empty($settings['imprintUrl']) ? $settings['imprintUrl'] : '';
 		$privacy_url = !empty($settings['privacyUrl']) ? $settings['privacyUrl'] : '';
@@ -92,7 +94,7 @@ function shop_notify_order($o) {
 	// ---- restaurant
 	$plain = '#'.$o['day_no'].' '.($delivery ? 'Lieferung' : 'Abholung').' '.$when."\r\n".$o['customer_name'].', '.$o['phone']."\r\n".($delivery ? $o['street'].', '.$o['zip'].' '.$o['city'].($o['address_note'] !== '' ? ' ('.$o['address_note'].')' : '')."\r\n" : '')."\r\n";
 	foreach ($lines as $l) { $plain .= $l['head'].($l['sub'] !== '' ? ' - '.$l['sub'] : '').($l['note'] !== '' ? ' ['.$l['note'].']' : '')."\r\n"; }
-	$plain .= ($o['note'] !== '' ? "\r\nAnmerkung: ".$o['note']."\r\n" : '')."\r\nGesamt ".shop_money($o['total_cents']).', '.$pay."\r\n";
+	$plain .= ($o['note'] !== '' ? "\r\nAnmerkung: ".$o['note']."\r\n" : '')."\r\nGesamt ".shop_money((int)$o['total_cents'] + $vc).($vc > 0 ? ', davon Geschenkgutschein '.shop_money($vc).', zu zahlen '.shop_money($o['total_cents']) : '').', '.$pay."\r\n";
 	$admin_subject = 'Neue Bestellung #'.$o['day_no'].' ('.($delivery ? 'Lieferung' : 'Abholung').', '.shop_money($o['total_cents']).')';
 	$htmlR = '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'.$h($admin_subject).'</title></head>'
 		.'<body style="margin:0;padding:0;background-color:#f4f1ea;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f1ea;"><tr><td align="center" style="padding:24px 12px;">'

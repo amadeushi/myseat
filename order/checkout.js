@@ -79,6 +79,10 @@
 		post('offers', { extra: S.extra, lines: S.cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; }) }).then(function (r) { S.offers = r.ok ? r : null; renderSummary(); }).catch(function () {});
 	}
 	function total() { return Math.max(0, subtotal() - discount() - offerCents() + fee() + tipCents()); }
+	// gift voucher (Wertgutschein): pays up to its balance, the rest is paid the chosen way (the server checks number and code again with the order)
+	function gvApply() { return S.gv ? Math.min(S.gv.balance, total()) : 0; }
+	function due() { return Math.max(0, total() - gvApply()); }
+	function gvCovers() { return !!S.gv && total() > 0 && due() === 0; }
 
 	// ---- summary
 	function renderSummary() {
@@ -100,6 +104,10 @@
 		if (S.mode === 'delivery') { h += '<div class="cart-row muted"><span>Liefergebühr</span><span>' + (S.zone ? fmt(S.zone.fee) : 'nach Adresse') + '</span></div>'; }
 		if (tipCents() > 0) { h += '<div class="cart-row muted"><span>Trinkgeld</span><span>' + fmt(tipCents()) + '</span></div>'; }
 		h += '<div class="cart-row total"><span>Gesamt</span><span>' + fmt(total()) + '</span></div>';
+		if (S.gv && gvApply() > 0) {
+			h += '<div class="cart-row coupon"><span>Geschenkgutschein ' + esc(S.gv.number) + ' <button type="button" class="co-coupon-off" id="co-gv-off">entfernen</button></span><span>&minus;' + fmt(gvApply()) + '</span></div>';
+			h += '<div class="cart-row total"><span>' + (due() > 0 ? 'Noch zu zahlen' : 'Mit Gutschein bezahlt') + '</span><span>' + fmt(due()) + '</span></div>';
+		}
 		var m = min(); if (m > 0 && subtotal() < m) { h += '<p class="cart-min">Noch ' + fmt(m - subtotal()) + ' bis zum Mindestbestellwert von ' + fmt(m) + '.</p>'; }
 		$('#co-totals').innerHTML = h;
 		renderPay();
@@ -225,7 +233,7 @@
 		var why = reason(), btn = $('#co-submit');
 		renderModeLine(); renderModeSubs(); quickEval();
 		btn.disabled = !!why || S.busy;
-		if (!S.busy) { btn.textContent = 'Zahlungspflichtig bestellen · ' + fmt(total()); }
+		if (!S.busy) { btn.textContent = gvCovers() ? 'Verbindlich bestellen · mit Gutschein bezahlt' : 'Zahlungspflichtig bestellen · ' + fmt(due()); }
 		$('#co-why').textContent = S.busy ? '' : why;
 		updateProgress();
 	}
@@ -385,8 +393,14 @@
 	}
 	function renderPay() {
 		if (!S.info) { updateSubmit(); return; }
+		if (gvCovers()) {   // the voucher pays everything: nothing to choose
+			S.pay = 'voucher'; S.payLabels = { voucher: 'Mit Gutschein bezahlt' };
+			$('#co-pay').innerHTML = '<p class="co-hint">Dein Geschenkgutschein deckt die ganze Bestellung. Du musst nichts weiter bezahlen.</p>';
+			updateSubmit(); return;
+		}
+		if (S.pay === 'voucher') { S.pay = ''; }
 		var opts = [];
-		var tot = fmt(total());
+		var tot = fmt(due());
 		if (S.info.pay.online) { opts.push(['mollie', 'Jetzt online bezahlen', 'Karte, PayPal, Apple Pay und mehr, sicher über Mollie. Du bezahlst im nächsten Schritt.']); }
 		if (S.info.pay.cash) { opts.push(['cash', S.mode === 'delivery' ? 'Bar bei Lieferung' : 'Bar bei Abholung', 'Bitte halte ' + tot + ' bereit, möglichst passend.']); }
 		if (S.info.pay.card_door) { opts.push(['card_door', S.mode === 'delivery' ? 'Mit Karte bei Lieferung bezahlen' : 'Mit Karte bei Abholung bezahlen', S.mode === 'delivery' ? 'Der Fahrer bringt das Kartengerät mit. ' + tot + ' zahlst du dort.' : 'Du zahlst ' + tot + ' bei der Abholung mit Karte.']); }
@@ -410,6 +424,19 @@
 			renderSummary();
 		}).catch(function () { couponMsg('Der Gutschein konnte gerade nicht geprüft werden.', true); });
 	}
+	// ---- gift voucher: number + security code, a preview of the balance (the server charges it with the order)
+	function gvMsg(t, bad) { var m = $('#co-gv-msg'); if (!m) { return; } m.textContent = t || ''; m.className = 'co-coupon-msg' + (t ? (bad ? ' bad' : ' ok') : ''); }
+	function applyGv() {
+		var n = $('#co-gv-num').value.trim(), c = $('#co-gv-code').value.trim();
+		if (!n || !c) { gvMsg('Bitte Nummer und Sicherheitscode eingeben.', true); return; }
+		gvMsg('Einen Moment ...', false);
+		post('gvcheck', { number: n, code: c }).then(function (r) {
+			if (r.ok) { S.gv = { number: r.number, code: c, balance: r.balance }; $('#co-gv-box').hidden = true; $('#co-gv-toggle').hidden = true; gvMsg('Geschenkgutschein ' + r.number + ': Guthaben ' + fmt(r.balance) + (r.until ? ', gültig bis ' + r.until : '') + '. Ein Rest bleibt auf dem Gutschein.', false); }
+			else { S.gv = null; gvMsg(r.error, true); }
+			renderSummary();
+		}).catch(function () { gvMsg('Der Gutschein konnte gerade nicht geprüft werden.', true); });
+	}
+	function removeGv() { S.gv = null; $('#co-gv-toggle').hidden = false; $('#co-gv-num').value = ''; $('#co-gv-code').value = ''; gvMsg('', false); renderSummary(); }
 	function removeCoupon() { S.coupon = null; $('#co-coupon-toggle').hidden = false; $('#co-coupon-in').value = ''; couponMsg('', false); renderSummary(); }
 
 	// ---- events
@@ -432,6 +459,9 @@
 		if (ev.target.closest('#co-coupon-toggle')) { var bx = $('#co-coupon-box'); bx.hidden = !bx.hidden; if (!bx.hidden) { $('#co-coupon-in').focus(); } $('#co-coupon-toggle').setAttribute('aria-expanded', bx.hidden ? 'false' : 'true'); return; }
 		if (ev.target.closest('#co-coupon-go')) { applyCoupon($('#co-coupon-in').value, false); return; }
 		if (ev.target.closest('#co-coupon-off')) { removeCoupon(); return; }
+		if (ev.target.closest('#co-gv-toggle')) { var gb = $('#co-gv-box'); gb.hidden = !gb.hidden; if (!gb.hidden) { $('#co-gv-num').focus(); } $('#co-gv-toggle').setAttribute('aria-expanded', gb.hidden ? 'false' : 'true'); return; }
+		if (ev.target.closest('#co-gv-go')) { applyGv(); return; }
+		if (ev.target.closest('#co-gv-off')) { removeGv(); return; }
 		if (ev.target.closest('#co-accwarn-skip')) { S.skipAcc = true; $('#co-accwarn').hidden = true; form.requestSubmit(); return; }
 		if (ev.target.closest('#co-acc-out')) { post('logout', {}).then(function () { location.reload(); }).catch(function () { location.reload(); }); return; }
 		var m = ev.target.closest('.mode-btn'); if (m) { setMode(m.dataset.mode, true); if (S.coupon) { applyCoupon(S.coupon.code, true); } return; }
@@ -446,6 +476,7 @@
 	});
 	$('#co-tip-custom-in').addEventListener('input', function () { S.tipCustom = this.value; renderSummary(); });
 	$('#co-coupon-in').addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); applyCoupon(this.value, false); } });
+	if ($('#co-gv-code')) { $('#co-gv-code').addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); applyGv(); } }); }
 	form.addEventListener('submit', function (ev) {
 		ev.preventDefault();
 		var err = $('#co-error'); err.textContent = '';
@@ -466,7 +497,7 @@
 		S.busy = true; updateSubmit(); $('#co-submit').textContent = 'Einen Moment ...';
 		post('create', {
 			type: S.mode, when: when, payment: S.pay, tip: tipCents(), name: f.name.value, phone: f.phone.value, email: f.email.value, note: f.note.value, nl_news: f.nl_news.checked ? 1 : 0, nl_stamps: f.nl_stamps.checked ? 1 : 0,
-			street: f.street.value, zip: f.zip.value, city: f.city.value, words: S.zoneWords, address_note: f.address_note.value, website: f.website.value, coupon: S.coupon ? S.coupon.code : '', extra: S.extra,
+			street: f.street.value, zip: f.zip.value, city: f.city.value, words: S.zoneWords, address_note: f.address_note.value, website: f.website.value, coupon: S.coupon ? S.coupon.code : '', gv_number: S.gv ? S.gv.number : '', gv_code: S.gv ? S.gv.code : '', extra: S.extra,
 			lines: S.cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; }),
 			group: S.group ? S.group.token : '', me: S.group ? S.group.me : '', rev: S.group ? (S.group.rev || '') : ''
 		}).then(function (r) {

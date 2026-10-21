@@ -134,6 +134,18 @@ $imprint = (!empty($settings['imprintUrl']) && preg_match('#^https?://#i', $sett
 				</div>
 				<p class="co-coupon-msg" id="co-coupon-msg" role="status" aria-live="polite"></p>
 			</div>
+			<?php if (shop_flag('gv_pay_on')): ?>
+			<div class="co-coupon co-gv" id="co-gv">
+				<button type="button" class="co-coupon-toggle" id="co-gv-toggle" aria-expanded="false" aria-controls="co-gv-box">Geschenkgutschein einlösen</button>
+				<div class="co-coupon-box" id="co-gv-box" hidden>
+					<label class="co-coupon-label" for="co-gv-num">Gutscheinnummer</label>
+					<input type="text" id="co-gv-num" maxlength="30" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="AMD-XXXX-XXXX" class="co-gv-in"/>
+					<label class="co-coupon-label" for="co-gv-code">Sicherheitscode</label>
+					<div class="co-coupon-row"><input type="text" id="co-gv-code" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="6 Zeichen"/><button type="button" class="co-coupon-go" id="co-gv-go">Prüfen</button></div>
+				</div>
+				<p class="co-coupon-msg" id="co-gv-msg" role="status" aria-live="polite"></p>
+			</div>
+			<?php endif; ?>
 			<div class="cart-sum" id="co-totals"></div>
 			<div class="co-progress" id="co-progress">
 				<div class="co-progress-track"><div class="co-progress-fill" id="co-progress-fill"></div></div>

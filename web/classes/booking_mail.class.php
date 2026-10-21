@@ -645,6 +645,7 @@ function bm_send_guest_mail($to_guest, $m, $brand, $admin_email) {
 		if (!empty($m['ics'])) {
 			$mail->AddStringAttachment($m['ics'], $m['ics_filename'], 'base64', 'text/calendar; method=PUBLISH; charset=UTF-8');
 		}
+		if (!empty($m['files'])) { foreach ($m['files'] as $fl) { $mail->AddStringAttachment($fl['data'], $fl['name'], 'base64', $fl['mime']); } }   // optional attachments (voucher PDF): name, mime, data
 		if (!empty($m['headers'])) { foreach ($m['headers'] as $hd) { $mail->AddCustomHeader($hd); } }
 		if (!$mail->Send()) { error_log('mySeat mail to guest failed: '.$mail->ErrorInfo); $GLOBALS['bm_last_mail_error'] = $mail->ErrorInfo; return false; }
 		return true;
@@ -656,11 +657,12 @@ function bm_send_guest_mail($to_guest, $m, $brand, $admin_email) {
 
 		$headers  = "MIME-Version: 1.0\r\nFrom: ".$from."\r\nReply-To: ".$reply_to."\r\nX-Mailer: mySeat\r\n";
 		if (!empty($m['headers'])) { foreach ($m['headers'] as $hd) { $headers .= preg_replace('/[\r\n]+/', ' ', $hd)."\r\n"; } }
-		if (!empty($m['ics'])) {
+		if (!empty($m['ics']) || !empty($m['files'])) {
 			$mix_boundary = '=_'.md5(uniqid('', true));
 			$headers .= "Content-Type: multipart/mixed; boundary=\"".$mix_boundary."\"\r\n";
 			$body  = "--".$mix_boundary."\r\nContent-Type: multipart/alternative; boundary=\"".$alt_boundary."\"\r\n\r\n".$alt;
-			$body .= "--".$mix_boundary."\r\nContent-Type: text/calendar; method=PUBLISH; charset=UTF-8; name=\"".$m['ics_filename']."\"\r\nContent-Transfer-Encoding: base64\r\nContent-Disposition: attachment; filename=\"".$m['ics_filename']."\"\r\n\r\n".chunk_split(base64_encode($m['ics']));
+			if (!empty($m['ics'])) { $body .= "--".$mix_boundary."\r\nContent-Type: text/calendar; method=PUBLISH; charset=UTF-8; name=\"".$m['ics_filename']."\"\r\nContent-Transfer-Encoding: base64\r\nContent-Disposition: attachment; filename=\"".$m['ics_filename']."\"\r\n\r\n".chunk_split(base64_encode($m['ics'])); }
+			if (!empty($m['files'])) { foreach ($m['files'] as $fl) { $body .= "--".$mix_boundary."\r\nContent-Type: ".$fl['mime']."; name=\"".$fl['name']."\"\r\nContent-Transfer-Encoding: base64\r\nContent-Disposition: attachment; filename=\"".$fl['name']."\"\r\n\r\n".chunk_split(base64_encode($fl['data'])); } }
 			$body .= "--".$mix_boundary."--\r\n";
 		} else {
 			$headers .= "Content-Type: multipart/alternative; boundary=\"".$alt_boundary."\"\r\n";

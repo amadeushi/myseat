@@ -628,10 +628,13 @@
 	function discAmt() { var b = goods(); return S.disc ? Math.min(b, Math.round(b * DISC_PCT / 100)) : 0; }
 	function vchAmt() { var cu = S.customer && S.customer.cust; return (S.vch && cu && cu.vch > 0 && subtotal() >= cu.vch) ? cu.vch : 0; }
 	function total() { return goods() + S.sur - discAmt() - vchAmt(); }
+	// gift voucher (number + code read out by the caller): pays up to its balance, the rest is paid cash / by card; the server checks and charges it with the order
+	function gvAmt() { return S.gv ? Math.min(S.gv.balance, Math.max(0, total())) : 0; }
+	function dueAmt() { return Math.max(0, total() - gvAmt()); }
 	function renderCash() {
-		var box = $('#kx-cash'), cash = pay() === 'cash'; box.hidden = !cash;
+		var box = $('#kx-cash'), cash = pay() === 'cash' && dueAmt() > 0; box.hidden = !cash;
 		if (!cash) { S.payWith = 0; return; }
-		var t = total(), opts = [], chips = '';
+		var t = dueAmt(), opts = [], chips = '';
 		if (t > 0) {
 			[5, 10, 20, 50, 100].forEach(function (d) { var v = Math.ceil(t / (d * 100)) * d * 100; if (opts.indexOf(v) < 0) { opts.push(v); } });
 			chips = '<button type="button" class="kx-chip' + (S.payWith === 0 ? ' is-on' : '') + '" data-cash="0">passend</button>' + opts.slice(0, 4).map(function (v) { return '<button type="button" class="kx-chip' + (S.payWith === v ? ' is-on' : '') + '" data-cash="' + v + '">' + esc(money(v).replace(',00', '')) + '</button>'; }).join('');
@@ -671,6 +674,22 @@
 		renderCust(); renderSum();
 	});
 	$('#kx-sur').addEventListener('click', toggleSur);
+	// ---- gift voucher read out by the caller
+	function gvMsg(t, bad) { var m = $('#kx-gv-msg'); if (m) { m.textContent = t || ''; m.classList.toggle('is-bad', !!bad); } }
+	if ($('#kx-gv-toggle')) {
+		$('#kx-gv-toggle').addEventListener('click', function () { var b = $('#kx-gv-box'); b.hidden = !b.hidden; this.setAttribute('aria-expanded', String(!b.hidden)); if (!b.hidden) { $('#kx-gv-num').focus(); } });
+		$('#kx-gv-go').addEventListener('click', function () {
+			var n = $('#kx-gv-num').value.trim(), c = $('#kx-gv-code').value.trim();
+			if (!n || !c) { gvMsg('Nummer und Sicherheitscode eingeben.', true); return; }
+			gvMsg('Einen Moment ...');
+			post('gvcheck', { number: n, code: c }).then(function (r) {
+				if (r.ok) { S.gv = { number: r.number, code: c, balance: r.balance }; $('#kx-gv-box').hidden = true; $('#kx-gv-toggle').setAttribute('aria-expanded', 'false'); gvMsg('Gutschein ' + r.number + ': Guthaben ' + money(r.balance) + (r.until ? ', gültig bis ' + r.until : '') + '.'); }
+				else { S.gv = null; gvMsg(r.error || 'Das hat nicht geklappt.', true); }
+				renderSum();
+			}).catch(function () { gvMsg('Keine Verbindung.', true); });
+		});
+		$('#kx-sum').addEventListener('click', function (ev) { if (ev.target.closest('#kx-gv-off')) { S.gv = null; gvMsg(''); renderSum(); } });
+	}
 	$('#kx-sum').addEventListener('click', function (ev) { var b = ev.target.closest('[data-edit]'); if (b) { S.panel = b.dataset.edit; renderAdj(); if (S.panel === 's') { $('#kx-sur-in').focus(); } } });
 	$('#kx-disc-why').addEventListener('click', function (ev) { var b = ev.target.closest('[data-why-d]'); if (b) { S.discWhy = S.discWhy === b.dataset.whyD ? '' : b.dataset.whyD; S.panel = S.discWhy ? '' : 'd'; renderSum(); } });
 	$('#kx-sur-why').addEventListener('click', function (ev) { var b = ev.target.closest('[data-why-s]'); if (b) { S.surWhy = S.surWhy === b.dataset.whyS ? '' : b.dataset.whyS; if (S.surWhy && S.sur) { S.panel = ''; } renderSum(); } });
@@ -690,12 +709,13 @@
 			(S.disc ? '<div class="is-adj"><dt><button type="button" class="kx-adjedit" data-edit="d" title="Grund ändern">Rabatt ' + DISC_PCT + ' %' + (S.discWhy ? ' · ' + esc(S.discWhy) : ' · Grund wählen') + '</button></dt><dd>&minus;' + money(da) + '</dd></div>' : '') +
 			(S.vch ? (vchAmt() ? '<div class="is-adj"><dt>Stempelgutschein</dt><dd>&minus;' + money(vchAmt()) + '</dd></div>' : '<div class="is-adj"><dt>Stempelgutschein</dt><dd><span class="kx-dash">gilt ab ' + money(S.customer.cust.vch) + ' Warenwert</span></dd></div>') : '') +
 			(S.sur ? '<div class="is-adj"><dt><button type="button" class="kx-adjedit" data-edit="s" title="Betrag oder Grund ändern">Aufschlag' + (S.surWhy ? ' · ' + esc(S.surWhy) : ' · Grund wählen') + '</button></dt><dd>+' + money(S.sur) + '</dd></div>' : '') +
-			'<div class="is-total"><dt>Gesamt</dt><dd>' + money(t) + '</dd></div>';
+			'<div class="is-total"><dt>Gesamt</dt><dd>' + money(t) + '</dd></div>' +
+			(gvAmt() > 0 ? '<div class="is-adj"><dt><button type="button" class="kx-adjedit" id="kx-gv-off" title="Gutschein entfernen">Geschenkgutschein ' + esc(S.gv.number) + '</button></dt><dd>&minus;' + money(gvAmt()) + '</dd></div><div class="is-total"><dt>' + (dueAmt() > 0 ? 'Noch zu zahlen' : 'Mit Gutschein bezahlt') + '</dt><dd>' + money(dueAmt()) + '</dd></div>' : '');
 		renderAdj();
-		$('#kx-go-t').textContent = cart.length ? money(t) : '';
+		$('#kx-go-t').textContent = cart.length ? money(dueAmt()) : '';
 		$('#kx-go').disabled = !cart.length;
 		var q = S.quote, when = S.when ? 'um ' + slotLabel(S.when) + ' Uhr' : (q ? 'in etwa ' + q.min + ' Minuten, gegen ' + q.eta + ' Uhr' : '');
-		$('#kx-read-t').textContent = cart.length ? 'Ich wiederhole: ' + cart.map(function (l) { return l.qty + ' mal ' + l.title + (l.variation ? ', ' + l.variation : '') + (l.options.length ? ' mit ' + l.options.map(function (o) { return o.title; }).join(' und ') : ''); }).join('; ') + '. Zusammen ' + money(t) + (del && S.zone ? ' mit Lieferung' : '') + (S.disc ? ', mit ' + DISC_PCT + ' Prozent Rabatt' : '') + (S.sur ? ', einschließlich ' + money(S.sur) + ' Aufschlag' : '') +
+		$('#kx-read-t').textContent = cart.length ? 'Ich wiederhole: ' + cart.map(function (l) { return l.qty + ' mal ' + l.title + (l.variation ? ', ' + l.variation : '') + (l.options.length ? ' mit ' + l.options.map(function (o) { return o.title; }).join(' und ') : ''); }).join('; ') + '. Zusammen ' + money(t) + (gvAmt() > 0 ? ', davon ' + money(gvAmt()) + ' mit Geschenkgutschein, ' + (dueAmt() > 0 ? 'zu zahlen ' + money(dueAmt()) : 'nichts mehr zu zahlen') : '') + (del && S.zone ? ' mit Lieferung' : '') + (S.disc ? ', mit ' + DISC_PCT + ' Prozent Rabatt' : '') + (S.sur ? ', einschließlich ' + money(S.sur) + ' Aufschlag' : '') +
 			(del ? ', nach ' + (f.elements.street.value.trim() || '(Adresse)') : ', zum Abholen') + ', ' + when + '. Zahlung ' + (pay() === 'cash' ? 'bar' : 'mit Karte') + '.' : 'Noch nichts im Bon.';
 		renderCash();
 	}
@@ -787,7 +807,7 @@
 		var payload = {
 			type: type(), name: el.name.value, phone: el.phone.value, no_phone: !!el.no_phone.checked, street: el.street.value, zip: el.zip.value, city: el.city.value,
 			address_note: el.address_note.value, payment: pay(), note: el.note.value, when: S.when || '', pay_with: pay() === 'cash' ? S.payWith : 0,
-			use_voucher: vchAmt() > 0 ? 1 : 0, discount: S.disc ? 1 : 0, discount_reason: S.disc ? S.discWhy : '', surcharge: S.sur, surcharge_reason: S.sur ? S.surWhy : '',
+			gv_number: S.gv ? S.gv.number : '', gv_code: S.gv ? S.gv.code : '', use_voucher: vchAmt() > 0 ? 1 : 0, discount: S.disc ? 1 : 0, discount_reason: S.disc ? S.discWhy : '', surcharge: S.sur, surcharge_reason: S.sur ? S.surWhy : '',
 			lines: cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; })
 		};
 		$('#kx-go').disabled = true; setMsg('Einen Moment ...');
@@ -803,7 +823,7 @@
 		}).catch(function () { $('#kx-go').disabled = !cart.length; fail('Keine Verbindung. Bitte versuche es noch einmal.'); });
 	});
 	function resetBon() {
-		cart = []; saveCart(); f.reset(); S.when = null; S.zone = null; S.zoneErr = ''; S.customer = null; S.payWith = 0; S.disc = false; S.vch = false; S.discWhy = ''; S.sur = 0; S.surWhy = ''; S.panel = ''; $('#kx-sur-in').value = ''; S.prefilled = false; lastLookup = ''; zoneSeq++;
+		cart = []; saveCart(); f.reset(); S.when = null; S.zone = null; S.zoneErr = ''; S.customer = null; S.payWith = 0; S.gv = null; if ($('#kx-gv-num')) { $('#kx-gv-num').value = ''; $('#kx-gv-code').value = ''; $('#kx-gv-msg').textContent = ''; } S.disc = false; S.vch = false; S.discWhy = ''; S.sur = 0; S.surWhy = ''; S.panel = ''; $('#kx-sur-in').value = ''; S.prefilled = false; lastLookup = ''; zoneSeq++;
 		$('#pos-zone').innerHTML = ''; $('#kx-custom').hidden = true; $('#kx-cash-in').value = ''; $('#pos-search').value = ''; $('#pos-search-clear').hidden = true;
 		renderCart(); renderCust(); pickDefaultCat(); renderCats(); renderProducts(); syncType(); setMsg('');
 		f.elements.phone.focus();

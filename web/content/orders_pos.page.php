@@ -91,6 +91,17 @@ if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = myse
 							<input type="text" id="kx-cash-in" inputmode="decimal" placeholder="anderer Betrag" aria-label="Gast zahlt mit, Betrag in Euro" autocomplete="off"/>
 							<p class="kx-change" id="kx-change" aria-live="polite"></p>
 						</div>
+						<?php if (shop_flag('gv_pay_on')): ?>
+						<div class="kx-gv" id="kx-gv">
+							<button type="button" class="kx-chip" id="kx-gv-toggle" aria-expanded="false" aria-controls="kx-gv-box">Geschenkgutschein</button>
+							<div class="kx-gv-box" id="kx-gv-box" hidden>
+								<label class="kx-f">Nummer<input type="text" id="kx-gv-num" maxlength="30" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="AMD-XXXX-XXXX"/></label>
+								<label class="kx-f">Sicherheitscode<input type="text" id="kx-gv-code" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false"/></label>
+								<button type="button" class="kx-chip" id="kx-gv-go">Prüfen</button>
+							</div>
+							<p class="kx-gv-msg" id="kx-gv-msg" role="status" aria-live="polite"></p>
+						</div>
+						<?php endif; ?>
 						<label class="kx-f">Notiz an die Küche<textarea name="note" rows="2"></textarea></label>
 					</section>
 

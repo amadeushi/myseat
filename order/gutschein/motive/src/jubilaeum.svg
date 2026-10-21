@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1200" width="1800" height="1200">
+<defs>
+<radialGradient id="bg" cx="68%" cy="38%" r="75%"><stop offset="0" stop-color="#4b1b27"/><stop offset="0.55" stop-color="#26101a"/><stop offset="1" stop-color="#0e070b"/></radialGradient>
+<linearGradient id="box" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e2bd6a"/><stop offset="1" stop-color="#a97c2f"/></linearGradient>
+<linearGradient id="lid" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#efd187"/><stop offset="1" stop-color="#b8892f"/></linearGradient>
+<linearGradient id="rib" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbf3df"/><stop offset="1" stop-color="#d8c7a0"/></linearGradient>
+<g id="star"><path d="M0 -60 C6 -16 16 -6 60 0 C16 6 6 16 0 60 C-6 16 -16 6 -60 0 C-16 -6 -6 -16 0 -60z"/></g>
+</defs>
+<rect width="1800" height="1200" fill="url(#bg)"/>
+<g fill="#f1d68c"><use href="#star" x="950" y="250" transform="translate(950 250) scale(0.9) translate(-950 -250)" opacity="0.9"/><use href="#star" x="1640" y="200" opacity="0.8" transform="translate(1640 200) scale(1.1) translate(-1640 -200)"/><use href="#star" x="1020" y="560" opacity="0.55" transform="translate(1020 560) scale(0.55) translate(-1020 -560)"/><use href="#star" x="1700" y="560" opacity="0.6" transform="translate(1700 560) scale(0.65) translate(-1700 -560)"/><use href="#star" x="1250" y="110" opacity="0.5" transform="translate(1250 110) scale(0.5) translate(-1250 -110)"/></g>
+<g fill="#f1d68c" opacity="0.14"><circle cx="1480" cy="90" r="80"/><circle cx="880" cy="420" r="48"/><circle cx="1700" cy="400" r="40"/></g>
+<ellipse cx="1360" cy="700" rx="330" ry="34" fill="#000" opacity="0.4"/>
+<rect x="1180" y="400" width="360" height="290" rx="10" fill="url(#box)"/>
+<rect x="1150" y="330" width="420" height="96" rx="12" fill="url(#lid)"/>
+<rect x="1330" y="330" width="80" height="360" fill="url(#rib)"/>
+<path d="M1180 400 h360 v22 h-360z" fill="#000" opacity="0.16"/>
+<path d="M1370 330 C1290 250 1180 220 1190 292 C1198 342 1300 340 1370 330z" fill="url(#rib)"/>
+<path d="M1370 330 C1450 250 1560 220 1550 292 C1542 342 1440 340 1370 330z" fill="url(#rib)"/>
+<path d="M1370 330 C1300 300 1240 300 1215 290" stroke="#a98f5a" stroke-width="5" fill="none" opacity="0.6"/>
+<path d="M1370 330 C1440 300 1500 300 1525 290" stroke="#a98f5a" stroke-width="5" fill="none" opacity="0.6"/>
+<circle cx="1370" cy="332" r="34" fill="#fbf3df"/><circle cx="1370" cy="332" r="34" fill="none" stroke="#a98f5a" stroke-width="4"/>
+<rect x="1196" y="420" width="12" height="250" fill="#fff" opacity="0.14"/>
+</svg>

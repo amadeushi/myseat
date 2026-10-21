@@ -268,6 +268,7 @@ function shop_ensure_schema() {
 	shop_nl_schema($db, $opts);   // subscribers of the newsletter and the log of their consent (shop_newsletter.class.php)
 	shop_issue_schema($db, $opts);   // reports "es fehlt etwas" after a delivery (shop_issue.class.php)
 	shop_issue_chat_schema($db, $opts);   // chat about such a report (shop_issue_chat.class.php)
+	gv_schema($db, $opts);   // gift vouchers with a balance, their movements, staff PINs (shop_voucher.class.php)
 	$done = true;
 	shop_migrate_groups();
 }
@@ -356,6 +357,12 @@ function shop_defaults() {
 		'offer_combo' => '1',       // pizza + drink: euro off the drink per pizza (0 = off)
 		'stamp_on' => '1',          // stamp card: every finished order is a stamp, a full card becomes a voucher (see shop_stamp_*)
 		'stamp_percent' => '10', 'stamp_goal' => '5', 'stamp_months' => '12', 'voucher_days' => '90',
+		'gv_pay_on' => '0',        // gift vouchers can be redeemed as payment in the checkout and at the till (works for imported vouchers before the shop for guests opens)
+		'gv_on' => '0',             // gift vouchers (Wertgutscheine): the guest pages / online payment; the backend page works without it (web/classes/shop_voucher.class.php)
+		'gv_pdf_on' => '1', 'gv_post_on' => '1', 'gv_pickup_on' => '1',   // forms of the voucher shop: PDF by mail, numbered blank by post, pick-up at the restaurant
+		'gv_amounts' => '25,50,75,100,200,500', 'gv_min_eur' => '10', 'gv_max_eur' => '500', 'gv_post_fee' => '2.50',   // amounts to choose (euro), limits of a free amount, postage for the blank (euro)
+		'gv_withdraw_mode' => 'days14',   // days14 = 14 days of withdrawal like the AGB; lapse = the right ends when the PDF is delivered (needs the guest's consent, have a lawyer check before use)
+		'gv_shop_host' => 'amadeus.delivery', 'gv_motifs_off' => '', 'gv_own_motif' => '1', 'gv_terms_ok' => '0',   // motifs switched off (keys), guests may upload their own picture, the owner has checked the wording of the pages
 		'account_on' => '1',        // guest accounts: sign-in by code or link, order history, favorites (see shop_account.class.php)
 		'account_sms' => '1',       // sign-in codes by SMS (otherwise only by e-mail); needs SMS sending set up
 		'account_sms_daily' => '100', // at most this many sign-in SMS a day (every one costs money)
@@ -1345,7 +1352,8 @@ function shop_create_order($in) {
 	// payment and tip
 	$pay = isset($in['payment']) ? (string)$in['payment'] : '';
 	$allowed = array('mollie' => shop_flag('allow_online'), 'cash' => shop_flag('allow_cash'), 'card_door' => shop_flag('allow_card_door'));
-	if (empty($allowed[$pay])) { return array('ok' => false, 'error' => 'Diese Zahlungsart ist nicht möglich.'); }
+	$gvNumber = trim((string)(isset($in['gv_number']) ? $in['gv_number'] : '')); $gvCode = (string)(isset($in['gv_code']) ? $in['gv_code'] : '');   // a gift voucher pays all or a part (shop_voucher_shop.class.php)
+	if ($gvNumber === '' && empty($allowed[$pay])) { return array('ok' => false, 'error' => 'Diese Zahlungsart ist nicht möglich.'); }
 	$tip = shop_flag('tip_enabled') ? max(0, min(5000, (int)(isset($in['tip']) ? $in['tip'] : 0))) : 0;
 	// coupon: checked again here (the guest's view was only a preview), the discount is never taken from the browser
 	$coupon = null; $discount = 0;
@@ -1361,6 +1369,18 @@ function shop_create_order($in) {
 		if ($cr['ok']) { $coupon = $cr['coupon']; $discount = $cr['discount']; }
 	}
 	$total = max(0, $sub - $discount - $offerCents + $fee + $tip);
+	// gift voucher (number + security code, checked here again): it pays up to its balance; what is left is paid the chosen way, all of it covered = paid with the voucher
+	$gvV = null; $gvCents = 0;
+	if ($gvNumber !== '') {
+		if (!shop_flag('gv_pay_on')) { return array('ok' => false, 'error' => 'Geschenkgutscheine lassen sich gerade nicht einlösen.'); }
+		$gvErr = ''; $gvV = gv_pay_check($gvNumber, $gvCode, $gvErr);
+		if (!$gvV) { return array('ok' => false, 'error' => $gvErr); }
+		$gvCents = min((int)$gvV['balance_cents'], $total);
+		if ($gvCents < 1) { $gvV = null; $gvCents = 0; }
+		elseif ($gvCents >= $total) { $pay = 'voucher'; }
+	}
+	if ($pay !== 'voucher' && empty($allowed[$pay])) { return array('ok' => false, 'error' => $gvCents > 0 ? 'Bitte wähle, wie du den Rest bezahlen möchtest.' : 'Diese Zahlungsart ist nicht möglich.'); }
+	$total -= $gvCents;   // what is still to be paid
 	// a visitor may not flood the kitchen
 	$ip = substr(hash('sha256', (isset($in['ip']) ? $in['ip'] : '').'|myseat-shop'), 0, 16);
 	$recent = fb_row("SELECT COUNT(*) AS n FROM ".fb_t('tp_shop_orders')." WHERE ip_hash = ? AND created_at > ?", 'ss', array($ip, date('Y-m-d H:i:s', time() - 600)));
@@ -1372,6 +1392,11 @@ function shop_create_order($in) {
 	if ($coupon && !$test && !shop_coupon_reserve($coupon['id'])) { return array('ok' => false, 'error' => 'Dieser Gutschein wurde gerade eingelöst und ist jetzt aufgebraucht.'); }
 	$token = bin2hex(random_bytes(16));
 	$number = shop_order_number();
+	// the voucher is charged before the order exists (two guests cannot spend the same money); a test order does not touch a real voucher
+	if ($gvCents > 0 && !$test) {
+		$gvR = gv_pay_take($gvV['id'], $gvCents, $number);
+		if (!$gvR['ok']) { if ($coupon && !$test) { shop_coupon_unreserve($coupon['id']); } return array('ok' => false, 'error' => $gvR['error']); }
+	}
 	$today = date('Y-m-d');
 	shop_dayno_lock(); // two orders arriving together (n8n imports, a phone order) must not get the same number of the day
 	$dayNo = (int)(fb_row("SELECT COALESCE(MAX(day_no), 0) + 1 AS n FROM ".fb_t('tp_shop_orders')." WHERE order_date = ?", 's', array($today))['n']);
@@ -1386,9 +1411,14 @@ function shop_create_order($in) {
 			mb_substr(trim((string)(isset($in['note']) ? $in['note'] : '')), 0, 500), $test, $now, $now));
 	if (!$ok) {
 		if ($coupon && !$test) { shop_coupon_unreserve($coupon['id']); }
+		if ($gvCents > 0 && !$test) { gv_refund((int)$gvV['id'], $gvCents, array(null, 'Storno'), 'Bestellung '.$number.' nicht gespeichert'); }
 		return array('ok' => false, 'error' => 'Die Bestellung konnte nicht gespeichert werden. Bitte versuche es noch einmal.');
 	}
 	$id = (int)mysqli_insert_id($db); shop_dayno_unlock();
+	if ($gvCents > 0) {   // paid (all or in part) with a voucher; a test order never charged it, so there is nothing to give back
+		fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET voucher_id = ?, voucher_cents = ?, voucher_back = ?, payment_status = ? WHERE id = ?", 'iiisi', array((int)$gvV['id'], $gvCents, $test ? 1 : 0, $pay === 'voucher' ? 'paid' : 'open', $id));
+		shop_log($id, 'voucher', 'Gutschein '.$gvV['number'].' zahlt '.shop_money($gvCents));
+	}
 	if (!empty($in['acc_id'])) { fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET account_id = ? WHERE id = ?", 'ii', array((int)$in['acc_id'], $id)); }
 	if ($offerCents > 0 || $offerChoice !== '') { fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET offer_cents = ?, offer_note = ?, offer_choice = ? WHERE id = ?", 'issi', array($offerCents, $offerNote, $offerChoice, $id)); }
 	if ($coupon) {
@@ -1546,7 +1576,8 @@ function shop_create_manual_order($in) {
 		$fee = $z['zone']['fee_cents']; $zoneId = $z['zone']['id']; $lat = $z['lat']; $lng = $z['lng'];
 	}
 	$pay = isset($in['payment']) ? (string)$in['payment'] : '';
-	if (!in_array($pay, array('cash', 'card_door'), true)) { return array('ok' => false, 'error' => 'Bitte eine Zahlart wählen.'); }
+	$gvNumber = trim((string)(isset($in['gv_number']) ? $in['gv_number'] : '')); $gvCode = (string)(isset($in['gv_code']) ? $in['gv_code'] : '');   // gift voucher read out by the caller: number + security code
+	if ($gvNumber === '' && !in_array($pay, array('cash', 'card_door'), true)) { return array('ok' => false, 'error' => 'Bitte eine Zahlart wählen.'); }
 	$adj = shop_pos_adjust($sub, $fee, $in);
 	if (!$adj['ok']) { return $adj; }
 	// the voucher of the stamp card of the caller (a fixed amount, used up completely): instead of the manual discount, never both; it is taken from the keys of the phone number (and e-mail)
@@ -1561,6 +1592,16 @@ function shop_create_manual_order($in) {
 		$coupon = $cr['coupon']; $vDiscount = (int)$cr['discount'];
 	}
 	$total = $sub + $fee + $adj['surcharge'] - $adj['discount'] - $vDiscount;
+	$gvV = null; $gvCents = 0;
+	if ($gvNumber !== '') {   // the voucher pays up to its balance, the rest goes the way the till chose (cash / card at the door)
+		if (!shop_flag('gv_pay_on')) { return array('ok' => false, 'error' => 'Geschenkgutscheine lassen sich gerade nicht einlösen (Backend > Gutscheine > Einstellungen).'); }
+		$gvErr = ''; $gvV = gv_pay_check($gvNumber, $gvCode, $gvErr);
+		if (!$gvV) { return array('ok' => false, 'error' => $gvErr); }
+		$gvCents = min((int)$gvV['balance_cents'], $total);
+		if ($gvCents < 1) { $gvV = null; $gvCents = 0; } elseif ($gvCents >= $total) { $pay = 'voucher'; }
+	}
+	if ($pay !== 'voucher' && !in_array($pay, array('cash', 'card_door'), true)) { return array('ok' => false, 'error' => $gvCents > 0 ? 'Bitte wählen, wie der Rest bezahlt wird.' : 'Bitte eine Zahlart wählen.'); }
+	$total -= $gvCents;   // what is still to be paid
 	// a wish time (Y-m-d H:i) stands as the caller chose it; "as soon as possible" is the time the till told the caller (shop_pos_quote)
 	$scheduled = null; $eta = date('Y-m-d H:i:s', time() + shop_pos_quote($type)['min'] * 60);
 	if (!empty($in['when'])) {
@@ -1572,6 +1613,10 @@ function shop_create_manual_order($in) {
 	if ($coupon && !shop_coupon_reserve($coupon['id'])) { return array('ok' => false, 'error' => 'Dieser Gutschein wurde gerade eingelöst und ist jetzt aufgebraucht.'); }
 	$token = bin2hex(random_bytes(16));
 	$number = shop_order_number();
+	if ($gvCents > 0) {   // charged before the order exists: two tills cannot spend the same money
+		$gvR = gv_pay_take($gvV['id'], $gvCents, $number);
+		if (!$gvR['ok']) { if ($coupon) { shop_coupon_unreserve($coupon['id']); } return array('ok' => false, 'error' => $gvR['error']); }
+	}
 	$today = date('Y-m-d');
 	shop_dayno_lock(); // two orders arriving together (n8n imports, a phone order) must not get the same number of the day
 	$dayNo = (int)(fb_row("SELECT COALESCE(MAX(day_no), 0) + 1 AS n FROM ".fb_t('tp_shop_orders')." WHERE order_date = ?", 's', array($today))['n']);
@@ -1583,8 +1628,12 @@ function shop_create_manual_order($in) {
 		'ssisss'.'s'.'sssssss'.'ddi'.'iii'.'ssss'.'i'.'iis'.'s', array($token, $number, $dayNo, $today, $type, $scheduled, $eta, $name, $phone, $email, $street, $zip, $city, $addrNote,
 			$lat === null ? 0 : $lat, $lng === null ? 0 : $lng, $zoneId === null ? 0 : $zoneId, $sub, $fee, $total, $pay,
 			mb_substr(trim((string)(isset($in['note']) ? $in['note'] : '')), 0, 500), $now, $now, $payWith, $adj['discount'], $adj['surcharge'], $adj['note'], $now));
-	if (!$ok) { if ($coupon) { shop_coupon_unreserve($coupon['id']); } shop_dayno_unlock(); return array('ok' => false, 'error' => 'Die Bestellung konnte nicht gespeichert werden. Bitte versuche es noch einmal.'); }
+	if (!$ok) { if ($coupon) { shop_coupon_unreserve($coupon['id']); } if ($gvCents > 0) { gv_refund((int)$gvV['id'], $gvCents, array(null, 'Storno'), 'Bestellung '.$number.' nicht gespeichert'); } shop_dayno_unlock(); return array('ok' => false, 'error' => 'Die Bestellung konnte nicht gespeichert werden. Bitte versuche es noch einmal.'); }
 	$id = (int)mysqli_insert_id(fb_db()); shop_dayno_unlock();
+	if ($gvCents > 0) {
+		fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET voucher_id = ?, voucher_cents = ?, payment_status = ? WHERE id = ?", 'iisi', array((int)$gvV['id'], $gvCents, $pay === 'voucher' ? 'paid' : 'open', $id));
+		shop_log($id, 'voucher', 'Gutschein '.$gvV['number'].' zahlt '.shop_money($gvCents));
+	}
 	if ($coupon) {
 		fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET coupon_code = ?, discount_cents = ? WHERE id = ?", 'sii', array($coupon['code'], $vDiscount, $id));
 		fb_exec("INSERT INTO ".fb_t('tp_shop_coupon_uses')." (coupon_id, order_id, guest_key, guest_key2, discount_cents, created_at) VALUES (?, ?, ?, ?, ?, NOW())", 'iissi', array((int)$coupon['id'], $id, $gkeys[0], $gkeys[1], $vDiscount));
@@ -1724,7 +1773,7 @@ function shop_set_status($id, $status, $by = '', $etaMinutes = 0) {
 	if ($status === 'done' || $status === 'cancelled' || $status === 'failed') { $set .= ", done_at = ?"; $types .= 's'; $params[] = $now; }
 	$types .= 'i'; $params[] = (int)$id;
 	$st = fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET $set WHERE id = ?", $types, $params);
-	if ($st) { shop_log($id, 'status', $status.($by !== '' ? ' ('.$by.')' : '')); shop_sms_status((int)$id, $status); shop_push_status((int)$id, $status); if ($status === 'cancelled' || $status === 'failed') { shop_coupon_release((int)$id); } if ($status === 'done') { try { shop_stamp_award((int)$id); } catch (Throwable $e) { error_log('mySeat stamp: '.$e->getMessage()); } } }
+	if ($st) { shop_log($id, 'status', $status.($by !== '' ? ' ('.$by.')' : '')); shop_sms_status((int)$id, $status); shop_push_status((int)$id, $status); if ($status === 'cancelled' || $status === 'failed') { shop_coupon_release((int)$id); gv_pay_back((int)$id); } if ($status === 'done') { try { shop_stamp_award((int)$id); } catch (Throwable $e) { error_log('mySeat stamp: '.$e->getMessage()); } } }
 	return (bool)$st;
 }
 
@@ -1946,7 +1995,7 @@ function shop_orders_with_items($rows) {
 			'created' => substr($r['created_at'], 11, 5), 'created_ts' => strtotime($r['created_at']), 'scheduled' => $r['scheduled_at'] ? substr($r['scheduled_at'], 11, 5) : '',
 			'due' => substr($due, 11, 5), 'due_date' => substr($due, 0, 10), 'name' => $r['customer_name'], 'phone' => $r['phone'], 'email' => $r['email'],
 			'address' => $r['type'] === 'delivery' ? trim($r['street'].', '.$r['zip'].' '.$r['city']) : '', 'street' => (string)$r['street'], 'zip' => (string)$r['zip'], 'city' => (string)$r['city'], 'address_note' => $r['address_note'], 'note' => $r['note'],
-			'pay' => $r['payment_method'], 'pay_status' => $r['payment_status'], 'total' => (int)$r['total_cents'], 'fee' => (int)$r['fee_cents'], 'tip' => (int)$r['tip_cents'], 'subtotal' => (int)$r['subtotal_cents'],
+			'pay' => $r['payment_method'], 'pay_status' => $r['payment_status'], 'voucher' => (int)(isset($r['voucher_cents']) ? $r['voucher_cents'] : 0), 'total' => (int)$r['total_cents'], 'fee' => (int)$r['fee_cents'], 'tip' => (int)$r['tip_cents'], 'subtotal' => (int)$r['subtotal_cents'],
 			'items' => isset($items[(int)$r['id']]) ? $items[(int)$r['id']] : array(), 'coupon' => (string)$r['coupon_code'], 'discount' => (int)$r['discount_cents'], 'surcharge' => (int)$r['surcharge_cents'], 'adjust' => (string)$r['adjust_note'],
 			'token' => $r['token'],
 			'driver_name' => $r['driver_id'] && isset($driverNames[(int)$r['driver_id']]) ? $driverNames[(int)$r['driver_id']] : '',
@@ -3048,7 +3097,7 @@ function shop_dispatch_retry_order($orderId, $in, $by) {
 	if ($phone === '') { $phone = (string)$o['phone']; }
 	fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET street = ?, zip = ?, city = ?, address_note = ?, phone = ?, lat = ?, lng = ?, zone_id = ?, fail_reason = '', driver_id = NULL,
 		driver_lat = NULL, driver_lng = NULL, driver_at = NULL, driver_here_at = NULL, done_at = NULL WHERE id = ?", 'sssssddii', array($street, $zip, $city, $note, $phone, $lat, $lng, $zone, (int)$orderId));
-	shop_coupon_reclaim($orderId);
+	shop_coupon_reclaim($orderId); gv_pay_again($orderId);
 	if (!shop_set_status((int)$orderId, 'ready', $by.': Zustellung wiederholt')) { return array('ok' => false, 'error' => 'Die Lieferung konnte nicht zurückgeholt werden.'); }
 	shop_log((int)$orderId, 'Zurückgeholt', mb_substr(($diff ? implode('; ', $diff) : 'Adresse unverändert').($feeNote !== '' ? ' | '.$feeNote : '').' | Grund vorher: '.$o['fail_reason'], 0, 200));
 	return array('ok' => true, 'fee_note' => $feeNote);
@@ -3750,7 +3799,7 @@ function shop_stamp_mail($to, $m) {
 	require_once __DIR__.'/shop_mail.class.php';
 	$from = shop_mail_from();
 	$to = trim((string)$to);
-	if ($to === '' || $from === '' || !filter_var($to, FILTER_VALIDATE_EMAIL)) { return; }
+	if ($to === '' || $from === '' || !filter_var($to, FILTER_VALIDATE_EMAIL)) { return false; }
 	$brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 	$h = function ($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); };
 	$font = 'font-family:Arial,Helvetica,sans-serif;';
@@ -3776,7 +3825,7 @@ function shop_stamp_mail($to, $m) {
 		.'<tr><td style="padding:14px 32px 30px;">'.$sign.'</td></tr>'
 		.$footer.'</table></td></tr></table></body></html>';
 	$plain = $m['headline']."\r\n\r\n".$m['lead']."\r\n\r\n".(!empty($m['box']) ? $m['box']['label'].': '.$m['box']['value'].' ('.$m['box']['note'].")\r\n\r\n" : '').$m['after']."\r\n".($m['url'] !== '' ? "\r\n".$m['btn'].': '.$m['url']."\r\n" : '')."\r\n".$m['signoff']."\r\n";
-	bm_send_guest_mail($to, array('subject' => $m['subject'], 'plain' => $plain, 'html' => $html, 'ics' => '', 'ics_filename' => '', 'purpose' => isset($m['purpose']) ? (string)$m['purpose'] : 'order'), $brand, $from);
+	return bm_send_guest_mail($to, array('subject' => $m['subject'], 'plain' => $plain, 'html' => $html, 'ics' => '', 'ics_filename' => '', 'purpose' => isset($m['purpose']) ? (string)$m['purpose'] : 'order', 'files' => isset($m['files']) ? $m['files'] : array()), $brand, $from);
 }
 function shop_stamp_signoff() { return 'Guten Appetit, Hamun und Zeus'; }
 
@@ -3824,3 +3873,6 @@ require_once __DIR__.'/shop_offers.class.php';
 require_once __DIR__.'/shop_push.class.php';
 require_once __DIR__.'/shop_issue.class.php';
 require_once __DIR__.'/shop_issue_chat.class.php';
+require_once __DIR__.'/shop_voucher.class.php';
+require_once __DIR__.'/shop_voucher_pdf.class.php';
+require_once __DIR__.'/shop_voucher_shop.class.php';

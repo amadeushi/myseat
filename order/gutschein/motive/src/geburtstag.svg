@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1200" width="1800" height="1200">
+<defs>
+<radialGradient id="bg" cx="68%" cy="38%" r="75%"><stop offset="0" stop-color="#4a3322"/><stop offset="0.55" stop-color="#241911"/><stop offset="1" stop-color="#0f0b08"/></radialGradient>
+<linearGradient id="box" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#cf4a39"/><stop offset="1" stop-color="#8f2519"/></linearGradient>
+<linearGradient id="lid" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#df5b49"/><stop offset="1" stop-color="#a02d20"/></linearGradient>
+<linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f1d68c"/><stop offset="1" stop-color="#b98a3a"/></linearGradient>
+</defs>
+<rect width="1800" height="1200" fill="url(#bg)"/>
+<g fill="#e9c46f" opacity="0.16"><circle cx="1500" cy="140" r="90"/><circle cx="1180" cy="90" r="46"/><circle cx="1690" cy="360" r="62"/><circle cx="900" cy="230" r="38"/><circle cx="1050" cy="470" r="30"/></g>
+<g opacity="0.9"><rect x="860" y="160" width="26" height="26" rx="4" fill="#e9c46f" transform="rotate(24 873 173)"/><rect x="1660" y="120" width="22" height="22" rx="4" fill="#cf4a39" transform="rotate(-18 1671 131)"/><rect x="1000" y="360" width="20" height="20" rx="4" fill="#f4ead2" transform="rotate(40 1010 370)"/><circle cx="1700" cy="520" r="11" fill="#e9c46f"/><circle cx="930" cy="420" r="10" fill="#cf4a39"/><rect x="1590" y="640" width="22" height="22" rx="4" fill="#e9c46f" transform="rotate(12 1601 651)"/><circle cx="1010" cy="620" r="9" fill="#f4ead2"/></g>
+<ellipse cx="1360" cy="700" rx="330" ry="34" fill="#000" opacity="0.35"/>
+<rect x="1180" y="400" width="360" height="290" rx="10" fill="url(#box)"/>
+<rect x="1150" y="330" width="420" height="96" rx="12" fill="url(#lid)"/>
+<rect x="1330" y="330" width="80" height="360" fill="url(#gold)"/>
+<path d="M1180 400 h360 v22 h-360z" fill="#000" opacity="0.18"/>
+<path d="M1370 330 C1290 250 1180 220 1190 292 C1198 342 1300 340 1370 330z" fill="url(#gold)"/>
+<path d="M1370 330 C1450 250 1560 220 1550 292 C1542 342 1440 340 1370 330z" fill="url(#gold)"/>
+<path d="M1370 330 C1300 300 1240 300 1215 290" stroke="#8a6325" stroke-width="5" fill="none" opacity="0.55"/>
+<path d="M1370 330 C1440 300 1500 300 1525 290" stroke="#8a6325" stroke-width="5" fill="none" opacity="0.55"/>
+<circle cx="1370" cy="332" r="34" fill="#f1d68c"/><circle cx="1370" cy="332" r="34" fill="none" stroke="#b98a3a" stroke-width="4"/>
+<path d="M1360 360 q-30 80 -60 120" stroke="url(#gold)" stroke-width="12" fill="none" stroke-linecap="round" opacity="0.0"/>
+<rect x="1196" y="420" width="12" height="250" fill="#fff" opacity="0.10"/>
+</svg>

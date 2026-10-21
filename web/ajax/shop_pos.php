@@ -77,6 +77,13 @@ if ($op === 'last_call') {
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($body['token']) || empty($_SESSION['shop_admin_token']) || !hash_equals($_SESSION['shop_admin_token'], (string)$body['token'])) {
 	pos_out(array('ok' => false, 'error' => 'Die Sitzung ist abgelaufen. Bitte lade die Seite neu.'));
 }
+// a gift voucher read out by the caller: number + security code -> balance (wrong pairs are counted, see gv_lookup_guest)
+if ($op === 'gvcheck') {
+	if (!shop_flag('gv_pay_on')) { pos_out(array('ok' => false, 'error' => 'Geschenkgutscheine lassen sich gerade nicht einlösen (Backend > Gutscheine > Einstellungen).')); }
+	$err = '';
+	$v = gv_pay_check(mb_substr((string)(isset($body['number']) ? $body['number'] : ''), 0, 30), (string)(isset($body['code']) ? $body['code'] : ''), $err);
+	pos_out($v ? array('ok' => true, 'number' => $v['number'], 'balance' => (int)$v['balance_cents'], 'until' => $v['valid_until'] ? date('d.m.Y', strtotime($v['valid_until'])) : '') : array('ok' => false, 'error' => $err));
+}
 if ($op === 'create') {
 	pos_out(shop_create_manual_order($body));
 }

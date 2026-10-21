@@ -8,3 +8,6 @@ config/sipgate_webhook_key.php
 lieferando belege/
 __pycache__/
 .DS_Store
+
+# pictures guests uploaded for their voucher (private, never part of the code)
+uploads/gutschein/

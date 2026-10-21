@@ -39,6 +39,11 @@
 						Newsletter
 					</a>
 				</li>
+				<li>
+					<a href="main_page.php?p=15" <?php if($_SESSION['page']=='15'){echo "class='active'";} ?> >
+						Gutscheine
+					</a>
+				</li>
 				<?php endif ?>
 				<?php if ( current_user_can( 'Page-Statistic' ) ): ?>
 				<li>
