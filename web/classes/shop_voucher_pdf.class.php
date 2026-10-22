@@ -135,6 +135,19 @@ function gv_wrap_var($text, $font, $size, $widthFor, $maxLines = 99) {
 	return $lines;
 }
 
+// The part of a picture the front of the card shows. The area above the band has the ratio 148 : 81 (GV_CARD_W_MM x (GV_CARD_H_MM - 24)). Window of a source picture of $sw x $sh at zoom 1: array(width, height) in source pixels.
+function gv_crop_window($sw, $sh) { $aw = GV_CARD_W_MM / (GV_CARD_H_MM - 24); $cw = min($sw, $sh * $aw); return array($cw, $cw / $aw); }
+// Clean values for an own picture: position x, y 0..1000 and zoom 1000..zmax (the part must stay at least 1250 px wide, at most 4x). For every other motif the defaults. Returns array(x, y, z, zmax).
+function gv_crop_norm($motif, $x, $y, $z) {
+	$zmax = 1000;
+	if (strpos((string)$motif, 'own:') === 0) {
+		$f = gv_motif_file($motif); $i = $f !== '' ? @getimagesize($f) : false;
+		if ($i) { $w = gv_crop_window($i[0], $i[1]); $zmax = max(1000, min(4000, (int)floor(1000 * $w[0] / 1250))); }
+		return array(max(0, min(1000, (int)$x)), max(0, min(1000, (int)$y)), max(1000, min($zmax, (int)$z)), $zmax);
+	}
+	return array(500, 500, 1000, 1000);
+}
+
 /*
  * The front of the card: the picture as it is (cut to the format, never stretched, no fade or text on it) above a solid dark band with the logo, the word GUTSCHEIN and the amount.
  * Text sits only on solid colours, so it reads the same on every motif, also on a picture a guest uploads. Everything with the guest's words, number, code and QR code is on the back (gv_render_back).
@@ -147,10 +160,11 @@ function gv_render_card($o, $w) {
 	$band = (int)round($mm(24)); $phH = $H - $band; $dark = '14100c';
 	imagefill($im, 0, 0, gv_hex($im, $dark));
 	$file = gv_motif_file($o['motif'] ?? ''); $src = $file !== '' ? @imagecreatefromjpeg($file) : false;
-	if ($src) {   // the picture fills the area above the band (cut at the edges, never stretched)
-		$sw = imagesx($src); $sh = imagesy($src); $sc = max($w / $sw, $phH / $sh);
-		$cw = (int)round($w / $sc); $ch = (int)round($phH / $sc);
-		imagecopyresampled($im, $src, 0, 0, (int)(($sw - $cw) / 2), (int)(($sh - $ch) / 2), $w, $phH, $cw, $ch);
+	if ($src) {   // the picture fills the area above the band (cut at the edges, never stretched); an own picture can be moved and zoomed: $o['crop'] = array(x, y, zoom) as stored with the order
+		$sw = imagesx($src); $sh = imagesy($src);
+		$cr = gv_crop_norm($o['motif'] ?? '', $o['crop'][0] ?? 500, $o['crop'][1] ?? 500, $o['crop'][2] ?? 1000);
+		$win = gv_crop_window($sw, $sh); $cw = $win[0] * 1000 / $cr[2]; $ch = $win[1] * 1000 / $cr[2];
+		imagecopyresampled($im, $src, 0, 0, (int)round($cr[0] / 1000 * ($sw - $cw)), (int)round($cr[1] / 1000 * ($sh - $ch)), $w, $phH, (int)round($cw), (int)round($ch));
 	} else {   // no picture (for example a voucher of the old system): a quiet warm gradient
 		for ($y = 0; $y < $phH; $y++) { $t = $y / max(1, $phH); imagefilledrectangle($im, 0, $y, $w, $y, gv_hex($im, sprintf('%02x%02x%02x', 58 - 38 * $t, 44 - 28 * $t, 30 - 18 * $t))); }
 	}

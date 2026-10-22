@@ -53,6 +53,12 @@ function gv_schema($db, $opts) {
 		`consent_ua` VARCHAR(200) NOT NULL DEFAULT '', `terms_at` DATETIME NULL, `created_at` DATETIME NOT NULL, `paid_at` DATETIME NULL, `mail_at` DATETIME NULL, `fulfilled_at` DATETIME NULL,
 		`withdrawn_at` DATETIME NULL, `withdraw_ip` VARCHAR(45) NOT NULL DEFAULT '', `refund_id` VARCHAR(40) NULL, `refunded_at` DATETIME NULL, `note` VARCHAR(200) NOT NULL DEFAULT '',
 		UNIQUE KEY `token` (`token`), KEY `voucher` (`voucher_id`), KEY `st` (`status`), KEY `mollie` (`mollie_id`), KEY `email` (`buyer_email`)) $opts");
+	// the part of an own picture the card shows (gv_crop_norm): position 0..1000 (0 = left / top edge, 1000 = right / bottom edge) and zoom 1000..4000 (1000 = the picture fills the card)
+	if (!fb_rows("SHOW COLUMNS FROM ".fb_t('tp_gv_orders')." LIKE 'crop_z'")) {
+		mysqli_query($db, "ALTER TABLE ".fb_t('tp_gv_orders')." ADD `crop_x` SMALLINT NOT NULL DEFAULT 500");
+		mysqli_query($db, "ALTER TABLE ".fb_t('tp_gv_orders')." ADD `crop_y` SMALLINT NOT NULL DEFAULT 500");
+		mysqli_query($db, "ALTER TABLE ".fb_t('tp_gv_orders')." ADD `crop_z` SMALLINT NOT NULL DEFAULT 1000");
+	}
 	// postcard by EchtPost (echtpost.class.php): state (sending, queued, sent, error, unclear, canceled), motive id and card id there, the last error, time of the last step
 	if (!fb_rows("SHOW COLUMNS FROM ".fb_t('tp_gv_orders')." LIKE 'ep_state'")) {
 		mysqli_query($db, "ALTER TABLE ".fb_t('tp_gv_orders')." ADD `ep_state` VARCHAR(10) NULL");

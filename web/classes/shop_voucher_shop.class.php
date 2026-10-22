@@ -69,6 +69,7 @@ function gv_order_create($in) {
 	if ($ip !== '' && (int)$r['n'] >= GV_ORDERS_PER_HOUR) { return $bad('', 'Von deiner Adresse kamen gerade viele Bestellungen. Bitte versuche es später noch einmal.'); }
 	gv_order_gc();
 
+	$crop = gv_crop_norm($motif, $in['crop_x'] ?? 500, $in['crop_y'] ?? 500, $in['crop_z'] ?? 1000);   // the part of an own picture (other motifs: the defaults)
 	$fee = $d === 'post' ? $cfg['fee'] : 0;
 	// a printed card (own print file or EchtPost) carries the own digital number and code, a blank its printed number
 	$v = gv_issue(array('kind' => ($d === 'pdf' || $cfg['post_mode'] !== 'blank') ? 'pdf' : 'print', 'face_cents' => $amount, 'status' => 'pending', 'buyer_name' => $name, 'buyer_email' => $email, 'recipient' => mb_substr(trim((string)($in['recipient'] ?? '')), 0, 80),
@@ -76,10 +77,10 @@ function gv_order_create($in) {
 	if (!$v['ok']) { return $bad('', 'Der Gutschein konnte nicht angelegt werden. Bitte versuche es noch einmal.'); }
 	$token = bin2hex(random_bytes(16)); $now = gv_now();
 	$st = fb_exec("INSERT INTO ".fb_t('tp_gv_orders')." (token, voucher_id, delivery, amount_cents, fee_cents, total_cents, motif, recipient, from_name, message, buyer_name, buyer_email, buyer_phone, ship_name, ship_street, ship_zip, ship_city,
-		status, consent_lapse, consent_at, consent_ip, consent_ua, terms_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?)", 'sisiiisssssssssssisssss', array(
+		status, crop_x, crop_y, crop_z, consent_lapse, consent_at, consent_ip, consent_ua, terms_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?)", 'sisiiisssssssssssiiiisssss', array(
 		$token, (int)$v['voucher']['id'], $d, $amount, $fee, $amount + $fee, $motif, mb_substr(trim((string)($in['recipient'] ?? '')), 0, 80), mb_substr(trim((string)($in['from'] ?? '')), 0, 80), mb_substr(trim((string)($in['message'] ?? '')), 0, 160),
 		$name, $email, mb_substr(trim((string)($in['phone'] ?? '')), 0, 40), mb_substr($ship['ship_name'], 0, 80), mb_substr($ship['ship_street'], 0, 120), $ship['ship_zip'], mb_substr($ship['ship_city'], 0, 80),
-		$lapse ? 1 : 0, $lapse ? $now : null, $ip, substr(isset($_SERVER['HTTP_USER_AGENT']) ? preg_replace('/[\x00-\x1f]/', '', (string)$_SERVER['HTTP_USER_AGENT']) : '', 0, 200), $now, $now));
+		$crop[0], $crop[1], $crop[2], $lapse ? 1 : 0, $lapse ? $now : null, $ip, substr(isset($_SERVER['HTTP_USER_AGENT']) ? preg_replace('/[\x00-\x1f]/', '', (string)$_SERVER['HTTP_USER_AGENT']) : '', 0, 200), $now, $now));
 	if (!$st) { gv_void((int)$v['voucher']['id'], array(null, 'System'), 'Bestellung nicht angelegt'); return $bad('', 'Die Bestellung konnte nicht angelegt werden. Bitte versuche es noch einmal.'); }
 	$id = (int)mysqli_insert_id(fb_db());
 	fb_exec("UPDATE ".fb_t('tp_gv_orders')." SET number = ? WHERE id = ?", 'si', array('G'.str_pad((string)$id, 5, '0', STR_PAD_LEFT), $id));
@@ -141,7 +142,7 @@ function gv_order_mark_paid($orderId) {
 
 function gv_order_pdf_opts($order, $v) {
 	global $settings;
-	return array('motif' => $order['motif'], 'amount_cents' => (int)$order['amount_cents'], 'recipient' => $order['recipient'], 'from' => $order['from_name'], 'message' => $order['message'], 'number' => $v['number'],
+	return array('motif' => $order['motif'], 'crop' => array((int)($order['crop_x'] ?? 500), (int)($order['crop_y'] ?? 500), (int)($order['crop_z'] ?? 1000)), 'amount_cents' => (int)$order['amount_cents'], 'recipient' => $order['recipient'], 'from' => $order['from_name'], 'message' => $order['message'], 'number' => $v['number'],
 		'code' => (string)gv_code_plain($v), 'valid_until' => $v['valid_until'], 'order_number' => $order['number'], 'bought' => $order['paid_at'], 'token' => $v['token'], 'brand' => !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus');
 }
 function gv_order_status_url($order) { return rtrim(shop_site_url(), '/').'/order/gutschein_status.php?t='.$order['token']; }

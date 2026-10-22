@@ -100,3 +100,12 @@
 .gv-side-btn { min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: inherit; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
 .gv-side-btn[aria-pressed="true"] { background: var(--gold-strong); border-color: var(--gold-strong); color: #1a140e; }
 .gv-side-btn:focus-visible { outline: 3px solid var(--gold-strong); outline-offset: 2px; }
+
+/* position and zoom of an own picture (gutschein.php) */
+.gv-crop { margin: 0 0 12px; display: grid; gap: 4px; }
+.gv-crop-hint { font-size: 14px; color: var(--text-muted); margin: 0 0 4px; }
+.gv-crop-row { display: grid; grid-template-columns: 7.5em 1fr; align-items: center; gap: 10px; min-height: 44px; font-size: 15px; }
+.gv-crop-row input[type="range"] { width: 100%; min-height: 32px; accent-color: var(--gold-strong); }
+.gv-crop .gv-side-btn { justify-self: start; margin-top: 4px; }
+.gv-prev-frame.is-draggable { cursor: grab; touch-action: none; }
+.gv-prev-frame.is-draggable:active { cursor: grabbing; }

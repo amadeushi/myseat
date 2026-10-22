@@ -19,7 +19,7 @@ if (strpos($motif, 'own:') === 0) {
 $amount = gv_parse_amount(isset($_GET['amount']) ? $_GET['amount'] : '');
 if ($amount === null || $amount < 100 || $amount > $cfg['max']) { $amount = 5000; }
 $clean = function ($k, $len) { return mb_substr(trim(preg_replace('/[\x00-\x08\x0b\x0c\x0e-\x1f]/', '', isset($_GET[$k]) ? (string)$_GET[$k] : '')), 0, $len); };
-$o = array('motif' => $motif, 'amount_cents' => $amount, 'recipient' => $clean('recipient', 80), 'from' => $clean('from', 80), 'message' => $clean('message', 160), 'number' => 'AMD-XXXX-XXXX', 'code' => 'XXXXXX',
+$o = array('motif' => $motif, 'crop' => array(isset($_GET['cx']) ? (int)$_GET['cx'] : 500, isset($_GET['cy']) ? (int)$_GET['cy'] : 500, isset($_GET['cz']) ? (int)$_GET['cz'] : 1000), 'amount_cents' => $amount, 'recipient' => $clean('recipient', 80), 'from' => $clean('from', 80), 'message' => $clean('message', 160), 'number' => 'AMD-XXXX-XXXX', 'code' => 'XXXXXX',
 	'valid_until' => gv_default_valid_until(), 'brand' => !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus');
 header('Content-Type: image/jpeg');
 header('Cache-Control: private, max-age=60');

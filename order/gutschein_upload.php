@@ -21,4 +21,5 @@ $r = gv_upload_store((string)file_get_contents($f['tmp_name']));
 if (!$r['ok']) { gvu_out($r); }
 $own[] = $r['key']; $_SESSION['gv_own'] = $own;
 if (mt_rand(1, 20) === 1) { gv_upload_gc(); }
-gvu_out(array('ok' => true, 'motif' => 'own:'.$r['key']));
+$cn = gv_crop_norm('own:'.$r['key'], 500, 500, 1000); $sz = @getimagesize(gv_upload_dir().'/'.$r['key'].'.jpg');
+gvu_out(array('ok' => true, 'motif' => 'own:'.$r['key'], 'w' => $sz ? $sz[0] : 0, 'h' => $sz ? $sz[1] : 0, 'zmax' => $cn[3]));

@@ -23,6 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		if (strpos($motif, 'own:') === 0 && !in_array(substr($motif, 4), isset($_SESSION['gv_own']) ? (array)$_SESSION['gv_own'] : array(), true)) { $motif = ''; }
 		$in = array('delivery' => $val('delivery'), 'amount' => $val('amount_choice') === 'custom' ? $val('amount_custom') : $val('amount_choice'), 'motif' => $motif, 'recipient' => $val('recipient'), 'from' => $val('from'), 'message' => $val('message'),
 			'name' => $val('name'), 'email' => $val('email'), 'phone' => $val('phone'), 'ship_name' => $val('ship_name'), 'ship_street' => $val('ship_street'), 'ship_zip' => $val('ship_zip'), 'ship_city' => $val('ship_city'),
+			'crop_x' => $val('crop_x', '500'), 'crop_y' => $val('crop_y', '500'), 'crop_z' => $val('crop_z', '1000'),
 			'terms' => $val('terms') === '1', 'consent' => $val('consent') === '1');
 		$r = gv_order_create($in);
 		if ($r['ok']) {
@@ -64,6 +65,13 @@ gv_page_head('Gutschein verschenken', 'gv-shell');
 				<button type="button" class="gv-side-btn" id="gv-side-back" aria-pressed="false">Rückseite mit deinen Worten</button>
 			</div>
 			<div class="gv-prev-frame" id="gv-frame"><img id="gv-prev" alt="Vorderseite deines Gutscheins" width="1000" height="709" src="gutschein_preview.php?motif=<?php echo $h(rawurlencode($motifNow)); ?>&amp;amount=<?php echo $h(rawurlencode($chosenAmount === 'custom' ? $val('amount_custom', '50') : $chosenAmount)); ?>"/></div>
+			<div class="gv-crop" id="gv-crop" hidden>
+				<p class="gv-crop-hint" id="gv-crop-hint">Ziehe dein Bild in der Vorschau, um den Ausschnitt zu wählen. Oder nimm die Regler.</p>
+				<label class="gv-crop-row" for="gv-crop-z"><span>Größe</span><input type="range" id="gv-crop-z" min="100" max="100" step="5" value="100"/></label>
+				<label class="gv-crop-row" for="gv-crop-x"><span>Waagerecht</span><input type="range" id="gv-crop-x" min="0" max="100" step="1" value="50"/></label>
+				<label class="gv-crop-row" for="gv-crop-y"><span>Senkrecht</span><input type="range" id="gv-crop-y" min="0" max="100" step="1" value="50"/></label>
+				<button type="button" class="gv-side-btn" id="gv-crop-reset">Zurücksetzen</button>
+			</div>
 			<div class="gv-prev-frame" id="gv-frame-back" hidden><img id="gv-prev-back" alt="Rückseite deines Gutscheins mit deinen Worten" width="1000" height="709" src="gutschein_preview.php?side=back&amp;motif=<?php echo $h(rawurlencode($motifNow)); ?>&amp;amount=<?php echo $h(rawurlencode($chosenAmount === 'custom' ? $val('amount_custom', '50') : $chosenAmount)); ?>"/></div>
 			<figcaption>So sieht er aus: vorne dein Motiv, hinten deine Worte. Nummer und Sicherheitscode bekommst du nach der Zahlung.</figcaption>
 		</div></figure>
@@ -72,6 +80,7 @@ gv_page_head('Gutschein verschenken', 'gv-shell');
 			<?php if (!$open): ?><p class="gv-notice">Vorschau für dich: Der Verkauf ist noch nicht eingeschaltet, bestellen geht erst, wenn er offen ist.</p><?php endif; ?>
 			<?php if ($err !== ''): ?><p class="gv-err" role="alert" id="gv-err"><?php echo $h($err); ?></p><?php endif; ?>
 			<input type="hidden" name="do" value="order"/>
+			<input type="hidden" name="crop_x" id="gv-crop-hx" value="<?php echo $h($val('crop_x', '500')); ?>"/><input type="hidden" name="crop_y" id="gv-crop-hy" value="<?php echo $h($val('crop_y', '500')); ?>"/><input type="hidden" name="crop_z" id="gv-crop-hz" value="<?php echo $h($val('crop_z', '1000')); ?>"/>
 			<input type="hidden" name="token" value="<?php echo $h($_SESSION['shop_token']); ?>"/>
 			<input type="text" name="website" class="gv-trap" tabindex="-1" autocomplete="off" aria-hidden="true"/>
 
@@ -104,7 +113,7 @@ gv_page_head('Gutschein verschenken', 'gv-shell');
 				<?php if ($gv_cfg['own']): ?>
 				<div class="gv-motif-group"><h3>Oder dein eigenes Bild</h3>
 					<div class="gv-motifs" id="gv-own-list">
-						<?php if (strpos($motifNow, 'own:') === 0): ?><label class="gv-motif"><input type="radio" name="motif" value="<?php echo $h($motifNow); ?>" checked/><span>Dein Bild</span></label><?php endif; ?>
+						<?php if (strpos($motifNow, 'own:') === 0): $ownSz = @getimagesize(gv_motif_file($motifNow)); $ownCn = gv_crop_norm($motifNow, 500, 500, 1000); ?><label class="gv-motif"><input type="radio" name="motif" value="<?php echo $h($motifNow); ?>" data-w="<?php echo $ownSz ? (int)$ownSz[0] : 0; ?>" data-h="<?php echo $ownSz ? (int)$ownSz[1] : 0; ?>" data-zmax="<?php echo (int)$ownCn[3]; ?>" checked/><span>Dein Bild</span></label><?php endif; ?>
 						<label class="gv-own" id="gv-own-pick">Bild hochladen<small>JPG, PNG oder WebP, mindestens 1500 × 1000 Pixel</small><input type="file" id="gv-own-file" accept="image/jpeg,image/png,image/webp"/></label>
 					</div>
 					<p class="gv-own-msg" id="gv-own-msg" role="status" aria-live="polite"></p>

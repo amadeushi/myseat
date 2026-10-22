@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-22 == mySeat v6.65.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu (Gutschein-Shop, eigene Bilder): Der Gast kann den Ausschnitt seines Bildes wählen. In der Vorschau lässt sich das Bild mit Finger oder Maus verschieben, dazu gibt es die Regler "Größe", "Waagerecht" und "Senkrecht" (auch mit der Tastatur) und den Knopf "Zurücksetzen". Der Zoom ist begrenzt, damit der Ausschnitt mindestens etwa 1250 Pixel breit bleibt (bei einem Bild an der Mindestgröße von 1500 x 1000 Pixel also kaum Zoom, bei einem Handyfoto bis zu 4-fach). Position und Zoom werden mit der Bestellung gespeichert und gelten für Vorschau, PDF, Druckkarte, EchtPost-Motiv und die Seite hinter dem QR-Code. Bei den Foto- und Zeichnungs-Motiven ändert sich nichts. Am Handy ist die Vorschau beim Ziehen gesperrt für das Scrollen, solange ein eigenes Bild gewählt ist (zum Scrollen am Rand oder darunter wischen).
+ * Hinweis: Beim ersten Aufruf legt mySeat drei Spalten crop_x, crop_y, crop_z an tp_gv_orders selbst an.
+
 2026-10-22 == mySeat v6.64.2 == amadeushi - http://github.com/amadeushi/myseat
 
  * Behoben (Gutschein-Shop, Seite order/gutschein.php): Auf dem Desktop lag die angeheftete Vorschau am Seitenende über dem Abschnitt "Du hast einen Gutschein bekommen?", die Texte überlagerten sich. Die Vorschau endet jetzt am Ende ihrer Zeile und klebt nur noch daneben. Am Handy war es nicht betroffen (dort liegt die Vorschau normal über dem Formular).
