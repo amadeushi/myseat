@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-22 == mySeat v6.62.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu (Gutscheine, Backend): In den Einstellungen gibt es das Feld "Website in der Fußzeile des PDFs" (Standard amadeus-hildesheim.de, ein vorangestelltes https:// wird entfernt, leer = keine Website). Vorher ließ sich der Wert nur in der Datenbank ändern.
+
 2026-10-22 == mySeat v6.62.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu (Gutscheine, Karte aus dem Shop): Bei "Per Post" und "Abholung" bekommt der Gutschein jetzt eine eigene Nummer und einen eigenen Code. Im Backend (Gutscheine > Aufträge) gibt es den Knopf "Karte drucken": ein A4-PDF mit der persönlichen Karte im Maß A6 quer (148 x 105 mm, Schnittmarken) und der Rückseite mit den Einlöse-Hinweisen, zum beidseitigen Druck auf Karton. "Verschickt / bereitgelegt" benachrichtigt den Käufer, eine Vordruck-Nummer ist dafür nicht mehr nötig. Der numerierte Vordruck bleibt als Einstellung (Gutscheine > Einstellungen > Karten per Post).

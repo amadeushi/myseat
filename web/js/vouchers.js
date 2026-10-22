@@ -286,7 +286,7 @@
 			if (!r.ok) { say('gv-set-msg', r.error, true); return; }
 			var f = $('gv-set-form'), s = r.s, off = s.gv_motifs_off ? s.gv_motifs_off.split(',') : [];
 			['gv_on', 'gv_pay_on', 'gv_terms_ok', 'gv_pdf_on', 'gv_post_on', 'gv_pickup_on', 'gv_own_motif'].forEach(function (k) { f.elements[k].checked = s[k] === '1'; });
-			['gv_amounts', 'gv_min_eur', 'gv_max_eur', 'gv_post_fee'].forEach(function (k) { f.elements[k].value = s[k]; });
+			['gv_amounts', 'gv_min_eur', 'gv_max_eur', 'gv_post_fee', 'gv_site_host'].forEach(function (k) { f.elements[k].value = s[k] || ''; });
 			f.querySelector('input[name=gv_withdraw_mode][value=' + (s.gv_withdraw_mode === 'lapse' ? 'lapse' : 'days14') + ']').checked = true;
 			f.querySelector('input[name=gv_post_mode][value=' + (s.gv_post_mode === 'echtpost' || s.gv_post_mode === 'blank' ? s.gv_post_mode : 'print') + ']').checked = true;
 			drawEp(r.ep); $('gv-ep-hook').textContent = r.ep_hook;
@@ -298,7 +298,7 @@
 	$('gv-set-form').addEventListener('submit', function (e) {
 		e.preventDefault(); var f = e.target, d = {};
 		['gv_on', 'gv_pay_on', 'gv_terms_ok', 'gv_pdf_on', 'gv_post_on', 'gv_pickup_on', 'gv_own_motif'].forEach(function (k) { d[k] = f.elements[k].checked ? 1 : 0; });
-		['gv_amounts', 'gv_min_eur', 'gv_max_eur', 'gv_post_fee'].forEach(function (k) { d[k] = f.elements[k].value; });
+		['gv_amounts', 'gv_min_eur', 'gv_max_eur', 'gv_post_fee', 'gv_site_host'].forEach(function (k) { d[k] = f.elements[k].value; });
 		d.gv_withdraw_mode = f.querySelector('input[name=gv_withdraw_mode]:checked').value;
 		d.gv_post_mode = f.querySelector('input[name=gv_post_mode]:checked').value;
 		d.gv_motifs_off = Array.prototype.filter.call(f.querySelectorAll('input[data-motif]'), function (i) { return !i.checked; }).map(function (i) { return i.dataset.motif; }).join(',');

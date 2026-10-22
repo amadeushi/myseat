@@ -154,6 +154,12 @@ if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = myse
 					<div class="gv-field"><label for="gv-s-fee">Porto und Verpackung für Post (Euro)</label><input type="text" id="gv-s-fee" name="gv_post_fee" inputmode="decimal" maxlength="7"/></div>
 				</div>
 			</fieldset>
+			<fieldset class="gv-set-group"><legend>Auf dem Gutschein</legend>
+				<div class="gv-form">
+					<div class="gv-field"><label for="gv-s-site">Website in der Fußzeile des PDFs (ohne https://)</label><input type="text" id="gv-s-site" name="gv_site_host" maxlength="60" autocomplete="off" placeholder="amadeus-hildesheim.de"/></div>
+				</div>
+				<p class="sh-help">Anschrift, Telefon und E-Mail kommen aus deinen Stammdaten. Leer lassen, wenn keine Website gedruckt werden soll.</p>
+			</fieldset>
 			<fieldset class="gv-set-group"><legend>Widerruf bei PDF-Gutscheinen</legend>
 				<label class="co-check"><input type="radio" name="gv_withdraw_mode" value="days14"/> 14 Tage Widerruf wie in den AGB (empfohlen)</label>
 				<label class="co-check"><input type="radio" name="gv_withdraw_mode" value="lapse"/> Widerrufsrecht erlischt mit der sofortigen Bereitstellung (Gast stimmt beim Kauf zu)</label>

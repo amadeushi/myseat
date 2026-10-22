@@ -84,7 +84,7 @@ if ($op === 'orders') {
 	gva_out(array('ok' => true, 'rows' => $rows, 'counts' => $counts, 'filter' => $f));
 }
 if ($op === 'settings') {
-	$keys = array('gv_on', 'gv_pay_on', 'gv_terms_ok', 'gv_pdf_on', 'gv_post_on', 'gv_pickup_on', 'gv_own_motif', 'gv_amounts', 'gv_min_eur', 'gv_max_eur', 'gv_post_fee', 'gv_withdraw_mode', 'gv_motifs_off', 'gv_post_mode');
+	$keys = array('gv_on', 'gv_pay_on', 'gv_terms_ok', 'gv_pdf_on', 'gv_post_on', 'gv_pickup_on', 'gv_own_motif', 'gv_amounts', 'gv_min_eur', 'gv_max_eur', 'gv_post_fee', 'gv_withdraw_mode', 'gv_motifs_off', 'gv_post_mode', 'gv_site_host');
 	$s = array(); foreach ($keys as $k) { $s[$k] = (string)shop_setting($k); }
 	$m = array(); foreach (gv_motifs() as $k => $x) { $m[] = array('key' => $k, 'label' => $x['label'], 'group' => $x['group']); }
 	gva_out(array('ok' => true, 's' => $s, 'ep' => ep_info(), 'ep_hook' => rtrim(shop_site_url(), '/').'/order/echtpost_webhook.php', 'motifs' => $m, 'shop_url' => rtrim(shop_site_url(), '/').'/order/gutschein.php'));
@@ -199,11 +199,13 @@ switch ($op) {
 		$valid = array_keys(gv_motifs()); $off = array();
 		foreach (explode(',', isset($d['gv_motifs_off']) ? (string)$d['gv_motifs_off'] : '') as $k) { if (in_array($k, $valid, true)) { $off[] = $k; } }
 		if (count($off) >= count($valid)) { gva_out(array('ok' => false, 'error' => 'Mindestens ein Motiv muss eingeschaltet bleiben.')); }
+		$site = preg_replace('~^https?://~i', '', trim(isset($d['gv_site_host']) ? (string)$d['gv_site_host'] : '')); $site = rtrim($site, '/');
+		if ($site !== '' && !preg_match('~^[A-Za-z0-9][A-Za-z0-9.\-/]{2,59}$~', $site)) { gva_out(array('ok' => false, 'error' => 'Die Website sieht nicht richtig aus. Bitte nur die Adresse eintragen, zum Beispiel amadeus-hildesheim.de.')); }
 		$mode = isset($d['gv_withdraw_mode']) && $d['gv_withdraw_mode'] === 'lapse' ? 'lapse' : 'days14';
 		shop_setting_set('gv_on', $flag('gv_on')); shop_setting_set('gv_pay_on', $flag('gv_pay_on')); shop_setting_set('gv_terms_ok', $flag('gv_terms_ok'));
 		shop_setting_set('gv_pdf_on', $flag('gv_pdf_on')); shop_setting_set('gv_post_on', $flag('gv_post_on')); shop_setting_set('gv_pickup_on', $flag('gv_pickup_on')); shop_setting_set('gv_own_motif', $flag('gv_own_motif'));
 		shop_setting_set('gv_amounts', implode(',', $amounts)); shop_setting_set('gv_min_eur', $eur('gv_min_eur', '10')); shop_setting_set('gv_max_eur', $eur('gv_max_eur', '500')); shop_setting_set('gv_post_fee', $eur('gv_post_fee', '0.00'));
-		shop_setting_set('gv_withdraw_mode', $mode); shop_setting_set('gv_motifs_off', implode(',', $off));
+		shop_setting_set('gv_site_host', $site); shop_setting_set('gv_withdraw_mode', $mode); shop_setting_set('gv_motifs_off', implode(',', $off));
 		shop_setting_set('gv_post_mode', isset($d['gv_post_mode']) && in_array($d['gv_post_mode'], array('echtpost', 'blank'), true) ? $d['gv_post_mode'] : 'print');
 		gva_out(array('ok' => true));
 }
