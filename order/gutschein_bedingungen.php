@@ -13,6 +13,16 @@ gv_page_head('Gutschein-Bedingungen');
 		<h1>Gutschein-Bedingungen</h1>
 		<?php if (!$gv_cfg['terms_ok'] && $gv_staff): ?><p class="gv-draft">Entwurf: Diese Texte sind noch nicht freigegeben. Bitte prüfen (am besten mit Anwalt und Steuerberater), dann im Backend unter Gutscheine &gt; Einstellungen den Haken "Texte geprüft" setzen.</p><?php endif; ?>
 
+		<div class="gv-card gv-short"><h2>Das Wichtigste in vier Sätzen</h2>
+			<ol>
+				<li>Der Gutschein gilt bei uns im Restaurant und im Webshop (geliefert wird im Stadtgebiet Hildesheim).</li>
+				<li>Du kannst Teilbeträge einlösen. Eine Barauszahlung gibt es nicht.</li>
+				<li>Er ist drei Jahre gültig, gerechnet ab dem Ende des Jahres, in dem er ausgestellt wurde.</li>
+				<li>Er gilt wie Bargeld: Wer Nummer und Code kennt, kann ihn einlösen, bei Verlust gibt es keinen Ersatz.</li>
+			</ol>
+			<p class="co-hint">Die genauen Regeln stehen in den Abschnitten darunter.</p>
+		</div>
+
 		<h2>1. Was du kaufst</h2>
 		<p>Einen Gutschein über einen festen Eurobetrag für Speisen und Getränke bei <?php echo $h($gv_brand); ?> (Restaurant, Abholung und Lieferservice). Es ist ein Mehrzweck-Gutschein: Die Umsatzsteuer entsteht erst, wenn der Gutschein eingelöst wird.</p>
 
@@ -22,7 +32,7 @@ gv_page_head('Gutschein-Bedingungen');
 		<h2>3. Wie du ihn bekommst</h2>
 		<ul>
 			<li><strong>PDF per E-Mail:</strong> sofort nach der Zahlung, zum Ausdrucken oder Weiterleiten.</li>
-			<li><strong>Per Post:</strong> als gedruckte, nummerierte Karte an die angegebene Adresse. Die Versandkosten (<?php echo $h(gv_money($gv_cfg['fee'])); ?>) siehst du vor der Bestellung.</li>
+			<li><strong>Per Post:</strong> als gedruckte Karte<?php echo $gv_cfg['post_mode'] === 'echtpost' ? ' (Postkarte A6 ohne Umschlag, Nummer und Code stehen offen darauf)' : ($gv_cfg['post_mode'] === 'blank' ? ', nummeriert,' : ' mit deinem Motiv und deinen Worten, im Umschlag,'); ?> an die angegebene Adresse. Die Versandkosten (<?php echo $h(gv_money($gv_cfg['fee'])); ?>) siehst du vor der Bestellung.</li>
 			<li><strong>Abholung:</strong> die gedruckte Karte liegt im Restaurant für dich bereit, wir melden uns per E-Mail.</li>
 		</ul>
 

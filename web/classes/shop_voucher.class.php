@@ -53,6 +53,15 @@ function gv_schema($db, $opts) {
 		`consent_ua` VARCHAR(200) NOT NULL DEFAULT '', `terms_at` DATETIME NULL, `created_at` DATETIME NOT NULL, `paid_at` DATETIME NULL, `mail_at` DATETIME NULL, `fulfilled_at` DATETIME NULL,
 		`withdrawn_at` DATETIME NULL, `withdraw_ip` VARCHAR(45) NOT NULL DEFAULT '', `refund_id` VARCHAR(40) NULL, `refunded_at` DATETIME NULL, `note` VARCHAR(200) NOT NULL DEFAULT '',
 		UNIQUE KEY `token` (`token`), KEY `voucher` (`voucher_id`), KEY `st` (`status`), KEY `mollie` (`mollie_id`), KEY `email` (`buyer_email`)) $opts");
+	// postcard by EchtPost (echtpost.class.php): state (sending, queued, sent, error, unclear, canceled), motive id and card id there, the last error, time of the last step
+	if (!fb_rows("SHOW COLUMNS FROM ".fb_t('tp_gv_orders')." LIKE 'ep_state'")) {
+		mysqli_query($db, "ALTER TABLE ".fb_t('tp_gv_orders')." ADD `ep_state` VARCHAR(10) NULL");
+		mysqli_query($db, "ALTER TABLE ".fb_t('tp_gv_orders')." ADD `ep_motive` INT UNSIGNED NULL");
+		mysqli_query($db, "ALTER TABLE ".fb_t('tp_gv_orders')." ADD `ep_card` VARCHAR(40) NULL");
+		mysqli_query($db, "ALTER TABLE ".fb_t('tp_gv_orders')." ADD `ep_error` VARCHAR(250) NOT NULL DEFAULT ''");
+		mysqli_query($db, "ALTER TABLE ".fb_t('tp_gv_orders')." ADD `ep_at` DATETIME NULL");
+		mysqli_query($db, "ALTER TABLE ".fb_t('tp_gv_orders')." ADD KEY `epcard` (`ep_card`)");
+	}
 }
 
 function gv_money($cents) { return number_format($cents / 100, 2, ',', '.').' €'; }
@@ -299,6 +308,10 @@ function gv_pin_valid($pin) { return preg_match('/^\d{4,8}$/', (string)$pin) ===
 function gv_pin_set($userId, $pin) {
 	shop_ensure_schema();
 	if (!gv_pin_valid($pin)) { return array('ok' => false, 'error' => 'Die PIN besteht aus 4 bis 8 Ziffern.'); }
+	// the page behind the QR code finds the employee by the PIN alone, so no two employees may share one
+	foreach (fb_rows("SELECT user_id, pin_hash FROM ".fb_t('tp_gv_staff')." WHERE user_id <> ?", 'i', array((int)$userId)) as $o) {
+		if (password_verify((string)$pin, $o['pin_hash'])) { return array('ok' => false, 'error' => 'Diese PIN ist schon vergeben. Bitte wähle eine andere.'); }
+	}
 	fb_exec("REPLACE INTO ".fb_t('tp_gv_staff')." (user_id, pin_hash, fails, locked_until, updated_at) VALUES (?, ?, 0, NULL, ?)", 'iss', array((int)$userId, password_hash((string)$pin, PASSWORD_DEFAULT), gv_now()));
 	return array('ok' => true);
 }
@@ -349,6 +362,30 @@ function gv_redeem_staff($userId, $pin, $number, $amountCents, $ref = '') {
 	if ($why !== '') { return array('ok' => false, 'error' => $why); }
 	$amount = $amountCents === null || $amountCents === '' ? (int)$v['balance_cents'] : (int)$amountCents;
 	return gv_redeem((int)$v['id'], $amount, array((int)$userId, gv_staff_name($userId)), $ref !== '' ? $ref : 'Einlösung im Restaurant');
+}
+
+/*
+ * Redeem from the page behind the QR code of the voucher: the employee is found by the PIN alone (PINs are unique), no name list is shown to anyone.
+ * Wrong PINs are counted per address (GV_TRY_MAX in GV_TRY_WINDOW_MIN minutes) and per voucher (GV_PIN_MAX_FAILS), so the PIN cannot be guessed there.
+ * $amountCents null = everything. Returns array(ok, error, voucher, redeemed).
+ */
+function gv_redeem_pin($voucherId, $pin, $amountCents) {
+	shop_ensure_schema();
+	$since = date('Y-m-d H:i:s', time() - GV_TRY_WINDOW_MIN * 60); $vkey = 'v'.(int)$voucherId; $ip = gv_ip();
+	$count = function ($k) use ($since) { $r = fb_row("SELECT COUNT(*) AS n FROM ".fb_t('tp_gv_tries')." WHERE ip = ? AND at > ?", 'ss', array($k, $since)); return (int)($r['n'] ?? 0); };
+	$miss = function () use ($vkey, $ip) { foreach (array($vkey, $ip) as $k) { if ($k !== '') { fb_exec("INSERT INTO ".fb_t('tp_gv_tries')." (ip, at) VALUES (?, ?)", 'ss', array($k, gv_now())); } } };
+	if (($ip !== '' && $count($ip) >= GV_TRY_MAX) || $count($vkey) >= GV_PIN_MAX_FAILS) { return array('ok' => false, 'error' => 'Zu viele falsche PINs. Bitte versuche es in '.GV_PIN_LOCK_MIN.' Minuten noch einmal oder löse im Backend ein.'); }
+	if (!gv_pin_valid($pin)) { $miss(); return array('ok' => false, 'error' => 'Bitte die PIN eingeben (4 bis 8 Ziffern).'); }
+	$who = null;
+	foreach (fb_rows("SELECT user_id, pin_hash, locked_until FROM ".fb_t('tp_gv_staff')) as $r) { if (password_verify((string)$pin, $r['pin_hash'])) { $who = $r; break; } }
+	if (!$who) { $miss(); return array('ok' => false, 'error' => 'Die PIN stimmt nicht.'); }
+	if ($who['locked_until'] !== null && $who['locked_until'] > gv_now()) { return array('ok' => false, 'error' => 'Diese PIN ist gerade gesperrt.'); }
+	$v = gv_by_id($voucherId); $why = gv_block_reason($v);
+	if ($why !== '') { return array('ok' => false, 'error' => $why); }
+	$amount = $amountCents === null ? (int)$v['balance_cents'] : (int)$amountCents;
+	$r = gv_redeem((int)$voucherId, $amount, array((int)$who['user_id'], gv_staff_name((int)$who['user_id'])), 'Einlösung per QR-Code');
+	if (!empty($r['ok'])) { $r['redeemed'] = $amount; }
+	return $r;
 }
 
 // parse an amount typed by a person: "12,50", "12.5", "12" -> cents; null when it is not an amount

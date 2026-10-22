@@ -134,6 +134,18 @@ if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = myse
 				<label class="co-check"><input type="checkbox" name="gv_pickup_on"/> Abholung im Restaurant (gedruckter Vordruck)</label>
 				<label class="co-check"><input type="checkbox" name="gv_own_motif"/> Gäste dürfen ein eigenes Bild hochladen</label>
 			</fieldset>
+			<fieldset class="gv-set-group"><legend>Karten per Post</legend>
+				<label class="co-check"><input type="radio" name="gv_post_mode" value="print"/> Karte aus dem Shop: du druckst die persönliche Karte (Motiv, Worte, Nummer) selbst auf Karton und schickst sie im Umschlag oder legst sie bereit (empfohlen)</label>
+				<label class="co-check"><input type="radio" name="gv_post_mode" value="blank"/> Nummerierter Vordruck ohne Motiv: du schreibst Nummer und Code von Hand darauf</label>
+				<label class="co-check"><input type="radio" name="gv_post_mode" value="echtpost"/> Postkarte über EchtPost: nach der Zahlung wird die Karte automatisch gedruckt, frankiert und verschickt</label>
+				<div class="gv-form">
+					<div class="gv-field"><label for="gv-ep-key">EchtPost-Schlüssel (API-Key)</label><input type="password" id="gv-ep-key" autocomplete="off" maxlength="200" placeholder="ep_test_… oder Live-Schlüssel"/></div>
+				</div>
+				<p class="sh-help" id="gv-ep-state"></p>
+				<p><button type="button" class="sh-btn" id="gv-ep-save">Schlüssel speichern</button> <button type="button" class="sh-btn" id="gv-ep-test">Verbindung prüfen</button> <button type="button" class="sh-btn" id="gv-ep-clear">Schlüssel löschen</button> <span class="detail-status" id="gv-ep-msg" role="status" aria-live="polite"></span></p>
+				<p class="sh-help">So richtest du es ein: Konto bei echtpost.de anlegen, Guthaben aufladen und den Support bitten, eigene Motive per API freizuschalten. Dann unter Account > API keys einen Schlüssel erzeugen (ep_test_ ist der Testschlüssel, es wird nichts gedruckt oder berechnet) und hier speichern. Unter Account > Webhooks trägt man diese Adresse für card.sent ein: <strong class="gv-mono" id="gv-ep-hook"></strong></p>
+				<p class="sh-warn">Die Karte reist ohne Umschlag. Gutscheinnummer und Sicherheitscode stehen offen auf der Vorderseite und sind für alle lesbar, die die Karte in der Hand haben. Die Adresse des Beschenkten geht an EchtPost, das gehört in die Datenschutzerklärung (und ein Auftragsverarbeitungsvertrag mit EchtPost). Eine Karte kostet dich 2,90 € netto, im Preis "Porto und Verpackung" für Post (unten) sollte das stecken.</p>
+			</fieldset>
 			<fieldset class="gv-set-group"><legend>Beträge</legend>
 				<div class="gv-form">
 					<div class="gv-field"><label for="gv-s-amounts">Zur Auswahl (Euro, mit Komma getrennt)</label><input type="text" id="gv-s-amounts" name="gv_amounts" maxlength="80"/></div>

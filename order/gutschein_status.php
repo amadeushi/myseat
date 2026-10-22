@@ -23,10 +23,10 @@ gv_page_head('Deine Gutschein-Bestellung');
 		<p><a class="cart-go" href="gutschein.php">Zum Gutschein-Shop</a></p>
 	<?php else: list($wst, $wtext) = gv_order_withdraw_state($o); ?>
 		<?php if ($o['status'] === 'paid'): ?>
-			<h1>Danke, deine Zahlung ist angekommen</h1>
-			<p class="gv-stateline is-ok"><?php echo $o['delivery'] === 'pdf' ? 'Dein Gutschein ist fertig.' : ($o['fulfilled_at'] ? ($o['delivery'] === 'post' ? 'Die Karte ist unterwegs zu dir.' : 'Die Karte liegt im Restaurant für dich bereit.') : 'Wir machen deinen Gutschein gerade fertig und melden uns per Mail.'); ?></p>
+			<h1>Angekommen, danke.</h1>
+			<p class="gv-stateline is-ok"><?php echo $o['delivery'] === 'pdf' ? 'Dein Gutschein ist fertig und liegt auch in deinem Postfach.' : ($o['fulfilled_at'] ? ($o['delivery'] === 'post' ? 'Die Karte ist unterwegs.' : 'Die Karte liegt für dich bereit.') : ($o['delivery'] === 'post' ? 'Wir machen die Karte fertig und schreiben dir, sobald sie zur Post geht.' : 'Wir machen die Karte fertig und schreiben dir, sobald du sie holen kannst.')); ?></p>
 			<?php if ($o['delivery'] === 'pdf'): ?>
-				<p style="margin-top:16px"><img src="gutschein_pdf.php?t=<?php echo $h($o['token']); ?>&amp;fmt=jpg" alt="Dein Gutschein über <?php echo $h(gv_money((int)$o['amount_cents'])); ?>" width="1100" height="733" style="width:100%;height:auto;border-radius:14px;box-shadow:0 18px 48px rgba(0,0,0,.55)"/></p>
+				<p style="margin-top:16px"><img src="gutschein_pdf.php?t=<?php echo $h($o['token']); ?>&amp;fmt=jpg" alt="Dein Gutschein über <?php echo $h(gv_money((int)$o['amount_cents'])); ?>" width="1100" height="780" style="width:100%;height:auto;border-radius:14px;box-shadow:0 18px 48px rgba(0,0,0,.55)"/></p>
 				<p><a class="cart-go" href="gutschein_pdf.php?t=<?php echo $h($o['token']); ?>">PDF herunterladen</a></p>
 				<p>Wir haben dir den Gutschein auch per Mail an <?php echo $h($o['buyer_email']); ?> geschickt.<?php if ($v && $v['status'] === 'active'): ?> Aktuelles Guthaben: <strong><?php echo $h(gv_money((int)$v['balance_cents'])); ?></strong>.<?php endif; ?></p>
 			<?php endif; ?>
@@ -40,8 +40,8 @@ gv_page_head('Deine Gutschein-Bestellung');
 			<h1>Dein Widerruf ist eingegangen</h1>
 			<p class="gv-stateline"><?php echo $h($wtext); ?> Der Gutschein ist gesperrt. Wir erstatten <?php echo $h(gv_money((int)$o['total_cents'])); ?> auf dem Weg, mit dem du bezahlt hast.</p>
 		<?php else: ?>
-			<h1>Die Zahlung wurde nicht abgeschlossen</h1>
-			<p class="gv-stateline is-bad">Es wurde nichts abgebucht und es gibt keinen Gutschein.</p>
+			<h1>Das hat nicht geklappt.</h1>
+			<p class="gv-stateline is-bad">Es wurde nichts abgebucht, und es gibt keinen Gutschein.</p>
 			<p><a class="cart-go" href="gutschein.php">Neu bestellen</a></p>
 		<?php endif; ?>
 

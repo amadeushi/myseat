@@ -59,26 +59,35 @@ if ($op === 'export') {
 	exit;
 }
 
+if ($op === 'order_print') {   // the print file of a card (post / pick-up): personal motif and words, number and code of the voucher
+	$o = gv_order_by_id((int)(isset($_GET['id']) ? $_GET['id'] : 0)); $v = $o ? gv_by_id((int)$o['voucher_id']) : null;
+	if (!$o || !$v || $o['status'] !== 'paid' || $o['delivery'] === 'pdf' || $v['kind'] === 'print' || gv_code_plain($v) === null) { http_response_code(404); echo 'Für diesen Auftrag gibt es keine Druckdatei.'; exit; }
+	header('Content-Type: application/pdf'); header('Content-Disposition: inline; filename="Gutschein-Karte-'.$o['number'].'.pdf"'); header('Cache-Control: private, no-store');
+	echo gv_print_pdf(gv_order_pdf_opts($o, $v));
+	exit;
+}
 if ($op === 'orders') {
 	$f = isset($_GET['filter']) && in_array($_GET['filter'], array('todo', 'refund', 'paid', 'withdrawn', 'pending', 'all'), true) ? $_GET['filter'] : 'todo';
 	$counts = array(); foreach (array('todo', 'refund', 'paid', 'withdrawn', 'pending', 'all') as $k) { $counts[$k] = count(gv_orders_list($k, 2000)); }
 	$rows = array();
 	foreach (gv_orders_list($f, 300) as $o) {
+		$o = gv_post_sync($o);   // a card EchtPost has sent meanwhile (at most every ten minutes per order)
 		$v = gv_by_id((int)$o['voucher_id']);
-		$todo = $o['status'] === 'paid' && $o['delivery'] !== 'pdf' && $o['fulfilled_at'] === null;
+		$todo = $o['status'] === 'paid' && $o['delivery'] !== 'pdf' && $o['fulfilled_at'] === null && $o['ep_state'] !== 'queued';
 		$rows[] = array('id' => (int)$o['id'], 'number' => $o['number'], 'status' => $o['status'], 'delivery' => $o['delivery'], 'amount' => (int)$o['amount_cents'], 'fee' => (int)$o['fee_cents'], 'total' => (int)$o['total_cents'],
 			'buyer' => $o['buyer_name'], 'email' => $o['buyer_email'], 'phone' => $o['buyer_phone'], 'recipient' => $o['recipient'], 'from' => $o['from_name'], 'message' => $o['message'], 'motif' => $o['motif'],
 			'ship' => $o['delivery'] === 'post' ? $o['ship_name'].', '.$o['ship_street'].', '.$o['ship_zip'].' '.$o['ship_city'] : '', 'created' => date('d.m.Y H:i', strtotime($o['created_at'])),
 			'paid_at' => $o['paid_at'] ? date('d.m.Y H:i', strtotime($o['paid_at'])) : '', 'fulfilled' => $o['fulfilled_at'] !== null, 'withdrawn_at' => $o['withdrawn_at'] ? date('d.m.Y H:i', strtotime($o['withdrawn_at'])) : '',
-			'refunded' => !empty($o['refund_id']), 'lapse' => (int)$o['consent_lapse'] === 1, 'voucher' => $v ? $v['number'] : '', 'code' => $todo && $v ? (string)gv_code_plain($v) : '', 'mail' => $o['mail_at'] !== null);
+			'refunded' => !empty($o['refund_id']), 'lapse' => (int)$o['consent_lapse'] === 1, 'voucher' => $v ? $v['number'] : '', 'code' => $todo && $v ? (string)gv_code_plain($v) : '', 'mail' => $o['mail_at'] !== null,
+			'own' => $v && $v['kind'] !== 'print', 'todo' => $todo, 'ep' => (string)$o['ep_state'], 'ep_error' => (string)$o['ep_error']);
 	}
 	gva_out(array('ok' => true, 'rows' => $rows, 'counts' => $counts, 'filter' => $f));
 }
 if ($op === 'settings') {
-	$keys = array('gv_on', 'gv_pay_on', 'gv_terms_ok', 'gv_pdf_on', 'gv_post_on', 'gv_pickup_on', 'gv_own_motif', 'gv_amounts', 'gv_min_eur', 'gv_max_eur', 'gv_post_fee', 'gv_withdraw_mode', 'gv_motifs_off');
+	$keys = array('gv_on', 'gv_pay_on', 'gv_terms_ok', 'gv_pdf_on', 'gv_post_on', 'gv_pickup_on', 'gv_own_motif', 'gv_amounts', 'gv_min_eur', 'gv_max_eur', 'gv_post_fee', 'gv_withdraw_mode', 'gv_motifs_off', 'gv_post_mode');
 	$s = array(); foreach ($keys as $k) { $s[$k] = (string)shop_setting($k); }
 	$m = array(); foreach (gv_motifs() as $k => $x) { $m[] = array('key' => $k, 'label' => $x['label'], 'group' => $x['group']); }
-	gva_out(array('ok' => true, 's' => $s, 'motifs' => $m, 'shop_url' => rtrim(shop_site_url(), '/').'/order/gutschein.php'));
+	gva_out(array('ok' => true, 's' => $s, 'ep' => ep_info(), 'ep_hook' => rtrim(shop_site_url(), '/').'/order/echtpost_webhook.php', 'motifs' => $m, 'shop_url' => rtrim(shop_site_url(), '/').'/order/gutschein.php'));
 }
 
 // everything below changes something: POST with the token
@@ -162,6 +171,20 @@ switch ($op) {
 		gva_out(gv_order_fulfil($id, $p('number'), $me));
 	case 'order_refund':
 		gva_out(gv_order_refund($id));
+	case 'order_resend':   // the postcard again (after an error; "unclear" only with the confirmation of the owner)
+		gva_out(gv_post_send($id, $p('again') === '1'));
+	case 'ep_save':
+		$key = $p('key');
+		if (!preg_match('/^[A-Za-z0-9_.\-]{16,200}$/', $key)) { gva_out(array('ok' => false, 'error' => 'Der Schlüssel sieht nicht richtig aus.')); }
+		$enc = sms_encrypt($key);
+		if ($enc === null) { gva_out(array('ok' => false, 'error' => 'Der Schlüssel konnte nicht verschlüsselt werden.')); }
+		shop_setting_set('gv_ep_key', $enc);
+		gva_out(array('ok' => true, 'ep' => ep_info()));
+	case 'ep_clear':
+		shop_setting_set('gv_ep_key', null); if (shop_setting('gv_post_mode') === 'echtpost') { shop_setting_set('gv_post_mode', 'print'); }
+		gva_out(array('ok' => true, 'ep' => ep_info()));
+	case 'ep_test':
+		gva_out(ep_test());
 
 	case 'settings_save':
 		$d = json_decode(isset($_POST['data']) ? (string)$_POST['data'] : '', true);
@@ -181,6 +204,7 @@ switch ($op) {
 		shop_setting_set('gv_pdf_on', $flag('gv_pdf_on')); shop_setting_set('gv_post_on', $flag('gv_post_on')); shop_setting_set('gv_pickup_on', $flag('gv_pickup_on')); shop_setting_set('gv_own_motif', $flag('gv_own_motif'));
 		shop_setting_set('gv_amounts', implode(',', $amounts)); shop_setting_set('gv_min_eur', $eur('gv_min_eur', '10')); shop_setting_set('gv_max_eur', $eur('gv_max_eur', '500')); shop_setting_set('gv_post_fee', $eur('gv_post_fee', '0.00'));
 		shop_setting_set('gv_withdraw_mode', $mode); shop_setting_set('gv_motifs_off', implode(',', $off));
+		shop_setting_set('gv_post_mode', isset($d['gv_post_mode']) && in_array($d['gv_post_mode'], array('echtpost', 'blank'), true) ? $d['gv_post_mode'] : 'print');
 		gva_out(array('ok' => true));
 }
 gva_out(array('ok' => false, 'error' => 'Unbekannte Aktion.'));

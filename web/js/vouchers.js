@@ -197,7 +197,12 @@
 		}).catch(fail('gv-o-msg'));
 	}
 	function orderStand(o) {
-		if (o.status === 'paid') { return o.delivery === 'pdf' ? 'bezahlt, PDF verschickt' : (o.fulfilled ? 'erledigt' : 'zu erledigen'); }
+		if (o.status === 'paid') {
+			if (o.delivery === 'pdf') { return 'bezahlt, PDF verschickt'; }
+			if (o.fulfilled) { return o.ep ? 'Postkarte verschickt' : 'erledigt'; }
+			var EP = { queued: 'Postkarte bei EchtPost bestellt', sending: 'Postkarte wird bestellt …', error: 'Postkarte nicht bestellt: ' + o.ep_error, unclear: 'Postkarte unklar: ' + o.ep_error, canceled: 'Postkarte zurückgerufen' };
+			return EP[o.ep] || 'zu erledigen';
+		}
 		if (o.status === 'withdrawn') { return 'widerrufen am ' + o.withdrawn_at + (o.refunded ? ', erstattet' : ', Erstattung offen'); }
 		return OSTATE[o.status] || o.status;
 	}
@@ -218,10 +223,12 @@
 		$('gv-o-counts').innerHTML = items.map(function (i) { return '<button type="button" class="nl-count" data-ofilter="' + i[0] + '" aria-pressed="' + (oFilter === i[0]) + '"><b>' + (+i[2] || 0) + '</b><span>' + i[1] + '</span></button>'; }).join('');
 		$('gv-o-empty').hidden = d.rows.length > 0; $('gv-o-table').hidden = d.rows.length === 0;
 		$('gv-o-rows').innerHTML = d.rows.map(function (o) {
-			var p = oOpen[o.id], todo = o.status === 'paid' && o.delivery !== 'pdf' && !o.fulfilled, refundable = o.status === 'withdrawn' && !o.refunded;
+			var p = oOpen[o.id], todo = !!o.todo, refundable = o.status === 'withdrawn' && !o.refunded, resend = todo && (o.ep === 'error' || o.ep === 'unclear');
 			var tr = '<tr><td><strong>' + esc(o.number) + '</strong><br><small>' + esc(o.created) + '</small></td><td>' + esc(o.buyer) + '<br><small>' + esc(o.email) + '</small></td><td>' + esc(eur(o.amount)) + '<br><small>' + esc(FORM[o.delivery] || o.delivery) + ' · gesamt ' + esc(eur(o.total)) + '</small></td>' +
 				'<td><span class="offer-badge' + (todo || refundable ? '' : (o.status === 'paid' ? ' sms-badge-on' : '')) + '">' + esc(orderStand(o)) + '</span></td><td class="nl-act"><button type="button" class="sh-btn" data-oact="details" data-id="' + o.id + '">Details</button>' +
-				(todo ? '<button type="button" class="sh-btn is-primary" data-oact="fulfil" data-id="' + o.id + '">Erledigen</button>' : '') + (refundable ? '<button type="button" class="sh-btn is-primary" data-oact="refund" data-id="' + o.id + '">Erstatten</button>' : '') + '</td></tr>';
+				(resend ? '<button type="button" class="sh-btn is-primary" data-oact="resend" data-again="' + (o.ep === 'unclear' ? 1 : 0) + '" data-id="' + o.id + '">Postkarte noch einmal bestellen</button>' : '') +
+				(todo && o.own && !o.ep ? '<a class="sh-btn is-primary" href="' + API + '?op=order_print&id=' + o.id + '" target="_blank" rel="noopener">Karte drucken</a>' : '') +
+				(todo && o.ep !== 'sending' && o.ep !== 'unclear' ? '<button type="button" class="sh-btn' + (resend || (o.own && !o.ep) ? '' : ' is-primary') + '" data-oact="fulfil" data-id="' + o.id + '">' + (resend ? 'Von Hand erledigen' : (o.own && !o.ep ? 'Verschickt / bereitgelegt' : 'Erledigen')) + '</button>' :'') + (refundable ? '<button type="button" class="sh-btn is-primary" data-oact="refund" data-id="' + o.id + '">Erstatten</button>' : '') + '</td></tr>';
 			if (p) { tr += '<tr class="nl-proofrow"><td colspan="5">' + orderPanel(o, p) + '</td></tr>'; }
 			return tr;
 		}).join('');
@@ -235,6 +242,19 @@
 			post('order_refund', { id: id }).then(function (r) { if (!r.ok) { b.disabled = false; say('gv-o-msg', r.error || 'Das hat nicht geklappt.', true); return; } oOpen = {}; say('gv-o-msg', 'Die Erstattung ist bei Mollie ausgelöst.'); loadOrders(true); }).catch(fail('gv-o-msg'));
 			return;
 		}
+		if (act === 'resend') {
+			if (b.dataset.again === '1' && !window.confirm('EchtPost hat nicht geantwortet, die Karte könnte schon bestellt sein. Hast du im EchtPost-Konto nachgesehen, dass es sie nicht gibt?')) { return; }
+			b.disabled = true;
+			post('order_resend', { id: id, again: b.dataset.again }).then(function (r) { if (!r.ok) { b.disabled = false; say('gv-o-msg', r.error || 'Das hat nicht geklappt.', true); loadOrders(true); return; } say('gv-o-msg', 'Die Postkarte ist bei EchtPost bestellt.'); loadOrders(true); }).catch(fail('gv-o-msg'));
+			return;
+		}
+		var row = (oData ? oData.rows : []).filter(function (x) { return x.id === id; })[0];
+		if (act === 'fulfil' && row && row.own) {   // a card printed from the shop file has its own number: only the mail to the buyer is left
+			if (!window.confirm('Ist die Karte verschickt bzw. liegt sie bereit? Der Käufer bekommt jetzt eine Mail.')) { return; }
+			b.disabled = true;
+			post('order_fulfil', { id: id, number: '' }).then(function (r) { if (!r.ok) { b.disabled = false; say('gv-o-msg', r.error || 'Das hat nicht geklappt.', true); return; } oOpen = {}; say('gv-o-msg', 'Erledigt. Der Käufer hat eine Mail bekommen.'); loadOrders(true); }).catch(fail('gv-o-msg'));
+			return;
+		}
 		if (act === 'close' || (oOpen[id] && oOpen[id].kind === act)) { delete oOpen[id]; drawOrders(); return; }
 		oOpen = {}; oOpen[id] = { kind: act }; drawOrders();
 		var f = $('gv-o-rows').querySelector('.gv-inline input'); if (f) { f.focus(); }
@@ -245,6 +265,22 @@
 	});
 
 	/* ---- settings of the shop ---- */
+	function drawEp(ep) {
+		$('gv-ep-state').textContent = ep && ep.set ? 'Schlüssel gespeichert (' + ep.masked + ', ' + (ep.mode === 'test' ? 'Test: es wird nichts gedruckt' : 'live') + '). Er wird nicht mehr angezeigt.' : 'Noch kein Schlüssel gespeichert. Ohne Schlüssel bleibt es beim Vordruck.';
+	}
+	$('gv-ep-save').addEventListener('click', function () {
+		var k = $('gv-ep-key').value.trim(); if (!k) { say('gv-ep-msg', 'Bitte den Schlüssel einfügen.', true); return; }
+		post('ep_save', { key: k }).then(function (r) { if (!r.ok) { say('gv-ep-msg', r.error, true); return; } $('gv-ep-key').value = ''; drawEp(r.ep); say('gv-ep-msg', 'Gespeichert.'); }).catch(fail('gv-ep-msg'));
+	});
+	$('gv-ep-test').addEventListener('click', function () {
+		say('gv-ep-msg', 'Ich frage EchtPost …');
+		post('ep_test', {}).then(function (r) { say('gv-ep-msg', r.ok ? 'Verbunden' + (r.account ? ' (' + r.account + ')' : '') + (r.credits !== '' ? ', Guthaben ' + r.credits + ' €' : '') + (r.mode === 'test' ? ', Testmodus' : '') + '.' : r.error, !r.ok); }).catch(fail('gv-ep-msg'));
+	});
+	$('gv-ep-clear').addEventListener('click', function () {
+		if (!window.confirm('Schlüssel löschen? Die Karten per Post laufen dann wieder über den Vordruck.')) { return; }
+		post('ep_clear', {}).then(function (r) { if (!r.ok) { say('gv-ep-msg', r.error, true); return; } drawEp(r.ep); if ($('gv-set-form').querySelector('input[name=gv_post_mode]:checked').value === 'echtpost') { $('gv-set-form').querySelector('input[name=gv_post_mode][value=print]').checked = true; } say('gv-ep-msg', 'Gelöscht.'); }).catch(fail('gv-ep-msg'));
+	});
+
 	function loadSettings() {
 		get('op=settings').then(function (r) {
 			if (!r.ok) { say('gv-set-msg', r.error, true); return; }
@@ -252,6 +288,8 @@
 			['gv_on', 'gv_pay_on', 'gv_terms_ok', 'gv_pdf_on', 'gv_post_on', 'gv_pickup_on', 'gv_own_motif'].forEach(function (k) { f.elements[k].checked = s[k] === '1'; });
 			['gv_amounts', 'gv_min_eur', 'gv_max_eur', 'gv_post_fee'].forEach(function (k) { f.elements[k].value = s[k]; });
 			f.querySelector('input[name=gv_withdraw_mode][value=' + (s.gv_withdraw_mode === 'lapse' ? 'lapse' : 'days14') + ']').checked = true;
+			f.querySelector('input[name=gv_post_mode][value=' + (s.gv_post_mode === 'echtpost' || s.gv_post_mode === 'blank' ? s.gv_post_mode : 'print') + ']').checked = true;
+			drawEp(r.ep); $('gv-ep-hook').textContent = r.ep_hook;
 			$('gv-s-motifs').innerHTML = r.motifs.map(function (m) { return '<label class="co-check"><input type="checkbox" data-motif="' + esc(m.key) + '"' + (off.indexOf(m.key) < 0 ? ' checked' : '') + '/> ' + esc(m.label) + ' <small>(' + esc(m.group) + ')</small></label>'; }).join('');
 			$('gv-set-link').innerHTML = 'Seite für Gäste: <a href="' + esc(r.shop_url) + '" target="_blank" rel="noopener">' + esc(r.shop_url) + '</a> (du siehst sie auch, solange der Shop noch zu ist).';
 			say('gv-set-msg', '');
@@ -262,6 +300,7 @@
 		['gv_on', 'gv_pay_on', 'gv_terms_ok', 'gv_pdf_on', 'gv_post_on', 'gv_pickup_on', 'gv_own_motif'].forEach(function (k) { d[k] = f.elements[k].checked ? 1 : 0; });
 		['gv_amounts', 'gv_min_eur', 'gv_max_eur', 'gv_post_fee'].forEach(function (k) { d[k] = f.elements[k].value; });
 		d.gv_withdraw_mode = f.querySelector('input[name=gv_withdraw_mode]:checked').value;
+		d.gv_post_mode = f.querySelector('input[name=gv_post_mode]:checked').value;
 		d.gv_motifs_off = Array.prototype.filter.call(f.querySelectorAll('input[data-motif]'), function (i) { return !i.checked; }).map(function (i) { return i.dataset.motif; }).join(',');
 		if (d.gv_on && !d.gv_terms_ok) { say('gv-set-msg', 'Der Shop öffnet erst, wenn auch "Texte geprüft" gesetzt ist. Gespeichert wird trotzdem.', false); }
 		post('settings_save', { data: JSON.stringify(d) }).then(function (r) { if (!r.ok) { say('gv-set-msg', r.error || 'Das hat nicht geklappt.', true); return; } if (!(d.gv_on && !d.gv_terms_ok)) { say('gv-set-msg', 'Gespeichert.'); } }).catch(fail('gv-set-msg'));

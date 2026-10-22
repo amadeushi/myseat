@@ -49,17 +49,18 @@ gv_page_head('Gutschein verschenken', 'gv-shell');
 ?>
 	<main class="gv-atelier">
 		<div class="gv-intro">
-			<h1>Einen Abend verschenken</h1>
-			<p>Such dir Betrag und Motiv aus, schreib ein paar Worte dazu und sieh zu, wie dein Gutschein entsteht. Er gilt im Restaurant und beim Online-Bestellen, in Teilbeträgen, bis zum Ende des dritten Jahres nach dem Kauf.</p>
+			<h1>Schenk jemandem einen Platz am Tisch.</h1>
+			<p>Wer bei uns einen Gutschein bekommt, sucht sich selbst aus, was er mag: Schnitzel, Pizza, Pfannkuchen, ein Fassbier. Bei uns müssen nicht alle dasselbe wollen. Du wählst Betrag und Motiv, schreibst ein paar Worte dazu und siehst sofort, wie dein Gutschein aussieht.</p>
+			<p class="gv-line">Gilt im Restaurant und beim Online-Bestellen (geliefert wird im Stadtgebiet Hildesheim), auch in Teilbeträgen. Gültig bis zum Ende des dritten Jahres nach dem Kauf: Ein Gutschein von <?php echo (int)date('Y'); ?> gilt bis zum 31.12.<?php echo (int)date('Y') + 3; ?>.</p>
 		</div>
 
 		<?php if (!$open && !$gv_staff): ?>
-		<div class="gv-page" style="grid-column:1/-1;margin:0"><h2>Bald hier</h2><p>Der Gutscheinverkauf startet in Kürze. Bis dahin bekommst du Gutscheine bei uns im Restaurant.</p></div>
+		<div class="gv-page" style="grid-column:1/-1;margin:0"><h2>Bald hier</h2><p>Gutscheine gibt es bald auch hier. Bis dahin: einfach bei uns im Restaurant fragen.</p></div>
 		<?php else: ?>
 
 		<figure class="gv-prev">
-			<div class="gv-prev-frame" id="gv-frame"><img id="gv-prev" alt="So sieht dein Gutschein aus" width="1000" height="667" src="gutschein_preview.php?motif=<?php echo $h(rawurlencode($motifNow)); ?>&amp;amount=<?php echo $h(rawurlencode($chosenAmount === 'custom' ? $val('amount_custom', '50') : $chosenAmount)); ?>"/></div>
-			<figcaption>Vorschau. Nummer und Sicherheitscode bekommst du nach der Zahlung.</figcaption>
+			<div class="gv-prev-frame" id="gv-frame"><img id="gv-prev" alt="So sieht dein Gutschein aus" width="1000" height="709" src="gutschein_preview.php?motif=<?php echo $h(rawurlencode($motifNow)); ?>&amp;amount=<?php echo $h(rawurlencode($chosenAmount === 'custom' ? $val('amount_custom', '50') : $chosenAmount)); ?>"/></div>
+			<figcaption>So sieht er aus. Nummer und Sicherheitscode bekommst du nach der Zahlung.</figcaption>
 		</figure>
 
 		<form class="gv-form" id="gv-form" method="post" action="gutschein.php" novalidate data-fee="<?php echo (int)$gv_cfg['fee']; ?>" data-min="<?php echo (int)($gv_cfg['min'] / 100); ?>" data-max="<?php echo (int)($gv_cfg['max'] / 100); ?>" data-lapse="<?php echo $gv_cfg['lapse'] ? '1' : '0'; ?>" data-token="<?php echo $h($_SESSION['shop_token']); ?>">
@@ -70,7 +71,7 @@ gv_page_head('Gutschein verschenken', 'gv-shell');
 			<input type="text" name="website" class="gv-trap" tabindex="-1" autocomplete="off" aria-hidden="true"/>
 
 			<fieldset class="co-sec">
-				<legend>Betrag</legend>
+				<legend>Wie viel?</legend>
 				<div class="gv-chips" role="radiogroup" aria-label="Betrag">
 					<?php foreach ($presets as $c): $e = (string)($c / 100); ?>
 					<label class="gv-chip"><input type="radio" name="amount_choice" value="<?php echo $h($e); ?>"<?php echo $chosenAmount === $e ? ' checked' : ''; ?>/><span><?php echo $h($e); ?> €</span></label>
@@ -81,10 +82,11 @@ gv_page_head('Gutschein verschenken', 'gv-shell');
 					<label for="gv-amount-custom">Betrag in vollen Euro (<?php echo (int)($gv_cfg['min'] / 100); ?> bis <?php echo (int)($gv_cfg['max'] / 100); ?>)</label>
 					<input type="text" id="gv-amount-custom" name="amount_custom" inputmode="numeric" maxlength="4" autocomplete="off" value="<?php echo $h($val('amount_custom')); ?>" class="<?php echo trim($errCls('amount')); ?>"/> <span>€</span>
 				</div>
+				<p class="co-hint">Du musst nicht alles auf einmal einlösen. Was übrig bleibt, bleibt auf dem Gutschein.</p>
 			</fieldset>
 
 			<fieldset class="co-sec">
-				<legend>Motiv</legend>
+				<legend>Welches Bild?</legend>
 				<?php foreach ($groups as $gname => $items): ?>
 				<div class="gv-motif-group"><h3><?php echo $h($gname); ?></h3>
 					<div class="gv-motifs">
@@ -95,39 +97,39 @@ gv_page_head('Gutschein verschenken', 'gv-shell');
 				</div>
 				<?php endforeach; ?>
 				<?php if ($gv_cfg['own']): ?>
-				<div class="gv-motif-group"><h3>Dein eigenes Bild</h3>
+				<div class="gv-motif-group"><h3>Oder dein eigenes Bild</h3>
 					<div class="gv-motifs" id="gv-own-list">
 						<?php if (strpos($motifNow, 'own:') === 0): ?><label class="gv-motif"><input type="radio" name="motif" value="<?php echo $h($motifNow); ?>" checked/><span>Dein Bild</span></label><?php endif; ?>
 						<label class="gv-own" id="gv-own-pick">Bild hochladen<small>JPG, PNG oder WebP, mindestens 900 × 600 Pixel</small><input type="file" id="gv-own-file" accept="image/jpeg,image/png,image/webp"/></label>
 					</div>
 					<p class="gv-own-msg" id="gv-own-msg" role="status" aria-live="polite"></p>
-					<p class="co-hint">Mit dem Hochladen bestätigst du, dass du das Bild verwenden darfst. Wir nutzen es nur für diesen einen Gutschein.</p>
+					<p class="co-hint">Ein Foto von euch beiden, vom letzten Urlaub, von der Torte: Dein Bild kommt auf die Karte. Mit dem Hochladen bestätigst du, dass du das Bild verwenden darfst. Wir nutzen es nur für diesen einen Gutschein.</p>
 				</div>
 				<?php endif; ?>
 			</fieldset>
 
 			<fieldset class="co-sec">
-				<legend>Deine Worte</legend>
+				<legend>Was soll draufstehen?</legend>
 				<div class="co-grid">
-					<label class="co-f">Für (optional)<input type="text" name="recipient" id="gv-recipient" maxlength="80" autocomplete="off" value="<?php echo $h($val('recipient')); ?>"/></label>
-					<label class="co-f">Von (optional)<input type="text" name="from" id="gv-from" maxlength="80" autocomplete="off" value="<?php echo $h($val('from')); ?>"/></label>
-					<label class="co-f wide">Nachricht (optional)<textarea name="message" id="gv-message" maxlength="160" rows="3" placeholder="z. B. Alles Gute zum Geburtstag!"><?php echo $h($val('message')); ?></textarea><span class="gv-count" id="gv-count" aria-hidden="true">0 / 160</span></label>
+					<label class="co-f">Für wen? (optional)<input type="text" name="recipient" id="gv-recipient" maxlength="80" autocomplete="off" value="<?php echo $h($val('recipient')); ?>"/></label>
+					<label class="co-f">Von wem? (optional)<input type="text" name="from" id="gv-from" maxlength="80" autocomplete="off" value="<?php echo $h($val('from')); ?>"/></label>
+					<label class="co-f wide">Ein paar Worte (optional)<textarea name="message" id="gv-message" maxlength="160" rows="3" placeholder="z. B. Zum 40.: Such dir was aus, wir sehen uns dort."><?php echo $h($val('message')); ?></textarea><span class="gv-count" id="gv-count" aria-hidden="true">0 / 160</span></label>
 				</div>
 			</fieldset>
 
 			<fieldset class="co-sec">
-				<legend>So bekommst du ihn</legend>
-				<?php if ($gv_cfg['forms']['pdf']): ?><label class="co-radio"><input type="radio" name="delivery" value="pdf"<?php echo $delivery === 'pdf' ? ' checked' : ''; ?>/><span>PDF per E-Mail<small>Sofort nach der Zahlung, zum Ausdrucken oder Weiterleiten.</small></span></label><?php endif; ?>
-				<?php if ($gv_cfg['forms']['post']): ?><label class="co-radio"><input type="radio" name="delivery" value="post"<?php echo $delivery === 'post' ? ' checked' : ''; ?>/><span>Per Post<small>Als gedruckte Karte an die Adresse, die du angibst (+ <?php echo $h(gv_money($gv_cfg['fee'])); ?> Versand).</small></span></label><?php endif; ?>
-				<?php if ($gv_cfg['forms']['pickup']): ?><label class="co-radio"><input type="radio" name="delivery" value="pickup"<?php echo $delivery === 'pickup' ? ' checked' : ''; ?>/><span>Abholung im Restaurant<small>Die gedruckte Karte liegt für dich bereit, wir melden uns per Mail.</small></span></label><?php endif; ?>
+				<legend>Wie kommt er zu dir?</legend>
+				<?php if ($gv_cfg['forms']['pdf']): ?><label class="co-radio"><input type="radio" name="delivery" value="pdf"<?php echo $delivery === 'pdf' ? ' checked' : ''; ?>/><span>Als PDF in dein Postfach.<small>Sofort nach der Zahlung, zum Ausdrucken oder Weiterleiten.</small></span></label><?php endif; ?>
+				<?php if ($gv_cfg['forms']['post']): ?><label class="co-radio"><input type="radio" name="delivery" value="post"<?php echo $delivery === 'post' ? ' checked' : ''; ?>/><span>Als Karte per Post.<small><?php echo $gv_cfg['post_mode'] === 'echtpost' ? 'Als Postkarte (A6) ohne Umschlag, mit deinem Motiv und deinen Worten. Nummer und Code stehen offen auf der Karte.' : ($gv_cfg['post_mode'] === 'blank' ? 'Gedruckt und nummeriert, an die Adresse, die du angibst.' : 'Gedruckt mit deinem Motiv und deinen Worten, im Umschlag an die Adresse, die du angibst.'); ?> (+ <?php echo $h(gv_money($gv_cfg['fee'])); ?> Versand)</small></span></label><?php endif; ?>
+				<?php if ($gv_cfg['forms']['pickup']): ?><label class="co-radio"><input type="radio" name="delivery" value="pickup"<?php echo $delivery === 'pickup' ? ' checked' : ''; ?>/><span>Zum Abholen bei uns.<small>Die Karte liegt im Restaurant bereit. Wir schreiben dir, sobald du sie holen kannst.</small></span></label><?php endif; ?>
 			</fieldset>
 
 			<fieldset class="co-sec">
-				<legend>Deine Daten</legend>
+				<legend>Wer schenkt?</legend>
 				<div class="co-grid">
 					<label class="co-f">Name<input type="text" name="name" autocomplete="name" maxlength="80" required value="<?php echo $h($val('name')); ?>" class="<?php echo trim($errCls('name')); ?>"/></label>
 					<label class="co-f">E-Mail<input type="email" name="email" autocomplete="email" maxlength="160" required value="<?php echo $h($val('email')); ?>" class="<?php echo trim($errCls('email')); ?>"/></label>
-					<label class="co-f wide">Telefon (optional, für Rückfragen)<input type="tel" name="phone" autocomplete="tel" maxlength="40" value="<?php echo $h($val('phone')); ?>"/></label>
+					<label class="co-f wide">Telefon (optional, falls wir etwas klären müssen)<input type="tel" name="phone" autocomplete="tel" maxlength="40" value="<?php echo $h($val('phone')); ?>"/></label>
 				</div>
 				<div class="co-grid gv-ship" id="gv-ship" <?php echo $delivery === 'post' ? '' : 'hidden'; ?>>
 					<label class="co-f wide">Name auf dem Umschlag<input type="text" name="ship_name" autocomplete="shipping name" maxlength="80" value="<?php echo $h($val('ship_name')); ?>" class="<?php echo trim($errCls('ship_name')); ?>"/></label>
@@ -149,12 +151,12 @@ gv_page_head('Gutschein verschenken', 'gv-shell');
 			<?php endif; ?>
 
 			<button type="submit" class="cart-go" id="gv-submit"<?php echo $open ? '' : ' disabled aria-disabled="true"'; ?>>Zahlungspflichtig bestellen</button>
-			<p class="gv-legal">Mit dem Klick gibst du eine verbindliche Bestellung ab und bezahlst sicher bei Mollie (Karte, PayPal, Apple Pay und weitere). Der Gutschein ist ein Mehrzweck-Gutschein.<?php if (!$gv_cfg['lapse']): ?> Du kannst die Bestellung innerhalb von 14 Tagen widerrufen: Die Funktion <a href="gutschein_widerruf.php">Vertrag widerrufen</a> findest du auf jeder Seite unten.<?php endif; ?></p>
+			<p class="gv-legal">Mit dem Klick bestellst du verbindlich und bezahlst sicher über Mollie (Karte, PayPal, Apple Pay und weitere). Es ist ein Mehrzweck-Gutschein.<?php if (!$gv_cfg['lapse']): ?> 14 Tage lang kannst du die Bestellung widerrufen: Die Funktion <a href="gutschein_widerruf.php">Vertrag widerrufen</a> findest du auf jeder Seite unten.<?php endif; ?></p>
 		</form>
 
 		<section class="gv-howto" style="grid-column:1/-1" aria-labelledby="gv-howto-h">
-			<h2 id="gv-howto-h">Einen Gutschein einlösen</h2>
-			<p>Im Restaurant nennst du uns die Gutscheinnummer oder zeigst den QR-Code. Beim Online-Bestellen gibst du Nummer und Sicherheitscode ein. Du kannst einen Teil des Betrags nutzen, der Rest bleibt auf dem Gutschein.</p>
+			<h2 id="gv-howto-h">Du hast einen Gutschein bekommen?</h2>
+			<p>Bei uns im Haus nennst du die Gutscheinnummer oder zeigst den QR-Code. Beim Online-Bestellen gibst du Nummer und Sicherheitscode ein. Du kannst einen Teil nutzen, der Rest bleibt auf dem Gutschein.</p>
 			<form method="post" action="gutschein.php#gv-howto-h" class="gv-balance" style="margin-top:14px">
 				<input type="hidden" name="do" value="balance"/><input type="hidden" name="token" value="<?php echo $h($_SESSION['shop_token']); ?>"/>
 				<div class="co-grid" style="max-width:520px">

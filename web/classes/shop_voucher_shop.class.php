@@ -17,6 +17,7 @@ function gv_cfg() {
 	sort($amounts); $amounts = array_values(array_unique($amounts));
 	return array('on' => shop_flag('gv_on'), 'min' => min($min, $max), 'max' => $max, 'amounts' => $amounts, 'fee' => max(0, (int)round((float)str_replace(',', '.', (string)shop_setting('gv_post_fee')) * 100)),
 		'forms' => array('pdf' => shop_flag('gv_pdf_on'), 'post' => shop_flag('gv_post_on'), 'pickup' => shop_flag('gv_pickup_on')), 'lapse' => shop_setting('gv_withdraw_mode') === 'lapse',
+		'post_mode' => ep_active() ? 'echtpost' : (shop_setting('gv_post_mode') === 'blank' ? 'blank' : 'print'),   // print = the restaurant prints the personal card (backend: print file), blank = numbered blank filled by hand, echtpost = postcard printed and sent by EchtPost
 		'own' => shop_flag('gv_own_motif'), 'terms_ok' => shop_flag('gv_terms_ok'), 'open' => shop_flag('gv_on') && shop_flag('gv_terms_ok'));   // open = switched on AND the owner has checked the wording of the pages
 }
 function gv_form_label($d) { $m = array('pdf' => 'PDF per E-Mail', 'post' => 'Per Post', 'pickup' => 'Abholung im Restaurant'); return isset($m[$d]) ? $m[$d] : $d; }
@@ -69,7 +70,8 @@ function gv_order_create($in) {
 	gv_order_gc();
 
 	$fee = $d === 'post' ? $cfg['fee'] : 0;
-	$v = gv_issue(array('kind' => $d === 'pdf' ? 'pdf' : 'print', 'face_cents' => $amount, 'status' => 'pending', 'buyer_name' => $name, 'buyer_email' => $email, 'recipient' => mb_substr(trim((string)($in['recipient'] ?? '')), 0, 80),
+	// a printed card (own print file or EchtPost) carries the own digital number and code, a blank its printed number
+	$v = gv_issue(array('kind' => ($d === 'pdf' || $cfg['post_mode'] !== 'blank') ? 'pdf' : 'print', 'face_cents' => $amount, 'status' => 'pending', 'buyer_name' => $name, 'buyer_email' => $email, 'recipient' => mb_substr(trim((string)($in['recipient'] ?? '')), 0, 80),
 		'message' => mb_substr(trim((string)($in['message'] ?? '')), 0, 160), 'note' => 'Online-Bestellung', 'staff_name' => 'Online-Shop'));
 	if (!$v['ok']) { return $bad('', 'Der Gutschein konnte nicht angelegt werden. Bitte versuche es noch einmal.'); }
 	$token = bin2hex(random_bytes(16)); $now = gv_now();
@@ -131,6 +133,7 @@ function gv_order_mark_paid($orderId) {
 	if ($was && $was['status'] === 'canceled') { gv_unvoid((int)$o['voucher_id'], array(null, 'System'), 'Zahlung nachträglich eingegangen'); }
 	gv_activate((int)$o['voucher_id']);
 	try { gv_order_send_mail($o); gv_order_notify_owner($o); } catch (Throwable $e) { error_log('mySeat voucher mail: '.$e->getMessage()); }
+	if ($o['delivery'] === 'post' && ep_active()) { try { gv_post_send((int)$o['id']); } catch (Throwable $e) { error_log('mySeat EchtPost: '.$e->getMessage()); } }   // failures are kept on the order and mailed to the owner
 	return true;
 }
 
@@ -139,7 +142,7 @@ function gv_order_mark_paid($orderId) {
 function gv_order_pdf_opts($order, $v) {
 	global $settings;
 	return array('motif' => $order['motif'], 'amount_cents' => (int)$order['amount_cents'], 'recipient' => $order['recipient'], 'from' => $order['from_name'], 'message' => $order['message'], 'number' => $v['number'],
-		'code' => (string)gv_code_plain($v), 'valid_until' => $v['valid_until'], 'brand' => !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus');
+		'code' => (string)gv_code_plain($v), 'valid_until' => $v['valid_until'], 'order_number' => $order['number'], 'bought' => $order['paid_at'], 'token' => $v['token'], 'brand' => !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus');
 }
 function gv_order_status_url($order) { return rtrim(shop_site_url(), '/').'/order/gutschein_status.php?t='.$order['token']; }
 
@@ -150,16 +153,18 @@ function gv_order_send_mail($o) {
 	$valid = $v['valid_until'] ? date('d.m.Y', strtotime($v['valid_until'])) : '';
 	if ($o['delivery'] === 'pdf') {
 		$pdf = gv_pdf(gv_order_pdf_opts($o, $v));
-		$m = array('subject' => 'Dein Gutschein von Amadeus', 'headline' => 'Dein Gutschein ist da', 'purpose' => 'order', 'zeus' => false,
-			'lead' => 'Danke für deine Bestellung '.$o['number'].'. Der Gutschein hängt als PDF an dieser Mail. Du kannst ihn ausdrucken oder digital weitergeben.',
+		$m = array('subject' => 'Dein Gutschein vom Amadeus', 'headline' => 'Dein Gutschein ist da', 'purpose' => 'order', 'zeus' => false,
+			'lead' => 'Danke für deine Bestellung '.$o['number'].'. Im Anhang liegt der Gutschein als PDF: ausdrucken, in einen Umschlag, fertig. Oder leite die Mail weiter, dann liegt er direkt im Postfach der Person, für die er gedacht ist.',
 			'image' => '', 'alt' => '', 'box' => array('label' => 'Gutschein', 'value' => gv_money_short((int)$o['amount_cents']), 'note' => 'Nummer '.$v['number'].($valid !== '' ? ' · gültig bis '.$valid : '')),
-			'after' => 'Einlösen: im Restaurant mit der Nummer, beim Online-Bestellen mit Nummer und Sicherheitscode (beides steht im PDF). Teilbeträge sind möglich, ein Rest bleibt auf dem Gutschein. Dein Widerrufsrecht und alles zur Bestellung findest du über den Knopf.',
+			'after' => 'Einlösen kann man ihn bei uns mit der Nummer und beim Online-Bestellen mit Nummer und Sicherheitscode (beides steht im PDF). Ein Teilbetrag reicht, der Rest bleibt stehen. Über den Knopf siehst du deine Bestellung und findest die Widerrufsfunktion.',
 			'btn' => 'Bestellung ansehen', 'url' => $status, 'signoff' => 'Hamun und das Amadeus-Team', 'files' => array(array('name' => 'Gutschein-'.$v['number'].'.pdf', 'mime' => 'application/pdf', 'data' => $pdf)));
 	} else {
-		$m = array('subject' => 'Deine Gutschein-Bestellung bei Amadeus', 'headline' => 'Danke für deine Bestellung', 'purpose' => 'order', 'zeus' => false,
-			'lead' => 'Deine Zahlung für Bestellung '.$o['number'].' ist angekommen. '.($o['delivery'] === 'post' ? 'Wir schicken den Gutschein als gedruckte Karte an die angegebene Adresse.' : 'Wir legen den gedruckten Gutschein für dich bereit und melden uns, sobald du ihn abholen kannst.'),
-			'image' => '', 'alt' => '', 'box' => array('label' => 'Gutschein', 'value' => gv_money_short((int)$o['amount_cents']), 'note' => gv_form_label($o['delivery']).($valid !== '' ? ' · gültig bis '.$valid : '')),
-			'after' => 'Den Stand deiner Bestellung und alles zum Widerruf findest du über den Knopf.', 'btn' => 'Bestellung ansehen', 'url' => $status, 'signoff' => 'Hamun und das Amadeus-Team');
+		$m = array('subject' => 'Deine Gutschein-Bestellung '.$o['number'], 'headline' => 'Danke, wir machen die Karte fertig', 'purpose' => 'order', 'zeus' => false,
+			'lead' => 'Deine Zahlung ist angekommen. '.($o['delivery'] === 'post'
+					? (($o['ep_state'] !== null || ep_active() ? 'Wir lassen die Karte drucken und schicken sie an ' : 'Wir machen die Karte fertig und schicken sie an ').$o['ship_name'].'. Sobald sie zur Post geht, schreiben wir dir.')
+					: 'Wir machen die Karte fertig und legen sie im Restaurant für dich bereit. Sobald du sie holen kannst, schreiben wir dir.'),
+				'image' => '', 'alt' => '', 'box' => array('label' => 'Gutschein', 'value' => gv_money_short((int)$o['amount_cents']), 'note' => gv_form_label($o['delivery']).($valid !== '' ? ' · gültig bis '.$valid : '')),
+			'after' => 'Den Stand deiner Bestellung und die Widerrufsfunktion findest du über den Knopf.', 'btn' => 'Bestellung ansehen', 'url' => $status, 'signoff' => 'Hamun und das Amadeus-Team');
 	}
 	$ok = shop_stamp_mail($o['buyer_email'], $m);
 	if ($ok) { fb_exec("UPDATE ".fb_t('tp_gv_orders')." SET mail_at = ? WHERE id = ?", 'si', array(gv_now(), (int)$o['id'])); }
@@ -167,7 +172,7 @@ function gv_order_send_mail($o) {
 }
 // a mail to the restaurant for orders that need work (blank to send or hand over)
 function gv_order_notify_owner($o) {
-	if ($o['delivery'] === 'pdf') { return; }
+	if ($o['delivery'] === 'pdf' || ($o['delivery'] === 'post' && ep_active())) { return; }   // a postcard by EchtPost needs no work (a failure sends its own mail)
 	$to = shop_mail_from(); if ($to === '') { return; }
 	shop_stamp_mail($to, array('subject' => 'Neuer Gutschein-Auftrag '.$o['number'], 'headline' => 'Gutschein-Auftrag '.$o['number'], 'purpose' => 'order', 'zeus' => false,
 		'lead' => gv_form_label($o['delivery']).': '.gv_money_short((int)$o['amount_cents']).' für '.($o['recipient'] !== '' ? $o['recipient'] : $o['buyer_name']).'. Bitte im Backend unter Gutscheine > Aufträge erledigen.',
@@ -181,14 +186,21 @@ function gv_order_fulfil($orderId, $blankNumber, $who) {
 	$o = gv_order_by_id($orderId);
 	if (!$o || $o['status'] !== 'paid' || $o['delivery'] === 'pdf') { return array('ok' => false, 'error' => 'Dieser Auftrag lässt sich nicht erledigen.'); }
 	if ($o['fulfilled_at'] !== null) { return array('ok' => false, 'error' => 'Dieser Auftrag ist schon erledigt.'); }
-	$r = gv_renumber((int)$o['voucher_id'], $blankNumber, $who);
-	if (!$r['ok']) { return $r; }
+	if (in_array($o['ep_state'], array('sending', 'queued', 'unclear'), true)) { return array('ok' => false, 'error' => 'Die Postkarte ist bei EchtPost bestellt oder wird bestellt. Bitte dort nachsehen, bevor du den Auftrag von Hand erledigst.'); }
+	$v = gv_by_id((int)$o['voucher_id']);
+	if ($v && $v['kind'] === 'print') {   // a blank takes its printed number; a card printed from the shop file keeps its own
+		$r = gv_renumber((int)$o['voucher_id'], $blankNumber, $who);
+		if (!$r['ok']) { return $r; }
+	}
 	fb_exec("UPDATE ".fb_t('tp_gv_orders')." SET fulfilled_at = ? WHERE id = ?", 'si', array(gv_now(), (int)$orderId));
-	$o = gv_order_by_id($orderId);
-	shop_stamp_mail($o['buyer_email'], array('subject' => $o['delivery'] === 'post' ? 'Dein Gutschein ist unterwegs' : 'Dein Gutschein liegt bereit', 'headline' => $o['delivery'] === 'post' ? 'Dein Gutschein ist unterwegs' : 'Dein Gutschein liegt bereit',
-		'purpose' => 'order', 'zeus' => false, 'lead' => $o['delivery'] === 'post' ? 'Die Karte zu Bestellung '.$o['number'].' ist heute zur Post gegangen.' : 'Die Karte zu Bestellung '.$o['number'].' liegt im Restaurant für dich bereit. Bitte bring zur Abholung diese Mail oder die Bestellnummer mit.',
-		'image' => '', 'alt' => '', 'box' => null, 'after' => 'Den Stand deiner Bestellung findest du über den Knopf.', 'btn' => 'Bestellung ansehen', 'url' => gv_order_status_url($o), 'signoff' => 'Hamun und das Amadeus-Team'));
+	gv_order_mail_sent(gv_order_by_id($orderId));
 	return array('ok' => true);
+}
+// the mail "on its way" (post) / "ready" (pick-up) after the card went out
+function gv_order_mail_sent($o) {
+	shop_stamp_mail($o['buyer_email'], array('subject' => $o['delivery'] === 'post' ? 'Deine Karte ist unterwegs' : 'Deine Karte liegt bereit', 'headline' => $o['delivery'] === 'post' ? 'Deine Karte ist unterwegs' : 'Deine Karte liegt bereit',
+		'purpose' => 'order', 'zeus' => false, 'lead' => $o['delivery'] === 'post' ? 'Die Karte zu Bestellung '.$o['number'].' ist heute zur Post gegangen.' : 'Die Karte zu Bestellung '.$o['number'].' liegt im Restaurant für dich bereit. Sag bei uns einfach, dass du einen Gutschein abholst, und nenne die Bestellnummer '.$o['number'].'.',
+		'image' => '', 'alt' => '', 'box' => null, 'after' => 'Den Stand deiner Bestellung findest du über den Knopf.', 'btn' => 'Bestellung ansehen', 'url' => gv_order_status_url($o), 'signoff' => 'Hamun und das Amadeus-Team'));
 }
 
 // ---- withdrawal (Widerruf) and refund ----
@@ -213,13 +225,14 @@ function gv_order_withdraw($o) {
 	$u = fb_exec("UPDATE ".fb_t('tp_gv_orders')." SET status = 'withdrawn', withdrawn_at = ?, withdraw_ip = ? WHERE id = ? AND status = 'paid'", 'ssi', array(gv_now(), gv_ip(), (int)$o['id']));
 	if (!$u || mysqli_stmt_affected_rows($u) < 1) { return array('ok' => false, 'error' => 'Der Widerruf ist schon eingegangen.'); }
 	gv_void((int)$o['voucher_id'], array(null, 'Widerruf'), 'Widerruf der Bestellung '.$o['number']);
+	$cardNote = ''; try { $cardNote = gv_post_cancel($o); } catch (Throwable $e) { error_log('mySeat EchtPost cancel: '.$e->getMessage()); }   // a postcard not printed yet is called back
 	$o = gv_order_by_id((int)$o['id']);
 	$sent = shop_stamp_mail($o['buyer_email'], array('subject' => 'Dein Widerruf ist bei uns eingegangen', 'headline' => 'Dein Widerruf ist eingegangen', 'purpose' => 'order', 'zeus' => false,
-		'lead' => 'Wir bestätigen, dass dein Widerruf der Bestellung '.$o['number'].' am '.date('d.m.Y', strtotime($o['withdrawn_at'])).' um '.date('H:i', strtotime($o['withdrawn_at'])).' Uhr bei uns eingegangen ist. Der Gutschein ist gesperrt.',
+		'lead' => 'Wir bestätigen, dass dein Widerruf der Bestellung '.$o['number'].' am '.date('d.m.Y', strtotime($o['withdrawn_at'])).' um '.date('H:i', strtotime($o['withdrawn_at'])).' Uhr bei uns eingegangen ist. Der Gutschein ist gesperrt. Wir erstatten '.gv_money_short((int)$o['total_cents']).' auf dem Weg, mit dem du bezahlt hast, in der Regel innerhalb von 14 Tagen.',
 		'image' => '', 'alt' => '', 'box' => array('label' => 'Erstattung', 'value' => gv_money_short((int)$o['total_cents']), 'note' => 'auf dem Zahlungsweg deiner Bestellung'),
-		'after' => 'Wir erstatten den Betrag auf demselben Weg, mit dem du bezahlt hast, in der Regel innerhalb von 14 Tagen.', 'btn' => '', 'url' => '', 'signoff' => 'Hamun und das Amadeus-Team'));
+		'after' => 'Wenn du magst, sag uns kurz, woran es lag. Eine Antwort auf diese Mail genügt, du musst aber nicht.', 'btn' => '', 'url' => '', 'signoff' => 'Hamun und das Amadeus-Team'));
 	$to = shop_mail_from();
-	if ($to !== '') { shop_stamp_mail($to, array('subject' => 'Widerruf Gutschein '.$o['number'], 'headline' => 'Widerruf '.$o['number'], 'purpose' => 'order', 'zeus' => false, 'lead' => $o['buyer_name'].' hat die Bestellung '.$o['number'].' über '.gv_money_short((int)$o['total_cents']).' widerrufen. Der Gutschein ist gesperrt. Bitte im Backend unter Gutscheine > Aufträge die Erstattung auslösen.',
+	if ($to !== '') { shop_stamp_mail($to, array('subject' => 'Widerruf Gutschein '.$o['number'], 'headline' => 'Widerruf '.$o['number'], 'purpose' => 'order', 'zeus' => false, 'lead' => $o['buyer_name'].' hat die Bestellung '.$o['number'].' über '.gv_money_short((int)$o['total_cents']).' widerrufen. Der Gutschein ist gesperrt.'.($cardNote !== '' ? ' '.$cardNote : '').' Bitte im Backend unter Gutscheine > Aufträge die Erstattung auslösen.',
 		'image' => '', 'alt' => '', 'box' => null, 'after' => '', 'btn' => '', 'url' => '', 'signoff' => 'mySeat')); }
 	return array('ok' => true, 'mail' => (bool)$sent, 'order' => $o);
 }
@@ -243,7 +256,8 @@ function gv_order_refund($orderId) {
 // orders for the backend
 function gv_orders_list($filter, $limit = 200) {
 	shop_ensure_schema();
-	$w = array('todo' => "status = 'paid' AND delivery <> 'pdf' AND fulfilled_at IS NULL", 'refund' => "status = 'withdrawn' AND refund_id IS NULL", 'paid' => "status = 'paid'", 'withdrawn' => "status = 'withdrawn'", 'pending' => "status = 'pending'");
+	// todo: a postcard EchtPost has taken ('queued') is not our work until it fails
+	$w = array('todo' => "status = 'paid' AND delivery <> 'pdf' AND fulfilled_at IS NULL AND (ep_state IS NULL OR ep_state <> 'queued')", 'refund' => "status = 'withdrawn' AND refund_id IS NULL", 'paid' => "status = 'paid'", 'withdrawn' => "status = 'withdrawn'", 'pending' => "status = 'pending'");
 	$where = isset($w[$filter]) ? $w[$filter] : '1=1';
 	return fb_rows("SELECT * FROM ".fb_t('tp_gv_orders')." WHERE $where ORDER BY id DESC LIMIT ".(int)$limit);
 }

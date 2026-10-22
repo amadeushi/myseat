@@ -359,10 +359,12 @@ function shop_defaults() {
 		'stamp_percent' => '10', 'stamp_goal' => '5', 'stamp_months' => '12', 'voucher_days' => '90',
 		'gv_pay_on' => '0',        // gift vouchers can be redeemed as payment in the checkout and at the till (works for imported vouchers before the shop for guests opens)
 		'gv_on' => '0',             // gift vouchers (Wertgutscheine): the guest pages / online payment; the backend page works without it (web/classes/shop_voucher.class.php)
+		'gv_post_mode' => 'print',  // "Per Post"/"Abholung": print = the shop makes the personal card as a print file (backend, Aufträge), blank = numbered blank filled by hand, echtpost = postcard printed and sent by EchtPost (needs the key, web/classes/echtpost.class.php)
 		'gv_pdf_on' => '1', 'gv_post_on' => '1', 'gv_pickup_on' => '1',   // forms of the voucher shop: PDF by mail, numbered blank by post, pick-up at the restaurant
 		'gv_amounts' => '25,50,75,100,200,500', 'gv_min_eur' => '10', 'gv_max_eur' => '500', 'gv_post_fee' => '2.50',   // amounts to choose (euro), limits of a free amount, postage for the blank (euro)
 		'gv_withdraw_mode' => 'days14',   // days14 = 14 days of withdrawal like the AGB; lapse = the right ends when the PDF is delivered (needs the guest's consent, have a lawyer check before use)
-		'gv_shop_host' => 'amadeus.delivery', 'gv_motifs_off' => '', 'gv_own_motif' => '1', 'gv_terms_ok' => '0',   // motifs switched off (keys), guests may upload their own picture, the owner has checked the wording of the pages
+		'gv_shop_host' => 'amadeus.delivery', 'gv_site_host' => 'amadeus-hildesheim.de',   // website of the restaurant as printed in the small print of the voucher
+		 'gv_motifs_off' => '', 'gv_own_motif' => '1', 'gv_terms_ok' => '0',   // motifs switched off (keys), guests may upload their own picture, the owner has checked the wording of the pages
 		'account_on' => '1',        // guest accounts: sign-in by code or link, order history, favorites (see shop_account.class.php)
 		'account_sms' => '1',       // sign-in codes by SMS (otherwise only by e-mail); needs SMS sending set up
 		'account_sms_daily' => '100', // at most this many sign-in SMS a day (every one costs money)
@@ -3876,3 +3878,4 @@ require_once __DIR__.'/shop_issue_chat.class.php';
 require_once __DIR__.'/shop_voucher.class.php';
 require_once __DIR__.'/shop_voucher_pdf.class.php';
 require_once __DIR__.'/shop_voucher_shop.class.php';
+require_once __DIR__.'/echtpost.class.php';

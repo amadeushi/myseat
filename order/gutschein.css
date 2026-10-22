@@ -4,7 +4,7 @@
 .gv-intro p { margin-top: 8px; color: var(--text-muted); max-width: 54ch; }
 .gv-notice { margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--gold); border-radius: var(--radius-md); background: var(--surface-2); color: var(--gold-strong); font-size: 14px; }
 .gv-prev { margin: 0; }
-.gv-prev-frame { position: relative; border-radius: 14px; overflow: hidden; background: var(--surface-2); aspect-ratio: 3 / 2; box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--border-soft); }
+.gv-prev-frame { position: relative; border-radius: 14px; overflow: hidden; background: var(--surface-2); aspect-ratio: 148 / 105; box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--border-soft); }
 .gv-prev-frame img { display: block; width: 100%; height: 100%; object-fit: cover; transition: opacity .2s ease; }
 .gv-prev-frame.is-busy img { opacity: .55; }
 .gv-prev figcaption { margin-top: 10px; font-size: 13px; color: var(--text-muted); }
@@ -79,3 +79,17 @@
 }
 @media (max-width: 520px) { .gv-intro h1, .gv-page h1 { font-size: 32px; } .gv-motifs { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); } }
 @media (prefers-reduced-motion: reduce) { .gv-prev-frame img { transition: none; } }
+
+/* the page behind the QR code of a voucher (gutschein_karte.php): the card, its state, the redeem form of the team */
+.gv-karte-img { display: block; width: 100%; max-width: 620px; height: auto; border-radius: 14px; box-shadow: 0 10px 30px rgba(0, 0, 0, .45); }
+.gv-karte-img.is-off { filter: grayscale(.85) brightness(.7); }
+.gv-redeem { display: grid; gap: 10px; max-width: 420px; margin-top: 10px; }
+.gv-redeem label { font-size: .9rem; opacity: .8; margin-top: 8px; }
+.gv-redeem input { min-height: 48px; padding: 0 14px; font-size: 1.1rem; border-radius: 10px; border: 1px solid rgba(255, 255, 255, .25); background: rgba(255, 255, 255, .06); color: inherit; }
+.gv-redeem .cart-go { min-height: 52px; cursor: pointer; }
+.gv-redeem .cart-go.is-alt { background: transparent; border: 1px solid currentColor; color: inherit; }
+
+.gv-intro .gv-line { font-size: .95rem; opacity: .75; }
+
+.gv-short { margin: 0 0 28px; }
+.gv-short ol { margin: 8px 0 12px 1.2em; padding: 0; display: grid; gap: 6px; }
