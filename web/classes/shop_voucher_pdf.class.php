@@ -43,7 +43,7 @@ function gv_upload_store($bin) {
 	$info = @getimagesizefromstring($bin);
 	if (!$info || !in_array($info[2], array(IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP), true)) { return array('ok' => false, 'error' => 'Bitte ein Bild als JPG, PNG oder WebP wählen.'); }
 	if ($info[0] * $info[1] > 40000000) { return array('ok' => false, 'error' => 'Das Bild hat zu viele Pixel. Bitte verkleinern.'); }
-	if ($info[0] < 900 || $info[1] < 600) { return array('ok' => false, 'error' => 'Das Bild ist zu klein für einen scharfen Druck (mindestens 900 x 600 Pixel).'); }
+	if ($info[0] < 1500 || $info[1] < 1000) { return array('ok' => false, 'error' => 'Das Bild ist zu klein für einen scharfen Druck (mindestens 1500 x 1000 Pixel).'); }
 	$im = @imagecreatefromstring($bin);
 	if (!$im) { return array('ok' => false, 'error' => 'Das Bild konnte nicht gelesen werden.'); }
 	if (!imageistruecolor($im)) { imagepalettetotruecolor($im); }
@@ -119,78 +119,58 @@ function gv_qr_url($number, $token = '') {
 	return rtrim(shop_site_url(), '/').($token !== '' ? '/order/gutschein_karte.php?t='.rawurlencode($token) : '/order/gutschein.php?g='.rawurlencode($number));
 }
 
+// word wrap in which the available width depends on the line: $widthFor(lineIndex) gives it in pixels (a text that runs past a QR code first and then below it). More than $maxLines lines: cut with an ellipsis.
+function gv_wrap_var($text, $font, $size, $widthFor, $maxLines = 99) {
+	$words = preg_split('/\s+/u', trim((string)$text), -1, PREG_SPLIT_NO_EMPTY); $lines = array(); $cur = '';
+	foreach ($words as $wd) {
+		$try = $cur === '' ? $wd : $cur.' '.$wd;
+		if ($cur !== '' && gv_text_w($size, $font, $try) > $widthFor(count($lines))) { $lines[] = $cur; $cur = $wd; } else { $cur = $try; }
+	}
+	if ($cur !== '') { $lines[] = $cur; }
+	if (count($lines) > $maxLines) {
+		$lines = array_slice($lines, 0, $maxLines); $last = $lines[$maxLines - 1];
+		while ($last !== '' && gv_text_w($size, $font, $last.' …') > $widthFor($maxLines - 1)) { $last = mb_substr($last, 0, -1); }
+		$lines[$maxLines - 1] = rtrim($last).' …';
+	}
+	return $lines;
+}
+
 /*
- * Draw the card. $o: motif, amount_cents, recipient, from, message, number, code, valid_until (Y-m-d or ''), brand. Returns a GD image of $w x ($w * 105 / 148) pixels.
+ * The front of the card: the picture as it is (cut to the format, never stretched, no fade or text on it) above a solid dark band with the logo, the word GUTSCHEIN and the amount.
+ * Text sits only on solid colours, so it reads the same on every motif, also on a picture a guest uploads. Everything with the guest's words, number, code and QR code is on the back (gv_render_back).
+ * $o: motif, amount_cents, label (default GUTSCHEIN), brand. Returns a GD image of $w x ($w * 105 / 148) pixels; sizes are real points on a card of GV_CARD_W_MM.
  */
 function gv_render_card($o, $w) {
-	$H = (int)round($w * GV_CARD_H_MM / GV_CARD_W_MM); $u = $w / 1000;
+	$H = (int)round($w * GV_CARD_H_MM / GV_CARD_W_MM); $pxMm = $w / GV_CARD_W_MM;
+	$mm = function ($v) use ($pxMm) { return $v * $pxMm; }; $P = function ($pt) use ($pxMm) { return $pt * 25.4 / 72 * $pxMm; };
 	$im = imagecreatetruecolor($w, $H); imagealphablending($im, true);
-	imagefill($im, 0, 0, gv_hex($im, '14100c'));
-	$file = gv_motif_file($o['motif'] ?? '');
-	if ($file !== '') {   // the picture fills the card (cut at the edges, never stretched)
-		$src = @imagecreatefromjpeg($file);
-		if ($src) {
-			$sw = imagesx($src); $sh = imagesy($src); $s = max($w / $sw, $H / $sh);
-			$cw = (int)round($w / $s); $ch = (int)round($H / $s);
-			imagecopyresampled($im, $src, 0, 0, (int)(($sw - $cw) / 2), (int)(($sh - $ch) / 2), $w, $H, $cw, $ch);
-		}
+	$band = (int)round($mm(24)); $phH = $H - $band; $dark = '14100c';
+	imagefill($im, 0, 0, gv_hex($im, $dark));
+	$file = gv_motif_file($o['motif'] ?? ''); $src = $file !== '' ? @imagecreatefromjpeg($file) : false;
+	if ($src) {   // the picture fills the area above the band (cut at the edges, never stretched)
+		$sw = imagesx($src); $sh = imagesy($src); $sc = max($w / $sw, $phH / $sh);
+		$cw = (int)round($w / $sc); $ch = (int)round($phH / $sc);
+		imagecopyresampled($im, $src, 0, 0, (int)(($sw - $cw) / 2), (int)(($sh - $ch) / 2), $w, $phH, $cw, $ch);
+	} else {   // no picture (for example a voucher of the old system): a quiet warm gradient
+		for ($y = 0; $y < $phH; $y++) { $t = $y / max(1, $phH); imagefilledrectangle($im, 0, $y, $w, $y, gv_hex($im, sprintf('%02x%02x%02x', 58 - 38 * $t, 44 - 28 * $t, 30 - 18 * $t))); }
 	}
-	// the logo is white on a dark picture and black on a bright one: measured where it sits (before the fades)
-	$lum = 0; $cnt = 0;
-	for ($yy = (int)(20 * $u); $yy < 150 * $u; $yy += max(2, (int)(8 * $u))) { for ($xx = (int)(30 * $u); $xx < 300 * $u; $xx += max(2, (int)(8 * $u))) { $c = imagecolorat($im, $xx, $yy); $lum += (0.299 * (($c >> 16) & 255) + 0.587 * (($c >> 8) & 255) + 0.114 * ($c & 255)) / 255; $cnt++; } }
-	$bright = $cnt > 0 && $lum / $cnt > 0.6;
-	for ($y = 0; $y < $H; $y++) {   // fades: at the top (logo) light on a bright picture, else dark; dark at the bottom (text)
-		$t = $y / $H; $a = 0.0; $top = 0.0;
-		if ($t < 0.28) { $top = ($bright ? 0.5 : 0.62) * (1 - $t / 0.28); }
-		if ($top > 0.004) { imagefilledrectangle($im, 0, $y, $w, $y, gv_hex($im, $bright ? 'fbf4e2' : '120d09', (int)round(127 * (1 - $top)))); }
-		if ($t > 0.34) { $a = min(0.93, 0.93 * pow(($t - 0.34) / 0.5, 0.9)); }
-		if ($a > 0.004) { imagefilledrectangle($im, 0, $y, $w, $y, gv_hex($im, '120d09', (int)round(127 * (1 - $a)))); }
-	}
-	$serif = gv_font('CormorantGaramond-SemiBold'); $serifM = gv_font('CormorantGaramond-Medium'); $sans = gv_font('Raleway-Regular'); $sansB = gv_font('Raleway-SemiBold');
-	$gold = gv_hex($im, 'e6c57e'); $cream = gv_hex($im, 'fbf4e2'); $soft = gv_hex($im, 'fbf4e2', 30);
-	$px = function ($v) use ($u) { return $v * $u * 0.75; };   // design size in "u" -> GD point size (points are 4/3 pixels)
-	$m = 44 * $u;
-
-	$logoFile = gv_logo_file($bright);
-	if ($logoFile !== '' && ($lg = @imagecreatefrompng($logoFile))) {   // the logo of the restaurant (order/gutschein/logo-weiss.png / logo-schwarz.png)
-		$lw = (int)round(215 * $u); $lh = (int)round($lw * imagesy($lg) / imagesx($lg));
-		imagealphablending($im, true); imagecopyresampled($im, $lg, (int)$m, (int)(34 * $u), 0, 0, $lw, $lh, imagesx($lg), imagesy($lg));
+	imagefilledrectangle($im, 0, $phH, $w, $H, gv_hex($im, $dark));
+	imagefilledrectangle($im, 0, $phH, $w, $phH + max(1, (int)round($mm(0.5))) - 1, gv_hex($im, 'c9a45c'));   // a fine gold line between picture and band
+	$serif = gv_font('CormorantGaramond-SemiBold'); $sansB = gv_font('Raleway-SemiBold');
+	$gold = gv_hex($im, 'efd08a'); $cream = gv_hex($im, 'fffaf0'); $m = $mm(9);
+	$logoFile = gv_logo_file(false);   // white logo on the dark band
+	if ($logoFile !== '' && ($lg = @imagecreatefrompng($logoFile))) {
+		$lw = (int)round($mm(38)); $lh = (int)round($lw * imagesy($lg) / imagesx($lg));
+		imagecopyresampled($im, $lg, (int)$m, (int)($phH + ($band - $lh) / 2), 0, 0, $lw, $lh, imagesx($lg), imagesy($lg));
 	} else {
-		imagettftext($im, $px(46), 0, (int)$m, (int)(76 * $u), $bright ? gv_hex($im, '1a140e') : $cream, $serif, (string)($o['brand'] ?? 'Amadeus'));
-		gv_text_spaced($im, $px(11.5), $m + 2 * $u, 104 * $u, $bright ? gv_hex($im, '5b4520') : $gold, $sansB, 'CAFÉ · RESTAURANT · BAR', 3.2 * $u);
+		imagettftext($im, $P(22), 0, (int)$m, (int)($phH + $band / 2 + $P(8)), $cream, $serif, (string)($o['brand'] ?? 'Amadeus'));
 	}
-
-	// bottom block, built from the bottom up
-	$y = $H - 40 * $u;
-	$info = 'Nr. '.($o['number'] ?? '').(($o['code'] ?? '') !== '' ? '     Code '.$o['code'] : '').(!empty($o['valid_until']) ? '     gültig bis '.date('d.m.Y', strtotime($o['valid_until'])) : '');
-	imagettftext($im, $px(14.5), 0, (int)$m, (int)$y, $soft, $sans, $info);
-	$y -= 52 * $u;
-	$msg = trim((string)($o['message'] ?? ''));
-	if ($msg !== '') {
-		$lines = gv_wrap($msg, $serifM, $px(27), 560 * $u, 3);
-		for ($i = count($lines) - 1; $i >= 0; $i--) { imagettftext($im, $px(27), 0, (int)$m, (int)$y, $cream, $serifM, $lines[$i]); $y -= 33 * $u; }
-		$y -= 6 * $u;
-	}
-	$names = array();
-	if (trim((string)($o['recipient'] ?? '')) !== '') { $names[] = 'Für '.trim($o['recipient']); }
-	if (trim((string)($o['from'] ?? '')) !== '') { $names[] = 'Von '.trim($o['from']); }
-	if ($names) { imagettftext($im, $px(16.5), 0, (int)$m, (int)$y, $gold, $sansB, implode('   ·   ', $names)); $y -= 50 * $u; }
-	imagettftext($im, $px(112), 0, (int)($m - 4 * $u), (int)$y, $cream, $serif, gv_money_short((int)($o['amount_cents'] ?? 0)));
-	$y -= 112 * $u;
-	gv_text_spaced($im, $px(13), $m + 2 * $u, $y, $gold, $sansB, (string)($o['label'] ?? 'GUTSCHEIN'), 5.5 * $u);
-
-	// QR code on a light square
-	$qr = qr_matrix(gv_qr_url($o['number'] ?? '', $o['token'] ?? ''));
-	if ($qr) {
-		$n = count($qr); $mod = max(1, (int)floor(138 * $u / ($n + 2))); $side = ($n + 2) * $mod; $pad = 9 * $u;
-		$bx = $w - $m - $side - 2 * $pad; $by = $H - 40 * $u - $side - 2 * $pad;
-		imagefilledrectangle($im, (int)$bx, (int)$by, (int)($bx + $side + 2 * $pad), (int)($by + $side + 2 * $pad), gv_hex($im, 'fbf4e2'));
-		$ink = gv_hex($im, '1a140e');
-		for ($r = 0; $r < $n; $r++) { for ($c = 0; $c < $n; $c++) { if ($qr[$r][$c]) {
-			$x0 = (int)($bx + $pad + ($c + 1) * $mod); $y0 = (int)($by + $pad + ($r + 1) * $mod);
-			imagefilledrectangle($im, $x0, $y0, $x0 + $mod - 1, $y0 + $mod - 1, $ink);
-		} } }
-	}
+	// right: GUTSCHEIN (10 pt) and the amount (30 pt), right aligned
+	$label = (string)($o['label'] ?? 'GUTSCHEIN'); $ls = $P(10); $sp = $mm(1.1);
+	$lwid = gv_text_w($ls, $sansB, $label) + (mb_strlen($label) - 1) * $sp;
+	gv_text_spaced($im, $ls, $w - $m - $lwid, $phH + $mm(8.2), $gold, $sansB, $label, $sp);
+	$amount = gv_money_short((int)($o['amount_cents'] ?? 0)); $as = $P(30);
+	imagettftext($im, $as, 0, (int)($w - $m - gv_text_w($as, $serif, $amount)), (int)($phH + $mm(19.6)), $cream, $serif, $amount);
 	return $im;
 }
 function gv_card_jpeg($o, $w, $q = 86) {
@@ -220,9 +200,8 @@ function gv_postcard_front_jpeg($o, $q = 90) {
 // the small print at the foot of the PDF and of the back of a printed card, like the FirstVoucher original: reference (voucher, order, purchase date), where the terms are, address, contact, website. Array of lines.
 function gv_footer_lines($o) {
 	$ref = array('Gutschein '.($o['number'] ?? ''));
-	if (!empty($o['order_number'])) { $ref[] = 'Bestellung '.$o['order_number']; }
-	if (!empty($o['bought'])) { $ref[] = 'gekauft am '.date('d.m.Y', strtotime($o['bought'])); }
-	$lines = array(implode('  ·  ', $ref), 'Es gelten die Gutschein-Bedingungen: '.rtrim(shop_site_url(), '/').'/order/gutschein_bedingungen.php');
+	if (!empty($o['order_number'])) { $ref[] = 'Bestellung '.$o['order_number'].(!empty($o['bought']) ? ' vom '.date('d.m.Y', strtotime($o['bought'])) : ''); }
+	$lines = array(implode('  ·  ', $ref), 'Bedingungen: '.rtrim(shop_site_url(), '/').'/order/gutschein_bedingungen.php');
 	$site = trim((string)shop_setting('gv_site_host'));
 	$contact = array_merge(gv_legal_lines(), $site !== '' ? array($site) : array());
 	if ($contact) { $lines[] = implode('  ·  ', $contact); }
@@ -254,31 +233,69 @@ function gv_links_in($line, $x, $base, $size, $font) {
 	return $out;
 }
 
-// the A4 page as a picture (300 dpi): card at the top, instructions below
-function gv_page_jpeg($o) {
-	$W = 2480; $H = 3508; $cw = 2244; $ch = (int)round($cw * GV_CARD_H_MM / GV_CARD_W_MM);
-	$page = imagecreatetruecolor($W, $H); imagefill($page, 0, 0, 0xFFFFFF);
-	$card = gv_render_card($o, $cw);
-	$x = (int)(($W - $cw) / 2); $y = 177;
-	imagecopy($page, $card, $x, $y, 0, 0, $cw, $ch);
-	$gray = gv_hex($page, '9a9488'); $ink = gv_hex($page, '2a2118'); $mut = gv_hex($page, '5b5346');   // cut marks at the corners of the card
-	foreach (array(array($x, $y, -1, -1), array($x + $cw, $y, 1, -1), array($x, $y + $ch, -1, 1), array($x + $cw, $y + $ch, 1, 1)) as $c) {
-		imageline($page, $c[0] + $c[2] * 16, $c[1], $c[0] + $c[2] * 56, $c[1], $gray); imageline($page, $c[0], $c[1] + $c[3] * 16, $c[0], $c[1] + $c[3] * 56, $gray);
-	}
+/*
+ * The PDF for guests: three A4 pages, each with one job and a heading that says which.
+ * 1 "Dein Gutschein": front and back upright and large, to read and show on a screen (the way the PDF travels by mail).
+ * 2 "Zum Ausdrucken": three short steps, then the card as a folding card of 148 x 210 mm: the front on top, the fold line, the back below it turned by 180 degrees (so that it stands upright
+ *   after folding), cut marks at the four corners. Printed at 100 % on firm paper, cut out and folded with the pictures outside, it is a finished card of A6 (148 x 105 mm).
+ * 3 "So löst du ihn ein": the three blocks of the redeem text and the small print with the links (clickable).
+ * Real points: headings 18, steps and block headings 12, text 11, small print 9; dark ink on white (at least 9:1). Returns array of pages array(jpeg, w, h, links).
+ */
+function gv_guest_pages($o) {
+	$W = 2480; $H = 3508; $cw = 1748; $ch = 1240; $x = (int)(($W - $cw) / 2);
+	$S = function ($pt) { return $pt * 300 / 72; };   // real printed points -> GD size at 300 dpi
 	$serif = gv_font('CormorantGaramond-SemiBold'); $sans = gv_font('Raleway-Regular'); $sansB = gv_font('Raleway-SemiBold');
-	$ty = $y + $ch + 150; $links = array();
-	imagettftext($page, 50 * 0.75, 0, $x, $ty, $ink, $serif, 'So löst du ihn ein'); $ty += 96;
+	$mk = function () use ($W, $H) { $im = imagecreatetruecolor($W, $H); imagefill($im, 0, 0, 0xFFFFFF); return $im; };
+	$jpeg = function ($im) { ob_start(); imagejpeg($im, null, 80); return ob_get_clean(); };
+	$pages = array();
+
+	// ---- page 1: the voucher on the screen ----
+	$p0 = $mk(); $ink = gv_hex($p0, '1f1a14'); $mut = gv_hex($p0, '2e2921'); $edge = gv_hex($p0, 'cfc8b8');
+	$sw = 2000; $sh = (int)round($sw * GV_CARD_H_MM / GV_CARD_W_MM); $sx = (int)(($W - $sw) / 2); $ty = 190;
+	imagettftext($p0, $S(18), 0, $sx, $ty, $ink, $serif, 'Dein Gutschein'); $ty += 100;
+	foreach (gv_wrap('Vorderseite und Rückseite zum Lesen und Zeigen am Bildschirm. Zum Verschenken auf Papier: Seite 2.', $sans, $S(12), $sw) as $line) { imagettftext($p0, $S(12), 0, $sx, $ty, $mut, $sans, $line); $ty += 68; }
+	$y1 = $ty + 50; $y2 = $y1 + $sh + 90;
+	imagecopyresampled($p0, gv_render_card($o, $cw), $sx, $y1, 0, 0, $sw, $sh, $cw, $ch);
+	imagecopyresampled($p0, gv_render_back($o, $cw), $sx, $y2, 0, 0, $sw, $sh, $cw, $ch);
+	foreach (array($y1, $y2) as $yy) { imagerectangle($p0, $sx - 1, $yy - 1, $sx + $sw, $yy + $sh, $edge); }
+	$pages[] = array($jpeg($p0), $W, $H, array());
+
+	// ---- page 2: to print, cut out and fold ----
+	$p1 = $mk(); $ink = gv_hex($p1, '1f1a14'); $mut = gv_hex($p1, '2e2921'); $gray = gv_hex($p1, '6f685c');
+	$ty = 190;
+	imagettftext($p1, $S(18), 0, $x, $ty, $ink, $serif, 'Zum Ausdrucken und Falten'); $ty += 110;
+	$steps = array('Drucke diese Seite in Originalgröße (100 %), am besten auf festem Papier.', 'Schneide an den Schnittmarken aus und falte an der gestrichelten Linie, die Bilder nach außen. Zukleben, fertig.', 'Oder leite das PDF per Mail weiter: Die Person druckt es selbst aus.');
+	foreach ($steps as $k => $t) {
+		imagettftext($p1, $S(12), 0, $x, $ty, $ink, $sansB, ($k + 1).'.');
+		foreach (gv_wrap($t, $sans, $S(12), $cw - 90) as $line) { imagettftext($p1, $S(12), 0, $x + 90, $ty, $mut, $sans, $line); $ty += 68; }
+		$ty += 14;
+	}
+	$by = $ty + 60;   // top of the folding card
+	imagecopy($p1, gv_render_card($o, $cw), $x, $by, 0, 0, $cw, $ch);
+	imagecopy($p1, imagerotate(gv_render_back($o, $cw), 180, 0), $x, $by + $ch, 0, 0, $cw, $ch);
+	foreach (array(array($x, $by, -1, -1), array($x + $cw, $by, 1, -1), array($x, $by + 2 * $ch, -1, 1), array($x + $cw, $by + 2 * $ch, 1, 1)) as $c) {   // cut marks at the four corners of the block
+		imageline($p1, $c[0] + $c[2] * 16, $c[1], $c[0] + $c[2] * 66, $c[1], $gray); imageline($p1, $c[0], $c[1] + $c[3] * 16, $c[0], $c[1] + $c[3] * 66, $gray);
+	}
+	$fy = $by + $ch;   // the fold line: dashed across the block and a little beyond, named at the right
+	for ($xx = $x - 50; $xx < $x + $cw + 50; $xx += 36) { imageline($p1, $xx, $fy, min($x + $cw + 50, $xx + 18), $fy, $gray); imageline($p1, $xx, $fy + 1, min($x + $cw + 50, $xx + 18), $fy + 1, $gray); }
+	imagettftext($p1, $S(9), 0, $x + $cw + 70, $fy + 14, $mut, $sans, 'falten');
+	$pages[] = array($jpeg($p1), $W, $H, array());
+
+	// ---- page 3: how to redeem, small print ----
+	$p2 = $mk(); $ink = gv_hex($p2, '1f1a14'); $mut = gv_hex($p2, '2e2921'); $foot = gv_hex($p2, '3f392f'); $links = array();
+	$x2 = 118; $tw = $W - 2 * $x2; $ty = 220;
+	imagettftext($p2, $S(18), 0, $x2, $ty, $ink, $serif, 'So löst du ihn ein'); $ty += 130;
 	foreach (gv_pdf_terms($o) as $t) {
-		imagettftext($page, 34 * 0.75, 0, $x, $ty, $ink, $sansB, $t[0]); $ty += 58;
-		foreach (gv_wrap($t[1], $sans, 34 * 0.75, $cw) as $line) { imagettftext($page, 34 * 0.75, 0, $x, $ty, $mut, $sans, $line); $links = array_merge($links, gv_links_in($line, $x, $ty, 34 * 0.75, $sans)); $ty += 52; }
-		$ty += 46;
+		imagettftext($p2, $S(12), 0, $x2, $ty, $ink, $sansB, $t[0]); $ty += 66;
+		foreach (gv_wrap($t[1], $sans, $S(11), $tw) as $line) { imagettftext($p2, $S(11), 0, $x2, $ty, $mut, $sans, $line); $links = array_merge($links, gv_links_in($line, $x2, $ty, $S(11), $sans)); $ty += 68; }
+		$ty += 70;
 	}
 	$lf = gv_logo_file(true);   // black logo on the white page
-	if ($lf !== '' && ($lg = @imagecreatefrompng($lf))) { $lw = 520; $lh = (int)round($lw * imagesy($lg) / imagesx($lg)); imagecopyresampled($page, $lg, $x + $cw - $lw, $H - 120 - $lh, 0, 0, $lw, $lh, imagesx($lg), imagesy($lg)); }
-	$fy = $H - 150; $fl = array(); foreach (gv_footer_lines($o) as $part) { foreach (gv_wrap($part, $sans, 26 * 0.75, $cw - 640) as $line) { $fl[] = $line; } }
-	foreach (array_reverse($fl) as $line) { imagettftext($page, 26 * 0.75, 0, $x, $fy, $gray, $sans, $line); $links = array_merge($links, gv_links_in($line, $x, $fy, 26 * 0.75, $sans)); $fy -= 40; }
-	ob_start(); imagejpeg($page, null, 88); $b = ob_get_clean();
-	return array($b, $W, $H, $links);
+	if ($lf !== '' && ($lg = @imagecreatefrompng($lf))) { $lw = 520; $lh = (int)round($lw * imagesy($lg) / imagesx($lg)); imagecopyresampled($p2, $lg, $x2 + $tw - $lw, $H - 120 - $lh, 0, 0, $lw, $lh, imagesx($lg), imagesy($lg)); }
+	$yy = $H - 150; $fl = array(); foreach (gv_footer_lines($o) as $part) { foreach (gv_wrap($part, $sans, $S(9), $tw - 600) as $line) { $fl[] = $line; } }
+	foreach (array_reverse($fl) as $line) { imagettftext($p2, $S(9), 0, $x2, $yy, $foot, $sans, $line); $links = array_merge($links, gv_links_in($line, $x2, $yy, $S(9), $sans)); $yy -= 54; }
+	$pages[] = array($jpeg($p2), $W, $H, $links);
+	return $pages;
 }
 
 // one-page PDF (A4) around a JPEG; no library needed
@@ -317,79 +334,78 @@ function gv_pdf_wrap_jpegs($pages, $title, $pw = 595.28, $ph = 841.89) {
 	return $out;
 }
 function gv_pdf($o) {
-	list($jpeg, $w, $h, $links) = gv_page_jpeg($o);
-	return gv_pdf_wrap_jpegs(array(array($jpeg, $w, $h, $links)), 'Gutschein '.($o['number'] ?? ''));
+	return gv_pdf_wrap_jpegs(gv_guest_pages($o), 'Gutschein '.($o['number'] ?? ''));
 }
 
 /*
  * The print file for a card the restaurant prints itself (orders "Per Post" and "Abholung"): an A4 PDF of two pages, the card at its true size of A6 landscape (148 x 105 mm, cut marks)
  * on page 1 and the way to redeem it on the back of the card on page 2 (same place on the sheet, print double-sided on card stock, flip on the long edge). The value stays inside an envelope.
  */
-function gv_render_back($o, $w) {
-	$H = (int)round($w * GV_CARD_H_MM / GV_CARD_W_MM); $u = $w / 1000;
-	$im = imagecreatetruecolor($w, $H); imagefill($im, 0, 0, gv_hex($im, 'fbf7ee'));
-	$serif = gv_font('CormorantGaramond-SemiBold'); $sans = gv_font('Raleway-Regular'); $sansB = gv_font('Raleway-SemiBold');
-	$ink = gv_hex($im, '2a2118'); $mut = gv_hex($im, '5b5346'); $gold = gv_hex($im, '9a7a3a');
-	$m = 60 * $u; $maxw = (int)(880 * $u); $y = 92 * $u;
-	imagettftext($im, 30 * $u * 0.75, 0, (int)$m, (int)$y, $ink, $serif, 'So löst du ihn ein'); $y += 24 * $u;
-	imageline($im, (int)$m, (int)$y, (int)($m + 70 * $u), (int)$y, $gold); $y += 36 * $u;
-	foreach (gv_pdf_terms($o) as $t) {
-		imagettftext($im, 14.5 * $u * 0.75, 0, (int)$m, (int)$y, $ink, $sansB, $t[0]); $y += 24 * $u;
-		foreach (gv_wrap($t[1], $sans, 13.5 * $u * 0.75, $maxw) as $line) { imagettftext($im, 13.5 * $u * 0.75, 0, (int)$m, (int)$y, $mut, $sans, $line); $y += 21 * $u; }
-		$y += 16 * $u;
-	}
-	$fl = array(); $fs = 10.5 * $u * 0.75; foreach (gv_footer_lines($o) as $part) { foreach (gv_wrap($part, $sans, $fs, (int)(640 * $u)) as $line) { $fl[] = $line; } }
-	$fy = $H - 44 * $u; foreach (array_reverse($fl) as $line) { imagettftext($im, $fs, 0, (int)$m, (int)$fy, gv_hex($im, '8a8273'), $sans, $line); $fy -= 17 * $u; }
-	$lf = gv_logo_file(true);
-	if ($lf !== '' && ($lg = @imagecreatefrompng($lf))) { $lw = (int)(190 * $u); $lh = (int)round($lw * imagesy($lg) / imagesx($lg)); imagecopyresampled($im, $lg, (int)($w - $m - $lw), (int)($H - 52 * $u - $lh), 0, 0, $lw, $lh, imagesx($lg), imagesy($lg)); }
-	return $im;
-}
-/*
- * The label for a numbered blank, for a DYMO LabelWriter (label 54 x 101 mm = 99014, landscape, 300 dpi, black on white): the security code with the words that tell the guest what it is for
- * (redeem online in the web shop) and the QR code with the words that it is for the team. Built for reading at arm's length: the code is about 34 pt, the lines under it 13 pt, nothing is
- * smaller than 10 pt, everything is black on white in a semi bold face with lining figures, and there is only one thing to read per place (a heading, the code, one instruction; the QR code and one caption).
- * $o: number, code, token, valid_until. Returns a one-page PDF of that size.
- */
-function gv_label_pdf($o) {
-	$W = 1193; $H = 638; $m = 46;   // 101 x 54 mm at 300 dpi; 4 mm margin (the printer cannot print to the edge)
-	$im = imagecreatetruecolor($W, $H); imagefill($im, 0, 0, 0xFFFFFF);
-	$k = imagecolorallocate($im, 0, 0, 0);
-	$f = gv_font('Raleway-SemiBold');
-	$S = function ($pt) { return $pt * 300 / 72; };   // real printed points -> GD size (GD counts pixels at 300 dpi here)
-	$colW = 690; $divX = 770; $cap = 0.71;   // cap height of the face
-	// 1. heading
-	$hs = $S(16); $heading = 'Dein Webshop-Code';
-	while ($hs > $S(12) && gv_text_w($hs, $f, $heading) > $colW) { $hs -= 2; }
-	$y = $m + (int)round($cap * $hs);
-	imagettftext($im, $hs, 0, $m, $y, $k, $f, $heading);
-	// 2. the code, as large as the column allows (up to 36 pt)
-	$code = (string)($o['code'] ?? ''); $cs = $S(36); $track = 12;
-	while ($cs > $S(24) && gv_text_w($cs, $f, $code) + (max(1, strlen($code)) - 1) * $track > $colW) { $cs -= 2; }
-	$y += 54 + (int)round($cap * $cs);
-	gv_text_spaced($im, $cs, $m, $y, $k, $f, $code, $track);
-	// 3. one instruction, 13 pt, two short lines
-	$is = $S(13); $shop = trim((string)shop_setting('gv_shop_host'));
-	$y += 86; imagettftext($im, $is, 0, $m, $y, $k, $f, 'Einlösen auf');
-	$y += 64; imagettftext($im, $is, 0, $m, $y, $k, $f, $shop !== '' ? $shop : 'amadeus.delivery');
-	// 4. the number (to match the label to its blank) and the validity, 10 pt
-	$ms = $S(10);
-	imagettftext($im, $ms, 0, $m, $H - $m - 54, $k, $f, 'Nr. '.($o['number'] ?? ''));
-	if (!empty($o['valid_until'])) { imagettftext($im, $ms, 0, $m, $H - $m, $k, $f, 'gültig bis '.date('d.m.Y', strtotime($o['valid_until']))); }
-	// right column: divider, QR code for the team (at least 25 mm, with its quiet zone) and one caption
-	for ($yy = $m; $yy < $H - $m; $yy += 24) { imageline($im, $divX, $yy, $divX, min($H - $m, $yy + 12), $k); imageline($im, $divX + 1, $yy, $divX + 1, min($H - $m, $yy + 12), $k); }
-	$qr = qr_matrix(gv_qr_url($o['number'] ?? '', $o['token'] ?? ''));
-	$cx = $divX + (($W - $m - $divX) / 2); $ty = $m + 40;
-	if ($qr) {
-		$n = count($qr); $mod = max(1, (int)floor(310 / ($n + 2))); $side = ($n + 2) * $mod; $qx = (int)round($cx - $side / 2); $qy = $m - 6;
-		for ($r = 0; $r < $n; $r++) { for ($c = 0; $c < $n; $c++) { if ($qr[$r][$c]) { $x0 = $qx + ($c + 1) * $mod; $y0 = $qy + ($r + 1) * $mod; imagefilledrectangle($im, $x0, $y0, $x0 + $mod - 1, $y0 + $mod - 1, $k); } } }
-		$ty = $qy + $side + 62;
-	}
-	$cs2 = $S(13);
-	foreach (array('Nur für', 'das Team') as $line) { imagettftext($im, $cs2, 0, (int)round($cx - gv_text_w($cs2, $f, $line) / 2), $ty, $k, $f, $line); $ty += 62; }
-	ob_start(); imagejpeg($im, null, 92); $jpeg = ob_get_clean();
-	return gv_pdf_wrap_jpegs(array(array($jpeg, $W, $H)), 'Etikett '.($o['number'] ?? ''), 286.30, 153.07);
+// the short version of how to redeem, for the back of the card (the full text is on the PDF for guests and on the page of the conditions): array(heading, text)
+function gv_card_short($o) {
+	$shop = trim((string)shop_setting('gv_shop_host'));
+	return array('Einlösen', 'Bei uns am Tisch mit Nummer oder QR-Code, im Webshop '.($shop !== '' ? $shop.' ' : '').'mit Nummer und Code. Teilbeträge sind möglich, eine Barauszahlung gibt es nicht. Wie Bargeld: bei Verlust gibt es keinen Ersatz.');
 }
 
+/*
+ * The back of the card (A6 landscape, on paper): for / from, the words of the giver, number, code and validity, the QR code (for the team) and the short version of how to redeem, with the
+ * small print at the foot. Everything sits on the plain paper colour in dark ink (at least 9:1), sizes are real points: names 12, message 12 to 15, number and code 10, short text 9, small print 8.
+ */
+function gv_render_back($o, $w) {
+	$H = (int)round($w * GV_CARD_H_MM / GV_CARD_W_MM); $pxMm = $w / GV_CARD_W_MM;
+	$mm = function ($v) use ($pxMm) { return $v * $pxMm; }; $P = function ($pt) use ($pxMm) { return $pt * 25.4 / 72 * $pxMm; };
+	$im = imagecreatetruecolor($w, $H); imagefill($im, 0, 0, gv_hex($im, 'fffdf8'));
+	$serif = gv_font('CormorantGaramond-SemiBold'); $sans = gv_font('Raleway-Regular'); $sansB = gv_font('Raleway-SemiBold');
+	$ink = gv_hex($im, '1f1a14'); $body = gv_hex($im, '2e2921'); $foot = gv_hex($im, '3f392f'); $qink = gv_hex($im, '1a140e');
+	$m = $mm(9); $full = (int)$mm(130);
+	// QR code (26 mm) top right, with its caption
+	$qr = qr_matrix(gv_qr_url($o['number'] ?? '', $o['token'] ?? '')); $qrBottom = $mm(9);
+	if ($qr) {
+		$n = count($qr); $mod = max(1, (int)floor($mm(26) / ($n + 2))); $side = ($n + 2) * $mod; $qx = (int)round($w - $m - $side); $qy = (int)round($mm(7));
+		for ($r = 0; $r < $n; $r++) { for ($c = 0; $c < $n; $c++) { if ($qr[$r][$c]) { $x0 = $qx + ($c + 1) * $mod; $y0 = $qy + ($r + 1) * $mod; imagefilledrectangle($im, $x0, $y0, $x0 + $mod - 1, $y0 + $mod - 1, $qink); } } }
+		$cx = $qx + $side / 2; $cy = $qy + $side + $P(8) * 0.9;
+		foreach (array('QR-Code', 'für das Team') as $line) { imagettftext($im, $P(8), 0, (int)round($cx - gv_text_w($P(8), $sansB, $line) / 2), (int)round($cy), $ink, $sansB, $line); $cy += $P(8) * 1.35; }
+		$qrBottom = $cy;
+	}
+	$narrow = (int)($qr ? $mm(148 - 9 - 9 - 26 - 6) : $full);
+	// small print at the foot (8 pt, full width) and the short text above it
+	$fl = array(); foreach (gv_footer_lines($o) as $part) { foreach (gv_wrap($part, $sans, $P(8), $full, 99) as $line) { $fl[] = $line; } }
+	$footTop = $H - $mm(6) - count($fl) * $P(8) * 1.35 - $mm(2);
+	$short = gv_card_short($o); $ss = $P(9); $sl = gv_wrap($short[1], $sans, $ss, $full, 99);
+	$shortH = $P(9.5) * 1.45 + count($sl) * $ss * 1.38;
+	// names, the words of the giver (largest size that fits), then number / code / validity
+	$names = array();
+	if (trim((string)($o['recipient'] ?? '')) !== '') { $names[] = 'Für '.trim($o['recipient']); }
+	if (trim((string)($o['from'] ?? '')) !== '') { $names[] = 'Von '.trim($o['from']); }
+	$ns = $P(12); $nl = array();
+	if ($names) { $joined = implode('   ·   ', $names); $nl = gv_text_w($ns, $sansB, $joined) <= $narrow ? array($joined) : $names; }
+	$yNames = $mm(14); $yMsg0 = $nl ? $yNames + (count($nl) - 1) * $ns * 1.45 + $ns * 1.45 + $mm(1) : $yNames;
+	$msg = trim((string)($o['message'] ?? '')); $lines = array(); $ms = 15; $info = array('Nr. '.($o['number'] ?? '').(($o['code'] ?? '') !== '' ? '     Code '.$o['code'] : ''));
+	if (!empty($o['valid_until'])) { $info[] = 'gültig bis '.date('d.m.Y', strtotime($o['valid_until'])); }
+	$is = $P(10);
+	foreach (array(15, 14, 13, 12) as $ms) {
+		$lh = $P($ms) * 1.3; $lines = array();
+		if ($msg !== '') { $lines = gv_wrap_var($msg, $serif, $P($ms), function ($i) use ($yMsg0, $lh, $qrBottom, $narrow, $full, $P, $ms) { return ($yMsg0 + $i * $lh - $P($ms) * 0.75) < $qrBottom ? $narrow : $full; }, 99); }
+		$yLast = $lines ? $yMsg0 + (count($lines) - 1) * $lh : $yMsg0 - $lh;
+		$yInfo = $yLast + $mm(7.5);
+		$yShort = $yInfo + (count($info) - 1) * $is * 1.45 + $mm(6);
+		$bottom = $yShort + $shortH;
+		if ($bottom <= $footTop || $ms === 12) { break; }
+	}
+	if ($msg !== '' && $bottom > $footTop) {   // still too long at 12 pt: cut the words visibly
+		$maxL = max(2, (int)floor(($footTop - $shortH - $mm(6) - (count($info) - 1) * $is * 1.45 - $mm(7.5) - $yMsg0) / $lh) + 1);
+		$lines = gv_wrap_var($msg, $serif, $P($ms), function ($i) use ($yMsg0, $lh, $qrBottom, $narrow, $full, $P, $ms) { return ($yMsg0 + $i * $lh - $P($ms) * 0.75) < $qrBottom ? $narrow : $full; }, $maxL);
+		$yLast = $yMsg0 + (count($lines) - 1) * $lh; $yInfo = $yLast + $mm(7.5); $yShort = $yInfo + (count($info) - 1) * $is * 1.45 + $mm(6);
+	}
+	$y = $yNames; foreach ($nl as $line) { imagettftext($im, $ns, 0, (int)$m, (int)$y, $ink, $sansB, mb_strimwidth($line, 0, 70, '…')); $y += $ns * 1.45; }
+	foreach ($lines as $k => $line) { imagettftext($im, $P($ms), 0, (int)$m, (int)($yMsg0 + $k * $lh), $ink, $serif, $line); }
+	$yShort = max($yShort, $footTop - $shortH + $P(9.5) * 0.4);   // the redeem block rests on the small print, the free room lies between the info and this block
+	$y = $yInfo; foreach ($info as $line) { imagettftext($im, $is, 0, (int)$m, (int)$y, $ink, $sansB, $line); $y += $is * 1.45; }
+	imagettftext($im, $P(9.5), 0, (int)$m, (int)$yShort, $ink, $sansB, $short[0]); $y = $yShort + $P(9.5) * 1.45;
+	foreach ($sl as $line) { imagettftext($im, $ss, 0, (int)$m, (int)$y, $body, $sans, $line); $y += $ss * 1.38; }
+	$fy = $H - $mm(6); foreach (array_reverse($fl) as $line) { imagettftext($im, $P(8), 0, (int)$m, (int)$fy, $foot, $sans, $line); $fy -= $P(8) * 1.35; }
+	return $im;
+}
 function gv_print_pdf($o) {
 	$W = 2480; $H = 3508; $cw = 1748; $ch = 1240; $x = (int)(($W - $cw) / 2); $y = 330;   // 148 x 105 mm at 300 dpi
 	$pages = array();
@@ -401,8 +417,8 @@ function gv_print_pdf($o) {
 		foreach (array(array($x, $y, -1, -1), array($x + $cw, $y, 1, -1), array($x, $y + $ch, -1, 1), array($x + $cw, $y + $ch, 1, 1)) as $c) {
 			imageline($page, $c[0] + $c[2] * 20, $c[1], $c[0] + $c[2] * 70, $c[1], $gray); imageline($page, $c[0], $c[1] + $c[3] * 20, $c[0], $c[1] + $c[3] * 70, $gray);
 		}
-		$sans = gv_font('Raleway-Regular');
-		imagettftext($page, 26 * 0.75, 0, $x, $y + $ch + 140, gv_hex($page, '9a9488'), $sans, ($side === 'front' ? 'Vorderseite' : 'Rückseite').': auf Karton (mindestens 250 g) drucken, an den Marken ausschneiden. Beidseitig drucken, Wenden an der langen Kante.');
+		$sans = gv_font('Raleway-Regular'); $ny = $y + $ch + 150;
+		foreach (gv_wrap(($side === 'front' ? 'Vorderseite' : 'Rückseite').': auf Karton (mindestens 250 g) drucken, an den Marken ausschneiden. Beidseitig drucken, Wenden an der langen Kante.', $sans, 37.5, $cw) as $line) { imagettftext($page, 37.5, 0, $x, $ny, gv_hex($page, '3f392f'), $sans, $line); $ny += 54; }
 		ob_start(); imagejpeg($page, null, 90); $pages[] = array(ob_get_clean(), $W, $H);
 	}
 	return gv_pdf_wrap_jpegs($pages, 'Gutschein-Karte '.($o['number'] ?? ''));

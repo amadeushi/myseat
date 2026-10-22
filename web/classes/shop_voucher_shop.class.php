@@ -154,7 +154,7 @@ function gv_order_send_mail($o) {
 	if ($o['delivery'] === 'pdf') {
 		$pdf = gv_pdf(gv_order_pdf_opts($o, $v));
 		$m = array('subject' => 'Dein Gutschein vom Amadeus', 'headline' => 'Dein Gutschein ist da', 'purpose' => 'order', 'zeus' => false,
-			'lead' => 'Danke für deine Bestellung '.$o['number'].'. Im Anhang liegt der Gutschein als PDF: ausdrucken, in einen Umschlag, fertig. Oder leite die Mail weiter, dann liegt er direkt im Postfach der Person, für die er gedacht ist.',
+			'lead' => 'Danke für deine Bestellung '.$o['number'].'. Im Anhang liegt der Gutschein als PDF: Seite 2 ausdrucken, falten, in einen Umschlag, fertig. Oder leite die Mail weiter, dann liegt er direkt im Postfach der Person, für die er gedacht ist.',
 			'image' => '', 'alt' => '', 'box' => array('label' => 'Gutschein', 'value' => gv_money_short((int)$o['amount_cents']), 'note' => 'Nummer '.$v['number'].($valid !== '' ? ' · gültig bis '.$valid : '')),
 			'after' => 'Einlösen kann man ihn bei uns mit der Nummer und beim Online-Bestellen mit Nummer und Sicherheitscode (beides steht im PDF). Ein Teilbetrag reicht, der Rest bleibt stehen. Über den Knopf siehst du deine Bestellung und findest die Widerrufsfunktion.',
 			'btn' => 'Bestellung ansehen', 'url' => $status, 'signoff' => 'Hamun und das Amadeus-Team', 'files' => array(array('name' => 'Gutschein-'.$v['number'].'.pdf', 'mime' => 'application/pdf', 'data' => $pdf)));

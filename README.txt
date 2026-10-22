@@ -52,6 +52,18 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-22 == mySeat v6.64.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geändert (Gutscheine, Aufbau der Karte wie bei FirstVoucher): Die Vorderseite zeigt das Motiv unverfälscht (nur auf das Format zugeschnitten, kein Verlauf, kein Text auf dem Foto) über einem einfarbigen dunklen Balken mit Logo, "GUTSCHEIN" und Betrag. Dadurch ist der Text bei jedem Motiv gleich lesbar, auch bei einem hochgeladenen Foto. Grußworte, Nummer, Code, Gültigkeit, der QR-Code für das Team und eine Kurzfassung zum Einlösen stehen auf der Rückseite (A6, auf Papierfarbe, dunkle Schrift, mindestens 8 pt, Hauptteile 9 bis 15 pt). Das Gäste-PDF hat drei Seiten mit je einer Aufgabe: 1 "Dein Gutschein" (Vorder- und Rückseite groß und aufrecht, zum Lesen und Zeigen am Bildschirm), 2 "Zum Ausdrucken und Falten" (drei Schritte, die Karte als Klappkarte 148 x 210 mm mit Schnittmarken und gestrichelter Faltlinie; gefaltet ergibt sie eine fertige A6-Karte), 3 "So löst du ihn ein" (Hinweise, Kleingedrucktes, anklickbare Links). Der Text der Mail zum PDF verweist jetzt auf Seite 2.
+ * Neu (Shop): Die Vorschau zeigt Vorderseite und Rückseite zum Umschalten (die Rückseite erscheint beim Tippen der Worte). Eigene Bilder müssen jetzt mindestens 1500 x 1000 Pixel haben (vorher 900 x 600), damit die Karte scharf druckt.
+ * Geändert (EchtPost): Nummer, Code und Gültigkeit stehen im Text der Rückseite, der QR-Code über qr_code_url; die Vorderseite trägt sie nicht mehr.
+ * Geändert (QR-Seite): Die Seite zeigt die Gutscheinnummer und den Namen als Text.
+ * Hinweis: Die Kurzfassung auf der Rückseite der Karte ("Einlösen") ist ein neuer Text und gehört zur Freigabe.
+
+2026-10-22 == mySeat v6.63.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geändert (Gutscheine, Lesbarkeit der Karte und des PDFs): Alle Schriften sind jetzt in echten Druckgrößen gesetzt. Vorher waren Hinweise und Fließtext nur 4 bis 6 pt groß, die Fußzeilen 3 bis 5 pt, zwei Grautöne erreichten den Kontrast nicht. Jetzt: Karte (A6) Betrag 38 pt, Nachricht 12 bis 15 pt (bis zu fünf Zeilen), Namen 12 pt, Nummer, Code und Gültigkeit 10 pt, Text und Beschriftungen in hellem Creme statt durchscheinend; Rückseite 9 bis 10 pt, Kleingedrucktes 8 pt, Kontrast mindestens 9:1; Gäste-PDF Titel 18 pt, Zwischentitel 12 pt, Text 11 pt, Kleingedrucktes 9 pt. Bei sehr langen Namen und Nachrichten wird der Betrag automatisch etwas kleiner, damit nichts überlappt; eine zu lange Nachricht wird sichtbar mit "..." gekürzt. Das Gäste-PDF ist dadurch größer (etwa 0,7 MB).
+
 2026-10-22 == mySeat v6.63.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu (Gutscheine, Etikett für nummerierte Vordrucke): Nach dem Anlegen eines Vordrucks (Gutscheine > Vordruck verkaufen) gibt es den Knopf "Etikett drucken (Dymo 54 x 101 mm)", im Bestand bei jedem Gutschein mit Code den Knopf "Etikett". Das PDF ist 101 x 54 mm quer (Dymo 99014, 300 dpi, schwarz auf weiß) und zeigt dem Gast links seinen Code mit der Erklärung "Online einlösen: Code für den Webshop" und rechts den QR-Code mit dem Hinweis "Nur für das Team" (führt auf die Einlöse-Seite mit PIN). Importierte Gutscheine haben keinen Code, dort gibt es kein Etikett.

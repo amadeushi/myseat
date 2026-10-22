@@ -1,8 +1,8 @@
 <?php
 /*
  * EchtPost (echtpost.de): prints a postcard per order and sends it with a stamp, through their REST API (https://api.echtpost.de/v2, docs: /v2/docs, spec: /v2/openapi.json).
- * Used for the voucher form "Per Post": the front of the card is the voucher itself (number, security code, value, motif: gv_postcard_front_jpeg), uploaded as a temporary motive of
- * 1795 x 1287 px (A6 landscape + 2 mm bleed); the back carries the words of the giver as text (their handwriting font) and the address.
+ * Used for the voucher form "Per Post": the front of the card is the motif with the band (logo, GUTSCHEIN, value: gv_postcard_front_jpeg), uploaded as a temporary motive of
+ * 1795 x 1287 px (A6 landscape + 2 mm bleed); the back carries the words of the giver, number, code and validity as text (their handwriting font), the QR code for the team (qr_code_url) and the address.
  * The key is stored encrypted (tp_shop_settings.gv_ep_key). A key starting with ep_test_ is the sandbox: nothing is printed or charged.
  * Requires an EchtPost account whose support has switched on custom motives (upload "nach Account-Verifikation") and a topped-up credit.
  */
@@ -74,13 +74,14 @@ function ep_clean($s) {
 	return trim(preg_replace('/[ \t]{2,}/', ' ', preg_replace('/[\x00-\x08\x0b\x0c\x0e-\x1f]/', '', $s)));
 }
 // the text on the back: for / message / from, then a short line on the voucher. Lines separated by \n.
-function ep_card_text($o, $withHint) {
+function ep_card_text($o, $withHint, $v = null) {
 	$parts = array();
 	$for = ep_clean($o['recipient'] ?? ''); $msg = ep_clean($o['message'] ?? ''); $from = ep_clean($o['from_name'] ?? '');
 	if ($for !== '') { $parts[] = 'Für '.$for; }
 	$parts[] = $msg !== '' ? $msg : 'Ein Gutschein für dich.';
 	if ($from !== '') { $parts[] = 'Von '.$from; }
-	if ($withHint) { $parts[] = 'Nummer und Sicherheitscode stehen auf der Vorderseite. Einlösen kannst du den Gutschein im Restaurant und im Webshop.'; }
+	if ($v) { $parts[] = 'Gutschein Nr. '.$v['number']."\n".'Code '.(string)gv_code_plain($v).($v['valid_until'] ? "\n".'gültig bis '.date('d.m.Y', strtotime($v['valid_until'])) : ''); }
+	if ($withHint) { $parts[] = 'Einlösen: im Restaurant mit der Nummer, im Webshop mit Nummer und Code.'; }
 	return implode("\n\n", $parts);
 }
 
@@ -112,20 +113,20 @@ function gv_post_send($orderId, $again = false) {
 		$motive = (int)$o['ep_motive'];
 		if ($motive < 1) {
 			file_put_contents($tmp, gv_postcard_front_jpeg(gv_order_pdf_opts($o, $v)));
-			$r = ep_request('POST', '/motives', array('name' => mb_substr('Gutschein '.$o['number'], 0, 60), 'orientation' => 'landscape', 'content_available' => 'true', 'content_ps_available' => 'true', 'vertical_text_available' => 'false', 'qr_code_available' => 'false'), $tmp);
+			$r = ep_request('POST', '/motives', array('name' => mb_substr('Gutschein '.$o['number'], 0, 60), 'orientation' => 'landscape', 'content_available' => 'true', 'content_ps_available' => 'true', 'vertical_text_available' => 'false', 'qr_code_available' => 'true'), $tmp);
 			if ($r['http'] !== 201 || empty($r['body']['id'])) { return $fail('error', 'Das Motiv wurde nicht angenommen: '.ep_describe($r)); }
 			$motive = (int)$r['body']['id'];
 			fb_exec("UPDATE ".fb_t('tp_gv_orders')." SET ep_motive = ? WHERE id = ?", 'ii', array($motive, (int)$orderId));
 		}
 		// 2. the text of the back: with the hint when it fits
-		$text = ep_card_text($o, true);
+		$text = ep_card_text($o, true, $v);
 		$fit = ep_request('POST', '/cards/preview_fit', array('content' => $text));
-		if ($fit['http'] === 200 && isset($fit['body']['fits']) && $fit['body']['fits'] === false) { $text = ep_card_text($o, false); }
+		if ($fit['http'] === 200 && isset($fit['body']['fits']) && $fit['body']['fits'] === false) { $text = ep_card_text($o, false, $v); }
 		// 3. the card
 		list($first, $last) = ep_split_name($o['ship_name']);
 		$rcpt = array('last_name' => $last, 'street' => $o['ship_street'], 'zip' => $o['ship_zip'], 'city' => $o['ship_city'], 'country_code' => 'DE');
 		if ($first !== '') { $rcpt['first_name'] = $first; }
-		$body = array('motive_id' => $motive, 'content' => $text, 'content_ps' => 'Gültig bis '.($v['valid_until'] ? date('d.m.Y', strtotime($v['valid_until'])) : ''), 'deliver_at' => 'asap', 'recipients' => array($rcpt));
+		$body = array('motive_id' => $motive, 'content' => $text, 'content_ps' => 'Gültig bis '.($v['valid_until'] ? date('d.m.Y', strtotime($v['valid_until'])) : ''), 'deliver_at' => 'asap', 'qr_code_url' => gv_qr_url($v['number'], $v['token']), 'recipients' => array($rcpt));
 		$r = ep_request('POST', '/cards', $body);
 		if ($r['http'] === 0) { return $fail('unclear', 'Keine Antwort von EchtPost, die Karte könnte trotzdem bestellt sein. Bitte im EchtPost-Konto nachsehen, bevor du es noch einmal versuchst'); }
 		if ($r['http'] !== 201 || empty($r['body']['id'])) { return $fail('error', 'Die Karte wurde nicht angenommen: '.ep_describe($r)); }

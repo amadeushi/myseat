@@ -59,8 +59,13 @@ gv_page_head('Gutschein verschenken', 'gv-shell');
 		<?php else: ?>
 
 		<figure class="gv-prev">
-			<div class="gv-prev-frame" id="gv-frame"><img id="gv-prev" alt="So sieht dein Gutschein aus" width="1000" height="709" src="gutschein_preview.php?motif=<?php echo $h(rawurlencode($motifNow)); ?>&amp;amount=<?php echo $h(rawurlencode($chosenAmount === 'custom' ? $val('amount_custom', '50') : $chosenAmount)); ?>"/></div>
-			<figcaption>So sieht er aus. Nummer und Sicherheitscode bekommst du nach der Zahlung.</figcaption>
+			<div class="gv-side-tabs" role="group" aria-label="Seite des Gutscheins">
+				<button type="button" class="gv-side-btn" id="gv-side-front" aria-pressed="true">Vorderseite</button>
+				<button type="button" class="gv-side-btn" id="gv-side-back" aria-pressed="false">Rückseite mit deinen Worten</button>
+			</div>
+			<div class="gv-prev-frame" id="gv-frame"><img id="gv-prev" alt="Vorderseite deines Gutscheins" width="1000" height="709" src="gutschein_preview.php?motif=<?php echo $h(rawurlencode($motifNow)); ?>&amp;amount=<?php echo $h(rawurlencode($chosenAmount === 'custom' ? $val('amount_custom', '50') : $chosenAmount)); ?>"/></div>
+			<div class="gv-prev-frame" id="gv-frame-back" hidden><img id="gv-prev-back" alt="Rückseite deines Gutscheins mit deinen Worten" width="1000" height="709" src="gutschein_preview.php?side=back&amp;motif=<?php echo $h(rawurlencode($motifNow)); ?>&amp;amount=<?php echo $h(rawurlencode($chosenAmount === 'custom' ? $val('amount_custom', '50') : $chosenAmount)); ?>"/></div>
+			<figcaption>So sieht er aus: vorne dein Motiv, hinten deine Worte. Nummer und Sicherheitscode bekommst du nach der Zahlung.</figcaption>
 		</figure>
 
 		<form class="gv-form" id="gv-form" method="post" action="gutschein.php" novalidate data-fee="<?php echo (int)$gv_cfg['fee']; ?>" data-min="<?php echo (int)($gv_cfg['min'] / 100); ?>" data-max="<?php echo (int)($gv_cfg['max'] / 100); ?>" data-lapse="<?php echo $gv_cfg['lapse'] ? '1' : '0'; ?>" data-token="<?php echo $h($_SESSION['shop_token']); ?>">
@@ -100,7 +105,7 @@ gv_page_head('Gutschein verschenken', 'gv-shell');
 				<div class="gv-motif-group"><h3>Oder dein eigenes Bild</h3>
 					<div class="gv-motifs" id="gv-own-list">
 						<?php if (strpos($motifNow, 'own:') === 0): ?><label class="gv-motif"><input type="radio" name="motif" value="<?php echo $h($motifNow); ?>" checked/><span>Dein Bild</span></label><?php endif; ?>
-						<label class="gv-own" id="gv-own-pick">Bild hochladen<small>JPG, PNG oder WebP, mindestens 900 × 600 Pixel</small><input type="file" id="gv-own-file" accept="image/jpeg,image/png,image/webp"/></label>
+						<label class="gv-own" id="gv-own-pick">Bild hochladen<small>JPG, PNG oder WebP, mindestens 1500 × 1000 Pixel</small><input type="file" id="gv-own-file" accept="image/jpeg,image/png,image/webp"/></label>
 					</div>
 					<p class="gv-own-msg" id="gv-own-msg" role="status" aria-live="polite"></p>
 					<p class="co-hint">Ein Foto von euch beiden, vom letzten Urlaub, von der Torte: Dein Bild kommt auf die Karte. Mit dem Hochladen bestätigst du, dass du das Bild verwenden darfst. Wir nutzen es nur für diesen einen Gutschein.</p>

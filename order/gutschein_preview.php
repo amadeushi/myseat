@@ -7,7 +7,7 @@ require __DIR__.'/bootstrap.inc.php';
 $cfg = gv_cfg();
 $now = time();
 $_SESSION['gv_prev'] = array_values(array_filter(isset($_SESSION['gv_prev']) ? (array)$_SESSION['gv_prev'] : array(), function ($t) use ($now) { return $t > $now - 600; }));
-if (count($_SESSION['gv_prev']) >= 150) { http_response_code(429); exit; }
+if (count($_SESSION['gv_prev']) >= 300) { http_response_code(429); exit; }
 $_SESSION['gv_prev'][] = $now;
 session_write_close();
 
@@ -23,4 +23,4 @@ $o = array('motif' => $motif, 'amount_cents' => $amount, 'recipient' => $clean('
 	'valid_until' => gv_default_valid_until(), 'brand' => !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus');
 header('Content-Type: image/jpeg');
 header('Cache-Control: private, max-age=60');
-echo gv_card_jpeg($o, 1000, 84);
+if (isset($_GET['side']) && $_GET['side'] === 'back') { ob_start(); imagejpeg(gv_render_back($o, 1000), null, 84); echo ob_get_clean(); } else { echo gv_card_jpeg($o, 1000, 84); }

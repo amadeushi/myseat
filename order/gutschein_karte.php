@@ -43,6 +43,7 @@ gv_page_head('Gutschein', 'gv-karte');
 			<?php if ($state === 'open'): ?>Guthaben <strong><?php echo $h(gv_money($bal)); ?></strong><?php echo (int)$v['face_cents'] > $bal ? ' von '.$h(gv_money((int)$v['face_cents'])) : ''; ?>, gültig bis <?php echo $h($v['valid_until'] ? date('d.m.Y', strtotime($v['valid_until'])) : 'unbegrenzt'); ?>.
 			<?php else: echo $h(gv_block_reason($v) ?: 'Dieser Gutschein ist '.($names[$state] ?? $state).'.'); endif; ?>
 		</p>
+		<p class="gv-hint">Nr. <strong><?php echo $h($v['number']); ?></strong><?php echo $v['recipient'] !== '' ? ' · Für '.$h($v['recipient']) : ''; ?><?php echo $v['kind'] === 'import' ? ' · aus dem alten System übernommen' : ''; ?></p>
 		<?php if ($msg && $msg[0] === 'ok'): ?><p class="gv-stateline is-ok" role="status"><?php echo $h($msg[1]); ?></p><?php endif; ?>
 
 		<?php if ($state === 'open'): ?>

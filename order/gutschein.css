@@ -93,3 +93,9 @@
 
 .gv-short { margin: 0 0 28px; }
 .gv-short ol { margin: 8px 0 12px 1.2em; padding: 0; display: grid; gap: 6px; }
+
+/* front / back switch of the preview (gutschein.php) */
+.gv-side-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+.gv-side-btn { min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: inherit; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+.gv-side-btn[aria-pressed="true"] { background: var(--gold-strong); border-color: var(--gold-strong); color: #1a140e; }
+.gv-side-btn:focus-visible { outline: 3px solid var(--gold-strong); outline-offset: 2px; }

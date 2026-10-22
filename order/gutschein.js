@@ -4,7 +4,10 @@
 	var form = document.getElementById('gv-form'); if (!form) { return; }
 	var $ = function (id) { return document.getElementById(id); };
 	var fee = +form.dataset.fee || 0, min = +form.dataset.min, max = +form.dataset.max, token = form.dataset.token;
-	var img = $('gv-prev'), frame = $('gv-frame'), timer = null, seq = 0;
+	var img = $('gv-prev'), frame = $('gv-frame'), imgBack = $('gv-prev-back'), frameBack = $('gv-frame-back'), timer = null, seq = 0;
+	function showSide(back) { frame.hidden = back; frameBack.hidden = !back; $('gv-side-front').setAttribute('aria-pressed', String(!back)); $('gv-side-back').setAttribute('aria-pressed', String(back)); }
+	$('gv-side-front').addEventListener('click', function () { showSide(false); });
+	$('gv-side-back').addEventListener('click', function () { showSide(true); });
 	function eur(c) { return (c / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
 	function checked(name) { var e = form.querySelector('input[name="' + name + '"]:checked'); return e ? e.value : ''; }
 	function amount() {
@@ -18,11 +21,13 @@
 	function preview() {
 		var a = amount() || 50;
 		var q = 'motif=' + encodeURIComponent(checked('motif') || 'kuchen') + '&amount=' + a + '&recipient=' + encodeURIComponent(form.elements.recipient.value) + '&from=' + encodeURIComponent(form.elements.from.value) + '&message=' + encodeURIComponent(form.elements.message.value);
-		var mine = ++seq; frame.classList.add('is-busy');
-		var n = new Image();
-		n.onload = function () { if (mine === seq) { img.src = n.src; frame.classList.remove('is-busy'); } };
-		n.onerror = function () { if (mine === seq) { frame.classList.remove('is-busy'); } };
-		n.src = 'gutschein_preview.php?' + q;
+		var mine = ++seq; frame.classList.add('is-busy'); frameBack.classList.add('is-busy');
+		[[img, frame, ''], [imgBack, frameBack, '&side=back']].forEach(function (p) {
+			var n = new Image();
+			n.onload = function () { if (mine === seq) { p[0].src = n.src; p[1].classList.remove('is-busy'); } };
+			n.onerror = function () { if (mine === seq) { p[1].classList.remove('is-busy'); } };
+			n.src = 'gutschein_preview.php?' + q + p[2];
+		});
 	}
 	function later() { clearTimeout(timer); timer = setTimeout(preview, 280); }
 
@@ -44,12 +49,12 @@
 	form.addEventListener('change', function (e) {
 		var n = e.target.name;
 		if (n === 'amount_choice' || n === 'delivery') { layout(); if (n === 'amount_choice' && e.target.value === 'custom') { $('gv-amount-custom').focus(); } }
-		if (n === 'amount_choice' || n === 'motif') { later(); }
+		if (n === 'amount_choice' || n === 'motif') { showSide(false); later(); }
 	});
 	form.addEventListener('input', function (e) {
 		var n = e.target.name;
 		if (n === 'amount_custom') { sum(); later(); }
-		else if (n === 'recipient' || n === 'from' || n === 'message') { count(); later(); }
+		else if (n === 'recipient' || n === 'from' || n === 'message') { count(); showSide(true); later(); }   // the words are on the back: show it while they are typed
 	});
 
 	/* own picture */
