@@ -96,6 +96,8 @@ function bm_ics_build($ctx) {
 	$lines[] = 'METHOD:PUBLISH';
 	$lines[] = 'BEGIN:VEVENT';
 	$lines[] = 'UID:'.$ctx['number'].'@'.$ctx['uid_domain'];
+	// a changed reservation: same UID with a higher sequence, so the calendar replaces the old entry instead of adding a second one
+	if (!empty($ctx['sequence'])) { $lines[] = 'SEQUENCE:'.(int)$ctx['sequence']; }
 	$lines[] = 'DTSTAMP:'.gmdate('Ymd\THis\Z');
 	$lines[] = 'DTSTART:'.gmdate('Ymd\THis\Z', $start);
 	$lines[] = 'DTEND:'.gmdate('Ymd\THis\Z', $end);
@@ -220,12 +222,12 @@ function bm_build($d) {
 	$form = $d['form'];
 	$lang = bm_lang($form);
 	$de = ($lang === 'de');
-	// 'confirmed' (default, unchanged) | 'pending' (awaiting staff approval) | 'declined'
+	// 'confirmed' (default, unchanged) | 'pending' (awaiting staff approval) | 'declined' | 'approved' | 'reminder' | 'updated' (the staff changed a confirmed reservation and sends the new details)
 	$mode = isset($d['mode']) ? $d['mode'] : 'confirmed';
 	// the person signing the guest mails ("Hamun vom Amadeus-Team"); optional $settings['mailSignName']
 	$who = !empty($settings['mailSignName']) ? $settings['mailSignName'] : 'Hamun';
 	// arrival, parking, accessibility and the menus only belong in a mail that confirms a table
-	$with_info = in_array($mode, array('confirmed', 'approved', 'reminder'), true);
+	$with_info = in_array($mode, array('confirmed', 'approved', 'reminder', 'updated'), true);
 
 	$outlet   = bm_clean($d['outlet']['outlet_name']);
 	$name     = bm_clean($form['reservation_guest_name']);
@@ -291,6 +293,13 @@ function bm_build($d) {
 			$cancel_t = 'Schaffst du es doch nicht? Dann sag uns bitte jetzt kurz Bescheid, damit wir den Tisch weitergeben können:';
 			$cancel_l = 'Reservierung stornieren';
 			$auto     = 'Diese E-Mail wurde automatisch am Tag vor deiner Reservierung versendet.';
+		} elseif ($mode === 'updated') {
+			$subject  = 'Aktualisiert: Deine Reservierung am '.$date_txt.' um '.$time_txt;
+			$intro    = 'wir haben etwas an deiner Reservierung geändert. Bitte schau dir die Angaben unten an: Sie ersetzen alles, was wir dir vorher geschickt haben.';
+			$head     = 'Deine Reservierung wurde geändert';
+			$cancel_t = 'Falls etwas dazwischenkommt, sag uns bitte kurz Bescheid, dann kann jemand anderes deinen Platz bekommen:';
+			$cancel_l = 'Reservierung stornieren';
+			$auto     = 'Diese E-Mail wurde automatisch versendet, nachdem wir deine Reservierung geändert haben.';
 		} elseif ($mode === 'approved') {
 			$subject  = 'Gute Nachrichten: Dein Tisch für '.$pax.' ist bestätigt';
 			$intro    = 'wir haben deinen Tisch fest für euch eingeplant und freuen uns auf euch! Unten findest du alles, was du für die Anreise wissen musst.';
@@ -339,6 +348,13 @@ function bm_build($d) {
 			$cancel_t = 'Cannot make it after all? Please let us know now so we can pass the table on:';
 			$cancel_l = 'Cancel reservation';
 			$auto     = 'This email was sent automatically the day before your reservation.';
+		} elseif ($mode === 'updated') {
+			$subject  = 'Updated: Your reservation on '.$date_txt.' at '.$time_txt;
+			$intro    = 'we have changed something about your reservation. Please check the details below: they replace everything we sent you before.';
+			$head     = 'Your reservation has changed';
+			$cancel_t = 'If something comes up, please let us know so someone else can take your seat:';
+			$cancel_l = 'Cancel reservation';
+			$auto     = 'This email was sent automatically after we changed your reservation.';
 		} elseif ($mode === 'approved') {
 			$subject  = 'Good news: your table for '.$pax.' is confirmed';
 			$intro    = 'we have set your table aside and are looking forward to seeing you! Below you will find everything you need to know for getting here.';
@@ -496,6 +512,7 @@ function bm_build($d) {
 		'duration' => isset($d['outlet']['avg_duration']) ? $d['outlet']['avg_duration'] : '',
 		'pax' => $pax, 'number' => $number, 'notes' => $notes,
 		'cancel_url' => $cancel, 'website_url' => $website_url, 'uid_domain' => $uid_host,
+		'sequence' => $mode === 'updated' ? max(1, time() - 1700000000) : 0,
 	)) : '';
 	$ics_filename = ($de ? 'reservierung' : 'reservation').'-'.$number.'.ics';
 

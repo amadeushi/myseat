@@ -2350,3 +2350,9 @@ body.kitchen .uber-alert { margin: 8px 18px; font-size: 20px; }
 .gv-set-group legend { padding: 0 8px; font-weight: 600; color: var(--gold-strong); }
 .gv-set-group .gv-form { margin-top: 10px; }
 .gv-motif-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0 12px; }
+
+/* own opening hours of a single day (day details) */
+.dayhours-row { margin: 10px 0 6px; }
+.dayhours-row label { display: block; }
+.dayhours-row input[type=time] { width: 8.5em; margin: 0 6px 0 2px; }
+.dayhours-row .detail-hint { display: block; margin-top: 4px; }

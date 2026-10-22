@@ -52,6 +52,19 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-23 == mySeat v6.67.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu (Reservierung): "Bestätigung erneut senden" in den Reservierungsdetails. Der Gast bekommt die aktuellen Angaben per E-Mail (mit Kalenderdatei und Stornolink); hat er keine E-Mail-Adresse, aber eine Handynummer, geht eine SMS raus (wenn SMS eingeschaltet ist). Nicht möglich bei stornierten, unentschiedenen oder vergangenen Reservierungen.
+ * Neu (Reservierung bearbeiten): Haken "Gast über die Änderung informieren" im Bearbeiten-Formular; nach dem Speichern geht dieselbe Nachricht raus. Nach dem Senden steht oben eine Bestätigung, bei einem Fehler ein Hinweis, dass gespeichert wurde, der Gast aber nicht informiert ist.
+ * Die Mail weist ausdrücklich auf die Änderung hin (Betreff "Aktualisiert: Deine Reservierung am ...", Überschrift "Deine Reservierung wurde geändert", Satz, dass die neuen Angaben alles Frühere ersetzen). Die Kalenderdatei hat dieselbe Kennung mit höherer Sequenz, damit der alte Eintrag ersetzt wird.
+ * Hinweis: Version v6.66.0 (Tageszeiten) ist in diesem Release enthalten.
+
+2026-10-23 == mySeat v6.66.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu (Tagesdetails): Für einen einzelnen Tag lassen sich Beginn und Ende der Reservierungszeit abweichend eintragen, zum Beispiel früher beginnen. Das Feld sitzt in den Tagesdetails neben Ruhetag und Kommentar; "Wie üblich" setzt den Tag zurück. Pausenzeiten gibt es dafür nicht.
+ * Die Zeiten gelten im Backend und im Online-Buchungsformular. Bestehende Reservierungen außerhalb des neuen Fensters bleiben bestehen; beim Speichern kommt ein Hinweis, wie viele es sind.
+ * Datenbank: Die Tabelle maitre bekommt beim ersten Aufruf zwei Spalten (day_open_time, day_close_time).
+
 2026-10-22 == mySeat v6.65.2 == amadeushi - http://github.com/amadeushi/myseat
 
  * Behoben (Gutscheine, Etikett): Der Knopf "Etikett" führte seit v6.64.0 zu einem Serverfehler 500, weil die Funktion gv_label_pdf beim Umbau der Karte versehentlich aus shop_voucher_pdf.class.php herausgefallen war. Sie ist wieder da, und ein Test prüft sie jetzt (eine Seite, 101 x 54 mm).

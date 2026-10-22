@@ -241,6 +241,8 @@ if (isset($_SESSION['selectedDate_saison'])
 	}
 	//echo $_SESSION['selOutlet']['outlet_open_time']."//".$_SESSION['selOutlet']['outlet_close_time'];
 
+require_once __DIR__.'/../classes/maitre.class.php';
+maitre_ensure_columns();   // own opening hours of a date (day details)
 $rows = querySQL('maitre_info');
 foreach($rows as $row) {
 	$maitre['maitre_id'] = $row->maitre_id;
@@ -251,6 +253,10 @@ foreach($rows as $row) {
 	$maitre['outlet_child_tables'] = ($row->outlet_child_tables) ? $row->outlet_child_tables : 0;
 	$maitre['outlet_child_capacity'] = ($row->outlet_child_capacity) ? $row->outlet_child_capacity : 0;
 	$maitre['passerby_max_pax'] = ($row->outlet_child_passer_max_pax) ? $row->outlet_child_passer_max_pax : 0;
+	$maitre['day_open_time'] = isset($row->day_open_time) ? $row->day_open_time : null;
+	$maitre['day_close_time'] = isset($row->day_close_time) ? $row->day_close_time : null;
+	// own hours for this date win over the weekday hours (no break times)
+	maitre_apply_day_hours($_SESSION['selOutlet'], $maitre['day_open_time'], $maitre['day_close_time']);
 }
 
 

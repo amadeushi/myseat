@@ -222,6 +222,9 @@ function sms_text($event, $r) {
 		return sms_fit('', $r['brand'], ': Bis morgen! Dein Tisch um '.$t.' Uhr für '.$people.' ist reserviert.'.$tail);
 	}
 	$tail = $link !== '' ? ' Reservierungsdetails: '.$link : ($tel !== '' ? ' Fragen oder Absage: '.$tel.'.' : '');
+	if ($event === 'update') {
+		return sms_fit('', $r['brand'], ': Deine Reservierung wurde geändert! Neu: '.$d.' um '.$t.' Uhr, '.$people.'. Buchungsnummer '.$r['number'].'.'.$tail);
+	}
 	return sms_fit('', $r['brand'], ': Deine Reservierung ist bestätigt! '.$d.' um '.$t.' Uhr, '.$people.'. Buchungsnummer '.$r['number'].'.'.$tail.' Bis bald!');
 }
 
@@ -532,5 +535,7 @@ function sms_send_for_reservation($event, $r) {
 	$tel = !empty($r['restaurant_phone']) ? $r['restaurant_phone'] : (!empty($settings['mailPhone']) ? $settings['mailPhone'] : '');
 	$link = sms_cancel_short_link(isset($r['reservation_id']) ? $r['reservation_id'] : 0, $r['number'], $r['date']);
 	$text = sms_text($event, array('link' => (string)$link, 'brand' => html_entity_decode((string)$r['brand'], ENT_QUOTES, 'UTF-8'), 'date' => $r['date'], 'time' => $r['time'], 'pax' => $r['pax'], 'number' => $r['number'], 'phone' => html_entity_decode((string)$tel, ENT_QUOTES, 'UTF-8')));
-	return sms_enqueue(isset($r['reservation_id']) ? $r['reservation_id'] : null, $mobile, $event, $text);
+	// a change can be sent more than once: its type is unique per send (the outbox allows one row per reservation and type)
+	$type = $event === 'update' ? 'update_'.base_convert((string)time(), 10, 36) : $event;
+	return sms_enqueue(isset($r['reservation_id']) ? $r['reservation_id'] : null, $mobile, $type, $text);
 }

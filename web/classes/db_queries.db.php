@@ -283,13 +283,7 @@ function querySQL($statement){
 			return $result;
 		break;
 		case 'maitre_info':
-			$result = query("SELECT maitre_id, maitre_outlet_id,
-							maitre_date, maitre_comment_day,
-							maitre_comment_day_timestamp, maitre_comment_day_name,
-							maitre_timestamp, maitre_ip,
-							maitre_author, outlet_child_tables,
-							outlet_child_capacity, outlet_capacity_timestamp,
-							outlet_child_passer_max_pax, outlet_child_dayoff 
+			$result = query("SELECT *   /* all columns: day_open_time / day_close_time (own hours of the date) exist once maitre_ensure_columns() has run */
 							FROM `$dbTables->maitre` 
 							WHERE `maitre_outlet_id` ='%d' 
 							AND `maitre_date`='%s' 

@@ -43,6 +43,7 @@ function tp_duration_minutes($outlet_id) {
 
 // opening hours of the outlet on a date as [open, close] in minutes; the daily override wins
 function tp_day_hours($outlet_id, $date) {
+	require_once __DIR__.'/maitre.class.php';
 	$r = tp_rows("SELECT * FROM ".tp_outlets_table()." WHERE `outlet_id` = ?", 'i', array((int)$outlet_id));
 	if (!$r) { return array(0, 24 * 60, 0, 0); }
 	$o = $r[0];
@@ -52,6 +53,13 @@ function tp_day_hours($outlet_id, $date) {
 	$close = tp_min($custom ? $o[$w.'_close_time'] : $o['outlet_close_time']);
 	$bo = (isset($o[$w.'_open_break'])  && $o[$w.'_open_break']  !== '00:00:00') ? $o[$w.'_open_break']  : (isset($o['outlet_open_break'])  ? $o['outlet_open_break']  : '00:00:00');
 	$bc = (isset($o[$w.'_close_break']) && $o[$w.'_close_break'] !== '00:00:00') ? $o[$w.'_close_break'] : (isset($o['outlet_close_break']) ? $o['outlet_close_break'] : '00:00:00');
+	// own hours for this date (day details) win over the weekday hours; no breaks then
+	global $dbTables;
+	if (function_exists('maitre_ensure_columns')) { maitre_ensure_columns(); }
+	$m = tp_rows("SELECT `day_open_time`, `day_close_time` FROM `".$dbTables->maitre."` WHERE `maitre_outlet_id` = ? AND `maitre_date` = ? ORDER BY `maitre_id` LIMIT 1", 'is', array((int)$outlet_id, $date));
+	if ($m && function_exists('maitre_parse_time') && maitre_parse_time($m[0]['day_open_time']) !== null && maitre_parse_time($m[0]['day_close_time']) !== null && maitre_parse_time($m[0]['day_open_time']) !== maitre_parse_time($m[0]['day_close_time'])) {
+		return array(tp_min($m[0]['day_open_time']), tp_min($m[0]['day_close_time']), 0, 0);
+	}
 	return array($open, $close, tp_min($bo), tp_min($bc));
 }
 

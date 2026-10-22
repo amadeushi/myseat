@@ -62,7 +62,7 @@ function appr_send_guest_mail($r, $mode) {
 		"SELECT outlet_name, property_id, avg_duration, confirmation_email FROM `".$dbTables->outlets."` WHERE outlet_id = ".(int)$r['reservation_outlet_id']." LIMIT 1"));
 	$property = $outlet ? mysqli_fetch_assoc(mysqli_query($link,
 		"SELECT * FROM `".$dbTables->properties."` WHERE id = ".(int)$outlet['property_id']." LIMIT 1")) : null;
-	if (!$outlet || !$property) { return; }
+	if (!$outlet || !$property) { return array('mail' => false, 'sms' => 'skip'); }
 	// the date/time settings of the restaurant: $general is only filled in the backend (it is read for the property of the session); the decision link in the mail
 	// (api/request.php) runs without a session, so $general is empty there - the time then came out as "7:00 pm" and the date was missing
 	$gen = (is_array($general) && !empty($general['timeformat']) && !empty($general['dateformat'])) ? $general : null;
@@ -94,7 +94,18 @@ function appr_send_guest_mail($r, $mode) {
 	));
 	$brand = bm_clean($outlet['outlet_name'] !== '' ? $outlet['outlet_name'] : $property['name']);
 	$admin_email = !empty($outlet['confirmation_email']) ? $outlet['confirmation_email'] : $property['email'];
-	bm_send_guest_mail($r['reservation_guest_email'], $m, $brand, $admin_email);
+	$result = array('mail' => false, 'sms' => 'skip');
+	$guest_mail = html_entity_decode(trim((string)$r['reservation_guest_email']), ENT_QUOTES, 'UTF-8');
+	$result['mail'] = (bool)bm_send_guest_mail($r['reservation_guest_email'], $m, $brand, $admin_email);
+	// a changed reservation: guests who left only a phone number get the news by SMS (with an address the mail is enough)
+	if ($mode === 'updated' && !filter_var($guest_mail, FILTER_VALIDATE_EMAIL)) {
+		require_once __DIR__.'/sms.class.php';
+		$result['sms'] = sms_send_for_reservation('update', array(
+			'reservation_id' => $r['reservation_id'], 'phone' => $r['reservation_guest_phone'], 'brand' => $brand,
+			'date' => $r['reservation_date'], 'time' => $r['reservation_time'], 'pax' => $r['reservation_pax'], 'number' => $r['reservation_bookingnumber'],
+			'restaurant_phone' => !empty($property['phone']) ? $property['phone'] : '',
+		));
+	}
 	if ($mode === 'approved') {
 		require_once __DIR__.'/sms.class.php';
 		sms_send_for_reservation('confirmation', array(
@@ -103,6 +114,27 @@ function appr_send_guest_mail($r, $mode) {
 			'restaurant_phone' => !empty($property['phone']) ? $property['phone'] : '',
 		));
 	}
+	return $result;
+}
+
+// the current details of a reservation to the guest once more, with a note that something changed: mail, or SMS when there is no address.
+// Returns array(ok, message|error) for the backend.
+function appr_notify_update($r) {
+	require_once __DIR__.'/booking_mail.class.php';
+	$mail_ok = filter_var(html_entity_decode(trim((string)$r['reservation_guest_email']), ENT_QUOTES, 'UTF-8'), FILTER_VALIDATE_EMAIL) !== false;
+	$res = appr_send_guest_mail($r, 'updated');
+	if ($mail_ok) {
+		return $res['mail']
+			? array('ok' => true, 'message' => 'Die geänderten Angaben wurden per E-Mail an '.html_entity_decode(trim($r['reservation_guest_email']), ENT_QUOTES, 'UTF-8').' gesendet.')
+			: array('ok' => false, 'error' => 'Die E-Mail ließ sich nicht senden. Bitte prüfe die Adresse oder versuche es später noch einmal.');
+	}
+	if ($res['sms'] === 'accepted' || $res['sms'] === 'queued') {
+		return array('ok' => true, 'message' => 'Der Gast hat keine E-Mail-Adresse. Die geänderten Angaben gehen per SMS an '.html_entity_decode(trim($r['reservation_guest_phone']), ENT_QUOTES, 'UTF-8').'.');
+	}
+	if ($res['sms'] === 'off') { return array('ok' => false, 'error' => 'Der Gast hat keine E-Mail-Adresse, und der SMS-Versand ist nicht eingeschaltet.'); }
+	if ($res['sms'] === 'skip') { return array('ok' => false, 'error' => 'Der Gast hat weder eine E-Mail-Adresse noch eine Handynummer, an die sich eine SMS senden lässt.'); }
+	if ($res['sms'] === 'duplicate') { return array('ok' => false, 'error' => 'Die SMS wurde gerade eben schon gesendet.'); }
+	return array('ok' => false, 'error' => 'Die SMS ließ sich nicht senden. Bitte versuche es später noch einmal.');
 }
 
 // approve a pending request: table assignment + confirmation mail. Returns false if it was not pending.

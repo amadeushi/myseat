@@ -258,6 +258,7 @@ $(document).ready(function() {
 		var savedMsg = sessionStorage.getItem('detailMsg');
 		if (savedMsg) { sessionStorage.removeItem('detailMsg'); showSaveToast(savedMsg); }
 	} catch (e) {}
+	$('#dayhours_clear').on('click', function() { $('#day_open_time, #day_close_time').val(''); });
 	$('#edit_maitre_form').submit(function() {
 		var $f = $(this), $btn = $f.find('input[type=submit]');
 		$btn.prop('disabled', true);

@@ -50,6 +50,14 @@ if (isset($_SESSION['messages']) && count($_SESSION['messages']) > 0) {
 	$_SESSION['messages'] = array();
 }
 
+// Notes after an action that went fine (e.g. the guest was told about a change)
+if ( !empty($_SESSION['notices']) ) {
+	echo "<div id='noticeBox'><div class='alert_success'><p>".uiIcon('check')." ";
+	foreach ($_SESSION['notices'] as $value) { echo htmlspecialchars($value)."<br/>"; }
+	echo "</p></div></div>";
+	$_SESSION['notices'] = array();
+}
+
 // Error & success messages
 if ( !empty($_SESSION['errors']) ) {
 	echo "<div id='messageBox'>";

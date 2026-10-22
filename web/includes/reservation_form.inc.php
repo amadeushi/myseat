@@ -102,6 +102,9 @@ $rsv_pick_date = date('Y-m-d', strtotime($row->reservation_date));
 				<label for="reservation_booker_name"><?php echo rt('staff'); ?> *</label>
 				<input type="text" name="reservation_booker_name" id="reservation_booker_name" class="required" title=" " minlength="3" maxlength="30" value="<?php echo htmlspecialchars($rsv_staff); ?>"/>
 			</div>
+			<div class="rsv-field rsv-notify">
+				<label class="rsv-check"><input type="checkbox" name="notify_guest" value="1"/> <span>Gast über die Änderung informieren (E-Mail, ohne Adresse SMS)</span></label>
+			</div>
 			<div class="rsv-actions">
 				<button id="submit_btn" type="submit" class="rsv-save"><?php echo rt('save'); ?></button>
 			</div>

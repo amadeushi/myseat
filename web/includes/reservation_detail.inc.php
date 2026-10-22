@@ -78,6 +78,36 @@
 				?>
 			</p>
 			<?php
+			// send the current details to the guest once more, with a note that something changed (not for cancelled or undecided reservations, not for a past date)
+			if ( current_user_can('Reservation-Edit') && (int)$row->reservation_hidden === 0 && (!isset($row->reservation_approval) || $row->reservation_approval !== 'pending') && strtotime(substr($row->reservation_date, 0, 10).' 23:59:59') >= time() ):
+			?>
+			<div id="resend-confirm" data-id="<?php echo (int)$row->reservation_id; ?>" data-token="<?php echo htmlspecialchars($token); ?>">
+				<p><button type="button" class="go-cancel" id="rc-send">Bestätigung erneut senden</button> <span id="rc-status" class="detail-status" role="status" aria-live="polite"></span><br/>
+				<small>Der Gast bekommt die aktuellen Angaben mit dem Hinweis, dass sich etwas geändert hat. Ohne E-Mail-Adresse geht eine SMS an die Handynummer.</small></p>
+			</div>
+			<script>
+			window.addEventListener('load', function () {
+				var $ = window.jQuery, $box = $ && $('#resend-confirm');
+				if (!$box || !$box.length) { return; }
+				$('#rc-send').click(function () {
+					var $b = $(this), $s = $('#rc-status');
+					if (!window.confirm('Die aktuellen Angaben jetzt an den Gast senden?')) { return; }
+					$b.prop('disabled', true);
+					$s.text('Wird gesendet ...').removeClass('is-error');
+					$.ajax({
+						type: 'POST', url: 'ajax/resend_confirmation.php', dataType: 'json',
+						data: { id: $box.data('id'), token: $box.data('token') },
+						success: function (r) {
+							if (!r || !r.ok) { $s.text((r && r.error) || 'Das hat nicht geklappt.').addClass('is-error'); } else { $s.text(r.message); }
+							$b.prop('disabled', false);
+						},
+						error: function () { $s.text('Das hat nicht geklappt. Bitte versuche es noch einmal.').addClass('is-error'); $b.prop('disabled', false); }
+					});
+				});
+			});
+			</script>
+			<?php endif; ?>
+			<?php
 			// group pre-order (n8n): the guest becomes the organizer and gets the links by mail
 			require_once __DIR__.'/../classes/grouporder.class.php';
 			$go = go_find($row->reservation_id);

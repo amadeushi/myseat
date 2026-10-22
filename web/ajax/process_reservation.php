@@ -358,6 +358,22 @@ if ($_SESSION['token'] == $_POST['token'] && $compare_pass > 0 ) {
 					error_log('mySeat group order sync: '.$e->getMessage());
 				}
 			}
+
+			// edited reservation, tick "Gast über die Änderung informieren": the new details go to the guest (never breaks the save)
+			if (!empty($_POST['reservation_id']) && !empty($_POST['notify_guest']) && (int)$_POST['notify_guest'] === 1) {
+				try {
+					require_once(__DIR__.'/../classes/approval.class.php');
+					appr_ensure_schema();
+					$nr = mysqli_fetch_assoc(mysqli_query($GLOBALS['__mysql_compat_link'], "SELECT * FROM `".$dbTables->reservations."` WHERE reservation_id = ".(int)$_POST['reservation_id']." LIMIT 1"));
+					if ($nr && (int)$nr['reservation_hidden'] === 0 && $nr['reservation_approval'] !== 'pending') {
+						$nres = appr_notify_update($nr);
+						if (!empty($nres['ok'])) { $_SESSION['notices'][] = $nres['message']; } else { $_SESSION['errors'][] = 'Gespeichert, aber der Gast wurde nicht informiert: '.$nres['error']; }
+					}
+				} catch (Throwable $e) {
+					error_log('mySeat notify guest: '.$e->getMessage());
+					$_SESSION['errors'][] = 'Gespeichert, aber der Gast wurde nicht informiert.';
+				}
+			}
 		
 			// *** send confirmation email
 			if ( $_POST['email_type'] != 'no' && $new_id != $_POST['reservation_id']) {

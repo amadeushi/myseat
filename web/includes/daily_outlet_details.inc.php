@@ -26,6 +26,21 @@
 				<small class="detail-hint">gilt nur für diesen Tag</small>
 			</p>
 			<input type="hidden" name="dayoff_initial" value="<?php echo (int)$dayoff; ?>">
+			<?php
+				require_once __DIR__.'/../classes/maitre.class.php';
+				$dhOpen = !empty($maitre['day_open_time']) ? substr($maitre['day_open_time'], 0, 5) : ''; $dhClose = !empty($maitre['day_close_time']) ? substr($maitre['day_close_time'], 0, 5) : '';
+				$dhNormal = maitre_normal_hours_text($_SESSION['selOutlet'], $_SESSION['selectedDate'], isset($_SESSION['open_time']) ? $_SESSION['open_time'] : $_SESSION['selOutlet']['outlet_open_time'], isset($_SESSION['close_time']) ? $_SESSION['close_time'] : $_SESSION['selOutlet']['outlet_close_time']);
+				$dhStep = max(1, (int)$general['timeintervall']) * 60;
+			?>
+			<div class="dayhours-row">
+				<label for="day_open_time">Abweichende Zeiten nur für diesen Tag</label>
+				<p>
+					von <input type="time" name="day_open_time" id="day_open_time" step="<?php echo $dhStep; ?>" value="<?php echo $dhOpen; ?>" <?php echo $cando ? '' : 'disabled="disabled"'; ?>/>
+					bis <input type="time" name="day_close_time" id="day_close_time" step="<?php echo $dhStep; ?>" value="<?php echo $dhClose; ?>" <?php echo $cando ? '' : 'disabled="disabled"'; ?>/>
+					<?php if ($cando): ?><button type="button" class="button_dark" id="dayhours_clear">Wie üblich</button><?php endif; ?>
+				</p>
+				<small class="detail-hint"><?php echo $dhOpen !== '' ? 'Für diesen Tag gelten '.$dhOpen.' bis '.$dhClose.' Uhr (sonst '.$dhNormal.' Uhr).' : 'Sonst '.$dhNormal.' Uhr. Beide Felder leer lassen = wie üblich.'; ?> Gilt für das Backend und die Online-Buchung, ohne Pausen.</small>
+			</div>
 			<label><?php echo _day_comment;?></label>
 			<p>
 				<?php if ( current_user_can( 'Daily-Outlet-Edit' ) ){
