@@ -75,7 +75,8 @@
 @media (min-width: 960px) {
 	.gv-atelier { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); padding-top: 28px; }
 	.gv-intro { grid-column: 1 / -1; }
-	.gv-prev { position: sticky; top: 84px; }
+	.gv-prev { align-self: stretch; }   /* as tall as the form beside it: the sticky part inside stops at the end of this row and never runs over the section below */
+	.gv-prev-in { position: sticky; top: 84px; }
 }
 @media (max-width: 520px) { .gv-intro h1, .gv-page h1 { font-size: 32px; } .gv-motifs { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); } }
 @media (prefers-reduced-motion: reduce) { .gv-prev-frame img { transition: none; } }

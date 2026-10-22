@@ -58,7 +58,7 @@ gv_page_head('Gutschein verschenken', 'gv-shell');
 		<div class="gv-page" style="grid-column:1/-1;margin:0"><h2>Bald hier</h2><p>Gutscheine gibt es bald auch hier. Bis dahin: einfach bei uns im Restaurant fragen.</p></div>
 		<?php else: ?>
 
-		<figure class="gv-prev">
+		<figure class="gv-prev"><div class="gv-prev-in">
 			<div class="gv-side-tabs" role="group" aria-label="Seite des Gutscheins">
 				<button type="button" class="gv-side-btn" id="gv-side-front" aria-pressed="true">Vorderseite</button>
 				<button type="button" class="gv-side-btn" id="gv-side-back" aria-pressed="false">Rückseite mit deinen Worten</button>
@@ -66,7 +66,7 @@ gv_page_head('Gutschein verschenken', 'gv-shell');
 			<div class="gv-prev-frame" id="gv-frame"><img id="gv-prev" alt="Vorderseite deines Gutscheins" width="1000" height="709" src="gutschein_preview.php?motif=<?php echo $h(rawurlencode($motifNow)); ?>&amp;amount=<?php echo $h(rawurlencode($chosenAmount === 'custom' ? $val('amount_custom', '50') : $chosenAmount)); ?>"/></div>
 			<div class="gv-prev-frame" id="gv-frame-back" hidden><img id="gv-prev-back" alt="Rückseite deines Gutscheins mit deinen Worten" width="1000" height="709" src="gutschein_preview.php?side=back&amp;motif=<?php echo $h(rawurlencode($motifNow)); ?>&amp;amount=<?php echo $h(rawurlencode($chosenAmount === 'custom' ? $val('amount_custom', '50') : $chosenAmount)); ?>"/></div>
 			<figcaption>So sieht er aus: vorne dein Motiv, hinten deine Worte. Nummer und Sicherheitscode bekommst du nach der Zahlung.</figcaption>
-		</figure>
+		</div></figure>
 
 		<form class="gv-form" id="gv-form" method="post" action="gutschein.php" novalidate data-fee="<?php echo (int)$gv_cfg['fee']; ?>" data-min="<?php echo (int)($gv_cfg['min'] / 100); ?>" data-max="<?php echo (int)($gv_cfg['max'] / 100); ?>" data-lapse="<?php echo $gv_cfg['lapse'] ? '1' : '0'; ?>" data-token="<?php echo $h($_SESSION['shop_token']); ?>">
 			<?php if (!$open): ?><p class="gv-notice">Vorschau für dich: Der Verkauf ist noch nicht eingeschaltet, bestellen geht erst, wenn er offen ist.</p><?php endif; ?>

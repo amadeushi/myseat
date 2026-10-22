@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-22 == mySeat v6.64.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Behoben (Gutschein-Shop, Seite order/gutschein.php): Auf dem Desktop lag die angeheftete Vorschau am Seitenende über dem Abschnitt "Du hast einen Gutschein bekommen?", die Texte überlagerten sich. Die Vorschau endet jetzt am Ende ihrer Zeile und klebt nur noch daneben. Am Handy war es nicht betroffen (dort liegt die Vorschau normal über dem Formular).
+
 2026-10-22 == mySeat v6.64.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geändert (Gutscheine, Motive): Die drei gezeichneten Motive (Geburtstag, Jubiläum, Brief) sind mittig neu gezeichnet und etwas größer, mit Glanz und Konfetti bzw. Sternen rund um den Gegenstand. Vorher saß der Gegenstand rechts (für Text auf der linken Seite), seit dem Balken unter dem Bild wirkte die linke Hälfte leer.
