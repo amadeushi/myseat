@@ -1,12 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1200" width="1800" height="1200">
 <defs>
-<radialGradient id="bg" cx="68%" cy="38%" r="75%"><stop offset="0" stop-color="#1f3a37"/><stop offset="0.55" stop-color="#112321"/><stop offset="1" stop-color="#080f0e"/></radialGradient>
+<radialGradient id="bg" cx="50%" cy="46%" r="72%"><stop offset="0" stop-color="#1f3a37"/><stop offset="0.55" stop-color="#112321"/><stop offset="1" stop-color="#080f0e"/></radialGradient>
 <linearGradient id="env" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbf3df"/><stop offset="1" stop-color="#e3d4ae"/></linearGradient>
 <linearGradient id="flap" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4e8c9"/><stop offset="1" stop-color="#e8d9b4"/></linearGradient>
 <radialGradient id="seal" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#d9503f"/><stop offset="1" stop-color="#8c2216"/></radialGradient>
 </defs>
 <rect width="1800" height="1200" fill="url(#bg)"/>
-<g fill="#e9c46f" opacity="0.14"><circle cx="1560" cy="120" r="84"/><circle cx="960" cy="190" r="40"/><circle cx="1700" cy="470" r="54"/></g>
+<g fill="#e9c46f" opacity="0.14"><circle cx="330" cy="300" r="84"/><circle cx="1500" cy="270" r="76"/><circle cx="220" cy="840" r="54"/><circle cx="1590" cy="860" r="62"/><circle cx="640" cy="150" r="40"/><circle cx="1240" cy="140" r="44"/><circle cx="130" cy="560" r="40"/><circle cx="1690" cy="560" r="46"/></g>
+<g transform="translate(900 590) scale(1.2) translate(-1330 -470)">
 <ellipse cx="1330" cy="760" rx="400" ry="34" fill="#000" opacity="0.4"/>
 <g transform="rotate(-5 1330 480)">
 <rect x="1000" y="250" width="660" height="440" rx="14" fill="url(#env)"/>
@@ -14,5 +15,6 @@
 <path d="M1000 264 L1330 520 L1660 264 L1660 250 Q1660 250 1646 250 L1014 250 Q1000 250 1000 264z" fill="url(#flap)" stroke="#cdbb8d" stroke-width="4"/>
 <circle cx="1330" cy="508" r="52" fill="url(#seal)"/><circle cx="1330" cy="508" r="52" fill="none" stroke="#6e170e" stroke-width="3" opacity="0.6"/>
 <path d="M1330 534 C1296 510 1300 484 1318 484 C1326 484 1330 490 1330 494 C1330 490 1334 484 1342 484 C1360 484 1364 510 1330 534z" fill="#f1d68c"/>
+</g>
 </g>
 </svg>

@@ -59,6 +59,7 @@ gv_page_head('Gutschein', 'gv-karte');
 			<input id="gk-amount" name="amount" type="text" inputmode="decimal" maxlength="8" placeholder="z. B. 12,50"/>
 			<button type="submit" name="mode" value="part" class="cart-go is-alt">Teilbetrag einlösen</button>
 		</form>
+		<p class="gv-hint">Teilbeträge sind möglich, der Rest bleibt auf dem Gutschein. Eine Barauszahlung gibt es nicht.</p>
 		<?php endif; ?>
 	<?php endif; ?>
 	</main>

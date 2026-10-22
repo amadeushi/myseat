@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-22 == mySeat v6.64.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geändert (Gutscheine, Motive): Die drei gezeichneten Motive (Geburtstag, Jubiläum, Brief) sind mittig neu gezeichnet und etwas größer, mit Glanz und Konfetti bzw. Sternen rund um den Gegenstand. Vorher saß der Gegenstand rechts (für Text auf der linken Seite), seit dem Balken unter dem Bild wirkte die linke Hälfte leer.
+ * Geändert (QR-Seite): Unter dem Einlöse-Formular steht ein Hinweis für das Team: "Teilbeträge sind möglich, der Rest bleibt auf dem Gutschein. Eine Barauszahlung gibt es nicht."
+
 2026-10-22 == mySeat v6.64.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geändert (Gutscheine, Aufbau der Karte wie bei FirstVoucher): Die Vorderseite zeigt das Motiv unverfälscht (nur auf das Format zugeschnitten, kein Verlauf, kein Text auf dem Foto) über einem einfarbigen dunklen Balken mit Logo, "GUTSCHEIN" und Betrag. Dadurch ist der Text bei jedem Motiv gleich lesbar, auch bei einem hochgeladenen Foto. Grußworte, Nummer, Code, Gültigkeit, der QR-Code für das Team und eine Kurzfassung zum Einlösen stehen auf der Rückseite (A6, auf Papierfarbe, dunkle Schrift, mindestens 8 pt, Hauptteile 9 bis 15 pt). Das Gäste-PDF hat drei Seiten mit je einer Aufgabe: 1 "Dein Gutschein" (Vorder- und Rückseite groß und aufrecht, zum Lesen und Zeigen am Bildschirm), 2 "Zum Ausdrucken und Falten" (drei Schritte, die Karte als Klappkarte 148 x 210 mm mit Schnittmarken und gestrichelter Faltlinie; gefaltet ergibt sie eine fertige A6-Karte), 3 "So löst du ihn ein" (Hinweise, Kleingedrucktes, anklickbare Links). Der Text der Mail zum PDF verweist jetzt auf Seite 2.
