@@ -1924,16 +1924,16 @@ select.status_dbox:not([multiple]) option::checkmark { display: inline-block; or
 .shop-page .offer-check { display: flex; margin: 6px 0; }
 
 /* ---- top bar on wide screens: the fixed 940px frame is too narrow for all menu items, so search and logout jumped into a second row.
-   The bar now uses the window width (up to 1400px): logo, menu (wraps inside its own space if it has to), search and logout stay in one row. ---- */
+   The bar now uses the window width (up to 1680px): logo, menu (wraps inside its own space if it has to), search and logout stay in one row. ---- */
 @media screen and (min-width: 941px) {
-	.topbar .container { width: auto; max-width: 1400px; padding: 0 16px; box-sizing: border-box; display: flex; align-items: flex-start; gap: 0 8px; }
+	.topbar .container { width: auto; max-width: 1680px; padding: 0 16px; box-sizing: border-box; display: flex; align-items: flex-start; gap: 0 8px; }
 	.topbar .brand { float: none; flex: none; }
 	.topbar ul.nav, .topbar div > ul.nav { float: none; display: flex; flex: 1 1 0; flex-wrap: wrap; min-width: 0; margin: 0; }
 	.topbar ul.nav > li { float: none; }
 	.topbar form { float: none; flex: none; display: flex; align-items: center; gap: 10px; margin: 5px 0 0 auto; white-space: nowrap; }
 	.topbar input#searchquery { width: 190px; }
 }
-@media screen and (min-width: 941px) and (max-width: 1240px) {
+@media screen and (min-width: 941px) and (max-width: 1499px) {   /* compact menu: with the eleven items (Gutscheine since v6.61.0) the normal size needs about 1440 px in one row */
 	.topbar { height: auto; min-height: 44px; padding-bottom: 4px; }
 	.topbar ul.nav, .topbar div > ul.nav { font-size: 1.02em; }
 	.topbar ul.nav > li > a { padding: 10px 7px 11px; }

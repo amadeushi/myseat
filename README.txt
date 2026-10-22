@@ -52,6 +52,15 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-22 == mySeat v6.65.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Behoben (Gutscheine, Etikett): Der Knopf "Etikett" führte seit v6.64.0 zu einem Serverfehler 500, weil die Funktion gv_label_pdf beim Umbau der Karte versehentlich aus shop_voucher_pdf.class.php herausgefallen war. Sie ist wieder da, und ein Test prüft sie jetzt (eine Seite, 101 x 54 mm).
+ * Geändert (Gutscheine, Etikett): Das Etikett gibt es nur noch für nummerierte Vordrucke. Bei PDF-Gutscheinen und bei Karten, die aus dem Shop gedruckt werden, trägt die Karte den Code selbst; dort zeigt der Bestand keinen Knopf mehr, und die Adresse antwortet mit einer Meldung (404).
+
+2026-10-22 == mySeat v6.65.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Behoben (Kopfzeile des Backends): Seit dem Menüpunkt "Gutscheine" (v6.61.0) war das Menü mit seinen elf Punkten für die Zeile zu breit, "System" rutschte in der Desktop-Ansicht in eine zweite Zeile, bei jeder Fensterbreite. Jetzt gilt die kompaktere Schrift und die engeren Abstände bis 1499 Pixel Fensterbreite, und auf größeren Bildschirmen darf die Kopfzeile bis 1680 Pixel breit werden (vorher 1400). Gemessen: von 1280 bis 1920 Pixel steht das ganze Menü in einer Zeile. Unter etwa 1200 Pixel bricht das Menü weiterhin innerhalb seines Platzes um, wie schon vorher.
+
 2026-10-22 == mySeat v6.65.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu (Gutschein-Shop, eigene Bilder): Der Gast kann den Ausschnitt seines Bildes wählen. In der Vorschau lässt sich das Bild mit Finger oder Maus verschieben, dazu gibt es die Regler "Größe", "Waagerecht" und "Senkrecht" (auch mit der Tastatur) und den Knopf "Zurücksetzen". Der Zoom ist begrenzt, damit der Ausschnitt mindestens etwa 1250 Pixel breit bleibt (bei einem Bild an der Mindestgröße von 1500 x 1000 Pixel also kaum Zoom, bei einem Handyfoto bis zu 4-fach). Position und Zoom werden mit der Bestellung gespeichert und gelten für Vorschau, PDF, Druckkarte, EchtPost-Motiv und die Seite hinter dem QR-Code. Bei den Foto- und Zeichnungs-Motiven ändert sich nichts. Am Handy ist die Vorschau beim Ziehen gesperrt für das Scrollen, solange ein eigenes Bild gewählt ist (zum Scrollen am Rand oder darunter wischen).

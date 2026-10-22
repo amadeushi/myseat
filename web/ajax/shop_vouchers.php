@@ -61,7 +61,8 @@ if ($op === 'export') {
 
 if ($op === 'label') {   // the label for a numbered blank (DYMO 54 x 101 mm): code for the guest, QR code for the team
 	$v = gv_by_id((int)(isset($_GET['id']) ? $_GET['id'] : 0));
-	if (!$v || gv_code_plain($v) === null) { http_response_code(404); echo 'Für diesen Gutschein gibt es keinen Code, also auch kein Etikett.'; exit; }
+	if (!$v || $v['kind'] !== 'print') { http_response_code(404); echo 'Ein Etikett gibt es nur für nummerierte Vordrucke.'; exit; }   // PDF vouchers and cards printed from the shop carry their code themselves
+	if (gv_code_plain($v) === null) { http_response_code(404); echo 'Für diesen Gutschein gibt es keinen Code, also auch kein Etikett.'; exit; }
 	header('Content-Type: application/pdf'); header('Content-Disposition: inline; filename="Etikett-'.preg_replace('/[^A-Za-z0-9\-]/', '', $v['number']).'.pdf"'); header('Cache-Control: private, no-store');
 	echo gv_label_pdf(array('number' => $v['number'], 'code' => gv_code_plain($v), 'token' => $v['token'], 'valid_until' => $v['valid_until']));
 	exit;
