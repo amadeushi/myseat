@@ -59,6 +59,13 @@ if ($op === 'export') {
 	exit;
 }
 
+if ($op === 'label') {   // the label for a numbered blank (DYMO 54 x 101 mm): code for the guest, QR code for the team
+	$v = gv_by_id((int)(isset($_GET['id']) ? $_GET['id'] : 0));
+	if (!$v || gv_code_plain($v) === null) { http_response_code(404); echo 'Für diesen Gutschein gibt es keinen Code, also auch kein Etikett.'; exit; }
+	header('Content-Type: application/pdf'); header('Content-Disposition: inline; filename="Etikett-'.preg_replace('/[^A-Za-z0-9\-]/', '', $v['number']).'.pdf"'); header('Cache-Control: private, no-store');
+	echo gv_label_pdf(array('number' => $v['number'], 'code' => gv_code_plain($v), 'token' => $v['token'], 'valid_until' => $v['valid_until']));
+	exit;
+}
 if ($op === 'order_print') {   // the print file of a card (post / pick-up): personal motif and words, number and code of the voucher
 	$o = gv_order_by_id((int)(isset($_GET['id']) ? $_GET['id'] : 0)); $v = $o ? gv_by_id((int)$o['voucher_id']) : null;
 	if (!$o || !$v || $o['status'] !== 'paid' || $o['delivery'] === 'pdf' || $v['kind'] === 'print' || gv_code_plain($v) === null) { http_response_code(404); echo 'Für diesen Auftrag gibt es keine Druckdatei.'; exit; }

@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-10-22 == mySeat v6.63.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu (Gutscheine, Etikett für nummerierte Vordrucke): Nach dem Anlegen eines Vordrucks (Gutscheine > Vordruck verkaufen) gibt es den Knopf "Etikett drucken (Dymo 54 x 101 mm)", im Bestand bei jedem Gutschein mit Code den Knopf "Etikett". Das PDF ist 101 x 54 mm quer (Dymo 99014, 300 dpi, schwarz auf weiß) und zeigt dem Gast links seinen Code mit der Erklärung "Online einlösen: Code für den Webshop" und rechts den QR-Code mit dem Hinweis "Nur für das Team" (führt auf die Einlöse-Seite mit PIN). Importierte Gutscheine haben keinen Code, dort gibt es kein Etikett.
+ * Geändert (Gutscheine, Lesbarkeit): Das Etikett ist für gutes Lesen gesetzt: Code etwa 34 pt, Anweisung und Hinweis 13 pt, nichts unter 10 pt, alles schwarz auf weiß in kräftiger Schrift, nur ein Hinweis pro Stelle. Die Schrift Raleway zeigt Ziffern jetzt als Versalziffern auf der Grundlinie (vorher rutschte zum Beispiel die 7 unter die Zeile), das gilt auch für Nummer, Code und Daten auf Karte und PDF.
+
 2026-10-22 == mySeat v6.62.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu (Gutscheine, Backend): In den Einstellungen gibt es das Feld "Website in der Fußzeile des PDFs" (Standard amadeus-hildesheim.de, ein vorangestelltes https:// wird entfernt, leer = keine Website). Vorher ließ sich der Wert nur in der Datenbank ändern.

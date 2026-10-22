@@ -284,8 +284,8 @@ function gv_page_jpeg($o) {
 // one-page PDF (A4) around a JPEG; no library needed
 function gv_pdf_wrap_jpeg($jpeg, $px, $py, $title) { return gv_pdf_wrap_jpegs(array(array($jpeg, $px, $py)), $title); }
 // PDF (A4) with one full-page JPEG per page: $pages = array(array(jpeg, px, py, links), ...); links = array(array(x0, y0, x1, y1, uri)) in picture pixels become clickable areas
-function gv_pdf_wrap_jpegs($pages, $title) {
-	$pw = 595.28; $ph = 841.89; $objs = array(); $annots = array(); $n = count($pages);
+function gv_pdf_wrap_jpegs($pages, $title, $pw = 595.28, $ph = 841.89) {
+	$objs = array(); $annots = array(); $n = count($pages);
 	$objs[1] = "<< /Type /Catalog /Pages 2 0 R >>";
 	$kids = array(); for ($i = 0; $i < $n; $i++) { $kids[] = (3 + 3 * $i).' 0 R'; }
 	$objs[2] = "<< /Type /Pages /Kids [".implode(' ', $kids)."] /Count $n >>";
@@ -344,6 +344,52 @@ function gv_render_back($o, $w) {
 	if ($lf !== '' && ($lg = @imagecreatefrompng($lf))) { $lw = (int)(190 * $u); $lh = (int)round($lw * imagesy($lg) / imagesx($lg)); imagecopyresampled($im, $lg, (int)($w - $m - $lw), (int)($H - 52 * $u - $lh), 0, 0, $lw, $lh, imagesx($lg), imagesy($lg)); }
 	return $im;
 }
+/*
+ * The label for a numbered blank, for a DYMO LabelWriter (label 54 x 101 mm = 99014, landscape, 300 dpi, black on white): the security code with the words that tell the guest what it is for
+ * (redeem online in the web shop) and the QR code with the words that it is for the team. Built for reading at arm's length: the code is about 34 pt, the lines under it 13 pt, nothing is
+ * smaller than 10 pt, everything is black on white in a semi bold face with lining figures, and there is only one thing to read per place (a heading, the code, one instruction; the QR code and one caption).
+ * $o: number, code, token, valid_until. Returns a one-page PDF of that size.
+ */
+function gv_label_pdf($o) {
+	$W = 1193; $H = 638; $m = 46;   // 101 x 54 mm at 300 dpi; 4 mm margin (the printer cannot print to the edge)
+	$im = imagecreatetruecolor($W, $H); imagefill($im, 0, 0, 0xFFFFFF);
+	$k = imagecolorallocate($im, 0, 0, 0);
+	$f = gv_font('Raleway-SemiBold');
+	$S = function ($pt) { return $pt * 300 / 72; };   // real printed points -> GD size (GD counts pixels at 300 dpi here)
+	$colW = 690; $divX = 770; $cap = 0.71;   // cap height of the face
+	// 1. heading
+	$hs = $S(16); $heading = 'Dein Webshop-Code';
+	while ($hs > $S(12) && gv_text_w($hs, $f, $heading) > $colW) { $hs -= 2; }
+	$y = $m + (int)round($cap * $hs);
+	imagettftext($im, $hs, 0, $m, $y, $k, $f, $heading);
+	// 2. the code, as large as the column allows (up to 36 pt)
+	$code = (string)($o['code'] ?? ''); $cs = $S(36); $track = 12;
+	while ($cs > $S(24) && gv_text_w($cs, $f, $code) + (max(1, strlen($code)) - 1) * $track > $colW) { $cs -= 2; }
+	$y += 54 + (int)round($cap * $cs);
+	gv_text_spaced($im, $cs, $m, $y, $k, $f, $code, $track);
+	// 3. one instruction, 13 pt, two short lines
+	$is = $S(13); $shop = trim((string)shop_setting('gv_shop_host'));
+	$y += 86; imagettftext($im, $is, 0, $m, $y, $k, $f, 'Einlösen auf');
+	$y += 64; imagettftext($im, $is, 0, $m, $y, $k, $f, $shop !== '' ? $shop : 'amadeus.delivery');
+	// 4. the number (to match the label to its blank) and the validity, 10 pt
+	$ms = $S(10);
+	imagettftext($im, $ms, 0, $m, $H - $m - 54, $k, $f, 'Nr. '.($o['number'] ?? ''));
+	if (!empty($o['valid_until'])) { imagettftext($im, $ms, 0, $m, $H - $m, $k, $f, 'gültig bis '.date('d.m.Y', strtotime($o['valid_until']))); }
+	// right column: divider, QR code for the team (at least 25 mm, with its quiet zone) and one caption
+	for ($yy = $m; $yy < $H - $m; $yy += 24) { imageline($im, $divX, $yy, $divX, min($H - $m, $yy + 12), $k); imageline($im, $divX + 1, $yy, $divX + 1, min($H - $m, $yy + 12), $k); }
+	$qr = qr_matrix(gv_qr_url($o['number'] ?? '', $o['token'] ?? ''));
+	$cx = $divX + (($W - $m - $divX) / 2); $ty = $m + 40;
+	if ($qr) {
+		$n = count($qr); $mod = max(1, (int)floor(310 / ($n + 2))); $side = ($n + 2) * $mod; $qx = (int)round($cx - $side / 2); $qy = $m - 6;
+		for ($r = 0; $r < $n; $r++) { for ($c = 0; $c < $n; $c++) { if ($qr[$r][$c]) { $x0 = $qx + ($c + 1) * $mod; $y0 = $qy + ($r + 1) * $mod; imagefilledrectangle($im, $x0, $y0, $x0 + $mod - 1, $y0 + $mod - 1, $k); } } }
+		$ty = $qy + $side + 62;
+	}
+	$cs2 = $S(13);
+	foreach (array('Nur für', 'das Team') as $line) { imagettftext($im, $cs2, 0, (int)round($cx - gv_text_w($cs2, $f, $line) / 2), $ty, $k, $f, $line); $ty += 62; }
+	ob_start(); imagejpeg($im, null, 92); $jpeg = ob_get_clean();
+	return gv_pdf_wrap_jpegs(array(array($jpeg, $W, $H)), 'Etikett '.($o['number'] ?? ''), 286.30, 153.07);
+}
+
 function gv_print_pdf($o) {
 	$W = 2480; $H = 3508; $cw = 1748; $ch = 1240; $x = (int)(($W - $cw) / 2); $y = 330;   // 148 x 105 mm at 300 dpi
 	$pages = array();

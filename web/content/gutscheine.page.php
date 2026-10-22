@@ -63,7 +63,7 @@ if (empty($_SESSION['shop_admin_token'])) { $_SESSION['shop_admin_token'] = myse
 	</div>
 
 	<div id="gv-panel-issue" role="tabpanel" aria-labelledby="gv-tab-issue" hidden>
-		<p class="sh-help">Für einen nummerierten Vordruck, der verschickt oder im Restaurant übergeben wird. Tippe die aufgedruckte Nummer ein (leer lassen, dann vergibt das System eine). Danach kann der Gutschein sofort eingelöst werden. Der Sicherheitscode erscheint nach dem Anlegen einmal: schreib ihn auf den Vordruck, damit der Gast online einlösen kann.</p>
+		<p class="sh-help">Für einen nummerierten Vordruck, der verschickt oder im Restaurant übergeben wird. Tippe die aufgedruckte Nummer ein (leer lassen, dann vergibt das System eine). Danach kann der Gutschein sofort eingelöst werden. Nach dem Anlegen druckst du ein Etikett (Dymo, 54 × 101 mm) mit dem Code für den Webshop und dem QR-Code für das Team und klebst es auf den Vordruck.</p>
 		<form class="gv-form gv-issue" id="gv-issue-form" autocomplete="off">
 			<div class="gv-field"><label for="gv-i-number">Nummer des Vordrucks</label><input type="text" id="gv-i-number" class="gv-mono" maxlength="30" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="automatisch"/></div>
 			<div class="gv-field"><label for="gv-i-face">Wert in Euro</label><input type="text" id="gv-i-face" inputmode="decimal" maxlength="9" autocomplete="off" placeholder="50"/></div>
