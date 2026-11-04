@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-04 == mySeat v6.68.3 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu (Gutscheinshop): Doppelklick-Schutz auf dem Server. Das Bestellformular trägt ein verstecktes Feld mit einem Zufallsschlüssel, der bei jeder Anzeige der Seite neu entsteht. Derselbe Schlüssel erzeugt nie eine zweite Bestellung und damit nie einen zweiten nummerierten Gutschein (ein Vordruck-Gutschein würde sonst eine zweite gedruckte Nummer reservieren): Wird das Formular noch einmal gesendet (Doppeltipp, "Formular erneut senden" nach dem Zurück-Knopf), geht der Gast zur offenen Zahlung der ersten Bestellung oder zu deren Statusseite. Eine stornierte Bestellung gibt ihren Schlüssel wieder frei. Neue Spalte idem in tp_gv_orders (entsteht beim ersten Aufruf).
+
 2026-11-04 == mySeat v6.68.2 == amadeushi - http://github.com/amadeushi/myseat
 
  * Behoben (Webshop, iPhone/Safari): Das Wischen zum Schließen war dort kaum nutzbar. Safari entscheidet in den ersten Pixeln einer Geste, ob die Seite scrollt oder wackelt, und danach lässt sich die Berührung nicht mehr übernehmen. Die Richtung wird deshalb jetzt mit der allerersten Abwärtsbewegung festgelegt (vorher erst nach 10 px, da war es zu spät), und jedes Sheet hat von Anfang an einen Listener, der die Berührung anhalten darf (das verlangt Safari).

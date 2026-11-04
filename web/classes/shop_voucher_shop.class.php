@@ -46,6 +46,14 @@ function gv_order_create($in) {
 	$cfg = gv_cfg();
 	$bad = function ($field, $msg) { return array('ok' => false, 'field' => $field, 'error' => $msg); };
 	if (!$cfg['open']) { return $bad('', 'Der Gutscheinverkauf ist gerade nicht geöffnet.'); }
+	// the same key (double tap, form sent again) never makes a second order and so never a second voucher: the first order is answered again (the lock ends with the request, so two at the same moment are served one after the other)
+	$idem = shop_idem_key($in['idem'] ?? '');
+	if ($idem !== '') {
+		if (!shop_idem_lock($idem)) { return $bad('', 'Deine Bestellung wird gerade verarbeitet. Bitte warte einen Moment.'); }
+		$ex = fb_row("SELECT * FROM ".fb_t('tp_gv_orders')." WHERE idem = ?", 's', array($idem));
+		if ($ex && $ex['status'] === 'canceled') { fb_exec("UPDATE ".fb_t('tp_gv_orders')." SET idem = NULL WHERE id = ?", 'i', array((int)$ex['id'])); $ex = null; }   // a canceled order frees its key
+		if ($ex) { return array('ok' => true, 'again' => true, 'order' => $ex); }
+	}
 	$d = (string)($in['delivery'] ?? '');
 	if (!isset($cfg['forms'][$d]) || !$cfg['forms'][$d]) { return $bad('delivery', 'Bitte wähle, wie du den Gutschein bekommen möchtest.'); }
 	$amount = gv_parse_amount($in['amount'] ?? '');
@@ -83,7 +91,7 @@ function gv_order_create($in) {
 		$crop[0], $crop[1], $crop[2], $lapse ? 1 : 0, $lapse ? $now : null, $ip, substr(isset($_SERVER['HTTP_USER_AGENT']) ? preg_replace('/[\x00-\x1f]/', '', (string)$_SERVER['HTTP_USER_AGENT']) : '', 0, 200), $now, $now));
 	if (!$st) { gv_void((int)$v['voucher']['id'], array(null, 'System'), 'Bestellung nicht angelegt'); return $bad('', 'Die Bestellung konnte nicht angelegt werden. Bitte versuche es noch einmal.'); }
 	$id = (int)mysqli_insert_id(fb_db());
-	fb_exec("UPDATE ".fb_t('tp_gv_orders')." SET number = ? WHERE id = ?", 'si', array('G'.str_pad((string)$id, 5, '0', STR_PAD_LEFT), $id));
+	fb_exec("UPDATE ".fb_t('tp_gv_orders')." SET number = ?, idem = ? WHERE id = ?", 'ssi', array('G'.str_pad((string)$id, 5, '0', STR_PAD_LEFT), $idem !== '' ? $idem : null, $id));
 	fb_exec("UPDATE ".fb_t('tp_gv_vouchers')." SET order_id = ?, motif_id = NULL WHERE id = ?", 'ii', array($id, (int)$v['voucher']['id']));
 	return array('ok' => true, 'order' => gv_order_by_id($id));
 }
@@ -106,6 +114,15 @@ function gv_order_pay_start($order, $baseUrl) {
 	}
 	fb_exec("UPDATE ".fb_t('tp_gv_orders')." SET mollie_id = ? WHERE id = ?", 'si', array($r['body']['id'], (int)$order['id']));
 	return array('ok' => true, 'url' => $r['body']['_links']['checkout']['href']);
+}
+
+// where the guest goes when the form was sent again for an order that exists already: the payment page that is still open, else the status page of the order
+function gv_order_again_url($o) {
+	if ($o['status'] === 'pending' && !empty($o['mollie_id'])) {
+		$r = shop_mollie_request('GET', '/payments/'.rawurlencode($o['mollie_id']));
+		if (in_array($r['http'], array(200, 201), true) && !empty($r['body']['_links']['checkout']['href'])) { return $r['body']['_links']['checkout']['href']; }
+	}
+	return 'gutschein_status.php?t='.$o['token'];
 }
 
 // ask Mollie what happened to the payment of this order (webhook and the guest coming back); returns the order as it is now

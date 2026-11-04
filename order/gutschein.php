@@ -23,9 +23,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		if (strpos($motif, 'own:') === 0 && !in_array(substr($motif, 4), isset($_SESSION['gv_own']) ? (array)$_SESSION['gv_own'] : array(), true)) { $motif = ''; }
 		$in = array('delivery' => $val('delivery'), 'amount' => $val('amount_choice') === 'custom' ? $val('amount_custom') : $val('amount_choice'), 'motif' => $motif, 'recipient' => $val('recipient'), 'from' => $val('from'), 'message' => $val('message'),
 			'name' => $val('name'), 'email' => $val('email'), 'phone' => $val('phone'), 'ship_name' => $val('ship_name'), 'ship_street' => $val('ship_street'), 'ship_zip' => $val('ship_zip'), 'ship_city' => $val('ship_city'),
-			'crop_x' => $val('crop_x', '500'), 'crop_y' => $val('crop_y', '500'), 'crop_z' => $val('crop_z', '1000'),
+			'crop_x' => $val('crop_x', '500'), 'crop_y' => $val('crop_y', '500'), 'crop_z' => $val('crop_z', '1000'), 'idem' => $val('idem'),
 			'terms' => $val('terms') === '1', 'consent' => $val('consent') === '1');
 		$r = gv_order_create($in);
+		if ($r['ok'] && !empty($r['again'])) { header('Location: '.gv_order_again_url($r['order'])); exit; }   // the form was sent twice: to the first order
 		if ($r['ok']) {
 			$p = gv_order_pay_start($r['order'], shop_base_url());
 			if ($p['ok']) { header('Location: '.$p['url']); exit; }
@@ -82,6 +83,7 @@ gv_page_head('Gutschein verschenken', 'gv-shell');
 			<input type="hidden" name="do" value="order"/>
 			<input type="hidden" name="crop_x" id="gv-crop-hx" value="<?php echo $h($val('crop_x', '500')); ?>"/><input type="hidden" name="crop_y" id="gv-crop-hy" value="<?php echo $h($val('crop_y', '500')); ?>"/><input type="hidden" name="crop_z" id="gv-crop-hz" value="<?php echo $h($val('crop_z', '1000')); ?>"/>
 			<input type="hidden" name="token" value="<?php echo $h($_SESSION['shop_token']); ?>"/>
+			<input type="hidden" name="idem" value="<?php echo $h(bin2hex(random_bytes(16))); ?>"/>
 			<input type="text" name="website" class="gv-trap" tabindex="-1" autocomplete="off" aria-hidden="true"/>
 
 			<fieldset class="co-sec">

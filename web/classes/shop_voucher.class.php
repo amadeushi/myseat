@@ -59,6 +59,10 @@ function gv_schema($db, $opts) {
 		mysqli_query($db, "ALTER TABLE ".fb_t('tp_gv_orders')." ADD `crop_y` SMALLINT NOT NULL DEFAULT 500");
 		mysqli_query($db, "ALTER TABLE ".fb_t('tp_gv_orders')." ADD `crop_z` SMALLINT NOT NULL DEFAULT 1000");
 	}
+	// idempotency key of the order form (a hidden field with a random value per page shown): the same key never makes a second order, and so never a second numbered voucher (double tap, "send form again" after the back button)
+	if (!fb_rows("SHOW COLUMNS FROM ".fb_t('tp_gv_orders')." LIKE 'idem'")) {
+		mysqli_query($db, "ALTER TABLE ".fb_t('tp_gv_orders')." ADD `idem` CHAR(32) NULL, ADD UNIQUE KEY `idem` (`idem`)");
+	}
 	// postcard by EchtPost (echtpost.class.php): state (sending, queued, sent, error, unclear, canceled), motive id and card id there, the last error, time of the last step
 	if (!fb_rows("SHOW COLUMNS FROM ".fb_t('tp_gv_orders')." LIKE 'ep_state'")) {
 		mysqli_query($db, "ALTER TABLE ".fb_t('tp_gv_orders')." ADD `ep_state` VARCHAR(10) NULL");
