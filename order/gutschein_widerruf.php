@@ -55,8 +55,8 @@ gv_page_head('Vertrag widerrufen');
 		<?php if ($err !== ''): ?><p class="gv-err" role="alert"><?php echo $h($err); ?></p><?php endif; ?>
 		<form method="post" action="gutschein_widerruf.php">
 			<input type="hidden" name="do" value="check"/><input type="hidden" name="token" value="<?php echo $h($_SESSION['shop_token']); ?>"/>
-			<label class="co-f">Bestellnummer (z. B. G00042)<input type="text" name="number" maxlength="16" autocapitalize="characters" autocomplete="off" required/></label>
-			<label class="co-f">E-Mail-Adresse der Bestellung<input type="email" name="email" maxlength="160" autocomplete="email" required/></label>
+			<label class="co-f">Bestellnummer (z. B. G00042)<input type="text" name="number" maxlength="16" autocapitalize="characters" autocomplete="off" enterkeyhint="next" required/></label>
+			<label class="co-f">E-Mail-Adresse der Bestellung<input type="email" name="email" maxlength="160" autocomplete="email" enterkeyhint="go" required/></label>
 			<button type="submit" class="cart-go">Weiter</button>
 		</form>
 	<?php endif; ?>

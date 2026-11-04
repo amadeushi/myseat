@@ -52,6 +52,12 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-05 == mySeat v6.69.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geprüft (Gutscheinshop, UI/UX-Review mobil, 390 px): Bestellformular, Statusseite, Karte hinter dem QR-Code, Widerruf; Kontrast, Schriftgrößen, Beschriftungen, Überbreite, versteckte Elemente. Keine Kontrast-, Beschriftungs- oder Überbreite-Fehler; die Felder sind 48 px hoch mit 16 px Schrift, Auswahlkarten und Bedingungs-Haken haben große Tippflächen.
+ * Behoben: Der Bereich zum Verschieben des eigenen Bildes (Hinweis "Ziehe dein Bild in der Vorschau ..." und drei Regler) war seit v6.65.0 auch bei den Standardmotiven sichtbar, obwohl er dort nichts tut. Grund: Die Anzeige "display: grid" überschrieb das Attribut "hidden". Jetzt erscheint er nur noch, wenn ein eigenes Bild gewählt ist.
+ * Geändert (Formular): Name und E-Mail stehen auf dem Handy untereinander statt nebeneinander (eine Adresse passt nicht in die halbe Breite); die drei Regler zum Verschieben des eigenen Bildes sind 44 px hoch (vorher 32 px); der Link "Vertrag widerrufen" im Text hat eine größere Trefferfläche; die Tastatur zeigt bei den Feldern "Weiter", "Fertig" oder "Los" (enterkeyhint), das Telefonfeld öffnet die Telefontastatur.
+
 2026-11-05 == mySeat v6.69.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geprüft (Webshop, UI/UX-Review mobil, 390 px): Shop-Seite, Warenkorb, Produktdialog, Kasse und Statusseite gegen Kontrast (WCAG 4,5:1 bzw. 3:1), Schriftgrößen (nichts unter 12 px), Beschriftung aller Felder und Knöpfe, Bild-Alt-Texte, Tippflächen und waagerechte Überbreite. Ergebnis: keine Kontrast-, Beschriftungs- oder Überbreite-Fehler; die Felder der Kasse sind 48 px hoch mit 16 px Schrift (kein Zoomen am iPhone) und haben die richtigen Autofill-Werte.

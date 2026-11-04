@@ -96,7 +96,7 @@ gv_page_head('Gutschein verschenken', 'gv-shell');
 				</div>
 				<div class="gv-custom" id="gv-custom" <?php echo $chosenAmount === 'custom' ? '' : 'hidden'; ?>>
 					<label for="gv-amount-custom">Betrag in vollen Euro (<?php echo (int)($gv_cfg['min'] / 100); ?> bis <?php echo (int)($gv_cfg['max'] / 100); ?>)</label>
-					<input type="text" id="gv-amount-custom" name="amount_custom" inputmode="numeric" maxlength="4" autocomplete="off" value="<?php echo $h($val('amount_custom')); ?>" class="<?php echo trim($errCls('amount')); ?>"/> <span>€</span>
+					<input type="text" id="gv-amount-custom" name="amount_custom" inputmode="numeric" enterkeyhint="done" maxlength="4" autocomplete="off" value="<?php echo $h($val('amount_custom')); ?>" class="<?php echo trim($errCls('amount')); ?>"/> <span>€</span>
 				</div>
 				<p class="co-hint">Du musst nicht alles auf einmal einlösen. Was übrig bleibt, bleibt auf dem Gutschein.</p>
 			</fieldset>
@@ -127,8 +127,8 @@ gv_page_head('Gutschein verschenken', 'gv-shell');
 			<fieldset class="co-sec">
 				<legend>Was soll draufstehen?</legend>
 				<div class="co-grid">
-					<label class="co-f">Für wen? (optional)<input type="text" name="recipient" id="gv-recipient" maxlength="80" autocomplete="off" value="<?php echo $h($val('recipient')); ?>"/></label>
-					<label class="co-f">Von wem? (optional)<input type="text" name="from" id="gv-from" maxlength="80" autocomplete="off" value="<?php echo $h($val('from')); ?>"/></label>
+					<label class="co-f">Für wen? (optional)<input type="text" name="recipient" id="gv-recipient" maxlength="80" autocomplete="off" enterkeyhint="next" value="<?php echo $h($val('recipient')); ?>"/></label>
+					<label class="co-f">Von wem? (optional)<input type="text" name="from" id="gv-from" maxlength="80" autocomplete="off" enterkeyhint="next" value="<?php echo $h($val('from')); ?>"/></label>
 					<label class="co-f wide">Ein paar Worte (optional)<textarea name="message" id="gv-message" maxlength="160" rows="3" placeholder="z. B. Zum 40.: Such dir was aus, wir sehen uns dort."><?php echo $h($val('message')); ?></textarea><span class="gv-count" id="gv-count" aria-hidden="true">0 / 160</span></label>
 				</div>
 			</fieldset>
@@ -143,9 +143,9 @@ gv_page_head('Gutschein verschenken', 'gv-shell');
 			<fieldset class="co-sec">
 				<legend>Wer schenkt?</legend>
 				<div class="co-grid">
-					<label class="co-f">Name<input type="text" name="name" autocomplete="name" maxlength="80" required value="<?php echo $h($val('name')); ?>" class="<?php echo trim($errCls('name')); ?>"/></label>
-					<label class="co-f">E-Mail<input type="email" name="email" autocomplete="email" maxlength="160" required value="<?php echo $h($val('email')); ?>" class="<?php echo trim($errCls('email')); ?>"/></label>
-					<label class="co-f wide">Telefon (optional, falls wir etwas klären müssen)<input type="tel" name="phone" autocomplete="tel" maxlength="40" value="<?php echo $h($val('phone')); ?>"/></label>
+					<label class="co-f gv-sm-wide">Name<input type="text" name="name" autocomplete="name" enterkeyhint="next" maxlength="80" required value="<?php echo $h($val('name')); ?>" class="<?php echo trim($errCls('name')); ?>"/></label>
+					<label class="co-f gv-sm-wide">E-Mail<input type="email" name="email" autocomplete="email" enterkeyhint="next" maxlength="160" required value="<?php echo $h($val('email')); ?>" class="<?php echo trim($errCls('email')); ?>"/></label>
+					<label class="co-f wide">Telefon (optional, falls wir etwas klären müssen)<input type="tel" name="phone" inputmode="tel" autocomplete="tel" enterkeyhint="done" maxlength="40" value="<?php echo $h($val('phone')); ?>"/></label>
 				</div>
 				<div class="co-grid gv-ship" id="gv-ship" <?php echo $delivery === 'post' ? '' : 'hidden'; ?>>
 					<label class="co-f wide">Name auf dem Umschlag<input type="text" name="ship_name" autocomplete="shipping name" maxlength="80" value="<?php echo $h($val('ship_name')); ?>" class="<?php echo trim($errCls('ship_name')); ?>"/></label>
@@ -176,8 +176,8 @@ gv_page_head('Gutschein verschenken', 'gv-shell');
 			<form method="post" action="gutschein.php#gv-howto-h" class="gv-balance" style="margin-top:14px">
 				<input type="hidden" name="do" value="balance"/><input type="hidden" name="token" value="<?php echo $h($_SESSION['shop_token']); ?>"/>
 				<div class="co-grid" style="max-width:520px">
-					<label class="co-f">Gutscheinnummer<input type="text" name="number" maxlength="30" autocapitalize="characters" autocomplete="off" value="<?php echo $h($balanceNo !== '' ? $balanceNo : $scanned); ?>"/></label>
-					<label class="co-f">Sicherheitscode<input type="text" name="code" maxlength="12" autocapitalize="characters" autocomplete="off"/></label>
+					<label class="co-f">Gutscheinnummer<input type="text" name="number" maxlength="30" autocapitalize="characters" autocomplete="off" enterkeyhint="next" value="<?php echo $h($balanceNo !== '' ? $balanceNo : $scanned); ?>"/></label>
+					<label class="co-f">Sicherheitscode<input type="text" name="code" maxlength="12" autocapitalize="characters" autocomplete="off" enterkeyhint="go"/></label>
 				</div>
 				<button type="submit" class="gb-btn" style="margin-top:12px">Guthaben prüfen</button>
 				<?php if ($balanceErr !== ''): ?><p class="gv-err" role="alert" style="margin-top:12px"><?php echo $h($balanceErr); ?></p><?php endif; ?>

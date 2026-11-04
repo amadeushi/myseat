@@ -40,7 +40,7 @@
 .gv-form textarea { width: 100%; min-height: 84px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface-2); color: var(--text); font: inherit; font-size: 16px; padding: 12px 14px; resize: vertical; }
 .gv-form textarea:focus { border-color: var(--gold); outline: none; box-shadow: 0 0 0 2px rgba(201, 162, 89, 0.3); }
 .gv-count { font-size: 12px; color: var(--text-muted); text-align: right; }
-.gv-ship[hidden], .gv-lapse[hidden], .gv-custom[hidden], .gv-sum-row[hidden] { display: none; }
+.gv-ship[hidden], .gv-lapse[hidden], .gv-custom[hidden], .gv-sum-row[hidden], .gv-crop[hidden] { display: none; }
 .gv-sum { margin-top: 20px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-2); }
 .gv-sum-row { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--text-muted); padding: 2px 0; }
 .gv-sum-row.is-total { margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--border-soft); color: var(--text); font-size: 20px; font-family: var(--font-display); font-weight: 500; }
@@ -105,7 +105,12 @@
 .gv-crop { margin: 0 0 12px; display: grid; gap: 4px; }
 .gv-crop-hint { font-size: 14px; color: var(--text-muted); margin: 0 0 4px; }
 .gv-crop-row { display: grid; grid-template-columns: 7.5em 1fr; align-items: center; gap: 10px; min-height: 44px; font-size: 15px; }
-.gv-crop-row input[type="range"] { width: 100%; min-height: 32px; accent-color: var(--gold-strong); }
+.gv-crop-row input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--gold-strong); }
 .gv-crop .gv-side-btn { justify-self: start; margin-top: 4px; }
 .gv-prev-frame.is-draggable { cursor: grab; touch-action: none; }
 .gv-prev-frame.is-draggable:active { cursor: grabbing; }
+
+/* UI/UX review: name and e-mail one under the other on a phone (an address does not fit into half the width), and the inline legal link reacts on a taller area */
+@media (max-width: 520px) { .co-f.gv-sm-wide { grid-column: 1 / -1; } }
+.gv-legal a { position: relative; }
+.gv-legal a::after { content: ''; position: absolute; inset: -14px -6px; }
