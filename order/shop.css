@@ -339,7 +339,7 @@
 
 /* order status */
 .st-wrap { max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
-.st-title { font-family: var(--font-display); font-weight: 400; font-size: 40px; line-height: 1.1; margin: 8px 0 8px; text-wrap: balance; }
+.st-title { font-family: var(--font-display); font-weight: 400; font-size: clamp(30px, 8.2vw, 40px); line-height: 1.12; margin: 8px 0 8px; text-wrap: balance; }   /* 32 px on a phone: "Danke, deine Bestellung / ist eingegangen" in two lines instead of three */
 /* failed/cancelled and delivered used to render through the exact same title styling as every other status -
    the hardest and the happiest moments on this page now get the same Ampel-set accent used elsewhere (.st-warn) */
 .st-zeus-head { display: block; width: 72px; height: 72px; margin: 6px 0 12px; }
