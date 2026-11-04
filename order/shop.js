@@ -12,7 +12,16 @@
 	function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 	// a name of a choice: a line may break after a slash ("Schweinefleisch/Hähnchenfleisch"), never in the middle of a word
 	function brk(s) { return esc(s).replace(/\//g, '/&#8203;'); }
-	function toast(t) { var el = $('#shop-toast'); el.textContent = t; el.classList.add('is-on'); clearTimeout(toast.t); toast.t = setTimeout(function () { el.classList.remove('is-on'); }, 1800); }
+	// a short message; with act = { label, fn } it carries a button ("Rückgängig") and stays longer. Instead of asking "are you sure?" first, the action happens and can be taken back.
+	function toast(t, act) {
+		var el = $('#shop-toast'); el.textContent = t; el.classList.remove('has-act');
+		if (act && act.fn) {
+			var b = document.createElement('button'); b.type = 'button'; b.className = 'shop-toast-act'; b.textContent = act.label || 'Rückgängig';
+			b.addEventListener('click', function () { clearTimeout(toast.t); el.classList.remove('is-on', 'has-act'); act.fn(); });
+			el.appendChild(b); el.classList.add('has-act');
+		}
+		el.classList.add('is-on'); clearTimeout(toast.t); toast.t = setTimeout(function () { el.classList.remove('is-on'); }, act ? 6000 : 1800);
+	}
 
 	// ---- storage
 	function load() {
@@ -310,6 +319,24 @@
 		if (hit) { hit.qty = Math.min(50, hit.qty + l.qty); } else { state.cart.push(l); }
 		save(); renderCart(); toast('Zum Warenkorb hinzugefügt');
 	}
+	// taking lines out: no "are you sure?", the toast offers to take it back (the lines come back where they were, or join an equal line that was added meanwhile)
+	function restoreLines(lines, at) {
+		lines.forEach(function (l, n) {
+			var k = lineKey(l), hit = state.cart.filter(function (x) { return lineKey(x) === k; })[0];
+			if (hit) { hit.qty = Math.min(50, hit.qty + l.qty); } else { state.cart.splice(Math.min(at + n, state.cart.length), 0, l); }
+		});
+		save(); renderCart();
+	}
+	function removeLine(i) {
+		var taken = state.cart.splice(i, 1)[0]; if (!taken) { return; }
+		state.noteEdit = null; save(); renderCart();
+		toast('„' + taken.title + '“ entfernt', { label: 'Rückgängig', fn: function () { restoreLines([taken], i); } });
+	}
+	function clearCart() {
+		var all = state.cart.slice(); if (!all.length) { return; }
+		state.cart = []; state.noteEdit = null; save(); renderCart(); cartOpen(false);
+		toast('Warenkorb geleert', { label: 'Rückgängig', fn: function () { restoreLines(all, 0); } });
+	}
 	// a changed line may now equal another one: they become one line with the sum of the amounts
 	function replaceLine(i, l) {
 		state.cart[i] = l;
@@ -546,7 +573,7 @@
 	}
 	function renderGroupCart(box, sub, min, below) {
 		var v = state.gv;
-		if (!v) { box.innerHTML = '<p class="cart-empty">Der gemeinsame Warenkorb wird geladen ...</p>'; return; }
+		if (!v) { box.innerHTML = '<div role="status" aria-busy="true"><span class="sk sk-line" aria-hidden="true"></span><span class="sk sk-block" aria-hidden="true"></span><span class="sk sk-block" aria-hidden="true"></span><span class="sr-only">Der gemeinsame Warenkorb wird geladen</span></div>'; return; }
 		var done = v.status === 'ordered', locked = v.status === 'locked', np = v.members.length;
 		var h = '<div class="gb-head"><p class="gb-kicker">Gemeinsame Bestellung</p><p class="gb-who">' + (v.owner ? 'Du bestellst und bezahlst. ' : esc(v.owner_name) + ' bestellt und bezahlt. ') + np + (np === 1 ? ' Person ist dabei.' : ' Personen sind dabei.') + '</p>';
 		if (!done) { h += '<label class="gb-link"><span>Link zum Teilen</span><input type="text" readonly value="' + esc(gLink()) + '" data-gb-link/></label><button type="button" class="gb-btn" data-gb-share>Link teilen</button>'; }
@@ -588,7 +615,66 @@
 	}
 	document.addEventListener('focusin', function (ev) { if (ev.target && ev.target.matches && ev.target.matches('[data-gb-link]')) { ev.target.select(); } });
 
-	function cartOpen(on) { var c = $('#shop-cart'); if (c) { c.classList.toggle('is-open', on); document.documentElement.style.overflow = on ? 'hidden' : ''; } }
+	// ---- sheets (the cart and the dialogs): the back gesture of the phone closes the top sheet instead of leaving the shop, and a swipe down on the head of a sheet dismisses it
+	var layers = [], skipPop = 0, REDUCE = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+	try { if (history.state && history.state.amLayer) { history.replaceState(null, ''); } } catch (e) {}   // a reload keeps the mark of an open sheet that is gone now
+	function layerOpened(el, close) {
+		if (layers.some(function (l) { return l.el === el; })) { return; }
+		layers.push({ el: el, close: close });
+		try { history.pushState({ amLayer: layers.length }, ''); } catch (e) {}
+	}
+	function layerClosed(el) {
+		var i = -1; layers.forEach(function (l, n) { if (l.el === el) { i = n; } });
+		if (i < 0) { return; }   // closed by the back gesture itself
+		layers.splice(i, 1);
+		if (history.state && history.state.amLayer) { skipPop++; try { history.back(); } catch (e) { skipPop--; } }
+	}
+	window.addEventListener('popstate', function () {
+		if (skipPop > 0) { skipPop--; return; }
+		var top = layers.pop(); if (top) { top.close(); }
+	});
+	function cartSet(on) { var c = $('#shop-cart'); if (c) { c.classList.toggle('is-open', on); document.documentElement.style.overflow = on ? 'hidden' : ''; } }
+	function cartOpen(on) {
+		var c = $('#shop-cart'); if (!c) { return; }
+		cartSet(on);
+		if (on) { layerOpened(c, function () { cartSet(false); }); } else { layerClosed(c); }
+	}
+	$$('dialog').forEach(function (d) {
+		new MutationObserver(function () { if (d.open) { layerOpened(d, function () { try { d.close(); } catch (e) {} }); } }).observe(d, { attributes: true, attributeFilter: ['open'] });
+		d.addEventListener('close', function () { layerClosed(d); });
+	});
+	// swipe down on the head of a sheet (phone width, finger or pen): the sheet follows the finger, a long or fast swipe dismisses it, otherwise it springs back
+	(function () {
+		var HEAD = '.cart-head, .pd-head, .acc-head, .pz-top', drag = null, narrow = window.matchMedia ? window.matchMedia('(max-width: 700px)') : null;
+		function sheetOf(head) { return head.closest('#shop-cart, dialog'); }
+		function dismiss(sh) { if (sh.id === 'shop-cart') { cartOpen(false); } else { try { sh.close(); } catch (e) {} } }
+		document.addEventListener('pointerdown', function (ev) {
+			if (ev.pointerType === 'mouse' || !ev.isPrimary || !narrow || !narrow.matches) { return; }
+			var head = ev.target.closest && ev.target.closest(HEAD); if (!head || ev.target.closest('button, a, input, select, textarea, label')) { return; }
+			var sh = sheetOf(head); if (!sh || (sh.id === 'shop-cart' ? !sh.classList.contains('is-open') : !sh.open)) { return; }
+			drag = { id: ev.pointerId, sh: sh, y0: ev.clientY, t0: ev.timeStamp, dy: 0 };
+			try { head.setPointerCapture(ev.pointerId); } catch (e) {}
+		});
+		document.addEventListener('pointermove', function (ev) {
+			if (!drag || ev.pointerId !== drag.id) { return; }
+			drag.dy = Math.max(0, ev.clientY - drag.y0);
+			drag.sh.style.transition = 'none'; drag.sh.style.transform = 'translateY(' + drag.dy + 'px)';
+		});
+		function end(ev) {
+			if (!drag || ev.pointerId !== drag.id) { return; }
+			var d = drag, sh = d.sh; drag = null;
+			var fast = d.dy / Math.max(1, ev.timeStamp - d.t0), away = ev.type !== 'pointercancel' && (d.dy > 120 || (d.dy > 40 && fast > 0.6));
+			sh.style.transition = REDUCE ? 'none' : 'transform 200ms cubic-bezier(.16,1,.3,1)';
+			sh.style.transform = away ? 'translateY(100%)' : '';
+			setTimeout(function () { sh.style.transition = ''; sh.style.transform = ''; if (away) { dismiss(sh); } }, REDUCE || !d.dy ? 0 : 210);
+		}
+		document.addEventListener('pointerup', end); document.addEventListener('pointercancel', end);
+	})();
+	// the soft first impression of a dish picture (a tiny copy as background, see order/index.php) goes away once the real picture is there, so pictures with transparent parts stay clean
+	$$('.shop-item-img').forEach(function (im) {
+		function clearBg() { im.style.backgroundImage = 'none'; }
+		if (im.complete && im.naturalWidth) { clearBg(); } else { im.addEventListener('load', clearBg, { once: true }); im.addEventListener('error', clearBg, { once: true }); }
+	});
 	document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') { var c = $('#shop-cart'); if (c && c.classList.contains('is-open')) { cartOpen(false); } } });
 
 	var dlg = $('#product-dialog');
@@ -867,13 +953,10 @@
 			return;
 		}
 		var clr = t.closest('[data-clear]');
-		if (clr) {
-			if (!clr.dataset.armed) { clr.dataset.armed = '1'; clr.textContent = 'Wirklich alles entfernen?'; setTimeout(function () { clr.dataset.armed = ''; clr.textContent = 'Warenkorb leeren'; }, 4000); return; }
-			state.cart = []; save(); renderCart(); cartOpen(false); return;
-		}
+		if (clr) { clearCart(); return; }
 		var q = t.closest('.qty-btn[data-i]');
-		if (q) { var l = state.cart[+q.dataset.i]; l.qty += +q.dataset.d; if (l.qty <= 0) { state.cart.splice(+q.dataset.i, 1); state.noteEdit = null; } save(); renderCart(); return; }
-		var rm = t.closest('.cart-remove'); if (rm) { state.cart.splice(+rm.dataset.i, 1); state.noteEdit = null; save(); renderCart(); }
+		if (q) { var l = state.cart[+q.dataset.i]; l.qty += +q.dataset.d; if (l.qty <= 0) { l.qty = 1; removeLine(+q.dataset.i); return; } save(); renderCart(); return; }
+		var gone = t.closest('.cart-remove'); if (gone) { removeLine(+gone.dataset.i); }
 	});
 
 	document.addEventListener('input', function (ev) { if (ev.target.matches && ev.target.matches('textarea[data-cn]')) { state.noteDraft = ev.target.value; } });

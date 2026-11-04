@@ -33,6 +33,7 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 	<?php if ($acc_on): ?><link rel="stylesheet" href="stempel.css?v=<?php echo @filemtime(__DIR__.'/stempel.css'); ?>"/><link rel="stylesheet" href="konto.css?v=<?php echo @filemtime(__DIR__.'/konto.css'); ?>"/><?php endif; ?>
 <link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
+	<script type="speculationrules">{"prerender":[{"where":{"selector_matches":"a[href='checkout.php']"},"eagerness":"moderate"}]}</script>
 </head>
 <body class="shop-shell" data-token="<?php echo shop_h($_SESSION['shop_token']); ?>" data-accepting="<?php echo $shop_accepting ? '1' : '0'; ?>" data-account="<?php echo $acc_on ? '1' : '0'; ?>" data-stamp="<?php $sc = shop_stamp_cfg(); echo ($acc_on && $sc['on']) ? (int)$sc['percent'] : 0; ?>">
 <?php if (!$shop_public): ?>
@@ -127,7 +128,7 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 							<?php if (trim($p['description']) !== ''): ?><p><?php echo shop_h($p['description']); ?></p><?php endif; ?>
 							<?php $dm = array_filter(explode(',', (string)$p['diet'])); if ($dm): ?><p class="shop-diet"><?php if (in_array('vegan', $dm, true)): ?><span>vegan</span><?php elseif (in_array('veg', $dm, true)): ?><span>vegetarisch</span><?php endif; ?><?php if (in_array('spicy', $dm, true)): ?><span class="is-spicy">scharf</span><?php endif; ?></p><?php endif; ?>
 						</div>
-						<?php if ($p['image_url'] !== ''): ?><?php $t240 = shop_img_thumb($p['image_url'], 240); $t480 = shop_img_thumb($p['image_url'], 480); ?><img class="shop-item-img" src="<?php echo shop_h($t240); ?>"<?php if ($t240 !== $p['image_url']): ?> srcset="<?php echo shop_h($t240); ?> 240w, <?php echo shop_h($t480); ?> 480w" sizes="(min-width: 1024px) 96px, 80px"<?php endif; ?> alt="" loading="lazy" decoding="async" width="80" height="80"/><?php endif; ?>
+						<?php if ($p['image_url'] !== ''): ?><?php $t240 = shop_img_thumb($p['image_url'], 240); $t480 = shop_img_thumb($p['image_url'], 480); $lq = shop_img_lqip($p['image_url']); ?><img class="shop-item-img"<?php if ($lq !== ''): ?> style="background-image:url(<?php echo shop_h($lq); ?>)"<?php endif; ?> src="<?php echo shop_h($t240); ?>"<?php if ($t240 !== $p['image_url']): ?> srcset="<?php echo shop_h($t240); ?> 240w, <?php echo shop_h($t480); ?> 480w" sizes="(min-width: 1024px) 96px, 80px"<?php endif; ?> alt="" loading="lazy" decoding="async" width="80" height="80"/><?php endif; ?>
 						<div class="shop-item-buy">
 							<span class="shop-price"><?php echo ($choices && (int)$p['nvar'] > 0) ? 'ab ' : ''; ?><?php echo shop_money($from); ?></span>
 							<?php $conf = !empty($p['configurator']); $sn = ((int)$p['configurator'] === 3); ?>

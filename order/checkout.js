@@ -369,8 +369,12 @@
 		}, 500);
 	}
 	function loadSlots() {
+		var whenBox = $('#co-when');
+		if (whenBox) { whenBox.setAttribute('aria-busy', 'true'); whenBox.innerHTML = '<span class="sk sk-line" aria-hidden="true"></span><span class="sk sk-line is-short" aria-hidden="true"></span>'; }
+		function slotsFailed() { if (whenBox) { whenBox.removeAttribute('aria-busy'); whenBox.innerHTML = '<p class="co-zone bad">Die Zeiten konnten nicht geladen werden. Bitte lade die Seite neu.</p>'; } }
 		fetch('api.php?op=slots&kind=' + S.mode, { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) {
-			if (!r.ok) { return; }
+			if (whenBox) { whenBox.removeAttribute('aria-busy'); }
+			if (!r.ok) { slotsFailed(); return; }
 			S.slots = r;
 			if (r.asap && !S.whenTouched) { S.when = 'asap'; } else if (!r.asap) { S.when = 'slot'; }
 			var h = '';
@@ -384,7 +388,7 @@
 			$('#co-when').innerHTML = h;
 			fillTimes();
 			updateSubmit();
-		});
+		}).catch(slotsFailed);
 	}
 	function fillTimes() {
 		var day = $('select[name=day]'), time = $('select[name=time]'); if (!day || !time || !S.slots) { return; }
@@ -477,6 +481,14 @@
 	$('#co-tip-custom-in').addEventListener('input', function () { S.tipCustom = this.value; renderSummary(); });
 	$('#co-coupon-in').addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); applyCoupon(this.value, false); } });
 	if ($('#co-gv-code')) { $('#co-gv-code').addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); applyGv(); } }); }
+	// one key per order attempt: when the answer gets lost and the guest taps again (or taps twice), the server answers with the order it already made instead of making a second one.
+	// An answer of the server ("not possible") ends the attempt, the next one gets a new key.
+	function newIdem() { var a = new Uint8Array(16); try { crypto.getRandomValues(a); } catch (e) { for (var i = 0; i < 16; i++) { a[i] = Math.floor(Math.random() * 256); } } return Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join(''); }
+	S.idem = newIdem();
+	// the browser may have prerendered this page while the guest was still in the cart: when the cart changed since, start over with the current one
+	function cartSnapshot() { try { return (localStorage.getItem(KEY) || '') + '|' + (localStorage.getItem(GKEY) || ''); } catch (e) { return ''; } }
+	var cartAtLoad = cartSnapshot();
+	document.addEventListener('prerenderingchange', function () { if (cartSnapshot() !== cartAtLoad) { location.reload(); } });
 	form.addEventListener('submit', function (ev) {
 		ev.preventDefault();
 		var err = $('#co-error'); err.textContent = '';
@@ -496,12 +508,13 @@
 		remember();
 		S.busy = true; updateSubmit(); $('#co-submit').textContent = 'Einen Moment ...';
 		post('create', {
+			idem: S.idem,
 			type: S.mode, when: when, payment: S.pay, tip: tipCents(), name: f.name.value, phone: f.phone.value, email: f.email.value, note: f.note.value, nl_news: f.nl_news.checked ? 1 : 0, nl_stamps: f.nl_stamps.checked ? 1 : 0,
 			street: f.street.value, zip: f.zip.value, city: f.city.value, words: S.zoneWords, address_note: f.address_note.value, website: f.website.value, coupon: S.coupon ? S.coupon.code : '', gv_number: S.gv ? S.gv.number : '', gv_code: S.gv ? S.gv.code : '', extra: S.extra,
 			lines: S.cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; }),
 			group: S.group ? S.group.token : '', me: S.group ? S.group.me : '', rev: S.group ? (S.group.rev || '') : ''
 		}).then(function (r) {
-			if (!r.ok) { var msg = r.error || 'Das hat nicht geklappt.'; err.textContent = msg; S.busy = false; updateSubmit(); $('#co-why').textContent = msg; err.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); return; }
+			if (!r.ok) { S.idem = newIdem(); var msg = r.error || 'Das hat nicht geklappt.'; err.textContent = msg; S.busy = false; updateSubmit(); $('#co-why').textContent = msg; err.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); return; }
 			try {
 				if (S.group) { localStorage.removeItem(GKEY); } // the shared basket is done; the own cart stays as it was
 				else { var d = JSON.parse(localStorage.getItem(KEY) || '{}'); d.cart = []; localStorage.setItem(KEY, JSON.stringify(d)); }

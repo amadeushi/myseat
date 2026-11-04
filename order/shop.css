@@ -889,3 +889,33 @@ body.co-quick-on #co-paysec > legend, body.co-quick-on #co-paysec .co-askhint, b
 .dv .cart-go.is-off, .dv .cart-go.is-off:hover { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
 .dv .dv-platform { margin: 10px 0 0; color: var(--text-muted); font-size: 15px; }
 .dv .dv-here-msg.is-hint { color: var(--text-muted); }
+
+/* ---- details: undo toast, sheet grabber, tap areas, skeleton, picture placeholder, balanced headlines, view transitions between the pages */
+.shop-toast.has-act { display: flex; align-items: center; gap: 4px; padding: 4px 6px 4px 18px; }
+.shop-toast.has-act.is-on { pointer-events: auto; }
+.shop-toast-act { min-height: 44px; padding: 0 14px; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--gold); font: inherit; font-weight: 700; cursor: pointer; }
+.shop-cart { overscroll-behavior: contain; }
+@media (max-width: 700px) {
+	.cart-head, .pd-head, .acc-head, .pz-top { touch-action: none; }
+	.pd-head { position: relative; }
+	.cart-head::before, .pd-head::before { content: ''; position: absolute; top: 6px; left: 50%; width: 40px; height: 4px; margin-left: -20px; border-radius: 2px; background: var(--border); }
+}
+/* the small round buttons of the amount keep their look, the area that reacts to a tap is 44 px */
+.pd-chip.has-step .qty-btn { position: relative; }
+.pd-chip.has-step .qty-btn::after { content: ''; position: absolute; inset: -4px; }
+/* a tiny copy of the picture (inline, see order/index.php) shows as a soft first impression until the real picture is there */
+.shop-item-img { background-color: var(--surface-2); background-size: cover; background-position: center; }
+/* skeleton: the shape of what is coming instead of a text */
+.sk { display: block; border-radius: var(--radius-md); background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%); background-size: 200% 100%; animation: sk-shimmer 1.4s ease-in-out infinite; }
+.sk-line { height: 16px; margin: 12px 0; }
+.sk-line.is-short { width: 45%; }
+.sk-block { height: 64px; margin: 12px 0; }
+@keyframes sk-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+.shop-shell h1, .shop-shell h2, .shop-shell h3, .shop-dialog h2, .gb-dialog h2, .gb-dialog h3, .pz h2, .pz h3 { text-wrap: balance; }
+@media (prefers-reduced-motion: no-preference) {
+	@view-transition { navigation: auto; }
+	::view-transition-old(root), ::view-transition-new(root) { animation-duration: 160ms; }
+}
+/* with the cart open there is no cart bar to keep clear: the toast sits at the very bottom and leaves the button of the cart free */
+html:has(.shop-cart.is-open) .shop-toast { bottom: calc(12px + env(safe-area-inset-bottom)); }

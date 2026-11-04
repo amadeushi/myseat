@@ -52,6 +52,14 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-04 == mySeat v6.68.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu (Webshop, Bestellung): Doppelklick-Schutz auf dem Server. Die Kasse schickt pro Bestellversuch einen Schlüssel mit; derselbe Schlüssel erzeugt nie eine zweite Bestellung (zwei Tipper, oder der Gast sendet noch einmal, weil die Antwort verloren ging). Der Server antwortet dann mit der ersten Bestellung, bei offener Online-Zahlung mit dem noch offenen Zahlungslink. Antwortet der Server mit "nicht möglich" oder wurde die Bestellung storniert, bekommt der nächste Versuch einen neuen Schlüssel. Neue Spalte idem in tp_shop_orders (entsteht beim ersten Aufruf).
+ * Neu (Webshop, Handy): Die Zurück-Geste schließt den Warenkorb und die Dialoge (Produkt, Konto, Pizza, Schnitzel), statt den Shop zu verlassen. Ein Wisch nach unten auf die Kopfzeile schließt sie ebenfalls (nur Finger und Stift, bis 700 px Breite); ein langer oder schneller Wisch schließt, ein kurzer federt zurück. Oben im Warenkorb und im Produktdialog sitzt dafür ein kleiner Griff.
+ * Neu (Webshop, Rückgängig): Artikel entfernen, "Warenkorb leeren" und Favoriten entfernen fragen nicht mehr nach, sondern zeigen einen Hinweis mit "Rückgängig" (6 Sekunden). Der Hinweis sitzt bei offenem Warenkorb ganz unten und verdeckt den Kassenknopf nicht.
+ * Neu (Webshop, Feinschliff): Übergang zwischen Shop, Kasse und Statusseite (View Transitions, nicht bei reduzierter Bewegung); die Kasse wird im Chrome vorgeladen, sobald man sich dem Link "Zur Kasse" nähert (Speculation Rules; die Kasse lädt neu, wenn sich der Warenkorb inzwischen geändert hat); Gerichtsbilder zeigen eine weiche Vorschau (ein 20 px breites Bild, rund 1 KB, inline), bis das echte Bild da ist; Skeleton statt Text bei den Zeiten in der Kasse und im gemeinsamen Warenkorb; "text-wrap: balance" für Überschriften im ganzen Shop; die Tippfläche der kleinen Mengenknöpfe im Produktdialog ist 44 px groß (sie sehen gleich aus).
+ * Nicht umgesetzt (bewusst): Befehlsmenü (Cmd+K), Tastenkürzel-Hinweise, Stale-while-revalidate für Speisekarte und Preise (Preise und Pausen müssen aktuell sein), Squircle-Ecken.
+
 2026-10-23 == mySeat v6.67.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu (Reservierung): "Bestätigung erneut senden" in den Reservierungsdetails. Der Gast bekommt die aktuellen Angaben per E-Mail (mit Kalenderdatei und Stornolink); hat er keine E-Mail-Adresse, aber eine Handynummer, geht eine SMS raus (wenn SMS eingeschaltet ist). Nicht möglich bei stornierten, unentschiedenen oder vergangenen Reservierungen.

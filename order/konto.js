@@ -74,6 +74,15 @@
 		b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.classList.toggle('is-on', on);
 		b.setAttribute('aria-label', title + (on ? ' aus den Favoriten entfernen' : ' als Favorit merken'));
 	}
+	// a favorite taken out comes back with one tap (the toast offers it)
+	function favBack(line) {
+		return function () {
+			api('fav_add', { line: { pid: line.pid, vid: line.vid || 0, opts: line.opts || {}, note: line.note || '' } }).then(function (r) {
+				if (!r.ok) { SH.toast(r.error || NETERR); return; }
+				me.favs = r.favs; renderFavRow(); markHearts(); if (dlg && dlg.open) { viewAccount(true); }
+			}).catch(function () { SH.toast(NETERR); });
+		};
+	}
 	function toggleFav(line) {
 		if (!signedIn()) { pending = function () { toggleFav(line); }; viewLogin('login'); openDlg(); return; }
 		var have = findFav(line);
@@ -81,7 +90,7 @@
 		p.then(function (r) {
 			if (!r.ok) { SH.toast(r.error || NETERR); return; }
 			me.favs = r.favs; renderFavRow(); markHearts();
-			SH.toast(have ? 'Aus den Favoriten entfernt' : 'Als Favorit gemerkt');
+			if (have) { SH.toast('Aus den Favoriten entfernt', { label: 'Rückgängig', fn: favBack(have.line || line) }); } else { SH.toast('Als Favorit gemerkt'); }
 		}).catch(function () { SH.toast(NETERR); });
 	}
 
@@ -296,7 +305,15 @@
 		var fc = t.closest('[data-fav-cart]');
 		if (fc) { var f1 = me.favs.filter(function (f) { return String(f.id) === fc.dataset.favCart && f.ok; })[0]; if (f1) { SH.addMany([f1.line]); SH.toast(f1.line.title + ' liegt im Warenkorb'); } return; }
 		var fd = t.closest('[data-fav-del]');
-		if (fd) { api('fav_remove', { id: +fd.dataset.favDel }).then(function (r) { if (r.ok) { me.favs = r.favs; renderFavRow(); markHearts(); viewAccount(true); } }).catch(function () { SH.toast(NETERR); }); return; }
+		if (fd) {
+			var taken = me.favs.filter(function (f) { return String(f.id) === fd.dataset.favDel; })[0];
+			api('fav_remove', { id: +fd.dataset.favDel }).then(function (r) {
+				if (!r.ok) { return; }
+				me.favs = r.favs; renderFavRow(); markHearts(); viewAccount(true);
+				if (taken && taken.line) { SH.toast('Aus den Favoriten entfernt', { label: 'Rückgängig', fn: favBack(taken.line) }); }
+			}).catch(function () { SH.toast(NETERR); });
+			return;
+		}
 		if (t.closest('[data-acc-logout-all]')) { api('logout_all').then(function () { signedOut('Du bist auf allen Geräten abgemeldet'); }).catch(function () { SH.toast(NETERR); }); return; }
 		if (t.closest('[data-acc-logout]')) { api('logout').then(function () { signedOut('Du bist abgemeldet'); }).catch(function () { SH.toast(NETERR); }); return; }
 		var del = t.closest('[data-acc-delete]');

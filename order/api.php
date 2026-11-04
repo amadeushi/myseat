@@ -325,6 +325,13 @@ if ($op === 'create') {
 	unset($body['acc_id'], $body['acc_keys']);
 	$accNow = shop_acc_current();
 	if ($accNow) { $body['acc_id'] = (int)$accNow['id']; $body['acc_keys'] = shop_acc_keys($accNow); }
+	// the same key (double tap, the guest repeats after a lost answer) never creates a second order: the first one is answered again
+	$body['idem'] = shop_idem_key(isset($body['idem']) ? $body['idem'] : '');
+	if ($body['idem'] !== '') {
+		if (!shop_idem_lock($body['idem'])) { api_out(array('ok' => false, 'error' => 'Deine Bestellung wird gerade verarbeitet. Bitte warte einen Moment.')); }
+		$again = shop_order_by_idem($body['idem']);
+		if ($again) { api_out(shop_idem_answer($again)); }
+	}
 	$r = shop_create_order($body);
 	if (!$r['ok']) { api_out(array('ok' => false, 'error' => $r['error'])); }
 	$order = $r['order'];

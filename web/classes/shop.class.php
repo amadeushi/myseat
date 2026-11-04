@@ -131,6 +131,9 @@ function shop_ensure_schema() {
 	// the drive time of this one order (minutes), set by the dispatch when the standard (setting kitchen_drive_min) does not fit: NULL = standard
 	$dcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'drive_min'");
 	if (!$dcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `drive_min` TINYINT UNSIGNED NULL"); }
+	// idempotency key of the checkout (order/checkout.js sends one per attempt): the same key never creates a second order (double tap, request repeated after a lost answer); NULL for all other orders
+	$ikcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'idem'");
+	if (!$ikcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `idem` CHAR(32) NULL, ADD UNIQUE KEY `idem` (`idem`)"); }
 	// delivery: the driver tapped "Ich bin vor Ort" (shop_driver_here_order)
 	$hcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'driver_here_at'");
 	if (!$hcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `driver_here_at` DATETIME NULL"); }
@@ -1406,11 +1409,11 @@ function shop_create_order($in) {
 	$now = date('Y-m-d H:i:s');
 	$ok = fb_exec("INSERT INTO ".fb_t('tp_shop_orders')."
 		(token, number, day_no, order_date, type, status, scheduled_at, eta_at, customer_name, phone, email, street, zip, city, address_note, lat, lng, zone_id,
-		 ip_hash, subtotal_cents, fee_cents, tip_cents, total_cents, payment_method, payment_status, note, lang, is_test, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, 'de', ?, ?, ?)",
-		'ssisssssssssss'.'sddisiiiississ', array($token, $number, $dayNo, $today, $type, $status, $scheduled, $eta, $name, $phone, $email, $street, $zip, $city, $addrNote,
+		 ip_hash, subtotal_cents, fee_cents, tip_cents, total_cents, payment_method, payment_status, note, lang, is_test, created_at, updated_at, idem)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, 'de', ?, ?, ?, ?)",
+		'ssisssssssssss'.'sddisiiiississ'.'s', array($token, $number, $dayNo, $today, $type, $status, $scheduled, $eta, $name, $phone, $email, $street, $zip, $city, $addrNote,
 			$lat === null ? 0 : $lat, $lng === null ? 0 : $lng, $zoneId === null ? 0 : $zoneId, $ip, $sub, $fee, $tip, $total, $pay,
-			mb_substr(trim((string)(isset($in['note']) ? $in['note'] : '')), 0, 500), $test, $now, $now));
+			mb_substr(trim((string)(isset($in['note']) ? $in['note'] : '')), 0, 500), $test, $now, $now, shop_idem_key(isset($in['idem']) ? $in['idem'] : '') ?: null));
 	if (!$ok) {
 		if ($coupon && !$test) { shop_coupon_unreserve($coupon['id']); }
 		if ($gvCents > 0 && !$test) { gv_refund((int)$gvV['id'], $gvCents, array(null, 'Storno'), 'Bestellung '.$number.' nicht gespeichert'); }
@@ -1756,6 +1759,29 @@ function shop_order_rate_driver($order, $rating) {
 }
 function shop_order($id) { return fb_row("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE id = ?", 'i', array((int)$id)); }
 function shop_order_by_token($token) { return fb_row("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE token = ?", 's', array((string)$token)); }
+
+// ---- idempotency of the checkout: one key per order attempt (32 hex characters from the browser)
+function shop_idem_key($v) { return (is_string($v) && preg_match('/^[a-f0-9]{32}$/', $v)) ? $v : ''; }
+// two requests with the same key at the same moment are served one after the other (the lock ends with the request), so the second one finds the order of the first
+function shop_idem_lock($key) {
+	$r = fb_row("SELECT GET_LOCK(?, 15) AS l", 's', array('shop_idem_'.$key));
+	return $r && (int)$r['l'] === 1;
+}
+// the order a key already created, or null; a cancelled one (payment failed) frees the key again so that the guest can try once more
+function shop_order_by_idem($key) {
+	if ($key === '') { return null; }
+	$o = fb_row("SELECT * FROM ".fb_t('tp_shop_orders')." WHERE idem = ?", 's', array($key));
+	if ($o && $o['status'] === 'cancelled') { fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET idem = NULL WHERE id = ?", 'i', array((int)$o['id'])); return null; }
+	return $o ?: null;
+}
+// the answer of the checkout for an order that exists already: the open online payment again, or the status page
+function shop_idem_answer($o) {
+	if ($o['payment_method'] === 'mollie' && $o['status'] === 'pending' && !empty($o['mollie_id'])) {
+		$r = shop_mollie_request('GET', '/payments/'.rawurlencode($o['mollie_id']));
+		if (in_array($r['http'], array(200, 201), true) && !empty($r['body']['_links']['checkout']['href'])) { return array('ok' => true, 'redirect' => $r['body']['_links']['checkout']['href'], 'duplicate' => true); }
+	}
+	return array('ok' => true, 'redirect' => 'status.php?t='.$o['token'], 'duplicate' => true);
+}
 function shop_order_items($id) {
 	$rows = fb_rows("SELECT * FROM ".fb_t('tp_shop_order_items')." WHERE order_id = ? ORDER BY id", 'i', array((int)$id));
 	foreach ($rows as &$r) { $r['options'] = json_decode((string)$r['options'], true) ?: array(); } unset($r);
@@ -2321,7 +2347,7 @@ function shop_img_store($bin) {
 // only needed larger. Made when the picture is stored, or on the first view for the ones that were there before; returns the address of the copy, or of the original if there is none.
 function shop_img_thumb($url, $w) {
 	$w = (int)$w; $file = shop_img_file($url);
-	if ($file === '' || !is_file($file) || $w < 40) { return $url; }
+	if ($file === '' || !is_file($file) || $w < 16) { return $url; }
 	$name = basename($file); $dir = shop_img_dir().'/t'.$w; $rel = shop_img_prefix().'t'.$w.'/'.$name;
 	if (is_file($dir.'/'.$name)) { return $rel; }
 	if (!function_exists('imagecreatefromstring')) { return $url; }
@@ -2342,7 +2368,17 @@ function shop_img_thumb($url, $w) {
 	@chmod($dir.'/'.$name, 0644);
 	return $rel;
 }
-function shop_img_thumbs_remove($name) { foreach (array(240, 480) as $w) { $f = shop_img_dir().'/t'.$w.'/'.basename($name); if (is_file($f)) { @unlink($f); } } }
+// a 20 px wide copy of a dish picture as a data address: the soft first impression while the real picture loads (order/index.php); '' when there is no local picture
+function shop_img_lqip($url) {
+	$file = shop_img_file($url);
+	if ($file === '' || !is_file($file) || shop_img_thumb($url, 20) === $url) { return ''; }
+	$path = shop_img_dir().'/t20/'.basename($file);
+	$bin = is_file($path) ? @file_get_contents($path) : false;
+	if ($bin === false || strlen($bin) > 4000) { return ''; }
+	$ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+	return 'data:'.($ext === 'webp' ? 'image/webp' : ($ext === 'png' ? 'image/png' : 'image/jpeg')).';base64,'.base64_encode($bin);
+}
+function shop_img_thumbs_remove($name) { foreach (array(20, 240, 480) as $w) { $f = shop_img_dir().'/t'.$w.'/'.basename($name); if (is_file($f)) { @unlink($f); } } }
 function shop_img_from_upload($f) {
 	if (!is_array($f) || !isset($f['error']) || $f['error'] !== UPLOAD_ERR_OK) {
 		$big = is_array($f) && isset($f['error']) && in_array($f['error'], array(UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE), true);
