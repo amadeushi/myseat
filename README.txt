@@ -52,6 +52,12 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-04 == mySeat v6.68.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Behoben (Webshop, Handy): Das Wischen zum Schließen funktionierte nur bedingt. Es griff nur auf der schmalen Kopfzeile des Warenkorbs oder Dialogs; jetzt folgt das Sheet dem Finger von überall, solange der Inhalt unter dem Finger ganz oben steht (sonst scrollt der Inhalt wie gewohnt). Gilt für Warenkorb, Produktdialog, Konto- und Gruppendialog; Pizza- und Schnitzel-Konfigurator nur über die Kopfzeile, weil sie eigene Gesten haben. Sideways-Wischen (Chip-Reihen) und Eingabefelder bleiben unberührt.
+ * Behoben (Webshop, Handy): Wurde der Warenkorb mitten in der Geste neu gezeichnet (Angebote laden nach, gemeinsamer Warenkorb ändert sich), blieb das Sheet halb heruntergezogen stehen, weil die Bewegung des Fingers die Seite nicht mehr erreichte. Die Bewegung hängt jetzt an dem Element, das zuerst berührt wurde, und eine verlorene Berührung wird beim nächsten Antippen zurückgesetzt.
+ * Geändert: Ein schneller Schlenker am Ende der Geste reicht zum Schließen (Geschwindigkeit der letzten 120 ms, nicht der ganzen Geste); der scrollende Teil des Produktdialogs zieht die Seite dahinter nicht mehr mit.
+
 2026-11-04 == mySeat v6.68.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu (Webshop, Bestellung): Doppelklick-Schutz auf dem Server. Die Kasse schickt pro Bestellversuch einen Schlüssel mit; derselbe Schlüssel erzeugt nie eine zweite Bestellung (zwei Tipper, oder der Gast sendet noch einmal, weil die Antwort verloren ging). Der Server antwortet dann mit der ersten Bestellung, bei offener Online-Zahlung mit dem noch offenen Zahlungslink. Antwortet der Server mit "nicht möglich" oder wurde die Bestellung storniert, bekommt der nächste Versuch einen neuen Schlüssel. Neue Spalte idem in tp_shop_orders (entsteht beim ersten Aufruf).

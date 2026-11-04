@@ -643,32 +643,80 @@
 		new MutationObserver(function () { if (d.open) { layerOpened(d, function () { try { d.close(); } catch (e) {} }); } }).observe(d, { attributes: true, attributeFilter: ['open'] });
 		d.addEventListener('close', function () { layerClosed(d); });
 	});
-	// swipe down on the head of a sheet (phone width, finger or pen): the sheet follows the finger, a long or fast swipe dismisses it, otherwise it springs back
+	// swipe down to dismiss a sheet (finger, phone width). The cart, the product dialog, the account dialog and the group dialog follow the finger from anywhere on the sheet as long as the content under the
+	// finger is scrolled to its top (otherwise the swipe scrolls the content, as it should); the other dialogs (pizza, schnitzel: they have gestures of their own) only from their head.
+	// A long swipe or a quick flick dismisses, a short one springs back.
 	(function () {
-		var HEAD = '.cart-head, .pd-head, .acc-head, .pz-top', drag = null, narrow = window.matchMedia ? window.matchMedia('(max-width: 700px)') : null;
-		function sheetOf(head) { return head.closest('#shop-cart, dialog'); }
+		var WHOLE = '#shop-cart, #product-dialog, #acc-dialog, #group-dialog', HEAD = '.cart-head, .pd-head, .acc-head, .pz-top', t = null,
+			narrow = window.matchMedia ? window.matchMedia('(max-width: 700px)') : null;
+		function sheetOf(el) {
+			var sh = el.closest && el.closest('#shop-cart, dialog'); if (!sh) { return null; }
+			return (sh.id === 'shop-cart' ? sh.classList.contains('is-open') : sh.open) ? sh : null;
+		}
 		function dismiss(sh) { if (sh.id === 'shop-cart') { cartOpen(false); } else { try { sh.close(); } catch (e) {} } }
-		document.addEventListener('pointerdown', function (ev) {
-			if (ev.pointerType === 'mouse' || !ev.isPrimary || !narrow || !narrow.matches) { return; }
-			var head = ev.target.closest && ev.target.closest(HEAD); if (!head || ev.target.closest('button, a, input, select, textarea, label')) { return; }
-			var sh = sheetOf(head); if (!sh || (sh.id === 'shop-cart' ? !sh.classList.contains('is-open') : !sh.open)) { return; }
-			drag = { id: ev.pointerId, sh: sh, y0: ev.clientY, t0: ev.timeStamp, dy: 0 };
-			try { head.setPointerCapture(ev.pointerId); } catch (e) {}
-		});
-		document.addEventListener('pointermove', function (ev) {
-			if (!drag || ev.pointerId !== drag.id) { return; }
-			drag.dy = Math.max(0, ev.clientY - drag.y0);
-			drag.sh.style.transition = 'none'; drag.sh.style.transform = 'translateY(' + drag.dy + 'px)';
-		});
-		function end(ev) {
-			if (!drag || ev.pointerId !== drag.id) { return; }
-			var d = drag, sh = d.sh; drag = null;
-			var fast = d.dy / Math.max(1, ev.timeStamp - d.t0), away = ev.type !== 'pointercancel' && (d.dy > 120 || (d.dy > 40 && fast > 0.6));
+		// every scrolling box between the finger and the sheet must be at its top; a box that scrolls sideways (a row of chips) keeps its own swipe
+		function atTop(el, sh) {
+			for (var n = el; n && n.nodeType === 1; n = n.parentElement) {
+				var cs = getComputedStyle(n);
+				if (/(auto|scroll)/.test(cs.overflowX) && n.scrollWidth > n.clientWidth + 1) { return false; }
+				if (/(auto|scroll)/.test(cs.overflowY) && n.scrollHeight > n.clientHeight + 1 && n.scrollTop > 0) { return false; }
+				if (n === sh) { break; }
+			}
+			return true;
+		}
+		function speed() {   // px per ms over the last 120 ms: a flick at the end counts, a slow start does not
+			var s = t.s, f = s[0], l = s[s.length - 1];
+			return l.ts - f.ts > 10 ? (l.y - f.y) / (l.ts - f.ts) : 0;
+		}
+		function settle(away) {
+			var sh = release().sh;
 			sh.style.transition = REDUCE ? 'none' : 'transform 200ms cubic-bezier(.16,1,.3,1)';
 			sh.style.transform = away ? 'translateY(100%)' : '';
-			setTimeout(function () { sh.style.transition = ''; sh.style.transform = ''; if (away) { dismiss(sh); } }, REDUCE || !d.dy ? 0 : 210);
+			setTimeout(function () { sh.style.transition = ''; sh.style.transform = ''; if (away) { dismiss(sh); } }, REDUCE ? 0 : 210);
 		}
-		document.addEventListener('pointerup', end); document.addEventListener('pointercancel', end);
+		// The moves and the end of a touch go to the element that was touched first, and stay with it even when the cart is drawn anew during the swipe (the offers load, a shared basket changes):
+		// a listener on the page would never hear of them once that element is gone, and the sheet would stay half pulled down.
+		function begin(ev) {
+			if (t) { stop(t.on); }   // a touch that was lost: put the sheet back first
+			if (ev.touches.length !== 1 || !narrow || !narrow.matches) { return; }
+			var sh = sheetOf(ev.target); if (!sh) { return; }
+			if (!ev.target.closest(HEAD) && !sh.matches(WHOLE)) { return; }
+			if (ev.target.closest('input, textarea, select, [data-noswipe]') || !atTop(ev.target, sh)) { return; }
+			var p = ev.touches[0];
+			t = { el: ev.target, sh: sh, x0: p.clientX, y0: p.clientY, on: false, dy: 0, s: [{ y: p.clientY, ts: ev.timeStamp }] };
+			t.el.addEventListener('touchmove', move, { passive: false });
+			t.el.addEventListener('touchend', end);
+			t.el.addEventListener('touchcancel', cancel);
+		}
+		function release() {
+			if (!t) { return null; }
+			var g = t; t = null;
+			g.el.removeEventListener('touchmove', move); g.el.removeEventListener('touchend', end); g.el.removeEventListener('touchcancel', cancel);
+			return g;
+		}
+		function stop(moved) { if (!t) { return; } if (moved) { settle(false); } else { release(); } }
+		function move(ev) {
+			if (!t) { return; }
+			var p = ev.touches[0], dy = p.clientY - t.y0, dx = p.clientX - t.x0;
+			if (!t.on) {
+				if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) { release(); return; }   // sideways: not ours
+				if (dy < -6) { release(); return; }                                           // upwards: the content scrolls
+				if (dy < 10) { return; }
+				if (!ev.cancelable) { release(); return; }                                    // the browser has begun to scroll already
+				t.on = true; t.sh.style.transition = 'none';
+			}
+			if (ev.cancelable) { ev.preventDefault(); }
+			t.dy = Math.max(0, dy); t.sh.style.transform = 'translateY(' + t.dy + 'px)';
+			t.s.push({ y: p.clientY, ts: ev.timeStamp });
+			while (t.s.length > 2 && ev.timeStamp - t.s[0].ts > 120) { t.s.shift(); }
+		}
+		function end() {
+			if (!t) { return; }
+			if (!t.on) { release(); return; }
+			settle(t.dy > Math.min(160, t.sh.offsetHeight * 0.25) || (t.dy > 30 && speed() > 0.5));
+		}
+		function cancel() { stop(t && t.on); }
+		document.addEventListener('touchstart', begin, { passive: true });
 	})();
 	// the soft first impression of a dish picture (a tiny copy as background, see order/index.php) goes away once the real picture is there, so pictures with transparent parts stay clean
 	$$('.shop-item-img').forEach(function (im) {
