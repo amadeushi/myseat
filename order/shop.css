@@ -8,12 +8,12 @@
 	--font-display: 'Cormorant Garamond', Georgia, serif;
 	--font-body: 'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 	margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
-	min-height: 100vh; -webkit-text-size-adjust: 100%;
+	min-height: 100vh; min-height: 100dvh; -webkit-text-size-adjust: 100%;
 }
 .shop-shell *, .shop-shell *::before, .shop-shell *::after { box-sizing: border-box; text-shadow: none; }
 .shop-shell ::selection { background: var(--gold); color: #1a1408; }
 .shop-shell a { color: var(--gold); text-underline-offset: 3px; }
-.shop-shell a:hover { color: var(--gold-strong); }
+@media (hover: hover) and (pointer: fine) { .shop-shell a:hover { color: var(--gold-strong); } }
 .shop-shell :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .shop-shell button { font-family: inherit; cursor: pointer; }
 .shop-shell h1, .shop-shell h2, .shop-shell h3, .shop-shell p, .shop-shell ul { margin: 0; padding: 0; }
@@ -43,7 +43,7 @@
    the dropdown's path) so the overlay reads as an intentional modal instead of a stray box covering navigation. */
 .shop-zone { display: flex; align-items: center; gap: 10px; }
 .shop-zone-toggle { border: 0; background: transparent; padding: 0; min-height: 44px; color: var(--gold); font-size: 14px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
-.shop-zone-toggle:hover { color: var(--gold-strong); }
+@media (hover: hover) and (pointer: fine) { .shop-zone-toggle:hover { color: var(--gold-strong); } }
 .shop-zone-result { font-size: 13px; color: var(--text-muted); }
 .shop-zone-result:empty { display: none; }
 .shop-zone-result.ok { color: var(--success); }
@@ -51,7 +51,7 @@
 /* the what3words escape hatch: a muted secondary link that only appears once a typed address is
    not found (shop.js), for a location with no real street (a field, an event site) */
 .shop-zone-w3w-toggle { display: flex; align-items: center; border: 0; background: transparent; padding: 0; margin-top: 14px; min-height: 44px; color: var(--text-muted); font-size: 13px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; text-align: left; }
-.shop-zone-w3w-toggle:hover { color: var(--gold); }
+@media (hover: hover) and (pointer: fine) { .shop-zone-w3w-toggle:hover { color: var(--gold); } }
 /* explicit [hidden] overrides: this toggle's own display:flex, and the box's .co-grid
    display:grid, both have the same specificity as the browser's default [hidden]{display:none}
    and would otherwise win by source order, showing them even while hidden is set */
@@ -65,7 +65,8 @@
 .co-candidates[hidden] { display: none; }
 .co-candidate { display: flex; flex-direction: column; gap: 2px; width: 100%; min-height: 44px; padding: 10px 14px; background: var(--surface-2); border: 0; border-bottom: 1px solid var(--border-soft); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
 .co-candidate:last-child { border-bottom: 0; }
-.co-candidate:hover, .co-candidate:focus-visible { background: var(--surface-3); outline: none; }
+ .co-candidate:focus-visible { background: var(--surface-3); outline: none; }
+@media (hover: hover) and (pointer: fine) { .co-candidate:hover { background: var(--surface-3); outline: none; } }
 .co-candidate strong { font-weight: 700; }
 .co-candidate small { color: var(--text-muted); font-size: 13px; }
 .shop-zone-box { position: absolute; top: 100%; right: 16px; margin-top: 8px; z-index: 40; width: 320px; max-width: calc(100vw - 32px); padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5); }
@@ -81,7 +82,7 @@
 .shop-cats::-webkit-scrollbar { display: none; }
 /* diet filter: three toggles at the start of the category bar (a column of their own above the categories on a wide screen) */
 .shop-diet-chip { flex: none; min-height: 44px; box-sizing: border-box; padding: 0 16px; border: 1px dashed var(--border); border-radius: var(--radius-pill); background: transparent; color: var(--text-muted); font: inherit; font-size: 14px; cursor: pointer; white-space: nowrap; }
-.shop-diet-chip:hover { color: var(--text); border-color: var(--gold); }
+@media (hover: hover) and (pointer: fine) { .shop-diet-chip:hover { color: var(--text); border-color: var(--gold); } }
 .shop-diet-chip.is-on { border-style: solid; border-color: var(--gold); background: rgba(201, 162, 89, 0.16); color: var(--gold-strong); font-weight: 700; }
 .shop-diet { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0; }
 .shop-diet span { padding: 1px 8px; border: 1px solid var(--border); border-radius: var(--radius-pill); color: var(--success); font-size: 12px; font-weight: 700; }
@@ -102,14 +103,15 @@
 .shop-item-buy { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
 .shop-price { font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
 .shop-add { min-height: 44px; min-width: 44px; padding: 0 18px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: transparent; color: var(--gold-strong); font-size: 15px; font-weight: 700; transition: background 150ms ease, border-color 150ms ease; }
-.shop-add:hover { background: rgba(201, 162, 89, 0.14); border-color: var(--gold); }
+@media (hover: hover) and (pointer: fine) { .shop-add:hover { background: rgba(201, 162, 89, 0.14); border-color: var(--gold); } }
 .shop-legal { color: var(--text-muted); font-size: 12px; line-height: 1.6; margin-top: 40px; max-width: 70ch; }
 .shop-empty { color: var(--text-muted); padding: 40px 0; }
 .shop-shell .legal-footer { margin: 20px 0 0; text-align: left; font-size: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 0 4px; }
 /* the legal links are tap targets like every other control: 44 px high, with the text kept where it was (negative margin on the left edge) */
 .shop-shell .legal-footer a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 8px; color: var(--text-muted); text-underline-offset: 3px; }
 .shop-shell .legal-footer a:first-child { margin-left: -8px; }
-.shop-shell .legal-footer a:hover, .shop-shell .legal-footer a:focus-visible { color: var(--gold-strong); }
+ .shop-shell .legal-footer a:focus-visible { color: var(--gold-strong); }
+@media (hover: hover) and (pointer: fine) { .shop-shell .legal-footer a:hover { color: var(--gold-strong); } }
 /* a heading for screen readers (the page has no visible h1: the logo is the title) and a link that jumps over the header */
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .shop-shell .skip-link { position: absolute; left: 12px; top: -64px; z-index: 100; padding: 12px 18px; border-radius: var(--radius-pill); background: var(--gold); color: #1a1408; font-weight: 700; text-decoration: none; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); transition: top .15s ease; }
@@ -130,7 +132,7 @@
 .cart-lineprice { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
 .cart-qty { grid-column: 1 / -1; display: flex; align-items: center; gap: 4px; margin-top: 4px; }
 .qty-btn { width: 44px; height: 44px; box-sizing: border-box; border: 1px solid var(--border-soft); border-radius: 50%; background: var(--surface-2); color: var(--text); font-size: 20px; line-height: 1; }
-.qty-btn:hover { border-color: var(--border); }
+@media (hover: hover) and (pointer: fine) { .qty-btn:hover { border-color: var(--border); } }
 .qty-num { min-width: 32px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
 .cart-remove { margin-left: auto; border: 0; background: transparent; color: var(--text-muted); font-size: 13px; min-height: 44px; box-sizing: border-box; padding: 0 8px; text-decoration: underline; text-underline-offset: 3px; }
 .cart-sum { border-top: 1px solid var(--border); padding-top: 14px; margin-top: 8px; display: grid; gap: 6px; }
@@ -140,7 +142,7 @@
 .cart-min { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--gold-strong); font-size: 14px; }
 .cart-go { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 52px; margin-top: 16px; border: 0; border-radius: var(--radius-pill); background: var(--gold); color: #1a1408; font-size: 16px; font-weight: 700; text-decoration: none; transition: background 150ms ease; }
 .shop-shell a.cart-go { color: #1a1408; }
-.cart-go:hover { background: var(--gold-strong); }
+@media (hover: hover) and (pointer: fine) { .cart-go:hover { background: var(--gold-strong); } }
 .cart-go[aria-disabled="true"] { background: var(--surface-3); color: var(--text-muted); pointer-events: none; }
 .shop-cartbar { position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 40; min-height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 18px 0 12px; border: 0; border-radius: var(--radius-pill); background: var(--gold); color: #1a1408; font-size: 16px; font-weight: 700; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
 .shop-cartbar[hidden] { display: none; }
@@ -161,7 +163,7 @@
 .pd-step { display: inline-flex; align-items: center; gap: 2px; }
 .pd-foot { display: flex; align-items: center; gap: 12px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--border-soft); background: var(--surface); }
 .pd-add { flex: 1; min-height: 52px; border: 0; border-radius: var(--radius-pill); background: var(--gold); color: #1a1408; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 22px; }
-.pd-add:hover { background: var(--gold-strong); }
+@media (hover: hover) and (pointer: fine) { .pd-add:hover { background: var(--gold-strong); } }
 
 /* product dialog: required choices in one highlighted block, optional extras collapsed below */
 .pd-required { margin-top: 18px; padding: 2px 14px 6px; border: 1px solid var(--border); border-radius: var(--radius-md); background: rgba(201, 162, 89, 0.07); }
@@ -179,7 +181,7 @@
 .pd-chips { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); gap: 8px; }
 .pd-chips.is-list { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
 .pd-chip { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; padding: 8px 12px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface-2); color: var(--text); font-size: 14px; font-weight: 600; text-align: left; line-height: 1.25; transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease; }
-.pd-chip:hover:not(:disabled) { border-color: var(--border); }
+@media (hover: hover) and (pointer: fine) { .pd-chip:hover:not(:disabled) { border-color: var(--border); } }
 .pd-chip:not(.has-step) { flex-wrap: wrap; row-gap: 2px; }
 .pd-chip-name { flex: 1 1 auto; min-width: 0; overflow-wrap: break-word; word-break: normal; hyphens: auto; }
 .pd-chip-price { flex: none; color: var(--text-muted); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
@@ -221,14 +223,14 @@
 .pd-note textarea { width: 100%; min-height: 64px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface-2); color: var(--text); font: inherit; font-size: 16px; padding: 10px 12px; resize: vertical; }
 .pd-add { white-space: nowrap; gap: 8px; padding: 0 18px; }
 .pd-add.is-blocked { background: var(--surface-3); color: var(--gold-strong); box-shadow: inset 0 0 0 1px var(--border); }
-.pd-add.is-blocked:hover { background: var(--surface-3); }
+@media (hover: hover) and (pointer: fine) { .pd-add.is-blocked:hover { background: var(--surface-3); } }
 .pd-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 @media (prefers-reduced-motion: reduce) { .pd-ext-body, .pd-chev, .pd-badge, .pd-chip { transition: none; } .pd-req.is-flash { animation: none; } }
 
 .shop-toast { position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom)); transform: translate(-50%, 12px); z-index: 60; padding: 10px 18px; border-radius: var(--radius-pill); background: var(--surface-3); border: 1px solid var(--border); color: var(--text); font-size: 14px; opacity: 0; pointer-events: none; transition: opacity 180ms ease, transform 180ms ease; max-width: calc(100% - 32px); text-align: center; }
 .shop-toast.is-on { opacity: 1; transform: translate(-50%, 0); }
 
-.shop-soon { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 24px; }
+.shop-soon { min-height: 100vh; min-height: 100svh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 24px; }
 .shop-soon .brand-logo { height: 80px; }
 .shop-soon h1 { font-family: var(--font-display); font-weight: 300; font-size: 40px; }
 .shop-soon p { color: var(--text-muted); max-width: 40ch; }
@@ -247,9 +249,9 @@
 .st-nl p strong { color: var(--text); }
 .st-nl-btns { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 10px; }
 .st-nl-btn { flex: 1 1 180px; min-height: 48px; padding: 0 18px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: transparent; color: var(--text); font-size: 15px; font-weight: 700; }
-.st-nl-btn:hover { border-color: var(--gold); color: var(--gold-strong); }
+@media (hover: hover) and (pointer: fine) { .st-nl-btn:hover { border-color: var(--gold); color: var(--gold-strong); } }
 .st-nl-btn.is-yes { background: var(--gold); border-color: var(--gold); color: #1a1408; }
-.st-nl-btn.is-yes:hover { background: var(--gold-strong); color: #1a1408; }
+@media (hover: hover) and (pointer: fine) { .st-nl-btn.is-yes:hover { background: var(--gold-strong); color: #1a1408; } }
 .st-nl-btn:focus-visible { outline: 2px solid var(--gold-strong); outline-offset: 2px; }
 .st-nl .st-nl-fine { font-size: 13px; margin: 0; }
 /* checkout: the reminder tick sits right under the stamp card it is about */
@@ -371,7 +373,7 @@
 .cart-goal.is-met .cart-goal-bar span { background: var(--success); }
 .cart-goal.is-met p { color: var(--success); }
 .qty-btn.is-trash { color: var(--text-muted); display: inline-flex; align-items: center; justify-content: center; }
-.qty-btn.is-trash:hover { color: var(--danger); border-color: var(--danger); }
+@media (hover: hover) and (pointer: fine) { .qty-btn.is-trash:hover { color: var(--danger); border-color: var(--danger); } }
 .cart-up { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-soft); }
 .cart-up h3 { font-size: 15px; font-weight: 700; margin-bottom: 10px; }
 .cart-up-list { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -383,10 +385,10 @@
 .cart-extra-list { display: flex; flex-wrap: wrap; gap: 8px; }
 .cart-extra { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 14px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: transparent; color: var(--text); font: inherit; font-size: 14px; cursor: pointer; text-align: left; }
 .cart-extra small { color: var(--gold-strong); font-size: 13px; font-weight: 700; }
-.cart-extra:hover { background: rgba(201, 162, 89, 0.12); border-color: var(--gold); }
+@media (hover: hover) and (pointer: fine) { .cart-extra:hover { background: rgba(201, 162, 89, 0.12); border-color: var(--gold); } }
 .cart-extra.is-on { background: var(--gold); border-color: var(--gold); color: #1a1408; }
 .cart-extra.is-on small { color: #1a1408; }
-.cart-up-item:hover { background: rgba(201, 162, 89, 0.12); border-color: var(--gold); }
+@media (hover: hover) and (pointer: fine) { .cart-up-item:hover { background: rgba(201, 162, 89, 0.12); border-color: var(--gold); } }
 .cart-up-item small { color: var(--gold-strong); font-size: 13px; font-weight: 700; white-space: nowrap; }
 .shop-shell .cart-stamp { margin-top: 10px; color: var(--text-muted); font-size: 13px; text-align: center; text-wrap: balance; }
 .shop-shell .cart-stamp strong { color: var(--text); font-weight: 600; }
@@ -437,7 +439,7 @@
 @media (prefers-reduced-motion: reduce) { .cart-goal-bar span, .cart-up-item { transition: none; } }
 .shop-shell a.cart-go[aria-disabled="true"] { color: var(--text-muted); }
 .cart-edit { margin-left: auto; border: 0; background: transparent; color: var(--gold); font-size: 14px; font-weight: 600; min-height: 44px; box-sizing: border-box; padding: 0 6px; text-decoration: underline; text-underline-offset: 3px; }
-.cart-edit:hover { color: var(--gold-strong); }
+@media (hover: hover) and (pointer: fine) { .cart-edit:hover { color: var(--gold-strong); } }
 
 /* order status: map */
 .st-map { height: 280px; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border-soft); background: var(--bg); }
@@ -466,7 +468,7 @@
 .co-acc.is-warn { border-color: var(--gold); background: rgba(201, 162, 89, 0.1); }
 .co-acc-btn, .co-acc-out { flex: none; min-height: 44px; display: inline-flex; align-items: center; padding: 0 16px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: transparent; color: var(--gold-strong); font: inherit; font-size: 14px; font-weight: 700; text-decoration: none; cursor: pointer; }
 .co-acc-out { font-weight: 400; color: var(--text-muted); }
-.co-acc-btn:hover, .co-acc-out:hover { border-color: var(--gold); color: var(--text); }
+@media (hover: hover) and (pointer: fine) { .co-acc-btn:hover,.co-acc-out:hover { border-color: var(--gold); color: var(--text); } }
 .co-accwarn { margin: 0 0 12px; padding: 14px; border: 1px solid var(--gold); border-radius: var(--radius-md); background: rgba(201, 162, 89, 0.1); }
 .co-accwarn p { margin: 0 0 10px; font-size: 14px; line-height: 1.5; }
 .co-accwarn-act { display: flex; flex-direction: column; gap: 8px; }
@@ -499,14 +501,14 @@
 .st-star { display: grid; place-items: center; width: 52px; height: 52px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--gold); cursor: pointer; }
 .st-star svg { fill: none; stroke: currentColor; stroke-width: 1.6; transition: fill .12s ease, transform .12s ease; }
 .st-star.is-on svg { fill: currentColor; }
-.st-star:hover:not(:disabled) svg { transform: scale(1.12); }
+@media (hover: hover) and (pointer: fine) { .st-star:hover:not(:disabled) svg { transform: scale(1.12); } }
 .st-star:disabled { cursor: default; }
 .st-ratemsg { margin: 0; min-height: 22px; color: var(--text-muted); }
-@media (prefers-reduced-motion: reduce) { .st-pin-driver span { animation: none; } .st-star svg { transition: none; } .st-star:hover:not(:disabled) svg { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .st-pin-driver span { animation: none; } .st-star svg { transition: none; } @media (hover: hover) and (pointer: fine) { .st-star:hover:not(:disabled) svg { transform: none; } } }
 
 /* "Alles dabei?" after a delivery (order/issue.js): call the driver, or report what is missing */
 .cart-go.is-quiet, .shop-shell a.cart-go.is-quiet { background: transparent; color: var(--gold); border: 1px solid var(--border); }
-.cart-go.is-quiet:hover, .shop-shell a.cart-go.is-quiet:hover { background: var(--surface-2); color: var(--gold-strong); }
+@media (hover: hover) and (pointer: fine) { .cart-go.is-quiet:hover,.shop-shell a.cart-go.is-quiet:hover { background: var(--surface-2); color: var(--gold-strong); } }
 .st-issue .cart-go { margin-top: 0; }
 .st-issue-text { color: var(--text-muted); }
 .st-issue-items + .st-issue-text { margin-top: 14px; }
@@ -693,7 +695,7 @@
 .co-gv-in { width: 100%; min-height: 48px; margin: 0 0 10px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface-2); color: var(--text); font: inherit; font-size: 16px; padding: 0 14px; letter-spacing: .04em; }
 .co-gv-in:focus { border-color: var(--gold); outline: none; box-shadow: 0 0 0 2px rgba(201, 162, 89, 0.3); }
 .co-coupon-go { min-height: 48px; padding: 0 18px; border: 1px solid var(--gold); border-radius: var(--radius-md); background: transparent; color: var(--gold-strong); font-size: 15px; font-weight: 700; }
-.co-coupon-go:hover { background: rgba(201, 162, 89, 0.14); }
+@media (hover: hover) and (pointer: fine) { .co-coupon-go:hover { background: rgba(201, 162, 89, 0.14); } }
 .shop-shell .co-coupon-msg { margin-top: 8px; font-size: 14px; color: var(--text-muted); }
 .shop-shell .co-coupon-msg:empty { display: none; }
 .co-coupon-msg.ok { color: var(--success); }
@@ -710,7 +712,7 @@
 .shop-search-bar input:focus { border-color: var(--gold); outline: none; box-shadow: 0 0 0 2px rgba(201, 162, 89, 0.3); }
 .shop-search-bar input::-webkit-search-cancel-button { display: none; }
 .shop-search-clear { position: absolute; right: 6px; width: 44px; height: 44px; box-sizing: border-box; border: 0; border-radius: 50%; background: transparent; color: var(--text-muted); font-size: 20px; line-height: 1; }
-.shop-search-clear:hover { color: var(--text); background: rgba(245, 240, 230, 0.08); }
+@media (hover: hover) and (pointer: fine) { .shop-search-clear:hover { color: var(--text); background: rgba(245, 240, 230, 0.08); } }
 .shop-cats.is-filtered { opacity: 0.4; pointer-events: none; }
 .shop-item[hidden], .shop-cat[hidden] { display: none; }
 
@@ -719,16 +721,16 @@
 .gb-invite h3 { font-size: 15px; font-weight: 700; }
 .shop-shell .gb-invite p { margin: 4px 0 12px; color: var(--text-muted); font-size: 13px; }
 .gb-btn { min-height: 44px; padding: 0 18px; border-radius: var(--radius-pill); border: 1px solid var(--border); background: transparent; color: var(--gold-strong); font-size: 14px; font-weight: 700; }
-.gb-btn:hover { border-color: var(--gold); }
+@media (hover: hover) and (pointer: fine) { .gb-btn:hover { border-color: var(--gold); } }
 .gb-btn.solid { background: var(--gold); border-color: var(--gold); color: #1a1408; }
-.gb-btn.solid:hover { background: var(--gold-strong); }
+@media (hover: hover) and (pointer: fine) { .gb-btn.solid:hover { background: var(--gold-strong); } }
 .gb-btn.ghost { color: var(--text-muted); border-color: var(--border-soft); }
 .cart-go + .gb-btn, .gb-state + .gb-btn { display: block; width: 100%; margin-top: 10px; }
 .gb-head { display: grid; gap: 8px; justify-items: start; padding: 2px 0 10px; }
 .shop-shell .gb-kicker { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold-strong); font-weight: 700; }
 .shop-shell .gb-who { color: var(--text-muted); font-size: 14px; }
 .gb-link { display: grid; gap: 4px; width: 100%; font-size: 12px; color: var(--text-muted); }
-.gb-link input { width: 100%; min-height: 44px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface-2); color: var(--text); font: inherit; font-size: 14px; padding: 0 12px; }
+.gb-link input { width: 100%; min-height: 44px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface-2); color: var(--text); font: inherit; font-size: 16px; padding: 0 12px; }
 .shop-shell .gb-state { margin: 4px 0 8px; padding: 10px 12px; border-radius: var(--radius-md); background: var(--surface-2); border: 1px solid var(--border-soft); font-size: 14px; color: var(--gold-strong); }
 .shop-shell .gb-state.is-done { color: var(--success); }
 .gb-member { margin-top: 14px; }
@@ -748,7 +750,7 @@
 .gb-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
 .gb-actions .gb-btn { min-width: 120px; }
 .shop-group-btn { min-height: 44px; padding: 0 16px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: transparent; color: var(--gold-strong); font-size: 14px; font-weight: 600; white-space: nowrap; }
-.shop-group-btn:hover { border-color: var(--gold); }
+@media (hover: hover) and (pointer: fine) { .shop-group-btn:hover { border-color: var(--gold); } }
 
 /* sideways rows dragged with the mouse (dragscroll.js): the grabbing hand, no text selection, no snapping against the hand */
 .is-dragging { cursor: grabbing !important; user-select: none; -webkit-user-select: none; scroll-snap-type: none !important; scroll-behavior: auto !important; }
@@ -764,13 +766,13 @@
 .shop-chat-fab { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 35; display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 20px 0 16px; border-radius: var(--radius-pill);
 	background: var(--gold); color: #1a1408; font-size: 1rem; font-weight: 700; text-decoration: none; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); transition: background 150ms ease, transform 150ms ease; }
 .shop-shell a.shop-chat-fab, .shop-shell a.shop-chat-fab:visited { color: #1a1408; }
-.shop-shell a.shop-chat-fab:hover { background: var(--gold-strong); color: #1a1408; }
+@media (hover: hover) and (pointer: fine) { .shop-shell a.shop-chat-fab:hover { background: var(--gold-strong); color: #1a1408; } }
 .shop-chat-fab:active { transform: scale(0.97); }
 /* below 1024px the chat button sits in the top bar (.shop-chat-inline): a floating button there covered the "Wählen" buttons of the rows */
 @media (max-width: 1023.98px) { .shop-chat-fab { display: none; } }
 .shop-chat-inline { display: none; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: var(--radius-pill); background: var(--gold); color: #1a1408; font-size: 14px; font-weight: 700; white-space: nowrap; text-decoration: none; }
 .shop-shell a.shop-chat-inline, .shop-shell a.shop-chat-inline:visited { color: #1a1408; }
-.shop-shell a.shop-chat-inline:hover { background: var(--gold-strong); color: #1a1408; }
+@media (hover: hover) and (pointer: fine) { .shop-shell a.shop-chat-inline:hover { background: var(--gold-strong); color: #1a1408; } }
 @media (max-width: 1023.98px) { .shop-chat-inline { display: inline-flex; } }
 .shop-cartbar:not([hidden]) ~ .shop-chat-fab { bottom: calc(84px + env(safe-area-inset-bottom)); }
 /* wide screens: the button keeps its own width and ends on the right edge of the cart column (the layout is 1240px wide with 16px padding), so it does not hang out over the column */
@@ -787,7 +789,7 @@
 	.scp-head { flex: none; display: flex; align-items: center; justify-content: space-between; min-height: 52px; padding: 0 8px 0 18px; background: var(--surface); border-bottom: 1px solid var(--border-soft); }
 	.scp-title { font-family: var(--font-display); font-size: 1.5rem; font-weight: 500; color: var(--gold-strong); }
 	.scp-close { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--text); }
-	.scp-close:hover { background: var(--surface-3); color: var(--gold-strong); }
+	@media (hover: hover) and (pointer: fine) { .scp-close:hover { background: var(--surface-3); color: var(--gold-strong); } }
 	.scp-frame { flex: 1; width: 100%; border: 0; background: var(--bg); color-scheme: dark; }
 }
 @keyframes scp-in { from { opacity: 0; transform: translateY(12px) scale(0.97); } to { opacity: 1; transform: none; } }
@@ -803,7 +805,7 @@
 .shop-out-note { font-size: 0.875rem; font-weight: 600; color: var(--danger); }
 .st-pay-alt { display: block; margin-top: 10px; color: var(--text-muted); }
 .st-pay-sw { margin: 6px 8px 0 0; min-height: 40px; padding: 0 16px; border: 1px solid var(--border); border-radius: var(--radius-pill, 999px); background: transparent; color: var(--text); font: inherit; cursor: pointer; }
-.st-pay-sw:hover { border-color: var(--gold-strong); }
+@media (hover: hover) and (pointer: fine) { .st-pay-sw:hover { border-color: var(--gold-strong); } }
 .st-pay-sw:disabled { opacity: .5; cursor: default; }
 
 .shop-shell .co-modeline { margin: 0 0 10px; padding: 10px 14px; border: 1px solid var(--gold-strong); border-radius: var(--radius-md); color: var(--text); font-size: 15px; line-height: 1.45; }
@@ -813,7 +815,8 @@
 /* nothing chosen yet: the two choices stand out as two big buttons, so it is clear what has to be done first */
 .co-sec.is-ask .shop-mode { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: transparent; border: 0; padding: 0; }
 .co-sec.is-ask .mode-btn { min-height: 68px; font-size: 18px; color: var(--text); background: var(--surface-2); border: 2px solid var(--gold-strong); border-radius: var(--radius-md); animation: co-ask 1.8s ease-in-out infinite; }
-.co-sec.is-ask .mode-btn:hover, .co-sec.is-ask .mode-btn:focus-visible { background: var(--gold); color: #1a1408; animation: none; }
+ .co-sec.is-ask .mode-btn:focus-visible { background: var(--gold); color: #1a1408; animation: none; }
+@media (hover: hover) and (pointer: fine) { .co-sec.is-ask .mode-btn:hover { background: var(--gold); color: #1a1408; animation: none; } }
 .co-sec.is-ask .co-hint { color: var(--gold-strong); font-weight: 700; font-size: 16px; margin-top: 10px; }
 @keyframes co-ask { 0%, 100% { box-shadow: 0 0 0 0 rgba(226, 192, 127, 0); } 50% { box-shadow: 0 0 0 5px rgba(226, 192, 127, 0.28); } }
 @media (prefers-reduced-motion: reduce) { .co-sec.is-ask .mode-btn { animation: none; } }
@@ -821,7 +824,8 @@
 .mode-btn .mode-sub { display: none; }
 .co-sec.is-ask .mode-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 8px 12px; }
 .co-sec.is-ask .mode-btn .mode-sub { display: block; font-size: 13px; font-weight: 500; color: var(--text-muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.co-sec.is-ask .mode-btn:hover .mode-sub, .co-sec.is-ask .mode-btn:focus-visible .mode-sub { color: #1a1408; }
+ .co-sec.is-ask .mode-btn:focus-visible .mode-sub { color: #1a1408; }
+@media (hover: hover) and (pointer: fine) { .co-sec.is-ask .mode-btn:hover .mode-sub { color: #1a1408; } }
 
 /* the payment block while nothing is chosen: framed like the mode choice, with the request above */
 .co-sec.is-ask .co-askhint { color: var(--gold-strong); font-weight: 700; font-size: 16px; margin: 0 0 10px; }
@@ -853,7 +857,7 @@ body.co-quick-on #co-paysec > legend, body.co-quick-on #co-paysec .co-askhint, b
 /* the filters (Neu, Beliebt, Vegetarisch, Vegan): one small button in the search field, the chips in a panel below it - the categories keep the room */
 .shop-search-bar .shop-search-in.has-filter input, .shop-search-bar .shop-search-in:has(.shop-filter-btn) input { padding-right: 150px; }
 .shop-filter-btn { position: absolute; right: 50px; top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border: 1px solid var(--border-soft); border-radius: var(--radius-pill); background: transparent; color: var(--text-muted); font: inherit; font-size: 14px; cursor: pointer; }
-.shop-filter-btn:hover { color: var(--text); border-color: var(--gold); }
+@media (hover: hover) and (pointer: fine) { .shop-filter-btn:hover { color: var(--text); border-color: var(--gold); } }
 .shop-filter-btn.is-on { border-color: var(--gold); background: rgba(201, 162, 89, 0.16); color: var(--gold-strong); font-weight: 700; }
 .shop-filter-btn b { min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; background: var(--gold); color: #1a1408; font-size: 12px; line-height: 18px; text-align: center; }
 .shop-filter-panel { position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; display: flex; flex-wrap: wrap; gap: 8px; max-width: min(100%, 420px); padding: 12px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); background: var(--surface); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); }
@@ -886,7 +890,8 @@ body.co-quick-on #co-paysec > legend, body.co-quick-on #co-paysec .co-askhint, b
 .dv .dv-here-msg { margin: 8px 0 0; color: var(--danger); min-height: 1.2em; }
 
 /* Lieferando-Bestellung auf der Fahrerseite: Anruf und "Ich bin vor Ort" laufen über die Courier App */
-.dv .cart-go.is-off, .dv .cart-go.is-off:hover { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+.dv .cart-go.is-off { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+@media (hover: hover) and (pointer: fine) { .dv .cart-go.is-off:hover { opacity: 0.45; cursor: not-allowed; pointer-events: none; } }
 .dv .dv-platform { margin: 10px 0 0; color: var(--text-muted); font-size: 15px; }
 .dv .dv-here-msg.is-hint { color: var(--text-muted); }
 
@@ -933,3 +938,26 @@ html:has(.shop-cart.is-open) .shop-toast { bottom: calc(12px + env(safe-area-ins
 /* small links inside a sentence ("Jetzt anmelden"): the area that reacts is taller than the line */
 .shop-shell .cart-stamp-btn, .shop-shell .cart-stamp a, .co-sec-stamp a, .st-account a { position: relative; }
 .shop-shell .cart-stamp-btn::after, .shop-shell .cart-stamp a::after, .co-sec-stamp a::after, .st-account a::after { content: ''; position: absolute; inset: -14px -6px; }
+
+/* ---- mobile-native review: the layer between the page and the phone. */
+html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }   /* no grey flash on a tap: every control has its own press state below */
+/* no double-tap zoom and no click delay on what is pressed (tapping "+" twice in a row must not zoom the page) */
+button, a, [role="button"], summary, label, select, input, textarea { touch-action: manipulation; }
+/* a control is not text: no selection and no callout on a long press (the text of the page stays selectable) */
+button, [role="button"], summary { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+/* press feedback the moment the finger lands. The single property "scale" is used because it leaves "transform" alone (the filter button is placed with a translateY) */
+button:not(:disabled):not([aria-disabled="true"]):active, a.cart-go:not([aria-disabled="true"]):active, .gv-chip:active span { scale: 0.97; }
+/* what scrolls inside a sheet does not pull the page behind it along */
+dialog, .shop-cart { overscroll-behavior: contain; }
+/* notch, Dynamic Island and home bar (the pages ask for viewport-fit=cover): on an iPhone in landscape and as an installed app nothing lies in the corners */
+.shop-shell { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+.shop-top { padding-top: env(safe-area-inset-top); }
+.shop-cartbar, .co-progress { left: max(12px, env(safe-area-inset-left)); right: max(12px, env(safe-area-inset-right)); }
+@media (max-width: 1023.98px) {
+	.shop-cart { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+	.cart-head { padding-top: calc(14px + env(safe-area-inset-top)); }
+}
+@media (max-width: 719.98px) {
+	.shop-dialog { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+	.pd-head { padding-top: calc(16px + env(safe-area-inset-top)); }
+}

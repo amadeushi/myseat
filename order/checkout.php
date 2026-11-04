@@ -15,7 +15,7 @@ $imprint = (!empty($settings['imprintUrl']) && preg_match('#^https?://#i', $sett
 <html lang="de">
 <head>
 	<meta charset="utf-8"/>
-	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"/>
 	<meta name="color-scheme" content="dark"/>
 	<meta name="theme-color" content="#0c0b0a"/>
 	<meta name="robots" content="noindex,nofollow"/>

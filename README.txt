@@ -52,6 +52,16 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-05 == mySeat v6.70.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geändert (Webshop, Handy-Gefühl, Review mit dem Skill "mobile-native"): Alle 66 :hover-Regeln der Shop-Stylesheets (shop, konto, gutschein, pizza, chat) stehen jetzt hinter "@media (hover: hover) and (pointer: fine)". Vorher blieb ein angetipptes Element am iPhone im Hover-Zustand (Farbe, Rand), bis man woanders tippte. Die Umstellung erfolgte per Skript und wurde im Browser gegen die alten Dateien verglichen: 0 Unterschiede in den Regeln, nur der Rahmen ist neu. Mit der Maus ändert sich nichts.
+ * Neu: Das graue Aufblitzen beim Tippen ist abgeschaltet (-webkit-tap-highlight-color), dafür haben alle Knöpfe und die Kassen-Links sofort einen Druckzustand (die Fläche schrumpft kurz auf 97 %, mit der Einzel-Eigenschaft "scale", die "transform" in Ruhe lässt).
+ * Neu: touch-action: manipulation auf Knöpfen, Links und Feldern. Zweimal schnell auf "+" zu tippen zoomt die Seite nicht mehr, und es gibt keine Klick-Verzögerung. Knöpfe, Hinweise (summary) und Rollen-Knöpfe lassen sich bei langem Druck nicht mehr markieren (keine Auswahl, kein Kontextmenü); der Seitentext bleibt markierbar.
+ * Behoben: Das Link-Feld im gemeinsamen Warenkorb hatte 14 px Schrift; iOS zoomte beim Antippen in die Seite. Jetzt 16 px.
+ * Geändert: Seitenhöhe mit "100dvh" statt nur "100vh" (die Adressleiste von Safari verschiebt nichts mehr), die "Bald da"-Seite nutzt "100svh". Scrollende Bereiche in Dialogen und im Warenkorb ziehen die Seite dahinter nicht mehr mit (overscroll-behavior: contain).
+ * Neu: Rand für Kerbe, Dynamic Island und Home-Leiste auf iPhones im Querformat und als installierte App (Manifest "standalone"): links, rechts und oben (Kopfzeile, Warenkorb, Produktdialog, Warenkorb-Leiste und Fortschrittsleiste der Kasse). Auf Geräten ohne Kerbe bleiben alle Maße gleich (geprüft).
+ * Neu: viewport "interactive-widget=resizes-content" auf Shop, Kasse, Status und Gutschein: Auf Android schiebt die Tastatur die Leisten am unteren Rand nach oben, wie es iOS schon macht.
+
 2026-11-05 == mySeat v6.69.3 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geändert (Gutscheine, Etikett): Das Dymo-Etikett für nummerierte Vordrucke steht jetzt hochkant (54 mm breit, 101 mm hoch, Seite im PDF 54 x 101 mm) statt quer. Von oben nach unten: "Dein Webshop-Code", der Code (36 pt), "Einlösen auf amadeus.delivery", eine gestrichelte Linie, der QR-Code fürs Team (bis 40 mm groß, scannt aus größerer Entfernung) mit "Nur für das Team", darunter Nummer und Gültigkeit (10 pt). Alles mittig, schwarz auf weiß, mit 4 mm Rand. Eine sehr lange Adresse (Einstellung "gv_site_host" / "gv_shop_host") wird zuerst kleiner, dann in zwei Zeilen umbrochen. Die Texte sind unverändert, nur die Anordnung ist neu.
