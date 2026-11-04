@@ -81,10 +81,10 @@ $imprint = (!empty($settings['imprintUrl']) && preg_match('#^https?://#i', $sett
 			<fieldset class="co-sec" id="sec-data">
 				<legend>Deine Daten</legend>
 				<div class="co-grid">
-					<label class="co-f wide"><span>Name</span><input type="text" name="name" autocomplete="name" maxlength="120" required/></label>
-					<label class="co-f"><span>Telefon</span><input type="tel" name="phone" inputmode="tel" autocomplete="tel" maxlength="40" required/></label>
-					<label class="co-f"><span>E-Mail (optional)</span><input type="email" name="email" autocomplete="email" maxlength="160"/></label>
-					<label class="co-f wide"><span>Anmerkung zur Bestellung (optional)</span><input type="text" name="note" maxlength="500"/></label>
+					<label class="co-f wide"><span>Name</span><input type="text" name="name" autocomplete="name" enterkeyhint="next" maxlength="120" required/></label>
+					<label class="co-f"><span>Telefon</span><input type="tel" name="phone" inputmode="tel" autocomplete="tel" enterkeyhint="next" maxlength="40" required/></label>
+					<label class="co-f"><span>E-Mail (optional)</span><input type="email" name="email" autocomplete="email" enterkeyhint="next" maxlength="160"/></label>
+					<label class="co-f wide"><span>Anmerkung zur Bestellung (optional)</span><input type="text" name="note" enterkeyhint="done" maxlength="500"/></label>
 				</div>
 				<label class="co-check"><input type="checkbox" name="remember" value="1"/> Meine Angaben auf diesem Gerät merken, damit es beim nächsten Mal schneller geht</label>
 				<div class="co-nl" role="group" aria-label="Mails von uns">

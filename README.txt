@@ -52,6 +52,13 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-05 == mySeat v6.69.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geprüft (Webshop, UI/UX-Review mobil, 390 px): Shop-Seite, Warenkorb, Produktdialog, Kasse und Statusseite gegen Kontrast (WCAG 4,5:1 bzw. 3:1), Schriftgrößen (nichts unter 12 px), Beschriftung aller Felder und Knöpfe, Bild-Alt-Texte, Tippflächen und waagerechte Überbreite. Ergebnis: keine Kontrast-, Beschriftungs- oder Überbreite-Fehler; die Felder der Kasse sind 48 px hoch mit 16 px Schrift (kein Zoomen am iPhone) und haben die richtigen Autofill-Werte.
+ * Neu (Warenkorb): Zwischensumme, Liefergebühr und der Knopf "Zur Kasse" bleiben am unteren Rand des Warenkorbs haften, solange der Knopf sonst weiter unten im langen Warenkorb stünde. Am Ende der Liste läuft alles wie bisher weiter. Gilt auch für die Spalte am Desktop. Der Raum unter der letzten Zeile gehört zum Inhalt, sodass unter der haftenden Summe nichts durchscheint; auf dem iPhone mit Sicherheitsabstand unten.
+ * Geändert (Tippflächen): Der Logo-Link oben (40 px), die Knöpfe "Doch liefern lassen" / "Liefern lassen" auf der Statusseite (40 px, jetzt 44 px) und die kleinen Links "Jetzt anmelden" im Warenkorb, in der Kasse und auf der Statusseite haben jetzt eine Trefferfläche von mindestens 44 px; das Aussehen und das Layout bleiben gleich.
+ * Neu (Kasse): Die Tastatur am Handy zeigt bei Name, Telefon und E-Mail "Weiter" und bei der Anmerkung "Fertig" (enterkeyhint).
+
 2026-11-04 == mySeat v6.68.3 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu (Gutscheinshop): Doppelklick-Schutz auf dem Server. Das Bestellformular trägt ein verstecktes Feld mit einem Zufallsschlüssel, der bei jeder Anzeige der Seite neu entsteht. Derselbe Schlüssel erzeugt nie eine zweite Bestellung und damit nie einen zweiten nummerierten Gutschein (ein Vordruck-Gutschein würde sonst eine zweite gedruckte Nummer reservieren): Wird das Formular noch einmal gesendet (Doppeltipp, "Formular erneut senden" nach dem Zurück-Knopf), geht der Gast zur offenen Zahlung der ersten Bestellung oder zu deren Statusseite. Eine stornierte Bestellung gibt ihren Schlüssel wieder frei. Neue Spalte idem in tp_gv_orders (entsteht beim ersten Aufruf).

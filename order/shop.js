@@ -465,11 +465,11 @@
 			}).join('') + '</div></div>';
 		}
 		var combo = offerCents(), od0 = offersCache.data;
-		h += '<div class="cart-sum"><div class="cart-row"><span>Zwischensumme</span><span>' + fmt(sub) + '</span></div>' +
+		h += '<div class="cart-foot"><div class="cart-sum"><div class="cart-row"><span>Zwischensumme</span><span>' + fmt(sub) + '</span></div>' +
 			(combo > 0 ? '<div class="cart-row coupon"><span>' + esc(od0.combo_text) + '</span><span>&minus;' + fmt(combo) + '</span></div>' : '') +
 			(state.mode === 'delivery' ? '<div class="cart-row muted"><span>Liefergebühr</span><span>' + (state.zone ? fmt(state.zone.fee) : 'nach Adresse') + '</span></div>' : '') + '</div>';
 		if (ACCOUNT && +body.dataset.stamp > 0) { h += '<p class="cart-stamp" data-stamp-hint hidden></p>'; }
-		h += '<a class="cart-go" href="checkout.php"' + (below ? ' aria-disabled="true" tabindex="-1"' : '') + '>' + (below ? 'Noch ' + fmt(min - sub) + ' bis zur Kasse' : 'Zur Kasse · ' + fmt(sub - combo)) + '</a>' +
+		h += '<a class="cart-go" href="checkout.php"' + (below ? ' aria-disabled="true" tabindex="-1"' : '') + '>' + (below ? 'Noch ' + fmt(min - sub) + ' bis zur Kasse' : 'Zur Kasse · ' + fmt(sub - combo)) + '</a></div>' +
 			'<p class="cart-trust">Frisch für dich zubereitet. Bezahlen kannst du online, bar oder mit Karte.</p>' +
 			'<button type="button" class="cart-clear" data-clear>Warenkorb leeren</button>' + groupInvite();
 		box.innerHTML = h;

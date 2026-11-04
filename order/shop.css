@@ -919,3 +919,17 @@ body.co-quick-on #co-paysec > legend, body.co-quick-on #co-paysec .co-askhint, b
 }
 /* with the cart open there is no cart bar to keep clear: the toast sits at the very bottom and leaves the button of the cart free */
 html:has(.shop-cart.is-open) .shop-toast { bottom: calc(12px + env(safe-area-inset-bottom)); }
+
+/* ---- UI/UX review: the sum and the button to the checkout stay in reach in a long cart, and every tap area is at least 44 px */
+.shop-cart { --cart-pad: 16px; --cart-bg: var(--bg); padding-bottom: 0; }
+#cart-body { padding-bottom: 24px; }   /* the room under the last line is part of the content, so that nothing shows below the sticky sum */
+.cart-foot { position: sticky; bottom: 0; z-index: 2; margin: 8px calc(-1 * var(--cart-pad)) 0; padding: 0 var(--cart-pad) calc(8px + env(safe-area-inset-bottom)); background: var(--cart-bg); box-shadow: 0 -16px 14px -8px var(--cart-bg); }
+.cart-foot .cart-sum { margin-top: 0; }
+@media (min-width: 1024px) { .shop-cart { --cart-pad: 20px; --cart-bg: var(--surface); } .cart-foot { padding-bottom: 8px; } }
+/* the logo link is 40 px high: the area that reacts is 44 px, nothing moves */
+.shop-logo { position: relative; }
+.shop-logo::after { content: ''; position: absolute; inset: -2px 0; }
+.st-pay-sw { min-height: 44px; }
+/* small links inside a sentence ("Jetzt anmelden"): the area that reacts is taller than the line */
+.shop-shell .cart-stamp-btn, .shop-shell .cart-stamp a, .co-sec-stamp a, .st-account a { position: relative; }
+.shop-shell .cart-stamp-btn::after, .shop-shell .cart-stamp a::after, .co-sec-stamp a::after, .st-account a::after { content: ''; position: absolute; inset: -14px -6px; }
