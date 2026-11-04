@@ -52,6 +52,12 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-05 == mySeat v6.69.3 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geändert (Gutscheine, Etikett): Das Dymo-Etikett für nummerierte Vordrucke steht jetzt hochkant (54 mm breit, 101 mm hoch, Seite im PDF 54 x 101 mm) statt quer. Von oben nach unten: "Dein Webshop-Code", der Code (36 pt), "Einlösen auf amadeus.delivery", eine gestrichelte Linie, der QR-Code fürs Team (bis 40 mm groß, scannt aus größerer Entfernung) mit "Nur für das Team", darunter Nummer und Gültigkeit (10 pt). Alles mittig, schwarz auf weiß, mit 4 mm Rand. Eine sehr lange Adresse (Einstellung "gv_site_host" / "gv_shop_host") wird zuerst kleiner, dann in zwei Zeilen umbrochen. Die Texte sind unverändert, nur die Anordnung ist neu.
+ * Behoben: Die Schriftgrößen des Etiketts waren bisher um ein Drittel größer als angegeben (GD rechnet Punkte bei 96 dpi, nicht bei 300 dpi); das Etikett rechnet jetzt in echten Punkten, wie sie im Kommentar stehen. Beim hochkanten Etikett passte die Überschrift sonst nicht mehr in die Spalte.
+ * Hinweis zum Drucken: Im Druckdialog das Papier "54 x 101 mm" (Dymo 99014) und "Hochformat" wählen, Skalierung 100 %.
+
 2026-11-05 == mySeat v6.69.2 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geändert (Webshop, Statusseite): Die Überschrift ("Danke, deine Bestellung ist eingegangen" usw.) skaliert mit der Bildschirmbreite (32 px bei 390 px, mindestens 30 px, höchstens 40 px wie bisher). Auf dem Handy steht sie jetzt in zwei ausgewogenen Zeilen statt in drei ("Danke, deine Bestellung / ist eingegangen"); auf dem kleinsten iPhone (320 px) braucht nur der längste Text ("Deine Bestellung ist fertig und wird gleich abgeholt") drei Zeilen. Die Zeilenhöhe ist etwas luftiger (1,12).

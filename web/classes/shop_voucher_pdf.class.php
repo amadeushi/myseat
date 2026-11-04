@@ -421,49 +421,63 @@ function gv_render_back($o, $w) {
 	return $im;
 }
 /*
- * The label for a numbered blank, for a DYMO LabelWriter (label 54 x 101 mm = 99014, landscape, 300 dpi, black on white): the security code with the words that tell the guest what it is for
- * (redeem online in the web shop) and the QR code with the words that it is for the team. Built for reading at arm's length: the code is about 34 pt, the lines under it 13 pt, nothing is
- * smaller than 10 pt, everything is black on white in a semi bold face with lining figures, and there is only one thing to read per place (a heading, the code, one instruction; the QR code and one caption).
+ * The label for a numbered blank, for a DYMO LabelWriter (label 54 x 101 mm = 99014, upright: 54 mm wide, 101 mm high, 300 dpi, black on white): the security code with the words that tell the guest
+ * what it is for (redeem online in the web shop) and the QR code with the words that it is for the team. Built for reading at arm's length: the code is 36 pt (smaller only when a long code needs the room),
+ * the lines under it 12 pt, nothing is smaller than 10 pt, everything is black on white in a semi bold face with lining figures, and there is only one thing to read per place (a heading, the code, one
+ * instruction; the QR code and one caption). From top to bottom: heading, code, instruction, a dashed line, the QR code (as large as the room allows, 40 mm at most) with its caption, number and validity.
+ * The sizes are real printed points: GD takes the size of a face in points at 96 dpi, so a size of x pt on this 300 dpi picture is x * 300 / 72 pixels = $G(x) * 4 / 3 pixels.
  * $o: number, code, token, valid_until. Returns a one-page PDF of that size.
  */
 function gv_label_pdf($o) {
-	$W = 1193; $H = 638; $m = 46;   // 101 x 54 mm at 300 dpi; 4 mm margin (the printer cannot print to the edge)
+	$W = 638; $H = 1193; $m = 46;   // 54 x 101 mm at 300 dpi; 4 mm margin (the printer cannot print to the edge)
 	$im = imagecreatetruecolor($W, $H); imagefill($im, 0, 0, 0xFFFFFF);
 	$k = imagecolorallocate($im, 0, 0, 0);
 	$f = gv_font('Raleway-SemiBold');
-	$S = function ($pt) { return $pt * 300 / 72; };   // real printed points -> GD size (GD counts pixels at 300 dpi here)
-	$colW = 690; $divX = 770; $cap = 0.71;   // cap height of the face
-	// 1. heading
-	$hs = $S(16); $heading = 'Dein Webshop-Code';
-	while ($hs > $S(12) && gv_text_w($hs, $f, $heading) > $colW) { $hs -= 2; }
-	$y = $m + (int)round($cap * $hs);
-	imagettftext($im, $hs, 0, $m, $y, $k, $f, $heading);
-	// 2. the code, as large as the column allows (up to 36 pt)
-	$code = (string)($o['code'] ?? ''); $cs = $S(36); $track = 12;
-	while ($cs > $S(24) && gv_text_w($cs, $f, $code) + (max(1, strlen($code)) - 1) * $track > $colW) { $cs -= 2; }
-	$y += 54 + (int)round($cap * $cs);
-	gv_text_spaced($im, $cs, $m, $y, $k, $f, $code, $track);
-	// 3. one instruction, 13 pt, two short lines
-	$is = $S(13); $shop = trim((string)shop_setting('gv_shop_host'));
-	$y += 86; imagettftext($im, $is, 0, $m, $y, $k, $f, 'Einlösen auf');
-	$y += 64; imagettftext($im, $is, 0, $m, $y, $k, $f, $shop !== '' ? $shop : 'amadeus.delivery');
-	// 4. the number (to match the label to its blank) and the validity, 10 pt
-	$ms = $S(10);
-	imagettftext($im, $ms, 0, $m, $H - $m - 54, $k, $f, 'Nr. '.($o['number'] ?? ''));
-	if (!empty($o['valid_until'])) { imagettftext($im, $ms, 0, $m, $H - $m, $k, $f, 'gültig bis '.date('d.m.Y', strtotime($o['valid_until']))); }
-	// right column: divider, QR code for the team (at least 25 mm, with its quiet zone) and one caption
-	for ($yy = $m; $yy < $H - $m; $yy += 24) { imageline($im, $divX, $yy, $divX, min($H - $m, $yy + 12), $k); imageline($im, $divX + 1, $yy, $divX + 1, min($H - $m, $yy + 12), $k); }
-	$qr = qr_matrix(gv_qr_url($o['number'] ?? '', $o['token'] ?? ''));
-	$cx = $divX + (($W - $m - $divX) / 2); $ty = $m + 40;
-	if ($qr) {
-		$n = count($qr); $mod = max(1, (int)floor(310 / ($n + 2))); $side = ($n + 2) * $mod; $qx = (int)round($cx - $side / 2); $qy = $m - 6;
-		for ($r = 0; $r < $n; $r++) { for ($c = 0; $c < $n; $c++) { if ($qr[$r][$c]) { $x0 = $qx + ($c + 1) * $mod; $y0 = $qy + ($r + 1) * $mod; imagefilledrectangle($im, $x0, $y0, $x0 + $mod - 1, $y0 + $mod - 1, $k); } } }
-		$ty = $qy + $side + 62;
+	$G = function ($pt) { return $pt * 300 / 72 * 0.75; };   // real printed points -> the size GD wants
+	$px = function ($g) { return $g * 4 / 3; };                // the size GD wants -> pixels
+	$colW = $W - 2 * $m; $cap = 0.71;                         // width of the text column; cap height of the face (share of the size in pixels)
+	$mid = function ($size, $text, $track = 0) use ($f, $W) { return (int)round(($W - (gv_text_w($size, $f, $text) + (max(1, strlen($text)) - 1) * $track)) / 2); };
+	$fit = function ($size, $min, $text, $track = 0) use ($f, $colW) { while ($size > $min && gv_text_w($size, $f, $text) + (max(1, strlen($text)) - 1) * $track > $colW) { $size -= 1; } return $size; };
+	// 1. heading, 11 pt
+	$heading = 'Dein Webshop-Code'; $hs = $fit($G(11), $G(10), $heading);
+	$y = $m + (int)round($cap * $px($hs));
+	imagettftext($im, $hs, 0, $mid($hs, $heading), $y, $k, $f, $heading);
+	// 2. the code, 36 pt (a longer code gets only as small as it needs to)
+	$code = (string)($o['code'] ?? ''); $track = 12; $cs = $fit($G(36), $G(20), $code, $track);
+	$y += 40 + (int)round($cap * $px($cs));
+	gv_text_spaced($im, $cs, $mid($cs, $code, $track), $y, $k, $f, $code, $track);
+	// 3. one instruction, 12 pt, two short lines
+	$shop = trim((string)shop_setting('gv_shop_host')); $shop = $shop !== '' ? $shop : 'amadeus.delivery';
+	$is = $fit($G(12), $G(10), $shop);   // a long address gets a little smaller instead of running out of the label
+	$hostLines = array($shop);
+	if (gv_text_w($is, $f, $shop) > $colW) {   // still too wide at the smallest size: two lines, broken after the dash or dot nearest to the middle
+		$half = intdiv(strlen($shop), 2); $at = -1;
+		for ($i = 0; $i < strlen($shop); $i++) { if (in_array($shop[$i], array('-', '.', '/'), true) && ($at < 0 || abs($i - $half) < abs($at - $half))) { $at = $i; } }
+		$cut = $at >= 0 ? $at + 1 : $half; $hostLines = array(substr($shop, 0, $cut), substr($shop, $cut));
 	}
-	$cs2 = $S(13);
-	foreach (array('Nur für', 'das Team') as $line) { imagettftext($im, $cs2, 0, (int)round($cx - gv_text_w($cs2, $f, $line) / 2), $ty, $k, $f, $line); $ty += 62; }
+	$y += 44 + (int)round($cap * $px($is)); imagettftext($im, $is, 0, $mid($is, 'Einlösen auf'), $y, $k, $f, 'Einlösen auf');
+	foreach ($hostLines as $hl) { $y += (int)round(1.3 * $px($is)); imagettftext($im, $is, 0, $mid($is, $hl), $y, $k, $f, $hl); }
+	// 4. dashed line between the guest's part and the team's part
+	$y += 36; for ($xx = $m; $xx < $W - $m; $xx += 24) { imageline($im, $xx, $y, min($W - $m, $xx + 12), $y, $k); imageline($im, $xx, $y + 1, min($W - $m, $xx + 12), $y + 1, $k); }
+	// 5. the number (to match the label to its blank) and the validity, 10 pt, at the bottom
+	$ms = $G(10); $val = !empty($o['valid_until']) ? 'gültig bis '.date('d.m.Y', strtotime($o['valid_until'])) : '';
+	$yVal = $H - $m - 10; $yNr = $val !== '' ? $yVal - (int)round(1.4 * $px($ms)) : $yVal;   // the lowest line leaves room for the tails of letters under the margin
+	$nr = (string)($o['number'] ?? ''); imagettftext($im, $ms, 0, $mid($ms, $nr), $yNr, $k, $f, $nr);
+	if ($val !== '') { imagettftext($im, $ms, 0, $mid($ms, $val), $yVal, $k, $f, $val); }
+	// 6. the QR code for the team with one caption under it, in the room between the dashed line and the number
+	$qr = qr_matrix(gv_qr_url($o['number'] ?? '', $o['token'] ?? ''));
+	$cs2 = $G(12); $capLine = 'Nur für das Team'; $capH = (int)round($cap * $px($cs2));
+	$top = $y + 34; $capBase = $yNr - (int)round($cap * $px($ms)) - 56;   // the caption sits above the number with a gap
+	$ty = $capBase;
+	if ($qr) {
+		$room = $capBase - $capH - 36 - $top; $n = count($qr);
+		$limit = max(200, min($colW, 472, $room)); $mod = max(1, (int)floor($limit / ($n + 2))); $side = ($n + 2) * $mod; $qx = (int)round(($W - $side) / 2); $qy = $top + (int)round(max(0, $room - $side) / 2);   // 472 px = 40 mm with its quiet zone
+		for ($r = 0; $r < $n; $r++) { for ($c = 0; $c < $n; $c++) { if ($qr[$r][$c]) { $x0 = $qx + ($c + 1) * $mod; $y0 = $qy + ($r + 1) * $mod; imagefilledrectangle($im, $x0, $y0, $x0 + $mod - 1, $y0 + $mod - 1, $k); } } }
+		$ty = $qy + $side + 36 + $capH;
+	}
+	imagettftext($im, $cs2, 0, $mid($cs2, $capLine), $ty, $k, $f, $capLine);
 	ob_start(); imagejpeg($im, null, 92); $jpeg = ob_get_clean();
-	return gv_pdf_wrap_jpegs(array(array($jpeg, $W, $H)), 'Etikett '.($o['number'] ?? ''), 286.30, 153.07);
+	return gv_pdf_wrap_jpegs(array(array($jpeg, $W, $H)), 'Etikett '.($o['number'] ?? ''), 153.07, 286.30);
 }
 
 function gv_print_pdf($o) {
