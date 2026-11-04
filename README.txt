@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-04 == mySeat v6.68.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Behoben (Webshop, iPhone/Safari): Das Wischen zum Schließen war dort kaum nutzbar. Safari entscheidet in den ersten Pixeln einer Geste, ob die Seite scrollt oder wackelt, und danach lässt sich die Berührung nicht mehr übernehmen. Die Richtung wird deshalb jetzt mit der allerersten Abwärtsbewegung festgelegt (vorher erst nach 10 px, da war es zu spät), und jedes Sheet hat von Anfang an einen Listener, der die Berührung anhalten darf (das verlangt Safari).
+ * Behoben: Ein Warenkorb, der auf dem Handy nur ein paar Pixel breiter war als der Bildschirm, galt als seitlich scrollbar, und die Geste startete nie. Geprüft werden jetzt nur Reihen im Sheet (z. B. Chips), nicht das Sheet selbst.
+
 2026-11-04 == mySeat v6.68.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Behoben (Webshop, Handy): Das Wischen zum Schließen funktionierte nur bedingt. Es griff nur auf der schmalen Kopfzeile des Warenkorbs oder Dialogs; jetzt folgt das Sheet dem Finger von überall, solange der Inhalt unter dem Finger ganz oben steht (sonst scrollt der Inhalt wie gewohnt). Gilt für Warenkorb, Produktdialog, Konto- und Gruppendialog; Pizza- und Schnitzel-Konfigurator nur über die Kopfzeile, weil sie eigene Gesten haben. Sideways-Wischen (Chip-Reihen) und Eingabefelder bleiben unberührt.

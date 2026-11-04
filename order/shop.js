@@ -658,7 +658,7 @@
 		function atTop(el, sh) {
 			for (var n = el; n && n.nodeType === 1; n = n.parentElement) {
 				var cs = getComputedStyle(n);
-				if (/(auto|scroll)/.test(cs.overflowX) && n.scrollWidth > n.clientWidth + 1) { return false; }
+				if (n !== sh && /(auto|scroll)/.test(cs.overflowX) && n.scrollWidth > n.clientWidth + 1) { return false; }   // a row inside the sheet that scrolls sideways (not the sheet itself: its content may be a pixel wider)
 				if (/(auto|scroll)/.test(cs.overflowY) && n.scrollHeight > n.clientHeight + 1 && n.scrollTop > 0) { return false; }
 				if (n === sh) { break; }
 			}
@@ -684,24 +684,27 @@
 			if (ev.target.closest('input, textarea, select, [data-noswipe]') || !atTop(ev.target, sh)) { return; }
 			var p = ev.touches[0];
 			t = { el: ev.target, sh: sh, x0: p.clientX, y0: p.clientY, on: false, dy: 0, s: [{ y: p.clientY, ts: ev.timeStamp }] };
-			t.el.addEventListener('touchmove', move, { passive: false });
-			t.el.addEventListener('touchend', end);
-			t.el.addEventListener('touchcancel', cancel);
+			if (t.el !== sh) {   // the sheet itself has these listeners for good
+				t.el.addEventListener('touchmove', move, { passive: false });
+				t.el.addEventListener('touchend', end);
+				t.el.addEventListener('touchcancel', cancel);
+			}
 		}
 		function release() {
 			if (!t) { return null; }
 			var g = t; t = null;
-			g.el.removeEventListener('touchmove', move); g.el.removeEventListener('touchend', end); g.el.removeEventListener('touchcancel', cancel);
+			if (g.el !== g.sh) { g.el.removeEventListener('touchmove', move); g.el.removeEventListener('touchend', end); g.el.removeEventListener('touchcancel', cancel); }
 			return g;
 		}
 		function stop(moved) { if (!t) { return; } if (moved) { settle(false); } else { release(); } }
 		function move(ev) {
-			if (!t) { return; }
+			if (!t || ev.swDone) { return; }
+			ev.swDone = true;   // heard twice (on the touched element and on the page): once is enough
 			var p = ev.touches[0], dy = p.clientY - t.y0, dx = p.clientX - t.x0;
 			if (!t.on) {
-				if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) { release(); return; }   // sideways: not ours
-				if (dy < -6) { release(); return; }                                           // upwards: the content scrolls
-				if (dy < 10) { return; }
+				// the direction is decided with the very first movement: Safari on the iPhone starts to scroll (or to bounce the page) within a few pixels, and after that the touch cannot be taken over any more
+				if (Math.abs(dx) < 3 && Math.abs(dy) < 3) { return; }
+				if (dy <= 0 || Math.abs(dx) > Math.abs(dy)) { release(); return; }            // upwards or sideways: not ours, the content scrolls
 				if (!ev.cancelable) { release(); return; }                                    // the browser has begun to scroll already
 				t.on = true; t.sh.style.transition = 'none';
 			}
@@ -710,13 +713,21 @@
 			t.s.push({ y: p.clientY, ts: ev.timeStamp });
 			while (t.s.length > 2 && ev.timeStamp - t.s[0].ts > 120) { t.s.shift(); }
 		}
-		function end() {
-			if (!t) { return; }
+		function end(ev) {
+			if (!t || ev.swDone) { return; }
+			ev.swDone = true;
 			if (!t.on) { release(); return; }
 			settle(t.dy > Math.min(160, t.sh.offsetHeight * 0.25) || (t.dy > 30 && speed() > 0.5));
 		}
-		function cancel() { stop(t && t.on); }
+		function cancel(ev) { if (!t || ev.swDone) { return; } ev.swDone = true; stop(t.on); }
+		// Safari on the iPhone only lets a touch be taken over when a listener that may stop it (not passive) is there from the start: so each sheet has one, next to the one on the touched element
+		// (on the sheets only, so that scrolling the shop itself stays untouched)
 		document.addEventListener('touchstart', begin, { passive: true });
+		$$('#shop-cart, dialog').forEach(function (sh) {
+			sh.addEventListener('touchmove', move, { passive: false });
+			sh.addEventListener('touchend', end);
+			sh.addEventListener('touchcancel', cancel);
+		});
 	})();
 	// the soft first impression of a dish picture (a tiny copy as background, see order/index.php) goes away once the real picture is there, so pictures with transparent parts stay clean
 	$$('.shop-item-img').forEach(function (im) {
