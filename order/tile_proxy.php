@@ -13,6 +13,14 @@ if ($z < 0 || $z > 19 || $x < 0 || $y < 0 || $x >= $span || $y >= $span) {
 	exit;
 }
 
+// only the area we deliver to (Hildesheim and surroundings, 51.9-52.4 N, 9.5-10.4 E) and zoom 10-19: anything else is no tile of ours, and every fetched tile stays on the disk
+$tileX = function ($lon, $z) { return (int)floor(($lon + 180) / 360 * (1 << $z)); };
+$tileY = function ($lat, $z) { $r = deg2rad($lat); return (int)floor((1 - log(tan($r) + 1 / cos($r)) / M_PI) / 2 * (1 << $z)); };
+if ($z < 10 || $x < $tileX(9.5, $z) || $x > $tileX(10.4, $z) || $y < $tileY(52.4, $z) || $y > $tileY(51.9, $z)) {
+	http_response_code(404);
+	exit;
+}
+
 $maxAgeDisk = 30 * 24 * 3600; // Kartenbilder ändern sich selten - 30 Tage lokal vorhalten ist unbedenklich
 $cacheDir = __DIR__.'/cache/tiles/'.$z.'/'.$x;
 $cacheFile = $cacheDir.'/'.$y.'.png';

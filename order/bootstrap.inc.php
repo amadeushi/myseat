@@ -4,6 +4,9 @@
  * classes, and the visibility rule. Staff who are logged in to the backend can always look at the shop (preview).
  */
 require_once __DIR__.'/../web/classes/mysql_compat.php';
+// the cookie of the session: not readable by scripts (HttpOnly), only over https when the page is (Secure), and not sent along with requests from other sites (SameSite=Lax: the way back from Mollie is a normal link and still works)
+$shop_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+session_set_cookie_params(array('lifetime' => 0, 'path' => '/', 'secure' => $shop_https, 'httponly' => true, 'samesite' => 'Lax'));
 session_start();
 date_default_timezone_set('Europe/Berlin');
 include(__DIR__.'/../config/config.general.php');

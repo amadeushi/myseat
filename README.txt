@@ -52,6 +52,12 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-05 == mySeat v6.72.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geändert (Webshop, Sicherheitsprüfung): Das Sitzungs-Cookie der Gästeseiten ist jetzt HttpOnly, Secure (bei https) und SameSite=Lax. Vorher setzte der Server keine dieser Flags. Der Rückweg von Mollie funktioniert weiter (normaler Link).
+ * Geändert: Die Kartenkacheln (tile_proxy.php) gibt es nur noch für das Liefergebiet (51,9 bis 52,4 N, 9,5 bis 10,4 O) und Zoom 10 bis 19. Vorher konnte jeder beliebige Kacheln anfordern, die bei uns gespeichert wurden (Platte voll, OpenStreetMap-Sperre).
+ * Geändert: Eigene Gutschein-Bilder: höchstens 10 pro Stunde und Adresse (zusätzlich zu 6 pro Sitzung), und der Ordner nimmt höchstens 400 Bilder auf (vorher räumte nur ein Zufallslauf nach 2 Tagen auf).
+
 2026-11-05 == mySeat v6.71.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geändert (Webshop, Stresstest mit Extremdaten, Skill "break-ui"): Shop, Kasse und Gutschein wurden mit der schlimmsten realistischen Datenlage geprüft (82 Gerichte mit Titeln, Beschreibungen und Allergenen an der Spaltengrenze, 12 Varianten, 33 Zusatzoptionen, 60 Getränke, Beträge bis 4.999 €, fehlende/hohe/breite Bilder, Namen wie "Wiśniewska-Kowalczyk"). Alle gefundenen Brüche sind behoben.

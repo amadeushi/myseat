@@ -12,6 +12,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !shop_token_ok(isset($_POST['token'
 if (!$cfg['own']) { gvu_out(array('ok' => false, 'error' => 'Eigene Bilder sind gerade nicht möglich.')); }
 $own = isset($_SESSION['gv_own']) ? (array)$_SESSION['gv_own'] : array();
 if (count($own) >= 6) { gvu_out(array('ok' => false, 'error' => 'Du hast schon mehrere Bilder hochgeladen. Bitte wähle eines davon oder lade die Seite neu.')); }
+// per address as well (a visitor who throws away the cookie gets a new session): 10 pictures an hour, and the folder never holds more than 400 pictures
+shop_ensure_schema();
+$upKey = 'u'.substr(gv_ip(), 0, 44);
+$upN = fb_row("SELECT COUNT(*) AS n FROM ".fb_t('tp_gv_tries')." WHERE ip = ? AND at > ?", 'ss', array($upKey, date('Y-m-d H:i:s', time() - 3600)));
+if ($upN && (int)$upN['n'] >= 10) { gvu_out(array('ok' => false, 'error' => 'Du hast in der letzten Stunde schon viele Bilder hochgeladen. Bitte versuche es später noch einmal.')); }
+if (count((array)glob(gv_upload_dir().'/*.jpg')) >= 400) { gv_upload_gc(); if (count((array)glob(gv_upload_dir().'/*.jpg')) >= 400) { gvu_out(array('ok' => false, 'error' => 'Eigene Bilder sind gerade nicht möglich. Bitte wähle eines unserer Motive.')); } }
 $f = isset($_FILES['file']) ? $_FILES['file'] : null;
 if (!is_array($f) || $f['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($f['tmp_name'])) {
 	$big = is_array($f) && in_array($f['error'], array(UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE), true);
@@ -20,6 +26,7 @@ if (!is_array($f) || $f['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($f['tmp_
 $r = gv_upload_store((string)file_get_contents($f['tmp_name']));
 if (!$r['ok']) { gvu_out($r); }
 $own[] = $r['key']; $_SESSION['gv_own'] = $own;
+fb_exec("INSERT INTO ".fb_t('tp_gv_tries')." (ip, at) VALUES (?, ?)", 'ss', array($upKey, gv_now()));
 if (mt_rand(1, 20) === 1) { gv_upload_gc(); }
 $cn = gv_crop_norm('own:'.$r['key'], 500, 500, 1000); $sz = @getimagesize(gv_upload_dir().'/'.$r['key'].'.jpg');
 gvu_out(array('ok' => true, 'motif' => 'own:'.$r['key'], 'w' => $sz ? $sz[0] : 0, 'h' => $sz ? $sz[1] : 0, 'zmax' => $cn[3]));
