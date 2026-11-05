@@ -85,6 +85,9 @@
 		sum();
 	}
 	function count() { $('gv-count').textContent = form.elements.message.value.length + ' / 160'; }
+	// emoji and pictograms cannot be printed on the card (the faces have none): say so while it is typed
+	var EMOJI = /[\u{1F000}-\u{1FFFF}\u{2190}-\u{21FF}\u{2300}-\u{23FF}\u{2460}-\u{27BF}\u{2900}-\u{2BFF}\u{FE0F}\u{200D}\u{20E3}]/u;
+	function emojiHint() { var h = $('gv-emoji-hint'); if (h) { h.hidden = !['recipient', 'from', 'message'].some(function (n) { return EMOJI.test(form.elements[n].value); }); } }
 
 	form.addEventListener('change', function (e) {
 		var n = e.target.name;
@@ -94,7 +97,7 @@
 	form.addEventListener('input', function (e) {
 		var n = e.target.name;
 		if (n === 'amount_custom') { sum(); later(); }
-		else if (n === 'recipient' || n === 'from' || n === 'message') { count(); showSide(true); later(); }   // the words are on the back: show it while they are typed
+		else if (n === 'recipient' || n === 'from' || n === 'message') { count(); emojiHint(); showSide(true); later(); }   // the words are on the back: show it while they are typed
 	});
 
 	/* own picture */
@@ -121,6 +124,6 @@
 	}
 
 	form.addEventListener('submit', function () { var b = $('gv-submit'); if (b && !b.disabled) { setTimeout(function () { b.disabled = true; b.textContent = 'Einen Moment ...'; }, 0); } });
-	layout(); count(); cropShow();
+	layout(); count(); emojiHint(); cropShow();
 	var e = $('gv-err'); if (e) { e.scrollIntoView({ block: 'center' }); }
 })();

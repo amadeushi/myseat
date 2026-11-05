@@ -130,6 +130,7 @@ gv_page_head('Gutschein verschenken', 'gv-shell');
 					<label class="co-f">Für wen? (optional)<input type="text" name="recipient" id="gv-recipient" maxlength="80" autocomplete="off" enterkeyhint="next" value="<?php echo $h($val('recipient')); ?>"/></label>
 					<label class="co-f">Von wem? (optional)<input type="text" name="from" id="gv-from" maxlength="80" autocomplete="off" enterkeyhint="next" value="<?php echo $h($val('from')); ?>"/></label>
 					<label class="co-f wide">Ein paar Worte (optional)<textarea name="message" id="gv-message" maxlength="160" rows="3" placeholder="z. B. Zum 40.: Such dir was aus, wir sehen uns dort."><?php echo $h($val('message')); ?></textarea><span class="gv-count" id="gv-count" aria-hidden="true">0 / 160</span></label>
+					<p class="gv-hint" id="gv-emoji-hint" role="status" hidden>Emoji und Bildzeichen lassen sich nicht auf die Karte drucken, sie bleiben weg.</p>
 				</div>
 			</fieldset>
 

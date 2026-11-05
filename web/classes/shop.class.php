@@ -2319,22 +2319,20 @@ function shop_img_store($bin) {
 	if ($info[2] === IMAGETYPE_JPEG && function_exists('exif_read_data')) { // phone photos: turn them the way they were taken
 		$ex = @exif_read_data('data://image/jpeg;base64,'.base64_encode($bin)); $ang = array(3 => 180, 6 => -90, 8 => 90);
 		$o = isset($ex['Orientation']) ? (int)$ex['Orientation'] : 1;
-		if (isset($ang[$o])) { $r = imagerotate($im, $ang[$o], 0); if ($r) { imagedestroy($im); $im = $r; } }
+		if (isset($ang[$o])) { $r = imagerotate($im, $ang[$o], 0); if ($r) { $im = $r; } }
 	}
 	$w = imagesx($im); $h = imagesy($im);
 	if (max($w, $h) > 1200) {
 		$s = 1200 / max($w, $h); $nw = max(1, (int)round($w * $s)); $nh = max(1, (int)round($h * $s));
 		$dst = imagecreatetruecolor($nw, $nh); imagealphablending($dst, false); imagesavealpha($dst, true);
 		imagefill($dst, 0, 0, imagecolorallocatealpha($dst, 255, 255, 255, 127));
-		imagecopyresampled($dst, $im, 0, 0, 0, 0, $nw, $nh, $w, $h); imagedestroy($im); $im = $dst;
+		imagecopyresampled($dst, $im, 0, 0, 0, 0, $nw, $nh, $w, $h); $im = $dst;
 	}
 	if (function_exists('imagewebp')) { imagesavealpha($im, true); ob_start(); imagewebp($im, null, 82); $out = ob_get_clean(); $ext = 'webp'; }
 	else {
 		$flat = imagecreatetruecolor(imagesx($im), imagesy($im)); imagefill($flat, 0, 0, imagecolorallocate($flat, 255, 255, 255)); imagecopy($flat, $im, 0, 0, 0, 0, imagesx($im), imagesy($im));
-		ob_start(); imagejpeg($flat, null, 85); $out = ob_get_clean(); $ext = 'jpg'; imagedestroy($flat);
-	}
-	imagedestroy($im);
-	if (!$out) { return array('ok' => false, 'error' => 'Das Bild konnte nicht umgewandelt werden.'); }
+		ob_start(); imagejpeg($flat, null, 85); $out = ob_get_clean(); $ext = 'jpg'; 	}
+		if (!$out) { return array('ok' => false, 'error' => 'Das Bild konnte nicht umgewandelt werden.'); }
 	$dir = shop_img_dir();
 	if (!is_dir($dir)) { @mkdir($dir, 0755, true); }
 	$name = substr(sha1($out), 0, 20).'.'.$ext;
@@ -2345,6 +2343,8 @@ function shop_img_store($bin) {
 }
 // a smaller copy of a dish picture for the list (240 px and 480 px wide, in uploads/menu/t240/, t480/): the list shows the picture at 80-96 px, the original (up to 1200 px, 115-190 KB) is
 // only needed larger. Made when the picture is stored, or on the first view for the ones that were there before; returns the address of the copy, or of the original if there is none.
+// false only for a picture of this installation whose file is gone (deleted, never uploaded): then the dish is shown without the picture instead of a broken-picture symbol
+function shop_img_ok($url) { $f = shop_img_file($url); return $f === '' ? true : is_file($f); }
 function shop_img_thumb($url, $w) {
 	$w = (int)$w; $file = shop_img_file($url);
 	if ($file === '' || !is_file($file) || $w < 16) { return $url; }
@@ -2354,15 +2354,13 @@ function shop_img_thumb($url, $w) {
 	$im = @imagecreatefromstring((string)@file_get_contents($file));
 	if (!$im) { return $url; }
 	$sw = imagesx($im); $sh = imagesy($im);
-	if ($sw <= $w) { imagedestroy($im); return $url; }   // the original is no bigger than the copy would be
+	if ($sw <= $w) { return $url; }   // the original is no bigger than the copy would be
 	$nh = max(1, (int)round($sh * $w / $sw));
 	$dst = imagecreatetruecolor($w, $nh); imagealphablending($dst, false); imagesavealpha($dst, true);
 	imagefill($dst, 0, 0, imagecolorallocatealpha($dst, 255, 255, 255, 127));
-	imagecopyresampled($dst, $im, 0, 0, 0, 0, $w, $nh, $sw, $sh); imagedestroy($im);
-	ob_start();
-	if (substr($name, -5) === '.webp' && function_exists('imagewebp')) { imagewebp($dst, null, 80); } else { $flat = imagecreatetruecolor($w, $nh); imagefill($flat, 0, 0, imagecolorallocate($flat, 255, 255, 255)); imagecopy($flat, $dst, 0, 0, 0, 0, $w, $nh); imagejpeg($flat, null, 82); imagedestroy($flat); }
-	$out = ob_get_clean(); imagedestroy($dst);
-	if (!$out) { return $url; }
+	imagecopyresampled($dst, $im, 0, 0, 0, 0, $w, $nh, $sw, $sh); 	ob_start();
+	if (substr($name, -5) === '.webp' && function_exists('imagewebp')) { imagewebp($dst, null, 80); } else { $flat = imagecreatetruecolor($w, $nh); imagefill($flat, 0, 0, imagecolorallocate($flat, 255, 255, 255)); imagecopy($flat, $dst, 0, 0, 0, 0, $w, $nh); imagejpeg($flat, null, 82); }
+	$out = ob_get_clean(); 	if (!$out) { return $url; }
 	if (!is_dir($dir)) { @mkdir($dir, 0755, true); }
 	if (!is_writable($dir) || @file_put_contents($dir.'/'.$name, $out, LOCK_EX) === false) { return $url; }
 	@chmod($dir.'/'.$name, 0644);

@@ -365,6 +365,14 @@ function gv_card_short($o) {
  * The back of the card (A6 landscape, on paper): for / from, the words of the giver, number, code and validity, the QR code (for the team) and the short version of how to redeem, with the
  * small print at the foot. Everything sits on the plain paper colour in dark ink (at least 9:1), sizes are real points: names 12, message 12 to 15, number and code 10, short text 9, small print 8.
  */
+// the text of a card as the faces can draw it: Latin letters with their accents (Latin-Extended too: ś, ł, ő, č ...), no emoji, pictograms or invisible joiners (they would come out as gaps or garbage on the print)
+function gv_card_text($s) {
+	$s = (string)$s;
+	$s = mb_convert_encoding($s, 'UTF-8', 'UTF-8');
+	$r = preg_replace('/[\x{1F000}-\x{1FFFF}\x{2190}-\x{21FF}\x{2300}-\x{23FF}\x{2460}-\x{27BF}\x{2900}-\x{2BFF}\x{E000}-\x{F8FF}\x{FE00}-\x{FE0F}\x{200B}-\x{200F}\x{202A}-\x{202E}\x{2060}-\x{206F}\x{20E3}\x{FEFF}]/u', '', $s);
+	$r = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $r === null ? $s : $r);
+	return (string)preg_replace('/[ \t]{2,}/u', ' ', (string)$r);
+}
 function gv_render_back($o, $w) {
 	$H = (int)round($w * GV_CARD_H_MM / GV_CARD_W_MM); $pxMm = $w / GV_CARD_W_MM;
 	$mm = function ($v) use ($pxMm) { return $v * $pxMm; }; $P = function ($pt) use ($pxMm) { return $pt * 25.4 / 72 * $pxMm; };
@@ -388,13 +396,22 @@ function gv_render_back($o, $w) {
 	$short = gv_card_short($o); $ss = $P(9); $sl = gv_wrap($short[1], $sans, $ss, $full, 99);
 	$shortH = $P(9.5) * 1.45 + count($sl) * $ss * 1.38;
 	// names, the words of the giver (largest size that fits), then number / code / validity
-	$names = array();
-	if (trim((string)($o['recipient'] ?? '')) !== '') { $names[] = 'Für '.trim($o['recipient']); }
-	if (trim((string)($o['from'] ?? '')) !== '') { $names[] = 'Von '.trim($o['from']); }
+	$names = array(); $rec = trim(gv_card_text($o['recipient'] ?? '')); $frm = trim(gv_card_text($o['from'] ?? ''));
+	if ($rec !== '') { $names[] = 'Für '.$rec; }
+	if ($frm !== '') { $names[] = 'Von '.$frm; }
 	$ns = $P(12); $nl = array();
-	if ($names) { $joined = implode('   ·   ', $names); $nl = gv_text_w($ns, $sansB, $joined) <= $narrow ? array($joined) : $names; }
+	if ($names) {
+		$joined = implode('   ·   ', $names);
+		if (gv_text_w($ns, $sansB, $joined) <= $narrow) { $nl = array($joined); }
+		else {   // each name on its own, a little smaller (11 pt), wrapped inside the column left of the QR code (two lines each at most, three in all so that the words of the giver keep their room); a word that is wider than the column is shortened
+			$ns = $P(11);
+			foreach ($names as $nm) { foreach (gv_wrap($nm, $sansB, $ns, $narrow, 2) as $ln) { while (mb_strlen($ln) > 1 && gv_text_w($ns, $sansB, $ln) > $narrow) { $ln = rtrim(mb_substr($ln, 0, -2)).'…'; } $nl[] = $ln; } }
+			$cut = count($nl) > 3; $nl = array_slice($nl, 0, 3);
+			if ($cut) { $k = count($nl) - 1; $ln = rtrim($nl[$k]).' …'; while (mb_strlen($ln) > 3 && gv_text_w($ns, $sansB, $ln) > $narrow) { $ln = rtrim(mb_substr($ln, 0, -3)).' …'; } $nl[$k] = $ln; }   // lines that do not fit are not just dropped: the last one says so
+		}
+	}
 	$yNames = $mm(14); $yMsg0 = $nl ? $yNames + (count($nl) - 1) * $ns * 1.45 + $ns * 1.45 + $mm(1) : $yNames;
-	$msg = trim((string)($o['message'] ?? '')); $lines = array(); $ms = 15; $info = array('Nr. '.($o['number'] ?? '').(($o['code'] ?? '') !== '' ? '     Code '.$o['code'] : ''));
+	$msg = trim(gv_card_text($o['message'] ?? '')); $lines = array(); $ms = 15; $info = array('Nr. '.($o['number'] ?? '').(($o['code'] ?? '') !== '' ? '     Code '.$o['code'] : ''));
 	if (!empty($o['valid_until'])) { $info[] = 'gültig bis '.date('d.m.Y', strtotime($o['valid_until'])); }
 	$is = $P(10);
 	foreach (array(15, 14, 13, 12) as $ms) {
@@ -411,7 +428,7 @@ function gv_render_back($o, $w) {
 		$lines = gv_wrap_var($msg, $serif, $P($ms), function ($i) use ($yMsg0, $lh, $qrBottom, $narrow, $full, $P, $ms) { return ($yMsg0 + $i * $lh - $P($ms) * 0.75) < $qrBottom ? $narrow : $full; }, $maxL);
 		$yLast = $yMsg0 + (count($lines) - 1) * $lh; $yInfo = $yLast + $mm(7.5); $yShort = $yInfo + (count($info) - 1) * $is * 1.45 + $mm(6);
 	}
-	$y = $yNames; foreach ($nl as $line) { imagettftext($im, $ns, 0, (int)$m, (int)$y, $ink, $sansB, mb_strimwidth($line, 0, 70, '…')); $y += $ns * 1.45; }
+	$y = $yNames; foreach ($nl as $line) { imagettftext($im, $ns, 0, (int)$m, (int)$y, $ink, $sansB, $line); $y += $ns * 1.45; }
 	foreach ($lines as $k => $line) { imagettftext($im, $P($ms), 0, (int)$m, (int)($yMsg0 + $k * $lh), $ink, $serif, $line); }
 	$yShort = max($yShort, $footTop - $shortH + $P(9.5) * 0.4);   // the redeem block rests on the small print, the free room lies between the info and this block
 	$y = $yInfo; foreach ($info as $line) { imagettftext($im, $is, 0, (int)$m, (int)$y, $ink, $sansB, $line); $y += $is * 1.45; }

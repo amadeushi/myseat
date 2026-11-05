@@ -52,6 +52,18 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-05 == mySeat v6.71.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geändert (Webshop, Stresstest mit Extremdaten, Skill "break-ui"): Shop, Kasse und Gutschein wurden mit der schlimmsten realistischen Datenlage geprüft (82 Gerichte mit Titeln, Beschreibungen und Allergenen an der Spaltengrenze, 12 Varianten, 33 Zusatzoptionen, 60 Getränke, Beträge bis 4.999 €, fehlende/hohe/breite Bilder, Namen wie "Wiśniewska-Kowalczyk"). Alle gefundenen Brüche sind behoben.
+ * Behoben: Beträge haben überall Tausenderpunkte ("1.234,50 €", Shop, Warenkorb, Kasse).
+ * Behoben: Lange Beschreibungen in der Speisekarte sind auf drei Zeilen begrenzt, mit "mehr / weniger". Sehr lange Kategorienamen werden in den Chips mit "…" gekürzt (voller Name im Tooltip), Überschriften werden bei mehr als 48 Zeichen etwas kleiner.
+ * Behoben: Produkte, deren Bilddatei fehlt oder nicht lädt, zeigen keinen leeren Rahmen mehr; die Karte rückt zusammen. Kurze Suchbegriffe finden exakte Wörter wieder.
+ * Behoben: Die Lieferart-Knöpfe in der Kasse und lange Adressen können die Seite nicht mehr breiter als den Bildschirm machen (0 px Überlauf bei 390 px, getestet mit vier langen Adressen).
+ * Behoben: Die Summe im Warenkorb klebt unten nur noch, wenn der Bildschirm mindestens 600 px hoch ist. Am Handy im Querformat blieb sonst kaum Platz für die Liste.
+ * Behoben (Gutschein): Die Schriften Raleway und Cormorant Garamond enthalten jetzt auch Latin-Extended (Polnisch, Tschechisch, Türkisch, Ungarisch usw.). Vorher fehlten dort Buchstaben wie ś, ł, ő, ğ auf der Karte; die lateinischen Zeichen sind unverändert (pixelgleich geprüft, Lizenz OFL).
+ * Behoben (Gutschein): Emoji und Bildzeichen lassen sich nicht auf die Karte drucken und werden entfernt; im Formular steht jetzt ein Hinweis dazu. Namen auf der Karte laufen in der Textspalte (11 pt, höchstens 3 Zeilen, Kürzung mit "…"), die Nachricht hat Vorrang und wird nicht mehr abgeschnitten.
+ * Geändert (intern): Die PHP-8.5-Warnungen durch imagedestroy() sind entfernt (bringt in PHP 8 nichts), neue Funktion shop_img_ok() prüft lokale Produktbilder.
+
 2026-11-05 == mySeat v6.70.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geändert (Webshop, Handy-Gefühl, Review mit dem Skill "mobile-native"): Alle 66 :hover-Regeln der Shop-Stylesheets (shop, konto, gutschein, pizza, chat) stehen jetzt hinter "@media (hover: hover) and (pointer: fine)". Vorher blieb ein angetipptes Element am iPhone im Hover-Zustand (Farbe, Rand), bis man woanders tippte. Die Umstellung erfolgte per Skript und wurde im Browser gegen die alten Dateien verglichen: 0 Unterschiede in den Regeln, nur der Rahmen ist neu. Mit der Maus ändert sich nichts.

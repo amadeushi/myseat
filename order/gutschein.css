@@ -114,3 +114,6 @@
 @media (max-width: 520px) { .co-f.gv-sm-wide { grid-column: 1 / -1; } }
 .gv-legal a { position: relative; }
 .gv-legal a::after { content: ''; position: absolute; inset: -14px -6px; }
+
+.gv-hint { grid-column: 1 / -1; margin: 0; font-size: 13px; color: var(--gold-strong); }
+.gv-hint[hidden] { display: none; }

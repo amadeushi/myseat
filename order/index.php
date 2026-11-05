@@ -105,7 +105,7 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 
 	<div class="shop-layout">
 		<nav class="shop-cats" id="shop-cats" aria-label="Kategorien">
-			<?php foreach ($menu as $c): ?><a href="#cat-<?php echo (int)$c['id']; ?>" data-cat="<?php echo (int)$c['id']; ?>"><?php echo shop_h(trim($c['name'])); ?></a><?php endforeach; ?>
+			<?php foreach ($menu as $c): ?><a href="#cat-<?php echo (int)$c['id']; ?>" data-cat="<?php echo (int)$c['id']; ?>"<?php $cn = trim($c['name']); if (mb_strlen($cn) > 40) { echo ' title="'.shop_h($cn).'"'; } ?>><?php echo shop_h(mb_strlen($cn) > 40 ? rtrim(mb_substr($cn, 0, 39)).'…' : $cn); ?></a><?php endforeach; ?>
 		</nav>
 
 		<main class="shop-menu" id="shop-menu" tabindex="-1">
@@ -115,7 +115,7 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 			<?php endif; ?>
 			<?php foreach ($menu as $c): ?>
 			<section class="shop-cat" id="cat-<?php echo (int)$c['id']; ?>" aria-labelledby="h-<?php echo (int)$c['id']; ?>">
-				<h2 id="h-<?php echo (int)$c['id']; ?>"><?php echo shop_h(trim($c['name'])); ?></h2>
+				<h2 id="h-<?php echo (int)$c['id']; ?>"<?php echo mb_strlen(trim($c['name'])) > 48 ? ' class="is-long"' : ''; ?>><?php echo shop_h(trim($c['name'])); ?></h2>
 				<?php if (trim($c['description']) !== ''): ?><p class="shop-cat-desc"><?php echo shop_h($c['description']); ?></p><?php endif; ?>
 				<ul class="shop-list">
 					<?php foreach ($c['products'] as $p):
@@ -128,7 +128,7 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 							<?php if (trim($p['description']) !== ''): ?><p><?php echo shop_h($p['description']); ?></p><?php endif; ?>
 							<?php $dm = array_filter(explode(',', (string)$p['diet'])); if ($dm): ?><p class="shop-diet"><?php if (in_array('vegan', $dm, true)): ?><span>vegan</span><?php elseif (in_array('veg', $dm, true)): ?><span>vegetarisch</span><?php endif; ?><?php if (in_array('spicy', $dm, true)): ?><span class="is-spicy">scharf</span><?php endif; ?></p><?php endif; ?>
 						</div>
-						<?php if ($p['image_url'] !== ''): ?><?php $t240 = shop_img_thumb($p['image_url'], 240); $t480 = shop_img_thumb($p['image_url'], 480); $lq = shop_img_lqip($p['image_url']); ?><img class="shop-item-img"<?php if ($lq !== ''): ?> style="background-image:url(<?php echo shop_h($lq); ?>)"<?php endif; ?> src="<?php echo shop_h($t240); ?>"<?php if ($t240 !== $p['image_url']): ?> srcset="<?php echo shop_h($t240); ?> 240w, <?php echo shop_h($t480); ?> 480w" sizes="(min-width: 1024px) 96px, 80px"<?php endif; ?> alt="" loading="lazy" decoding="async" width="80" height="80"/><?php endif; ?>
+						<?php if ($p['image_url'] !== '' && shop_img_ok($p['image_url'])): ?><?php $t240 = shop_img_thumb($p['image_url'], 240); $t480 = shop_img_thumb($p['image_url'], 480); $lq = shop_img_lqip($p['image_url']); ?><img class="shop-item-img"<?php if ($lq !== ''): ?> style="background-image:url(<?php echo shop_h($lq); ?>)"<?php endif; ?> src="<?php echo shop_h($t240); ?>"<?php if ($t240 !== $p['image_url']): ?> srcset="<?php echo shop_h($t240); ?> 240w, <?php echo shop_h($t480); ?> 480w" sizes="(min-width: 1024px) 96px, 80px"<?php endif; ?> alt="" loading="lazy" decoding="async" width="80" height="80"/><?php endif; ?>
 						<div class="shop-item-buy">
 							<span class="shop-price"><?php echo ($choices && (int)$p['nvar'] > 0) ? 'ab ' : ''; ?><?php echo shop_money($from); ?></span>
 							<?php $conf = !empty($p['configurator']); $sn = ((int)$p['configurator'] === 3); ?>

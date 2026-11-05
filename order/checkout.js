@@ -9,7 +9,7 @@
 
 	function $(s, r) { return (r || document).querySelector(s); }
 	function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
-	function fmt(c) { return (c / 100).toFixed(2).replace('.', ',') + ' €'; }
+	function fmt(c) { return (c / 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; }
 	function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 	function post(op, data) {
 		data = data || {}; data.op = op; data.token = TOKEN;
@@ -219,7 +219,7 @@
 	function renderModeSubs() {
 		var d = $('#co-sub-delivery'); if (!d) { return; }
 		var f = form.elements, addr = [f.street.value.trim(), (f.zip.value.trim() + ' ' + f.city.value.trim()).trim()].filter(Boolean).join(', ');
-		d.textContent = addr ? 'an ' + addr : 'zu dir nach Hause';
+		d.textContent = addr ? 'an ' + addr : 'zu dir nach Hause'; d.title = addr || '';   // a long address is shortened in the button, the whole one is its tooltip
 	}
 	// one plain sentence above the button: what the guest is about to order (delivery to this address / pick up with us), with a way back to the choice
 	function renderModeLine() {

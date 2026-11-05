@@ -8,7 +8,7 @@
 
 	function $(s, r) { return (r || document).querySelector(s); }
 	function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
-	function fmt(c) { return (c / 100).toFixed(2).replace('.', ',') + ' €'; }
+	function fmt(c) { return (c / 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; }   // 14.997,00 € like on the status page
 	function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 	// a name of a choice: a line may break after a slash ("Schweinefleisch/Hähnchenfleisch"), never in the middle of a word
 	function brk(s) { return esc(s).replace(/\//g, '/&#8203;'); }
@@ -216,6 +216,7 @@
 		return false;
 	}
 	function wordMatches(q, w) {
+		if (q === w) { return true; }   // the whole word counts however short it is ("Nr", "3", "XL")
 		// one contains the other: partial typing, plurals, compound words - but only once the shorter side has real substance,
 		// else short words like "la" or "1" would match almost anything
 		if (w.length >= 3 && q.indexOf(w) >= 0) { return true; }
@@ -732,7 +733,15 @@
 	// the soft first impression of a dish picture (a tiny copy as background, see order/index.php) goes away once the real picture is there, so pictures with transparent parts stay clean
 	$$('.shop-item-img').forEach(function (im) {
 		function clearBg() { im.style.backgroundImage = 'none'; }
-		if (im.complete && im.naturalWidth) { clearBg(); } else { im.addEventListener('load', clearBg, { once: true }); im.addEventListener('error', clearBg, { once: true }); }
+		function gone() { clearBg(); im.style.display = 'none'; }   // the file is missing: no broken-picture symbol, the dish looks like one without a picture
+		if (im.complete && im.naturalWidth) { clearBg(); } else if (im.complete && im.getAttribute('src')) { gone(); } else { im.addEventListener('load', clearBg, { once: true }); im.addEventListener('error', gone, { once: true }); }
+	});
+	// a long description (more than three lines) gets "mehr" / "weniger"
+	$$('.shop-item-text p:not(.shop-diet)').forEach(function (p) {
+		if (p.scrollHeight <= p.clientHeight + 1) { return; }
+		var b = document.createElement('button'); b.type = 'button'; b.className = 'shop-more'; b.textContent = 'mehr'; b.setAttribute('aria-expanded', 'false');
+		b.addEventListener('click', function (ev) { ev.stopPropagation(); var on = !p.classList.contains('is-open'); p.classList.toggle('is-open', on); b.textContent = on ? 'weniger' : 'mehr'; b.setAttribute('aria-expanded', on ? 'true' : 'false'); });
+		p.parentNode.insertBefore(b, p.nextSibling);
 	});
 	document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') { var c = $('#shop-cart'); if (c && c.classList.contains('is-open')) { cartOpen(false); } } });
 

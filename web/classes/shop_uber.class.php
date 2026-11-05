@@ -57,12 +57,9 @@ function shop_uber_enlarge($png) {
 	$im = @imagecreatefromstring($png);
 	if (!$im) { return $png; }
 	$w = imagesx($im); $h = imagesy($im);
-	if ($w >= 900 || $w < 1 || $h < 1) { imagedestroy($im); return $png; }
-	$tc = imagecreatetruecolor($w, $h); imagecopy($tc, $im, 0, 0, 0, 0, $w, $h); imagedestroy($im);
-	$big = imagescale($tc, $w * 2, $h * 2, IMG_BICUBIC); imagedestroy($tc);
-	if (!$big) { return $png; }
-	ob_start(); imagepng($big, null, 6); $out = ob_get_clean(); imagedestroy($big);
-	return ($out !== '' && $out !== false) ? $out : $png;
+	if ($w >= 900 || $w < 1 || $h < 1) { return $png; }
+	$tc = imagecreatetruecolor($w, $h); imagecopy($tc, $im, 0, 0, 0, 0, $w, $h); 	$big = imagescale($tc, $w * 2, $h * 2, IMG_BICUBIC); 	if (!$big) { return $png; }
+	ob_start(); imagepng($big, null, 6); $out = ob_get_clean(); 	return ($out !== '' && $out !== false) ? $out : $png;
 }
 
 // sends the image to n8n; $tier is "small" or "large" (n8n picks the model). array('ok', 'data' => the JSON of the receipt, 'model')
