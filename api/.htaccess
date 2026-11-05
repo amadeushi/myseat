@@ -1,0 +1,6 @@
+# The booking form and the review widget are embedded on the restaurant's own websites (<iframe src="https://.../api/...">): this folder is the one place
+# that may be framed by other sites, so the frame protection set for the whole installation (see ../.htaccess) is taken back here.
+<IfModule mod_headers.c>
+	Header always unset Content-Security-Policy
+	Header always unset X-Frame-Options
+</IfModule>

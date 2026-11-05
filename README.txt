@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-05 == mySeat v6.75.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geändert (Sicherheitsprüfung): Der Frame-Schutz (Content-Security-Policy "frame-ancestors 'self'" und X-Frame-Options SAMEORIGIN) gilt jetzt für die ganze Installation, also auch für den Backend-Login, das Backend, die Monitore und die Installation, nicht mehr nur für order/. Fremde Seiten können sie nicht mehr unsichtbar überlagern (Clickjacking). Der Ordner api/ (Buchungsformular und Bewertungs-Widget auf den Webseiten des Restaurants) nimmt den Schutz in einer eigenen api/.htaccess wieder zurück und bleibt einbettbar.
+
 2026-11-05 == mySeat v6.74.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu (Webshop, Sicherheitsprüfung): Die Fahrerseite (order/driver.php) lässt sich mit einem eigenen Schlüssel schützen. Die Traccar-Geräte-ID ist eine kurze Zahl und leicht zu erraten; wer sie kannte, sah die Aufträge samt Kundenadressen und konnte Lieferungen annehmen. Im Backend (Einstellungen > Lieferservice > Fahrer) gibt es pro Fahrer "Geschützten Link erzeugen": Der Link <code>driver.php?device=ID&k=SCHLÜSSEL</code> wird einmal angezeigt (in der Datenbank liegt nur der Hash), der Fahrer öffnet ihn einmal auf seinem Handy, der Schlüssel bleibt danach als Cookie im Browser und wird aus der Adresszeile entfernt. "Neuen Link erzeugen" sperrt den alten sofort. Fahrer ohne Schlüssel funktionieren wie bisher, bis ein Link erzeugt wird. Die GPS-Meldung der Traccar-App (driver_gps.php) bleibt unverändert, weil Traccar die ID nicht ändern lässt. Neue Spalte tp_shop_drivers.access_hash (wird beim ersten Aufruf angelegt).

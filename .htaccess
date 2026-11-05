@@ -15,6 +15,10 @@ RedirectMatch 404 (^|/)\.git
 	Header always set Referrer-Policy "strict-origin-when-cross-origin"
 	# browsers remember for half a year that this host is only used over https (no includeSubDomains: other subdomains of amds.at are not ours to decide)
 	Header always set Strict-Transport-Security "max-age=15552000"
+	# no page of this installation (backend login, backend, monitors, order pages) may be shown inside a page of another site: no clickjacking.
+	# api/ takes this back in its own .htaccess: the booking and review widgets are made to be embedded on the restaurant's websites.
+	Header always set Content-Security-Policy "frame-ancestors 'self'"
+	Header always set X-Frame-Options "SAMEORIGIN"
 </IfModule>
 
 # ---- Two domains, one installation: app.amds.at is for guests (order page, account, order status, driver page),
