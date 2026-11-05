@@ -315,9 +315,17 @@ function gv_lookup_guest($number, $code, &$err) {
 // ---- staff PIN: one per employee (a backend user), stored hashed, locked after repeated mistakes ----
 
 function gv_pin_valid($pin) { return preg_match('/^\d{4,8}$/', (string)$pin) === 1; }
+// a NEW PIN: 6 to 8 digits, not all the same and not a run (123456, 654321). PINs set earlier (4 and 5 digits) keep working: gv_pin_valid is what the redeem form accepts
+function gv_pin_strong($pin) {
+	$p = (string)$pin;
+	if (preg_match('/^\d{6,8}$/', $p) !== 1) { return false; }
+	if (preg_match('/^(\d)\1+$/', $p)) { return false; }
+	foreach (array('0123456789012', '9876543210987') as $run) { if (strpos($run, $p) !== false) { return false; } }
+	return true;
+}
 function gv_pin_set($userId, $pin) {
 	shop_ensure_schema();
-	if (!gv_pin_valid($pin)) { return array('ok' => false, 'error' => 'Die PIN besteht aus 4 bis 8 Ziffern.'); }
+	if (!gv_pin_strong($pin)) { return array('ok' => false, 'error' => 'Die PIN besteht aus 6 bis 8 Ziffern, nicht alle gleich und keine Zahlenfolge wie 123456.'); }
 	// the page behind the QR code finds the employee by the PIN alone, so no two employees may share one
 	foreach (fb_rows("SELECT user_id, pin_hash FROM ".fb_t('tp_gv_staff')." WHERE user_id <> ?", 'i', array((int)$userId)) as $o) {
 		if (password_verify((string)$pin, $o['pin_hash'])) { return array('ok' => false, 'error' => 'Diese PIN ist schon vergeben. Bitte wähle eine andere.'); }
@@ -383,8 +391,9 @@ function gv_redeem_pin($voucherId, $pin, $amountCents) {
 	shop_ensure_schema();
 	$since = date('Y-m-d H:i:s', time() - GV_TRY_WINDOW_MIN * 60); $vkey = 'v'.(int)$voucherId; $ip = gv_ip();
 	$count = function ($k) use ($since) { $r = fb_row("SELECT COUNT(*) AS n FROM ".fb_t('tp_gv_tries')." WHERE ip = ? AND at > ?", 'ss', array($k, $since)); return (int)($r['n'] ?? 0); };
-	$miss = function () use ($vkey, $ip) { foreach (array($vkey, $ip) as $k) { if ($k !== '') { fb_exec("INSERT INTO ".fb_t('tp_gv_tries')." (ip, at) VALUES (?, ?)", 'ss', array($k, gv_now())); } } };
-	if (($ip !== '' && $count($ip) >= GV_TRY_MAX) || $count($vkey) >= GV_PIN_MAX_FAILS) { return array('ok' => false, 'error' => 'Zu viele falsche PINs. Bitte versuche es in '.GV_PIN_LOCK_MIN.' Minuten noch einmal oder löse im Backend ein.'); }
+	// 'pinall': wrong PINs over all vouchers and all addresses together. Someone with many QR codes and many addresses cannot guess a PIN piece by piece; the redeem form then waits, the backend redeems as always
+	$miss = function () use ($vkey, $ip) { foreach (array($vkey, $ip, 'pinall') as $k) { if ($k !== '') { fb_exec("INSERT INTO ".fb_t('tp_gv_tries')." (ip, at) VALUES (?, ?)", 'ss', array($k, gv_now())); } } };
+	if (($ip !== '' && $count($ip) >= GV_TRY_MAX) || $count($vkey) >= GV_PIN_MAX_FAILS || $count('pinall') >= 60) { return array('ok' => false, 'error' => 'Zu viele falsche PINs. Bitte versuche es in '.GV_PIN_LOCK_MIN.' Minuten noch einmal oder löse im Backend ein.'); }
 	if (!gv_pin_valid($pin)) { $miss(); return array('ok' => false, 'error' => 'Bitte die PIN eingeben (4 bis 8 Ziffern).'); }
 	$who = null;
 	foreach (fb_rows("SELECT user_id, pin_hash, locked_until FROM ".fb_t('tp_gv_staff')) as $r) { if (password_verify((string)$pin, $r['pin_hash'])) { $who = $r; break; } }

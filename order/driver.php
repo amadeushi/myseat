@@ -13,7 +13,13 @@ require __DIR__.'/bootstrap.inc.php';
 header('Cache-Control: no-store');
 $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 $device = isset($_GET['device']) ? (string)$_GET['device'] : '';
-$driver = shop_driver_by_device($device);
+$dvKey = shop_driver_request_key();
+$driver = shop_driver_auth($device, $dvKey);
+// opened with the key of the link: remember it in this browser and open the page again without it (the key must not stay in the address bar, the history or a screenshot)
+if ($driver && isset($_GET['k']) && $driver['access_hash'] !== '') {
+	setcookie('dvkey', $dvKey, array('expires' => time() + 400 * 86400, 'path' => '/order/', 'secure' => $shop_https, 'httponly' => true, 'samesite' => 'Lax'));
+	header('Location: driver.php?device='.rawurlencode($device)); exit;
+}
 $phone = !empty($settings['mailPhone']) ? $settings['mailPhone'] : '';
 $telHref = $phone !== '' ? 'tel:'.shop_h(preg_replace('/\s+/', '', $phone)) : '';
 ?>

@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-05 == mySeat v6.74.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu (Webshop, Sicherheitsprüfung): Die Fahrerseite (order/driver.php) lässt sich mit einem eigenen Schlüssel schützen. Die Traccar-Geräte-ID ist eine kurze Zahl und leicht zu erraten; wer sie kannte, sah die Aufträge samt Kundenadressen und konnte Lieferungen annehmen. Im Backend (Einstellungen > Lieferservice > Fahrer) gibt es pro Fahrer "Geschützten Link erzeugen": Der Link <code>driver.php?device=ID&k=SCHLÜSSEL</code> wird einmal angezeigt (in der Datenbank liegt nur der Hash), der Fahrer öffnet ihn einmal auf seinem Handy, der Schlüssel bleibt danach als Cookie im Browser und wird aus der Adresszeile entfernt. "Neuen Link erzeugen" sperrt den alten sofort. Fahrer ohne Schlüssel funktionieren wie bisher, bis ein Link erzeugt wird. Die GPS-Meldung der Traccar-App (driver_gps.php) bleibt unverändert, weil Traccar die ID nicht ändern lässt. Neue Spalte tp_shop_drivers.access_hash (wird beim ersten Aufruf angelegt).
+ * Geändert (Gutschein-PIN): Neue PINs der Mitarbeiter haben 6 bis 8 Ziffern, nicht alle gleich und keine Zahlenfolge (123456, 654321). Bereits gesetzte PINs mit 4 oder 5 Ziffern gelten weiter. Dazu zählt die Einlöse-Seite falsche PINs jetzt auch über alle Gutscheine und Adressen zusammen (60 in 15 Minuten); danach wartet das Formular, im Backend lässt sich weiter einlösen.
+
 2026-11-05 == mySeat v6.73.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geändert (Webshop, Sicherheitsprüfung): Die Gästeseiten (order/) lassen sich nur noch innerhalb der eigenen Domain in einen Rahmen einbetten (Content-Security-Policy "frame-ancestors 'self'" und X-Frame-Options SAMEORIGIN). Der Chat im Shop funktioniert weiter, fremde Seiten können Kasse oder Gutschein nicht mehr unsichtbar überlagern (Clickjacking). Die Widgets unter api/ bleiben absichtlich einbettbar.

@@ -251,7 +251,7 @@ $sh_secret = function ($label, $value, $hint = '') use ($sh_e) {
 	<section class="sh-group" id="sh-fahrer" aria-labelledby="sh-h-fahrer">
 		<h3 id="sh-h-fahrer">Fahrer</h3>
 		<h4 class="sh-sub">Fahrer</h4>
-		<?php $sh_help('Jeder Fahrer trägt in seiner Traccar-App eine selbst gewählte Geräte-ID ein. Hier wird sie einmalig einem Namen zugeordnet.', 'Server-URL in der App: diese Domain + <code>/order/driver_gps.php</code>, Protokoll: OsmAnd. Der eigene Link des Fahrers lautet <code>/order/driver.php?device=&lt;Geräte-ID&gt;</code>, zum Speichern auf dem Homescreen.'); ?>
+		<?php $sh_help('Jeder Fahrer trägt in seiner Traccar-App eine selbst gewählte Geräte-ID ein. Hier wird sie einmalig einem Namen zugeordnet.', 'Server-URL in der App: diese Domain + <code>/order/driver_gps.php</code>, Protokoll: OsmAnd. Die Geräte-ID ist oft eine kurze Zahl und leicht zu erraten. Mit "Geschützten Link erzeugen" bekommt der Fahrer einen eigenen Link mit langem Schlüssel (<code>/order/driver.php?device=&lt;Geräte-ID&gt;&amp;k=&lt;Schlüssel&gt;</code>), den er einmal auf seinem Handy öffnet und danach wie bisher als Lesezeichen oder auf dem Homescreen nutzt. Ohne Schlüssel kommt jeder mit der Geräte-ID in die Fahrerseite. Die Standortmeldung der Traccar-App ist davon nicht betroffen.'); ?>
 		<div class="shop-zones" id="shop-drivers">
 			<?php foreach ($sh_drivers as $d): ?>
 			<form class="shop-zone" data-id="<?php echo (int)$d['id']; ?>">
@@ -266,6 +266,8 @@ $sh_secret = function ($label, $value, $hint = '') use ($sh_e) {
 					<?php endif; ?>
 				</span>
 				<button type="submit" class="button_dark">Speichern</button>
+				<button type="button" class="button_dark" data-driver-key="<?php echo (int)$d['id']; ?>"><?php echo !empty($d['has_key']) ? 'Neuen Link erzeugen' : 'Geschützten Link erzeugen'; ?></button>
+				<span class="offer-badge<?php echo !empty($d['has_key']) ? ' sms-badge-on' : ''; ?>"><?php echo !empty($d['has_key']) ? 'Seite geschützt' : 'Seite nur mit Geräte-ID erreichbar'; ?></span>
 				<button type="button" class="offer-delete" data-driver-delete="<?php echo (int)$d['id']; ?>">Löschen</button>
 				<span class="detail-status" role="status" aria-live="polite"></span>
 			</form>
@@ -474,6 +476,20 @@ window.addEventListener('load', function () {
 			post('save_driver', { id: f.dataset.id, name: f.elements.name.value, device_id: f.elements.device_id.value, phone: f.elements.phone.value, active: f.elements.active.checked ? '1' : '' },
 				function (r) { say(out, r.message, false); setTimeout(function () { location.reload(); }, 600); }, function (e) { say(out, e, true); });
 		});
+		// own link with a key: shown once (only a hash is stored), the old link of this driver stops working
+		var kb = f.querySelector('[data-driver-key]');
+		if (kb) {
+			kb.addEventListener('click', function () {
+				if (!kb.dataset.armed && kb.textContent.indexOf('Neuen') === 0) { kb.dataset.armed = '1'; kb.textContent = 'Wirklich? Der alte Link geht dann nicht mehr'; return; }
+				post('driver_key', { id: kb.dataset.driverKey }, function (r) {
+					out.textContent = '';
+					var inp = document.createElement('input'); inp.type = 'text'; inp.readOnly = true; inp.value = r.link; inp.size = 60; inp.setAttribute('aria-label', 'Link für den Fahrer');
+					out.appendChild(inp); inp.focus(); inp.select();
+					var note = document.createElement('div'); note.textContent = 'Diesen Link dem Fahrer schicken und einmal auf seinem Handy öffnen. Er wird nur jetzt angezeigt.'; out.appendChild(note);
+					kb.dataset.armed = ''; kb.textContent = 'Neuen Link erzeugen';
+				}, function (e) { say(out, e, true); });
+			});
+		}
 		var del = f.querySelector('[data-driver-delete]');
 		if (del) {
 			del.addEventListener('click', function () {

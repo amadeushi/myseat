@@ -166,6 +166,8 @@ function shop_ensure_schema() {
 	if ($oc && stripos((string)$oc['Type'], 'unsigned') !== false) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_stamps')." MODIFY `order_id` INT NOT NULL"); }
 	$pcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_drivers')." LIKE 'phone'");
 	if (!$pcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_drivers')." ADD `phone` VARCHAR(40) NOT NULL DEFAULT ''"); }
+	// the key of a driver's own page (order/driver.php?device=..&k=..): only its hash is stored. Empty = this driver has no key yet and the page works with the device id alone, as before
+	if (!fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_drivers')." LIKE 'access_hash'")) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_drivers')." ADD `access_hash` CHAR(64) NOT NULL DEFAULT ''"); }
 	$col = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'ip_hash'");
 	if (!$col) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `ip_hash` CHAR(16) NOT NULL DEFAULT ''"); }
 	// pizza configurator: a dish can offer the guest "build it yourself"; an option can carry the symbol it shows on the pizza
@@ -2528,7 +2530,7 @@ function shop_driver_position($o) {
 // the only place a mismatched device id becomes visible at all
 function shop_drivers_list() {
 	shop_ensure_schema();
-	$rows = fb_rows("SELECT d.id, d.device_id, d.name, d.active, d.phone, p.updated_at FROM ".fb_t('tp_shop_drivers')." d
+	$rows = fb_rows("SELECT d.id, d.device_id, d.name, d.active, d.phone, (d.access_hash <> '') AS has_key, p.updated_at FROM ".fb_t('tp_shop_drivers')." d
 		LEFT JOIN ".fb_t('tp_shop_driver_positions')." p ON p.driver_id = d.id ORDER BY d.name");
 	foreach ($rows as &$r) { $r['last_seen_min'] = $r['updated_at'] ? max(0, (int)round((time() - strtotime($r['updated_at'])) / 60)) : null; } unset($r);
 	return $rows;
@@ -2537,6 +2539,29 @@ function shop_driver_by_device($deviceId) {
 	$deviceId = trim((string)$deviceId);
 	if ($deviceId === '') { return null; }
 	return fb_row("SELECT * FROM ".fb_t('tp_shop_drivers')." WHERE device_id = ? AND active = 1", 's', array($deviceId));
+}
+// the driver's own page and its actions: the device id (a short number from Traccar, easy to guess) is not enough once the driver has a key
+function shop_driver_auth($deviceId, $key) {
+	$d = shop_driver_by_device($deviceId);
+	if (!$d) { return null; }
+	if (isset($d['access_hash']) && $d['access_hash'] !== '') {
+		if (!is_string($key) || $key === '' || !hash_equals($d['access_hash'], hash('sha256', $key))) { return null; }
+	}
+	return $d;
+}
+// the key the browser brings: the link (k=...) the first time, afterwards the cookie set by order/driver.php
+function shop_driver_request_key() {
+	if (isset($_GET['k']) && is_string($_GET['k'])) { return substr($_GET['k'], 0, 64); }
+	return isset($_COOKIE['dvkey']) && is_string($_COOKIE['dvkey']) ? substr($_COOKIE['dvkey'], 0, 64) : '';
+}
+// a new key for a driver (the old one stops working at once); returned once, only the hash is kept
+function shop_driver_key_new($id) {
+	shop_ensure_schema();
+	$d = fb_row("SELECT id, device_id FROM ".fb_t('tp_shop_drivers')." WHERE id = ?", 'i', array((int)$id));
+	if (!$d) { return array('ok' => false, 'error' => 'Diesen Fahrer gibt es nicht mehr.'); }
+	$key = bin2hex(random_bytes(16));
+	fb_exec("UPDATE ".fb_t('tp_shop_drivers')." SET access_hash = ? WHERE id = ?", 'si', array(hash('sha256', $key), (int)$id));
+	return array('ok' => true, 'link' => shop_site_url().'/order/driver.php?device='.rawurlencode($d['device_id']).'&k='.$key);
 }
 function shop_driver_save($id, $name, $deviceId, $active, $phone = null) {
 	$name = mb_substr(trim((string)$name), 0, 80); $deviceId = mb_substr(trim((string)$deviceId), 0, 64);

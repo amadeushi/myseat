@@ -162,6 +162,11 @@ if ($op === 'save_driver') {
 	$r = shop_driver_save($id, isset($_POST['name']) ? $_POST['name'] : '', isset($_POST['device_id']) ? $_POST['device_id'] : '', !empty($_POST['active']), isset($_POST['phone']) ? $_POST['phone'] : null);
 	sa_out($r['ok'] ? array('ok' => true, 'message' => 'Fahrer gespeichert.') : $r);
 }
+if ($op === 'driver_key') {
+	// a new key for the driver's own page: the link is shown once, the old link stops working
+	$r = shop_driver_key_new((int)(isset($_POST['id']) ? $_POST['id'] : 0));
+	sa_out($r['ok'] ? array('ok' => true, 'link' => $r['link'], 'message' => 'Neuer Link erzeugt. Er wird nur jetzt angezeigt.') : $r);
+}
 if ($op === 'save_suburb') {
 	$r = shop_suburb_save((int)(isset($_POST['id']) ? $_POST['id'] : 0), isset($_POST['kind']) ? $_POST['kind'] : '', isset($_POST['pattern']) ? $_POST['pattern'] : '', isset($_POST['suburb']) ? $_POST['suburb'] : '');
 	sa_out($r['ok'] ? array('ok' => true, 'message' => 'Die Regel ist gespeichert.') : $r);

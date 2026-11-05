@@ -199,7 +199,7 @@ if ($op === 'repay') {
 // continuously at order/driver_gps.php from the Traccar app in the background; these ops are the open
 // pool, his own queue (claimed, not yet started), claiming/starting/pausing/releasing/failing/completing one.
 if (in_array($op, array('driver_list', 'driver_claim', 'driver_start', 'driver_pause', 'driver_fail', 'driver_release', 'driver_complete', 'driver_here'), true)) {
-	$driver = shop_driver_by_device(isset($body['device']) ? $body['device'] : '');
+	$driver = shop_driver_auth(isset($body['device']) ? $body['device'] : '', isset($_COOKIE['dvkey']) && is_string($_COOKIE['dvkey']) ? substr($_COOKIE['dvkey'], 0, 64) : '');
 	if (!$driver) { api_out(array('ok' => false, 'error' => 'Dieses Gerät ist keinem Fahrer zugeordnet.'), 403); }
 	$driverId = (int)$driver['id'];
 	if ($op === 'driver_list') { api_out(array_merge(array('ok' => true), shop_driver_state($driverId))); }
