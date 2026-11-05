@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-05 == mySeat v6.73.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geändert (Webshop, Sicherheitsprüfung): Die Gästeseiten (order/) lassen sich nur noch innerhalb der eigenen Domain in einen Rahmen einbetten (Content-Security-Policy "frame-ancestors 'self'" und X-Frame-Options SAMEORIGIN). Der Chat im Shop funktioniert weiter, fremde Seiten können Kasse oder Gutschein nicht mehr unsichtbar überlagern (Clickjacking). Die Widgets unter api/ bleiben absichtlich einbettbar.
+ * Neu: Strict-Transport-Security (sechs Monate, ohne Subdomains) auf beiden Hosts: Browser rufen sie danach nur noch über https auf.
+
 2026-11-05 == mySeat v6.72.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geändert (Webshop, Sicherheitsprüfung): Das Sitzungs-Cookie der Gästeseiten ist jetzt HttpOnly, Secure (bei https) und SameSite=Lax. Vorher setzte der Server keine dieser Flags. Der Rückweg von Mollie funktioniert weiter (normaler Link).

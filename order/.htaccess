@@ -1,3 +1,10 @@
+# The guest pages may only be shown inside a page of their own domain (the chat in the shop is such a frame): no clickjacking from other sites.
+# (api/ is not here on purpose: the booking and review widgets are meant to be embedded on the restaurant's websites.)
+<IfModule mod_headers.c>
+	Header always set Content-Security-Policy "frame-ancestors 'self'"
+	Header always set X-Frame-Options "SAMEORIGIN"
+</IfModule>
+
 # The shared start file is only included by the order pages, never called directly.
 <Files "bootstrap.inc.php">
 	<IfModule mod_authz_core.c>
