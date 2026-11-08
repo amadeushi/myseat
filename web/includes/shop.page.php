@@ -430,6 +430,17 @@ $sh_secret = function ($label, $value, $hint = '') use ($sh_e) {
 		</div>
 		<?php $sh_secret('Schlüssel für den Pi', shop_uber_key(), 'Trag ihn auf dem Pi in <code>/etc/uber-bridge.conf</code> ein, sonst nirgends.'); ?>
 
+		<h4 class="sh-sub">Direkt bestellen (Werbung auf dem Bon)</h4>
+		<?php $sh_help('Auf dem Bon von Uber-Eats- und Lieferando-Bestellungen steht ein Block: 10 % auf die erste Bestellung direkt bei uns, mit Code und QR-Code, dazu die Stempelkarte. Bei Uber-Eats-Bestellungen steht dasselbe auch als Karte auf der Statusseite.', 'Jede Plattform hat einen eigenen Code, so siehst du, woher die Bestellung kam. Der Block erscheint nur, solange der Gutschein dazu angelegt und aktiv ist. Der QR-Code wird nur auf Epson-Druckern gedruckt.'); ?>
+		<?php $sh_pr = shop_promo_state(); $sh_pr_on = false; foreach ($sh_pr as $sh_p) { if ($sh_p['exists'] && $sh_p['active']) { $sh_pr_on = true; } } ?>
+		<ul class="sh-bons" id="promo-state">
+			<?php foreach ($sh_pr as $sh_p): ?><li><strong><?php echo $sh_e($sh_p['label']); ?></strong> &middot; Code <?php echo $sh_e($sh_p['code']); ?> &middot; <?php echo !$sh_p['exists'] ? 'noch nicht angelegt' : ($sh_p['active'] ? 'an' : 'aus'); ?><?php echo $sh_p['exists'] ? ' &middot; '.(int)$sh_p['used'].' mal benutzt' : ''; ?><?php echo $sh_p['until'] !== '' ? ' &middot; gültig bis '.$sh_e(date('d.m.Y', strtotime($sh_p['until']))) : ''; ?></li>
+			<?php endforeach; ?></ul>
+		<p class="offer-actions">
+			<button type="button" class="button_dark" id="promo-switch" data-on="<?php echo $sh_pr_on ? '1' : ''; ?>"><?php echo $sh_pr_on ? 'Ausschalten' : 'Einschalten'; ?></button>
+			<span class="detail-status" id="promo-msg" role="status" aria-live="polite"></span>
+		</p>
+
 		<h4 class="sh-sub">Sipgate-Anrufererkennung</h4>
 		<?php $sh_help('Zeigt bei „Bestellung erfassen“ automatisch die Nummer eines eingehenden Anrufs an. Trag die Webhook-URL in deinem Sipgate-Konto unter sipgate.io für eingehende Anrufe ein.', 'Die vollständige URL enthält einen geheimen Schlüssel. Benutzername und Passwort sind nicht erforderlich. Gib die URL nicht weiter.'); ?>
 		<?php $sh_secret('Webhook-URL', $sh_webhook_url); ?>
@@ -606,6 +617,13 @@ window.addEventListener('load', function () {
 	}
 	wireKeyForm('google-key-form', 'google-key-msg', 'google-key-clear', 'save_google_key', 'clear_google_key', 'google_key', 'Schlüssel löschen');
 	wireKeyForm('w3w-key-form', 'w3w-key-msg', 'w3w-key-clear', 'save_w3w_key', 'clear_w3w_key', 'w3w_key', 'Schlüssel löschen');
+	var pw = document.getElementById('promo-switch'), pm = document.getElementById('promo-msg');
+	if (pw) {
+		pw.addEventListener('click', function () {
+			var turnOn = !pw.dataset.on; pw.disabled = true; say(pm, 'Einen Moment ...', false);
+			post('promo_switch', { on: turnOn ? '1' : '' }, function (r) { say(pm, r.message, false); setTimeout(function () { location.reload(); }, 900); }, function (e) { pw.disabled = false; say(pm, e, true); });
+		});
+	}
 	var uf = document.getElementById('uber-read-form'), um = document.getElementById('uber-read-msg');
 	if (uf) {
 		uf.addEventListener('submit', function (ev) { ev.preventDefault(); say(um, 'Einen Moment ...', false); post('save_uber_read', { uber_read_url: uf.elements.uber_read_url.value, uber_read_large: uf.elements.uber_read_large.checked ? '1' : '', uber_auto_import: uf.elements.uber_auto_import.checked ? '1' : '' }, function (r) { say(um, r.message, false); setTimeout(function () { location.reload(); }, 900); }, function (e) { say(um, e, true); }); });

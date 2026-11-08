@@ -519,6 +519,7 @@
 				if (S.group) { localStorage.removeItem(GKEY); } // the shared basket is done; the own cart stays as it was
 				else { var d = JSON.parse(localStorage.getItem(KEY) || '{}'); d.cart = []; localStorage.setItem(KEY, JSON.stringify(d)); }
 			} catch (e) {}
+			try { var sp2 = JSON.parse(localStorage.getItem('amadeusPromoCode') || 'null'); if (sp2 && S.coupon && sp2.code === S.coupon.code) { localStorage.removeItem('amadeusPromoCode'); } } catch (e) {}   // the remembered code is used up with this order
 			rememberLast();
 			location.href = r.redirect;
 		}).catch(function () { var msg = 'Das hat nicht geklappt. Bitte versuche es noch einmal.'; err.textContent = msg; S.busy = false; updateSubmit(); $('#co-why').textContent = msg; err.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); });
@@ -547,5 +548,10 @@
 		});
 	});
 	renderSummary();
-	try { var pc = new URLSearchParams(location.search).get('code'); if (pc && S.cart.length) { $('#co-coupon-in').value = pc; applyCoupon(pc, false); } } catch (e) {}
+	// the code of the address bar (checkout.php?code=...), else the one remembered from a printed slip or QR code (order/?code=..., kept 60 days): the remembered one is entered quietly, no message when it does not fit
+	try {
+		var pc = new URLSearchParams(location.search).get('code'), fromStore = false;
+		if (!pc) { var sp = JSON.parse(localStorage.getItem('amadeusPromoCode') || 'null'); if (sp && sp.code && Date.now() - sp.at < 60 * 86400000) { pc = sp.code; fromStore = true; } }
+		if (pc && S.cart.length) { $('#co-coupon-in').value = pc; applyCoupon(pc, fromStore); }
+	} catch (e) {}
 })();

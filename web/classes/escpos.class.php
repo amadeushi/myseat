@@ -33,6 +33,16 @@ function escpos_wrap($s, $w) {
 	return $lines;
 }
 
+// a QR code as ESC/POS bytes (model 2, error correction M, $size dots per module; 6 dots = about 0.75 mm, a URL of 45 characters makes about 25 mm). Epson printers (TM-m30II) print it; older printers do not know the command
+function escpos_qr($data, $size = 6) {
+	$n = strlen($data) + 3;
+	return "\x1d(k".chr(4).chr(0).chr(0x31).chr(0x41).chr(0x32).chr(0)
+		."\x1d(k".chr(3).chr(0).chr(0x31).chr(0x43).chr($size)
+		."\x1d(k".chr(3).chr(0).chr(0x31).chr(0x45).chr(0x31)
+		."\x1d(k".chr($n & 255).chr($n >> 8).chr(0x31).chr(0x50).chr(0x30).$data
+		."\x1d(k".chr(3).chr(0).chr(0x31).chr(0x51).chr(0x30);
+}
+
 function shop_slip_escpos($o, $items, $full) {
 	$W = 42;
 	$b = "\x1b@\x1bt\x13"; // reset, code page 858
@@ -100,6 +110,41 @@ function shop_slip_escpos($o, $items, $full) {
 		$put((isset($o['source']) && $o['source'] === 'courier' && (int)$o['total_cents'] === 0) ? 'nichts zu kassieren' : (in_array($o['payment_method'], array('mollie', 'lieferando', 'uber_eats', 'voucher'), true) ? ($o['payment_method'] === 'voucher' ? 'mit Geschenkgutschein bezahlt' : ($o['payment_method'] === 'lieferando' ? 'bei Lieferando bezahlt' : ($o['payment_method'] === 'uber_eats' ? 'bei Uber Eats bezahlt' : 'online bezahlt'))) : ($o['payment_method'] === 'cash' ? 'BAR kassieren: ' : 'KARTE kassieren: ').shop_money($o['total_cents'])), 1, true);
 		if (!empty($o['voucher_cents'])) { $put('Geschenkgutschein '.shop_money((int)$o['voucher_cents']).' abgezogen', 0, true); }
 		if (!empty($o['pay_with_cents']) && $o['payment_method'] === 'cash') { $put('Gast zahlt mit '.shop_money((int)$o['pay_with_cents']).', Rueckgeld '.shop_money((int)$o['pay_with_cents'] - (int)$o['total_cents']), 0, true); }
+		$rule();
+	}
+	// an order of a platform (Uber Eats, Lieferando): "order directly with us" with the code meant for that platform, and the stamp card. Only while the coupon of that code exists (shop_promo_for_source)
+	$promo = ($full && isset($o['source'])) ? shop_promo_for_source($o['source']) : null;
+	if ($promo) {
+		$bar = ' DIREKT BEI UNS '; $padL = (int)floor(($W - mb_strlen($bar)) / 2);
+		$b .= "\x1ba\x01\x1dB\x01\x1d!\x01\x1bE\x01".str_repeat(' ', $padL).$bar.str_repeat(' ', $W - $padL - mb_strlen($bar))."\n\x1dB\x00\x1d!\x00\x1bE\x00\x1ba\x00\n";
+		$b .= "\x1ba\x01\x1d!\x33\x1bE\x01".escpos_enc($promo['percent'].' %')."\n\x1d!\x00\x1bE\x00\x1ba\x00";
+		$put('auf deine erste Bestellung', 1, true, 1);
+		$b .= "\n";
+		$put('Dein Code', 0, false, 1);
+		$put(str_repeat('=', 24), 0, false, 1);
+		$put($promo['code'], 2, true, 1);
+		$put(str_repeat('=', 24), 0, false, 1);
+		$b .= "\n";
+		$put('amadeus.delivery', 2, true, 1);
+		$put('Code im Warenkorb eintragen', 0, false, 1);
+		if (shop_flag('promo_qr')) { $b .= "\n\x1ba\x01".escpos_qr($promo['url'], 6)."\n\x1ba\x00"; $put('oder QR-Code scannen', 0, false, 1); }
+		$sc = shop_stamp_cfg();
+		if ($sc['on']) {
+			$ex = $sc['goal'] * 24; $exv = (int)round($ex * $sc['percent'] / 100);
+			$b .= "\n".str_repeat('.', $W)."\n";
+			$put('Stempelkarte (mit Konto)', 1, true, 1);
+			$put(str_repeat('( )  ', $sc['goal'] - 1).'('.$exv.' €)', 1, true, 1);
+			$put(($sc['goal'] === 5 ? 'Fünfmal' : $sc['goal'].' mal').' bestellt, zusammen für '.$ex.' €?', 0, false, 1);
+			$put('Dann bekommst du '.$exv.' € Gutschein:', 0, true, 1);
+			$put($sc['percent'].' % von allem, was du bestellt hast.', 0, false, 1);
+		}
+		$fine = array();
+		if ($promo['per_guest']) { $fine[] = '1x pro Person'; }
+		if ($promo['min_cents'] > 0) { $fine[] = 'ab '.($promo['min_cents'] % 100 === 0 ? (int)($promo['min_cents'] / 100) : number_format($promo['min_cents'] / 100, 2, ',', '.')).' €'; }
+		if ($promo['until'] !== '') { $fine[] = 'bis '.date('d.m.Y', strtotime($promo['until'])); }
+		$b .= "\n";
+		if ($fine) { $put(implode(', ', $fine), 0, false, 1); }
+		$put('Hamun und Zeus', 0, false, 1);
 		$rule();
 	}
 	$put('gedruckt '.date('H:i').' Uhr', 0);

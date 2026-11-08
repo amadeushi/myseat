@@ -90,6 +90,12 @@ if ($op === 'save_uber_read') {
 	shop_setting_set('uber_auto_import', !empty($_POST['uber_auto_import']) ? '1' : '0');
 	sa_out(array('ok' => true, 'message' => 'Gespeichert.'));
 }
+// "order directly with us" (block on the slip of Uber Eats and Lieferando orders, card on the status page of Uber Eats orders): on = creates/activates the two coupons, off = deactivates them
+if ($op === 'promo_switch') {
+	$on = !empty($_POST['on']);
+	shop_promo_switch($on);
+	sa_out(array('ok' => true, 'message' => $on ? 'Eingeschaltet. Neue Bons von Uber Eats und Lieferando zeigen den Block.' : 'Ausgeschaltet. Die Bons zeigen den Block nicht mehr.'));
+}
 // reads receipts once more: one by id, or (id 0) the ones that are "check", "error" or still new (at most 4 at a time, every reading takes 5 to 20 seconds, up to twice that when the stronger model is needed)
 if ($op === 'uber_reread') {
 	$id = isset($_POST['id']) ? (int)$_POST['id'] : 0;

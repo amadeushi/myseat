@@ -1096,6 +1096,17 @@
 		if (!item) { toast(gone ? 'Dieses Gericht ist gerade leider nicht verfügbar.' : 'Dieses Gericht gibt es leider nicht mehr auf der Karte.'); return; }
 		openProduct(+item.dataset.id, null, spec);
 	})();
+	// a code from a printed slip or a QR code (order/?code=ZEUS10-U): remembered for the checkout, which enters it; a short note on arrival says so
+	(function () {
+		try {
+			var c = new URLSearchParams(location.search).get('code');
+			if (!c) { return; }
+			c = c.toUpperCase().replace(/[^A-Z0-9\-]/g, '').slice(0, 40); if (!c) { return; }
+			localStorage.setItem('amadeusPromoCode', JSON.stringify({ code: c, at: Date.now() }));
+			var p = document.createElement('p'); p.className = 'shop-notice'; p.textContent = 'Dein Code ' + c + ' ist gemerkt. Wir tragen ihn in der Kasse für dich ein.';
+			var m = document.getElementById('shop-menu'); if (m && m.parentNode) { m.parentNode.insertBefore(p, m); }
+		} catch (e) {}
+	})();
 	initShopZone();
 	loadState();
 	setInterval(loadState, 60000);

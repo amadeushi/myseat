@@ -200,6 +200,34 @@ $delivery = $order && $order['type'] === 'delivery';
 		<?php endif; ?>
 
 		<?php
+			// an Uber Eats order (the status page comes by link): "order directly with us", with the code meant for Uber Eats. Only once the food is ready or on its way, and only while the coupon exists
+			$promoCard = ($order['source'] === 'uber_eats' && in_array($st, array('ready', 'delivering', 'done'), true)) ? shop_promo_for_source('uber_eats') : null;
+			if ($promoCard):
+				$pcFine = array();
+				if ($promoCard['per_guest']) { $pcFine[] = 'einmal pro Person'; }
+				if ($promoCard['min_cents'] > 0) { $pcFine[] = 'ab '.shop_money($promoCard['min_cents']).' Warenwert'; }
+				if ($promoCard['until'] !== '') { $pcFine[] = 'bis '.date('d.m.Y', strtotime($promoCard['until'])); }
+		?>
+		<div class="st-box st-direct">
+			<h2>Beim nächsten Mal direkt bei uns</h2>
+			<p><?php echo (int)$promoCard['percent']; ?> % auf deine erste Bestellung<?php echo $pcFine ? ' ('.shop_h(implode(', ', $pcFine)).')' : ''; ?>.</p>
+			<p class="st-direct-code"><strong id="st-direct-code"><?php echo shop_h($promoCard['code']); ?></strong> <button type="button" class="st-direct-copy" id="st-direct-copy">Kopieren</button></p>
+			<p><a class="cart-go" href="./?code=<?php echo shop_h(rawurlencode($promoCard['code'])); ?>">Direkt bestellen</a></p>
+		</div>
+		<script>
+			(function () {
+				var b = document.getElementById('st-direct-copy'), c = document.getElementById('st-direct-code'); if (!b || !c) { return; }
+				b.addEventListener('click', function () {
+					var t = c.textContent;
+					function done() { b.textContent = 'Kopiert'; setTimeout(function () { b.textContent = 'Kopieren'; }, 2000); }
+					if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(t).then(done, function () { window.getSelection().selectAllChildren(c); }); }
+					else { window.getSelection().selectAllChildren(c); }
+				});
+			})();
+		</script>
+		<?php endif; ?>
+
+		<?php
 			// stamp card: what this order brings (or brought) the guest; the stamp lands once, when the finished order is seen first
 			if ($st !== 'cancelled' && $st !== 'failed' && shop_stamp_cfg()['on']):
 				$sKeys = shop_coupon_guest_keys($order['phone'], $order['email']);

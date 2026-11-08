@@ -366,6 +366,7 @@ function shop_defaults() {
 		'offer_combo' => '1',       // pizza + drink: euro off the drink per pizza (0 = off)
 		'stamp_on' => '1',          // stamp card: every finished order is a stamp, a full card becomes a voucher (see shop_stamp_*)
 		'stamp_percent' => '10', 'stamp_goal' => '5', 'stamp_months' => '12', 'voucher_days' => '90',
+		'promo_code_uber_eats' => 'ZEUS10-U', 'promo_code_lieferando' => 'ZEUS10-L', 'promo_qr' => '1', 'promo_percent' => '10', 'promo_min_cents' => '1500', 'promo_until' => '2027-01-31',   // "order directly with us" block on the slip of a platform order: only while the coupon of that code exists (shop_promo_for_source); QR only for printers that can print one (Epson)
 		'gv_pay_on' => '0',        // gift vouchers can be redeemed as payment in the checkout and at the till (works for imported vouchers before the shop for guests opens)
 		'gv_on' => '0',             // gift vouchers (Wertgutscheine): the guest pages / online payment; the backend page works without it (web/classes/shop_voucher.class.php)
 		'gv_post_mode' => 'print',  // "Per Post"/"Abholung": print = the shop makes the personal card as a print file (backend, Aufträge), blank = numbered blank filled by hand, echtpost = postcard printed and sent by EchtPost (needs the key, web/classes/echtpost.class.php)
@@ -3349,6 +3350,47 @@ function shop_coupon_check($code, $type, $sub, $keys = array('', '')) {
 	$d = max(0, min($d, $sub));
 	if ($d <= 0) { return $no('Dieser Gutschein bringt bei deiner Bestellung keinen Rabatt.'); }
 	return array('ok' => true, 'error' => '', 'coupon' => $c, 'discount' => $d);
+}
+// the two codes of the "order directly with us" offer: which exist, which are active, how often used (backend: Einstellungen > Lieferservice)
+function shop_promo_state() {
+	shop_ensure_schema();
+	$out = array();
+	foreach (array('uber_eats' => 'Uber Eats', 'lieferando' => 'Lieferando') as $src => $label) {
+		$code = shop_coupon_normalize((string)shop_setting('promo_code_'.$src));
+		$c = $code !== '' ? shop_coupon_by_code($code) : null;
+		$out[$src] = array('label' => $label, 'code' => $code, 'exists' => (bool)$c, 'active' => $c ? (bool)(int)$c['active'] : false, 'used' => $c ? (int)$c['used'] : 0, 'until' => ($c && $c['valid_until']) ? substr($c['valid_until'], 0, 10) : '');
+	}
+	return $out;
+}
+// switches the offer on (creates the two coupons when they do not exist yet: percent, minimum, end date and "once per guest" from the settings promo_*) or off (deactivates them; the used counts stay)
+function shop_promo_switch($on) {
+	shop_ensure_schema();
+	$percent = max(1, min(90, (int)shop_setting('promo_percent'))); $min = max(0, (int)shop_setting('promo_min_cents'));
+	$until = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)shop_setting('promo_until')) ? shop_setting('promo_until').' 23:59:59' : null;
+	foreach (array('uber_eats' => 'Direkt bestellen, Bon von Uber Eats', 'lieferando' => 'Direkt bestellen, Bon von Lieferando') as $src => $note) {
+		$code = shop_coupon_normalize((string)shop_setting('promo_code_'.$src));
+		if ($code === '') { continue; }
+		$c = shop_coupon_by_code($code);
+		if ($c) { fb_exec("UPDATE ".fb_t('tp_shop_coupons')." SET active = ? WHERE id = ?", 'ii', array($on ? 1 : 0, (int)$c['id'])); }
+		elseif ($on) {
+			fb_exec("INSERT INTO ".fb_t('tp_shop_coupons')." (code, note, kind, value, max_discount_cents, min_order_cents, applies, valid_from, valid_until, max_uses, per_guest, used, active, created_at) VALUES (?, ?, 'percent', ?, 0, ?, 'all', NULL, ?, 0, 1, 0, 1, ?)",
+				'ssiiss', array($code, $note, $percent, $min, $until, date('Y-m-d H:i:s')));
+		}
+	}
+}
+// the "order directly with us" offer for an order of a platform (Uber Eats, Lieferando): the code meant for that platform, as long as its coupon exists, is active and can still be used.
+// No coupon = no offer: creating the two coupons in the backend switches it on, deactivating them (or the end date) switches it off. Null when there is no offer.
+function shop_promo_for_source($source) {
+	if (!in_array($source, array('uber_eats', 'lieferando'), true)) { return null; }
+	$code = shop_coupon_normalize((string)shop_setting('promo_code_'.$source));
+	if ($code === '') { return null; }
+	$c = shop_coupon_by_code($code);
+	if (!$c || !(int)$c['active'] || $c['kind'] !== 'percent') { return null; }
+	if ($c['valid_until'] && strtotime($c['valid_until']) < time()) { return null; }
+	if ($c['valid_from'] && strtotime($c['valid_from']) > time()) { return null; }
+	if ((int)$c['max_uses'] > 0 && (int)$c['used'] >= (int)$c['max_uses']) { return null; }
+	return array('code' => $c['code'], 'percent' => (int)$c['value'], 'min_cents' => (int)$c['min_order_cents'], 'until' => $c['valid_until'] ? substr($c['valid_until'], 0, 10) : '',
+		'per_guest' => (int)$c['per_guest'] === 1, 'url' => shop_site_url().'/order/?code='.rawurlencode($c['code']));
 }
 function shop_coupon_reserve($id) {
 	$st = fb_exec("UPDATE ".fb_t('tp_shop_coupons')." SET used = used + 1 WHERE id = ? AND active = 1 AND (max_uses = 0 OR used < max_uses)", 'i', array((int)$id));

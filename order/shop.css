@@ -972,3 +972,8 @@ dialog, .shop-cart { overscroll-behavior: contain; }
 .shop-more::after { content: ''; position: absolute; inset: -12px -10px; }
 /* a very long name of a category: smaller, so that it needs fewer lines (the bar above shows it shortened) */
 .shop-cat h2.is-long { font-size: 24px; line-height: 1.2; }
+
+/* "order directly with us" on the status page of an Uber Eats order: the code big and easy to copy */
+.st-direct-code { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 12px 0; }
+.st-direct-code strong { font-family: var(--font-display); font-weight: 400; font-size: 32px; letter-spacing: .06em; padding: 4px 14px; border: 1.5px dashed var(--gold-strong); border-radius: var(--radius-sm); user-select: all; -webkit-user-select: all; }
+.st-direct-copy { min-height: 44px; padding: 0 18px; border: 1px solid var(--border-soft); border-radius: var(--radius-sm); background: transparent; color: inherit; font: inherit; font-size: 15px; cursor: pointer; }
