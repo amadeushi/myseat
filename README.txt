@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-08 == mySeat v6.81.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Behoben (Bestellseite, Code aus dem QR-Code): Der Hinweis "Dein Code ... ist gemerkt" (v6.78.0) war als Band direkt vor die Speisekarte gesetzt worden. Dort liegt sie im Raster aus Kategorien, Karte und Warenkorb; das Band wurde zu einer eigenen Spalte, verschob das ganze Layout und stand mitten auf der Seite. Jetzt erscheint derselbe Satz als kurze Einblendung (toast) unten am Rand, 4,5 Sekunden lang, nach 0,7 Sekunden Wartezeit: fest positioniert, nichts verschiebt sich. Gemessen: Karte, Kategorien und Warenkorb haben mit und ohne ?code= dieselben Maße. toast() kann dafür eine eigene Anzeigedauer bekommen (dritter Parameter).
+
 2026-11-08 == mySeat v6.80.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu (Bestellungen, Seite 9): Jede Bestellung der Tagesliste hat ein Druck-Symbol (links neben dem Knopf für den nächsten Schritt), auch abgeschlossene, stornierte und fehlgeschlagene Bestellungen eines früheren Tages (Datum mit den Pfeilen oben wählen, Filter "Abgeschlossen"). Es druckt den Lieferzettel über die Browser-Version web/bon.php (MonitorPrint.slip(id, true)), also genau den Bon, den auch das Druck-Symbol der Disposition druckt und der zum Gast geht; bei Uber-Eats- und Lieferando-Bestellungen mit dem Werbeblock "Direkt bestellen", solange der eingeschaltet ist. Das Brett der Disposition zeigt nur laufende Bestellungen, dort gab es für alte Bons keinen Weg. Die letzte Spalte der Zeile ist breiter geworden (minmax(130px, max-content)), damit Druck- und Status-Knopf nebeneinander passen. Der Nachdruck ist nicht als solcher gekennzeichnet (wie in der Disposition).

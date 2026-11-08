@@ -13,14 +13,14 @@
 	// a name of a choice: a line may break after a slash ("Schweinefleisch/Hähnchenfleisch"), never in the middle of a word
 	function brk(s) { return esc(s).replace(/\//g, '/&#8203;'); }
 	// a short message; with act = { label, fn } it carries a button ("Rückgängig") and stays longer. Instead of asking "are you sure?" first, the action happens and can be taken back.
-	function toast(t, act) {
+	function toast(t, act, ms) {
 		var el = $('#shop-toast'); el.textContent = t; el.classList.remove('has-act');
 		if (act && act.fn) {
 			var b = document.createElement('button'); b.type = 'button'; b.className = 'shop-toast-act'; b.textContent = act.label || 'Rückgängig';
 			b.addEventListener('click', function () { clearTimeout(toast.t); el.classList.remove('is-on', 'has-act'); act.fn(); });
 			el.appendChild(b); el.classList.add('has-act');
 		}
-		el.classList.add('is-on'); clearTimeout(toast.t); toast.t = setTimeout(function () { el.classList.remove('is-on'); }, act ? 6000 : 1800);
+		el.classList.add('is-on'); clearTimeout(toast.t); toast.t = setTimeout(function () { el.classList.remove('is-on'); }, ms || (act ? 6000 : 1800));
 	}
 
 	// ---- storage
@@ -1103,8 +1103,8 @@
 			if (!c) { return; }
 			c = c.toUpperCase().replace(/[^A-Z0-9\-]/g, '').slice(0, 40); if (!c) { return; }
 			localStorage.setItem('amadeusPromoCode', JSON.stringify({ code: c, at: Date.now() }));
-			var p = document.createElement('p'); p.className = 'shop-notice'; p.textContent = 'Dein Code ' + c + ' ist gemerkt. Wir tragen ihn in der Kasse für dich ein.';
-			var m = document.getElementById('shop-menu'); if (m && m.parentNode) { m.parentNode.insertBefore(p, m); }
+			// a short message that floats at the bottom (the toast): it does not push the page and does not sit in the middle of the menu; a band in the page would become a column of the layout grid
+			setTimeout(function () { toast('Dein Code ' + c + ' ist gemerkt. Wir tragen ihn in der Kasse für dich ein.', null, 4500); }, 700);
 		} catch (e) {}
 	})();
 	initShopZone();
