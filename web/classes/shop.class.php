@@ -366,7 +366,7 @@ function shop_defaults() {
 		'offer_combo' => '1',       // pizza + drink: euro off the drink per pizza (0 = off)
 		'stamp_on' => '1',          // stamp card: every finished order is a stamp, a full card becomes a voucher (see shop_stamp_*)
 		'stamp_percent' => '10', 'stamp_goal' => '5', 'stamp_months' => '12', 'voucher_days' => '90',
-		'promo_code_uber_eats' => 'ZEUS10-U', 'promo_code_lieferando' => 'ZEUS10-L', 'promo_qr' => '1', 'promo_percent' => '10', 'promo_min_cents' => '1500', 'promo_until' => '2027-01-31',   // "order directly with us" block on the slip of a platform order: only while the coupon of that code exists (shop_promo_for_source); QR only for printers that can print one (Epson)
+		'promo_code_uber_eats' => 'ZEUS10-U', 'promo_code_lieferando' => 'ZEUS10-L', 'promo_percent' => '10', 'promo_min_cents' => '1500', 'promo_until' => '2027-01-31',   // "order directly with us" block on the slip of a platform order: only while the coupon of that code exists (shop_promo_for_source)
 		'gv_pay_on' => '0',        // gift vouchers can be redeemed as payment in the checkout and at the till (works for imported vouchers before the shop for guests opens)
 		'gv_on' => '0',             // gift vouchers (Wertgutscheine): the guest pages / online payment; the backend page works without it (web/classes/shop_voucher.class.php)
 		'gv_post_mode' => 'print',  // "Per Post"/"Abholung": print = the shop makes the personal card as a print file (backend, Aufträge), blank = numbered blank filled by hand, echtpost = postcard printed and sent by EchtPost (needs the key, web/classes/echtpost.class.php)
@@ -3377,6 +3377,44 @@ function shop_promo_switch($on) {
 				'ssiiss', array($code, $note, $percent, $min, $until, date('Y-m-d H:i:s')));
 		}
 	}
+}
+// the "order directly with us" block of the paper slip of a platform order (web/bon.php: the slip the dispatch prints, which also goes to the guest): HTML for the 68 mm slip with the QR code as SVG.
+// '' when there is no offer (shop_promo_for_source). Only the delivery slip ("full") shows it, web/bon.php decides that.
+function shop_slip_promo_html($o) {
+	$promo = isset($o['source']) ? shop_promo_for_source($o['source']) : null;
+	if (!$promo) { return ''; }
+	require_once __DIR__.'/qrcode.class.php';
+	$h = function ($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); };
+	$short = function ($cents) { return ($cents % 100 === 0 ? (string)(int)($cents / 100) : number_format($cents / 100, 2, ',', '.')).' €'; };
+	$qr = ''; $m = qr_matrix($promo['url']);
+	if ($m) {
+		$n = count($m); $q = 2; $d = '';
+		for ($r = 0; $r < $n; $r++) { for ($c = 0; $c < $n; $c++) { if ($m[$r][$c]) { $d .= 'M'.($c + $q).' '.($r + $q).'h1v1h-1z'; } } }
+		$t = $n + 2 * $q;
+		$qr = '<svg viewBox="0 0 '.$t.' '.$t.'" shape-rendering="crispEdges" role="img" aria-label="QR-Code"><rect width="'.$t.'" height="'.$t.'" fill="#fff"/><path d="'.$d.'" fill="#000"/></svg>';
+	}
+	$fine = array();
+	if ($promo['per_guest']) { $fine[] = '1x pro Person'; }
+	if ($promo['min_cents'] > 0) { $fine[] = 'ab '.$short($promo['min_cents']); }
+	if ($promo['until'] !== '') { $fine[] = 'bis '.date('d.m.Y', strtotime($promo['until'])); }
+	$sc = shop_stamp_cfg(); $stamp = '';
+	if ($sc['on']) {
+		$ex = $sc['goal'] * 24; $exv = (int)round($ex * $sc['percent'] / 100);
+		$circles = ''; for ($i = 1; $i < $sc['goal']; $i++) { $circles .= '<span></span>'; }
+		// one running sentence (it wraps by itself); "zum Beispiel" before the amount: 120 € is an example, not a minimum, and the circle shows the one figure that always holds
+		$stamp = '<div class="pr-line"></div><div class="pr-title">Stempelkarte (mit Konto)</div><div class="pr-circles">'.$circles.'<span class="on">'.(int)$sc['percent'].' %</span></div>'
+			.'<div class="pr-txt">Bestellst du '.($sc['goal'] === 5 ? 'fünfmal' : (int)$sc['goal'].' mal').', zum Beispiel für zusammen '.$ex.' €, bekommst du <b style="white-space:nowrap">'.$exv.' € als Gutschein</b>: '.(int)$sc['percent'].' % von allem, was du bestellt hast.</div>';
+	}
+	return '<style>.promo{margin-top:12px;text-align:center}.promo .pr-bar{background:#000;color:#fff;font-size:17pt;font-weight:900;letter-spacing:.04em;padding:4px 0;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+		.'.promo .pr-big{font-size:58pt;font-weight:900;line-height:1;margin-top:8px}.promo .pr-sub{font-size:15pt;font-weight:800}.promo .pr-lab{font-size:10pt;margin-top:8px}'
+		.'.promo .pr-code{display:inline-block;border:3px solid #000;padding:3px 10px;font-size:26pt;font-weight:900;letter-spacing:.05em}.promo .pr-url{font-size:19pt;font-weight:900;margin-top:8px}'
+		.'.promo .pr-how{font-size:11pt}.promo svg{display:block;width:27mm;height:27mm;margin:4px auto 0}.promo .pr-line{border-top:2px dotted #000;margin:10px 0 6px}'
+		.'.promo .pr-title{font-size:13pt;font-weight:900}.promo .pr-circles{margin:5px 0}.promo .pr-circles span{display:inline-block;width:9mm;height:9mm;border:2px solid #000;border-radius:50%;margin:0 1mm;vertical-align:middle;text-align:center;font-size:9pt;font-weight:900;line-height:8mm}'
+		.'.promo .pr-circles span.on{background:#000;color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}.promo .pr-txt{font-size:10pt}.promo .pr-b{font-weight:900}.promo .pr-fine{font-size:9.5pt;margin-top:8px}.promo .pr-sign{font-size:12pt;margin-top:4px}</style>'
+		.'<div class="promo"><div class="pr-bar">DIREKT BEI UNS</div><div class="pr-big">'.(int)$promo['percent'].' %</div><div class="pr-sub">auf deine erste Bestellung</div>'
+		.'<div class="pr-lab">Dein Code</div><div class="pr-code">'.$h($promo['code']).'</div><div class="pr-url">amadeus.delivery</div><div class="pr-how">Code im Warenkorb eintragen</div>'
+		.($qr !== '' ? $qr.'<div class="pr-how">oder QR-Code scannen</div>' : '')
+		.($fine ? '<div class="pr-fine">'.$h(implode(', ', $fine)).'</div>' : '').$stamp.'<div class="pr-sign">Hamun und Zeus</div></div>';
 }
 // the "order directly with us" offer for an order of a platform (Uber Eats, Lieferando): the code meant for that platform, as long as its coupon exists, is active and can still be used.
 // No coupon = no offer: creating the two coupons in the backend switches it on, deactivating them (or the end date) switches it off. Null when there is no offer.
