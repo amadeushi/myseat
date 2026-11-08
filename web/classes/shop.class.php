@@ -164,6 +164,10 @@ function shop_ensure_schema() {
 	if (!fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_accounts')." LIKE 'blocked'")) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_accounts')." ADD `blocked` TINYINT NOT NULL DEFAULT 0"); }
 	$oc = fb_row("SHOW COLUMNS FROM ".fb_t('tp_shop_stamps')." LIKE 'order_id'");
 	if ($oc && stripos((string)$oc['Type'], 'unsigned') !== false) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_stamps')." MODIFY `order_id` INT NOT NULL"); }
+	// what a slip held when it was handed to the print agent (positions, pieces, a short hash of the bytes and of the dishes), and the hash the agent says it received: to tell afterwards whether a dish was missing in the order, lost on the way or only on the paper
+	foreach (array('pos_n' => 'SMALLINT NULL', 'pcs_n' => 'SMALLINT NULL', 'data_sha' => 'CHAR(8) NULL', 'order_hash' => 'CHAR(8) NULL', 'agent_sha' => 'CHAR(8) NULL') as $pjCol => $pjType) {
+		if (!fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_print_jobs')." LIKE '".$pjCol."'")) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_print_jobs')." ADD `".$pjCol."` ".$pjType); }
+	}
 	$pcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_drivers')." LIKE 'phone'");
 	if (!$pcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_drivers')." ADD `phone` VARCHAR(40) NOT NULL DEFAULT ''"); }
 	// the key of a driver's own page (order/driver.php?device=..&k=..): only its hash is stored. Empty = this driver has no key yet and the page works with the device id alone, as before
@@ -460,9 +464,24 @@ function shop_print_claim() {
 	}
 	$o = shop_order((int)$j['order_id']);
 	if (!$o) { shop_print_done((int)$j['id']); return null; }
-	return array('id' => (int)$j['id'], 'order_id' => (int)$j['order_id'], 'data' => base64_encode(shop_slip_escpos($o, shop_order_items((int)$o['id']), (bool)$j['is_full'])));
+	$items = shop_order_items((int)$o['id']);
+	$raw = shop_slip_escpos($o, $items, (bool)$j['is_full']);
+	// the record of this hand-over: how many positions and pieces were on the slip, a hash of the bytes sent and one of the dishes (title, quantity, variation, options, note)
+	$cnt = shop_slip_counts($items); $dishes = array();
+	foreach ($items as $it) { $dishes[] = array((int)$it['qty'], (string)$it['title'], (string)$it['variation'], $it['options'], (string)$it['note']); }
+	fb_exec("UPDATE ".fb_t('tp_shop_print_jobs')." SET pos_n = ?, pcs_n = ?, data_sha = ?, order_hash = ?, agent_sha = NULL WHERE id = ?", 'iissi',
+		array((int)$cnt['pos'], (int)$cnt['pcs'], substr(sha1($raw), 0, 8), substr(sha1(json_encode($dishes)), 0, 8), (int)$j['id']));
+	return array('id' => (int)$j['id'], 'order_id' => (int)$j['order_id'], 'data' => base64_encode($raw));
 }
-function shop_print_done($id) { fb_exec("UPDATE ".fb_t('tp_shop_print_jobs')." SET printed_at = ? WHERE id = ?", 'si', array(date('Y-m-d H:i:s'), (int)$id)); }
+// the agent reports the slip as printed; $agentSha is the hash of the bytes it received: when it differs from data_sha the slip changed on the way
+function shop_print_done($id, $agentSha = '') {
+	$agentSha = preg_match('/^[0-9a-f]{8}$/', (string)$agentSha) ? (string)$agentSha : '';
+	fb_exec("UPDATE ".fb_t('tp_shop_print_jobs')." SET printed_at = ?, agent_sha = ? WHERE id = ?", 'ssi', array(date('Y-m-d H:i:s'), $agentSha !== '' ? $agentSha : null, (int)$id));
+	if ($agentSha !== '') {
+		$r = fb_row("SELECT data_sha FROM ".fb_t('tp_shop_print_jobs')." WHERE id = ?", 'i', array((int)$id));
+		if ($r && $r['data_sha'] !== null && $r['data_sha'] !== $agentSha) { error_log('print job '.(int)$id.': the agent received other bytes ('.$agentSha.') than were sent ('.$r['data_sha'].')'); }
+	}
+}
 
 // the page token of the logged-in user: the same in every session of that user (secret: shop_preview_key())
 function myseat_admin_token() {

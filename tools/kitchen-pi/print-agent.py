@@ -6,7 +6,7 @@ direkt per USB anzusprechen (pyusb). Danach startete sich der Drucker nach 5 bis
 angekommen war (Test 2026-10-05: Bon mit 25 Positionen brach bei Pos 18 ab), und ohne Treiber fehlte die Flusskontrolle (Lieferung #10: ein Stueck mitten im Bon fehlte).
 Ueber den Treiber kam derselbe lange Bon vollstaendig an, und der Drucker blieb am Bus.
 """
-import base64, fcntl, hashlib, json, os, signal, sys, termios, time, urllib.parse, urllib.request
+import base64, fcntl, hashlib, json, os, re, signal, sys, termios, time, urllib.parse, urllib.request
 
 URL, KEY = os.environ['AGENT_URL'], os.environ['AGENT_KEY']
 TTY = os.environ.get('PRINT_TTY', '/dev/ttyUSB0')
@@ -14,7 +14,7 @@ TTY = os.environ.get('PRINT_TTY', '/dev/ttyUSB0')
 def log(*a): print(time.strftime('%H:%M:%S'), *a, flush=True)
 
 KEEP_DIR = os.environ.get('BON_KEEP_DIR', '/var/tmp/bon-agent')   # the last bons as they were sent (to compare with the paper when something is missing)
-KEEP_N = 40
+KEEP_N = 500   # about 1 KB each: a whole busy weekend stays, so a bon that went wrong can still be looked at the next day
 
 def keep(job_id, data):
     try:
@@ -24,6 +24,17 @@ def keep(job_id, data):
         for p in old[:-KEEP_N]: os.remove(p)
     except Exception as e:
         log('Bon konnte nicht gesichert werden:', e)
+
+def content(data):
+    """What the bytes of a slip say about themselves, for the log: the positions numbered 'Pos k von n', the control line and whether the last line is there. Nothing is changed or printed from this."""
+    pos = [int(x) for x in re.findall(rb'Pos (\d+) von \d+', data)]
+    tot = re.findall(rb'Pos \d+ von (\d+)', data)
+    kon = re.search(rb'Kontrolle: (\d+) Position(?:en)? / (\d+) St', data)
+    p = 'Pos %d/%s' % (len(pos), tot[0].decode() if tot else '-')
+    p += ', Nummern lueckenlos' if pos == list(range(1, len(pos) + 1)) else ', NUMMERN NICHT LUECKENLOS %s' % pos
+    p += ', Kontrolle %s Pos / %s Stueck' % ((kon.group(1).decode(), kon.group(2).decode()) if kon else ('fehlt', '-'))
+    p += ', ENDE ' + ('ja' if b'--- ENDE ---' in data else 'FEHLT')
+    return p
 
 def _timeout(*a): raise TimeoutError
 
@@ -113,10 +124,12 @@ def main():
             job = r.get('job') if r.get('ok') else None
             if job:
                 data = base64.b64decode(job['data']); t0 = time.time()
+                sha = hashlib.sha1(data).hexdigest()[:8]
                 keep(job['id'], data)
+                log('Bon erhalten, Bestellung', job['order_id'], 'Auftrag', job['id'], '(%d Byte, sha1 %s):' % (len(data), sha), content(data))
                 send(data)
-                call('done', id=job['id'])
-                log('Bon gedruckt, Bestellung', job['order_id'], 'Auftrag', job['id'], '(%d Byte, sha1 %s, in %.1f s)' % (len(data), hashlib.sha1(data).hexdigest()[:8], time.time() - t0))
+                call('done', id=job['id'], sha=sha)   # the server compares the hash with the one of the bytes it sent
+                log('Bon gedruckt, Bestellung', job['order_id'], 'Auftrag', job['id'], '(%d Byte, sha1 %s, in %.1f s)' % (len(data), sha, time.time() - t0))
                 continue
         except Exception as e:
             log('Fehler:', e)

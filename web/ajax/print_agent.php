@@ -28,7 +28,7 @@ if ($op === 'next') {
 	pa_out(array('ok' => true, 'job' => $job));
 }
 if ($op === 'done') {
-	shop_print_done((int)(isset($_POST['id']) ? $_POST['id'] : 0));
+	shop_print_done((int)(isset($_POST['id']) ? $_POST['id'] : 0), isset($_POST['sha']) ? (string)$_POST['sha'] : '');
 	pa_out(array('ok' => true));
 }
 if ($op === 'ping') { pa_out(array('ok' => true)); }

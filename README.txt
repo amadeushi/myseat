@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-08 == mySeat v6.76.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu (Küchendrucker, Nachvollziehbarkeit): Zu jedem Bon speichert der Server jetzt in tp_shop_print_jobs, was er an den Druck-Agenten übergeben hat: Positionen (pos_n), Stückzahl (pcs_n), einen kurzen Hash der gesendeten Bytes (data_sha) und einen Hash der Gerichte der Bestellung (order_hash: Titel, Menge, Variante, Optionen, Notiz). Der Agent meldet beim Fertigmelden den Hash der empfangenen Bytes (agent_sha); weichen beide ab, steht eine Zeile im Fehlerprotokoll. Damit lässt sich bei einem Bon mit fehlender Position später trennen: fehlte sie schon in der Bestellung (order_hash der Aufträge vergleichen), ging sie unterwegs verloren (data_sha gegen agent_sha) oder erst auf dem Papier. Neue Spalten werden beim ersten Aufruf angelegt.
+ * Neu (Pi, tools/kitchen-pi/print-agent.py): Der Agent hebt jetzt die letzten 500 statt 40 Bons auf (gut 1 KB je Bon) und schreibt je Bon eine Zeile "Bon erhalten ...": Positionsnummern lückenlos?, Kontrollzeile, ist "--- ENDE ---" da? Der Pi speichert sein Journal jetzt dauerhaft (/etc/systemd/journald.conf.d/50-persistent.conf, höchstens 100 MB); bisher war es nur im Arbeitsspeicher und mit jedem Neustart weg. Hintergrund: Nach fehlenden Schnitzeln auf Lieferbons am 7.11. waren die Bons und das Protokoll von vor 18:29 Uhr nicht mehr da.
+
 2026-11-05 == mySeat v6.75.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geändert (Sicherheitsprüfung): Der Frame-Schutz (Content-Security-Policy "frame-ancestors 'self'" und X-Frame-Options SAMEORIGIN) gilt jetzt für die ganze Installation, also auch für den Backend-Login, das Backend, die Monitore und die Installation, nicht mehr nur für order/. Fremde Seiten können sie nicht mehr unsichtbar überlagern (Clickjacking). Der Ordner api/ (Buchungsformular und Bewertungs-Widget auf den Webseiten des Restaurants) nimmt den Schutz in einer eigenen api/.htaccess wieder zurück und bleibt einbettbar.
