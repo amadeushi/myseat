@@ -6,6 +6,7 @@
 	var LABEL = { 'new': 'neu', accepted: 'angenommen', preparing: 'in Zubereitung', ready: 'fertig', delivering: 'unterwegs', done: 'erledigt', cancelled: 'storniert', failed: 'fehlgeschlagen' };
 	var ICON_BOX = '<svg class="orders-type-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7l9-4 9 4v10l-9 4-9-4V7zm9-4v18M3 7l9 4 9-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 	var ICON_BAG = '<svg class="orders-type-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8h12l-1.2 12.5a1 1 0 0 1-1 .9H8.2a1 1 0 0 1-1-.9L6 8zm3 0V6a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+	var ICON_PRINT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V4h10v5M7 17H5a1.5 1.5 0 0 1-1.500-1.500v-5A1.500 1.500 0 0 1 5 9h14a1.500 1.500 0 0 1 1.500 1.500v5A1.500 1.500 0 0 1 19 17h-2M7 14h10v6H7z" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 	function $(s, r) { return (r || document).querySelector(s); }
 	function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 	function money(c) { return (c / 100).toFixed(2).replace('.', ',') + ' €'; }
@@ -84,7 +85,8 @@
 			'<span class="orders-who">' + esc(o.name) + (o.source === 'phone' ? ' <em class="orders-test">Telefon</em>' : '') + (o.test ? ' <em class="orders-test">Test</em>' : '') + '</span>' +
 			'<span class="orders-sum">' + money(o.total) + '</span><span class="orders-pay">' + pay + '</span>' +
 			'<span class="orders-status">' + LABEL[o.status] + '</span><span class="orders-act">' +
-			(n ? '<button type="button" class="button_dark" data-status="' + n[0] + '"' + (o.scheduled ? ' data-sched="1"' : '') + '>' + n[1] + '</button>' : '') + '</span></div>';
+			'<button type="button" class="orders-print" data-print="1" title="Bon drucken (Lieferzettel, wie in der Disposition)" aria-label="Bon #' + o.day_no + ' drucken">' + ICON_PRINT + '</button>' +
+			(n ?'<button type="button" class="button_dark" data-status="' + n[0] + '"' + (o.scheduled ? ' data-sched="1"' : '') + '>' + n[1] + '</button>' : '') + '</span></div>';
 		if (open[o.id]) {
 			h += '<div class="orders-detail"><p><strong>' + esc(o.name) + '</strong>' + (o.phone ? ' · <a href="tel:' + esc(o.phone.replace(/\s+/g, '')) + '">' + esc(o.phone) + '</a>' : '') + (o.email ? ' · ' + esc(o.email) : '') + ' · Nr. ' + esc(o.number) + '</p>' +
 				(o.address ? '<p>' + esc(o.address) + (o.address_note ? ' (' + esc(o.address_note) + ')' : '') + '</p>' : '') +
@@ -204,6 +206,7 @@
 		var rowEl = ev.target.closest('.orders-row'); if (!rowEl) { return; }
 		var id = rowEl.dataset.id;
 		if (ev.target.closest('.orders-toggle')) { open[id] = !open[id]; load(); return; }
+		if (ev.target.closest('[data-print]')) { if (window.MonitorPrint) { window.MonitorPrint.slip(id, true); } return; }   // the slip of any order, also a finished one of an earlier day: the same one the dispatch prints (web/bon.php, delivery slip)
 		var st = ev.target.closest('[data-status]');
 		if (st) {
 			if (st.dataset.status === 'cancelled') {

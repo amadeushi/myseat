@@ -1874,9 +1874,14 @@ select.status_dbox:not([multiple]) option::checkmark { display: inline-block; or
 .orders-stat span { display: block; font-size: 12px; color: var(--text-muted); }
 .orders-stat strong { font-size: 18px; font-variant-numeric: tabular-nums; }
 .orders-row { border-top: 1px solid var(--border-soft, rgba(245,240,230,.08)); }
-.orders-main { display: grid; grid-template-columns: 34px 52px 110px 90px minmax(120px, 1fr) 80px 130px 110px 130px; gap: 8px; align-items: center; padding: 10px 0; }
+.orders-main { display: grid; grid-template-columns: 34px 52px 110px 90px minmax(120px, 1fr) 80px 130px 110px minmax(130px, max-content); gap: 8px; align-items: center; padding: 10px 0; }
 .orders-toggle { width: 30px; height: 30px; border: 1px solid var(--border-soft, rgba(245,240,230,.1)); border-radius: var(--radius-md); background: transparent; color: var(--text); cursor: pointer; }
 .orders-toggle:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+/* print the slip of this order (also of a finished one): next to the button of the next step */
+.orders-print { width: 34px; height: 34px; padding: 5px; margin-right: 8px; vertical-align: middle; border: 1px solid var(--border-soft, rgba(245,240,230,.1)); border-radius: var(--radius-md); background: transparent; color: var(--text); cursor: pointer; }
+.orders-print svg { display: block; width: 100%; height: 100%; }
+.orders-print:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .orders-print:hover { border-color: var(--gold); color: var(--gold); } }
 .orders-no { font-weight: 700; }
 /* delivery vs. pickup is told apart by icon, not by a second accent color - color stays reserved for the
    status meanings documented in DESIGN.md (gold accent, danger/success as the bounded status exception) */

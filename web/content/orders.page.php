@@ -72,4 +72,5 @@ $or_pause = shop_pause_state();
 		</form>
 	</dialog>
 </div>
+<script src="js/monitor_print.js?v=<?php echo @filemtime(__DIR__.'/../js/monitor_print.js'); ?>"></script>
 <script src="js/orders.js?v=<?php echo @filemtime(__DIR__.'/../js/orders.js'); ?>"></script>
