@@ -10,15 +10,17 @@ $contact_phone = !empty($settings['mailPhone']) ? trim($settings['mailPhone']) :
 
 if (!function_exists('reserve_contact_message')) {
 	// $title says what is going on, $hint what the guest can do about it; contact buttons below
-	function reserve_contact_message($title, $hint, $contact_email, $contact_phone = '') {
+	function reserve_contact_message($title, $hint, $contact_email, $contact_phone = '', $action_label = '', $action_href = '') {
 		$e = function ($s) { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); };
 		echo "<div class='alert_info' role='status'>"
 			."<svg class='notice-icon' viewBox='0 0 24 24' fill='none' aria-hidden='true'><circle cx='12' cy='12' r='9' stroke='currentColor' stroke-width='1.6'/><path d='M12 11v5' stroke='currentColor' stroke-width='1.8' stroke-linecap='round'/><circle cx='12' cy='8' r='1' fill='currentColor'/></svg>"
 			."<div class='notice-body'><p class='notice-title'>".$e($title)."</p><p class='notice-hint'>".$e($hint)."</p>";
 		$tel = preg_replace('/[^\d+]/', '', $contact_phone);
 		if (substr($tel, 0, 2) === '00') { $tel = '+'.substr($tel, 2); } elseif (substr($tel, 0, 1) === '0') { $tel = '+49'.substr($tel, 1); }
-		if ($contact_email || $tel !== '') {
+		if ($contact_email || $tel !== '' || $action_label !== '') {
 			echo "<div class='notice-actions'>";
+			// a suggestion the guest takes by clicking (never chosen for them)
+			if ($action_label !== '') { echo "<a class='notice-btn' href='".$e($action_href)."'>".$e($action_label)."</a>"; }
 			if ($contact_email) { echo "<a class='notice-btn' href='mailto:".$e($contact_email)."'>".$e(bt('contact_mail'))."</a>"; }
 			if ($tel !== '') { echo "<a class='notice-btn' href='tel:".$e($tel)."'>".$e(bt('contact_call').' '.$contact_phone)."</a>"; }
 			echo "</div>";
@@ -42,7 +44,9 @@ include_once __DIR__.'/../web/classes/online_block.class.php';
 $online_blocked = ob_is_blocked($_SESSION['outletID'], $_SESSION['selectedDate']);
 
 if ($outlet_closed_today) {
-	reserve_contact_message(bt('closed_day'), bt('closed_day_hint'), '', '');
+	// the guest keeps the date they picked and sees that it is closed; the next open day is only offered as a button
+	$next_open = nextOpenDate(max($_SESSION['selectedDate'], date('Y-m-d')));
+	reserve_contact_message(bt('closed_day'), bt('closed_day_hint'), '', '', $next_open ? bt('next_open_day', nextOpenLabel($next_open)) : '', $next_open ? '?selectedDate='.$next_open : '');
 } elseif ($online_blocked) {
 	reserve_contact_message(bt('online_blocked'), bt('online_blocked_hint'), $contact_email, $contact_phone);
 } elseif ($party_too_big) {

@@ -293,9 +293,10 @@ function querySQL($statement){
 		case 'maitre_dayoffs':
 			$result = query("SELECT `maitre_date` FROM `$dbTables->maitre` 
 							WHERE `outlet_child_dayoff` = 'ON'
-							AND YEAR(maitre_date) = '%s'
-							AND `maitre_outlet_id` ='%d' 
-							ORDER BY `maitre_date` ASC",date('Y'),$_SESSION['outletID']);
+							AND `maitre_date` >= CURDATE()
+							AND `maitre_date` <= DATE_ADD(CURDATE(), INTERVAL 13 MONTH)
+							AND `maitre_outlet_id` ='%d'
+							ORDER BY `maitre_date` ASC",$_SESSION['outletID']);   // the next 13 months (the calendar offers 12), not just the current year: a single-day Ruhetag set for January was open in the calendar from 1 January on
 			return getRowList($result);
 		break;
 		case 'outlet_closedays':

@@ -103,6 +103,7 @@ function bt($key, $arg = null) {
 				'contact_call'   => 'Anrufen',
 				'closed_day'     => 'An diesem Tag haben wir geschlossen.',
 				'closed_day_hint' => 'Wähle bitte ein anderes Datum, wir freuen uns auf dich.',
+				'next_open_day'  => 'Nächster freier Tag: %s',
 				'online_blocked' => 'Für diesen Tag nehmen wir online keine Reservierungen an.',
 				'online_blocked_hint' => 'Wähle ein anderes Datum oder frag uns direkt, vielleicht finden wir eine Lösung.',
 				'group_big'      => 'Gruppen ab %d Personen planen wir gern persönlich.',
@@ -149,6 +150,7 @@ function bt($key, $arg = null) {
 				'contact_call'   => 'Call us',
 				'closed_day'     => 'We are closed on this day.',
 				'closed_day_hint' => 'Please pick another date, we would love to see you.',
+				'next_open_day'  => 'Next open day: %s',
 				'online_blocked' => 'We are not taking online reservations for this day.',
 				'online_blocked_hint' => 'Pick another date or ask us directly, we may still find a solution.',
 				'group_big'      => 'We like to plan groups of %d or more personally.',
@@ -550,7 +552,7 @@ function defineOffDays(){
 	// days blocked for online bookings in the backend (closed party, sold out)
 	if (is_file(__DIR__.'/../web/classes/online_block.class.php')) {
 		require_once(__DIR__.'/../web/classes/online_block.class.php');
-		foreach (ob_blocked_dates($_SESSION['outletID'], date('Y-m-d'), date('Y-m-d', strtotime('+6 months'))) as $blocked_date => $blocked_reason) {
+		foreach (ob_blocked_dates($_SESSION['outletID'], date('Y-m-d'), date('Y-m-d', strtotime('+13 months'))) as $blocked_date => $blocked_reason) {
 			$date_string .= "'".$blocked_date."',";
 		}
 	}
@@ -559,7 +561,7 @@ function defineOffDays(){
 	$outlet_closedays = "'".$outlet_closedays."'";
 	
 	$day		= mktime(0, 0, 0, date('m'), date('d'), date('y'));
-	$enddate 	= mktime(0, 0, 0, date('m')+6, date('d'), date('y'));
+	$enddate 	= mktime(0, 0, 0, date('m')+13, date('d'), date('y'));   // the calendar offers 12 months ahead
 
 	while ($day < $enddate) {
 		if ( strpos($outlet_closedays, date("w",$day)) === false) {
@@ -568,13 +570,32 @@ function defineOffDays(){
 			$date_string .= "'".date('Y-m-d',$day)."',";
 		}
 		//add 1 day
-		$day = $day + 86400;
+		$day = strtotime('+1 day', $day);   // a calendar day, not 86400 seconds (the clock change makes a day 23 or 25 hours long)
 	}
-	
+
 	$date_string = substr($date_string,0,-1);
 	//print_r($dayoffs);
 	//echo $outlet_closedays;
 	echo $date_string;
+}
+
+// the first day after $from the restaurant is open (same rules as the calendar: weekly closing days, single-day Ruhetage, days blocked for online bookings), or null.
+// Only offered to the guest as a button, never selected for them: whoever came for one day must not end up with a booking for another.
+function nextOpenDate($from) {
+	ob_start(); defineOffDays(); $raw = ob_get_clean();
+	preg_match_all("/'(\d{4}-\d{2}-\d{2})'/", $raw, $m);
+	$off = array_flip($m[1]);
+	for ($i = 1; $i <= 360; $i++) {
+		$d = date('Y-m-d', strtotime($from.' +'.$i.' day'));
+		if (!isset($off[$d])) { return $d; }
+	}
+	return null;
+}
+function nextOpenLabel($ymd) {
+	$t = strtotime($ymd);
+	if (isset($_SESSION['lang']) && substr($_SESSION['lang'], 0, 2) !== 'de') { return date('D, M j', $t); }
+	$days = array('Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag');
+	return $days[(int)date('w', $t)].', '.date('j.n.', $t);
 }
 
 function processBooking(){

@@ -52,6 +52,11 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-08 == mySeat v6.77.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Behoben (Reservierungs-Widget, Ruhetage): Im Kalender waren einzelne Ruhetage (Tagesdetails > Ruhetag) nur für das laufende Kalenderjahr gesperrt; ein für Januar eingetragener Ruhetag war ab dem 1.1. im Kalender trotzdem wählbar. Jetzt gelten die nächsten 13 Monate. Auch die festen Ruhetage der Woche und die online gesperrten Tage wurden nur 6 Monate im Voraus gesperrt, der Kalender erlaubt aber 12; jetzt ebenfalls 13 Monate. Die Tagesschleife rechnet mit Kalendertagen statt mit 86400 Sekunden (Zeitumstellung).
+ * Neu: Ist das gewählte Datum ein Ruhetag (zum Beispiel heute), bleibt es wie gewählt stehen und zeigt weiter "An diesem Tag haben wir geschlossen". Darunter steht jetzt ein Knopf "Nächster freier Tag: Freitag, 6.11.", den der Gast selbst anklickt. Es wird bewusst nicht automatisch auf den nächsten Tag gesprungen: Wer für einen bestimmten Tag gekommen ist, soll nicht unbemerkt für einen anderen buchen.
+
 2026-11-08 == mySeat v6.76.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu (Küchendrucker, Nachvollziehbarkeit): Zu jedem Bon speichert der Server jetzt in tp_shop_print_jobs, was er an den Druck-Agenten übergeben hat: Positionen (pos_n), Stückzahl (pcs_n), einen kurzen Hash der gesendeten Bytes (data_sha) und einen Hash der Gerichte der Bestellung (order_hash: Titel, Menge, Variante, Optionen, Notiz). Der Agent meldet beim Fertigmelden den Hash der empfangenen Bytes (agent_sha); weichen beide ab, steht eine Zeile im Fehlerprotokoll. Damit lässt sich bei einem Bon mit fehlender Position später trennen: fehlte sie schon in der Bestellung (order_hash der Aufträge vergleichen), ging sie unterwegs verloren (data_sha gegen agent_sha) oder erst auf dem Papier. Neue Spalten werden beim ersten Aufruf angelegt.
