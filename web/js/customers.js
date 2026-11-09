@@ -139,7 +139,7 @@
 		if (canAdmin) {
 			var more = '<div class="cu-acts">' + (c.links.length ? '<button type="button" class="cu-btn" data-act="unlink">Zusammenführung aufheben</button>' : '<button type="button" class="cu-btn" data-act="panel" data-v="link">Mit anderem Kunden zusammenführen</button>') +
 				'<a class="cu-btn" href="kunde_auskunft.php?c=' + esc(c.id) + '" target="_blank" rel="noopener">Auskunft drucken</a></div>';
-			if (S.panel === 'link') { more += '<div class="cu-form"><p><b>Dieselbe Person</b> unter zweiter Nummer oder Mailadresse: beide werden hier als ein Kunde gezeigt. Stempel und Konten bleiben, wie sie sind.</p><input type="search" id="cu-link-q" placeholder="Name oder Nummer des anderen Kunden" autocomplete="off"/><div class="cu-list2" id="cu-link-res"></div></div>'; }
+			if (S.panel === 'link') { more += '<div class="cu-form"><p><b>Dieselbe Person</b> unter zweiter Nummer oder Mailadresse: beide werden hier als ein Kunde gezeigt. Die offenen Stempel kommen auf eine Karte (die des Kontos). Ist sie danach voll, wird der Gutschein ausgestellt und der Gast per Mail benachrichtigt.</p><input type="search" id="cu-link-q" placeholder="Name oder Nummer des anderen Kunden" autocomplete="off"/><div class="cu-list2" id="cu-link-res"></div></div>'; }
 			more += '<div class="cu-danger"><p><b>Daten löschen</b> · Name, Kontakt, Adresse, Konto, Stempel, Gutscheine und Notizen werden entfernt. Die Bestellungen bleiben für die Buchhaltung, ohne Personenbezug. Das geht nicht rückgängig.</p>' +
 				(S.panel === 'erase' ? '<label class="cu-lbl" for="cu-erase-in">Zur Bestätigung den Namen oder die Telefonnummer eintippen</label><input type="text" id="cu-erase-in" autocomplete="off"/><div class="cu-acts"><button type="button" class="cu-btn is-danger" data-act="erase">Endgültig löschen</button><button type="button" class="cu-btn" data-act="panel" data-v="">Abbrechen</button></div>' : '<div class="cu-acts"><button type="button" class="cu-btn is-danger-o" data-act="panel" data-v="erase">Daten löschen ...</button></div>') + '</div>';
 			h += sec('Weitere Aktionen', more);
@@ -168,7 +168,7 @@
 			if (!r.ok) { say(r.error || 'Das hat nicht geklappt.', 'error'); return; }
 			S.panel = ''; S.draft = null; S.reason = '';
 			var id = (r.id && op === 'link') ? r.id : S.sel; if (after) { after(r); }
-			return Promise.all([openCard(id, false), loadList(false)]).then(function () { say(okText + (r.code ? ' ' + r.code : ''), 'ok'); });
+			return Promise.all([openCard(id, false), loadList(false)]).then(function () { say((r.msg || okText) + (r.code ? ' ' + r.code : ''), 'ok'); });
 		}).catch(function () { say('Keine Verbindung. Bitte versuche es noch einmal.', 'error'); });
 	}
 	// a second tap confirms (a button that changes something for good asks once)

@@ -34,6 +34,13 @@ html.acc-lock { overflow: hidden; }
 .acc-tabs [role="tab"][aria-selected="true"] { background: var(--gold); color: #1a1408; }
 
 .acc-panel { display: grid; gap: 12px; align-content: start; min-height: 120px; }
+.shop-shell .acc-stl { margin-top: 18px; border-top: 1px solid var(--border-soft); padding-top: 12px; }
+.shop-shell .acc-stl h4 { margin: 0 0 6px; font-size: 14px; font-weight: 600; }
+.shop-shell .acc-stl ul { list-style: none; margin: 0; padding: 0; }
+.shop-shell .acc-stl li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border-soft); font-size: 14px; line-height: 1.4; }
+.shop-shell .acc-stl li span:last-child { color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.shop-shell .acc-stl .acc-stl-h { margin: 14px 0 2px; color: var(--text-muted); font-size: 12px; }
+.shop-shell .acc-stl .is-used li { color: var(--text-muted); }
 .shop-shell .acc-empty { padding: 18px 4px; color: var(--text-muted); font-size: 14px; line-height: 1.6; }
 .acc-panel .stp { margin: 0; }
 

@@ -222,6 +222,24 @@ function shop_cust_contact($c) {
 	$sms = (function_exists('sms_enabled') && sms_enabled() && sms_normalize_phone(html_entity_decode((string)$c['phone'], ENT_QUOTES, 'UTF-8')) !== null);
 	return array('mail' => $mail, 'sms' => $sms);
 }
+/*
+ * The open stamps of one person must lie on ONE set of keys: the keys of the account, which are the ones the shop shows and the card check counts (shop_stamp_open).
+ * Stamps given by hand before the account existed, or earned under the second number of a linked customer, lie on other keys of the same customer and were never
+ * counted together (a full card that never became a voucher). This moves the open stamps of the customer $c (a row of shop_cust_index) onto $keys; stamps that are
+ * already part of a voucher stay as they are. Returns how many were moved.
+ */
+function shop_cust_gather_stamps($c, $keys) {
+	if (!$c || empty($c['keys']) || !shop_stamp_has_keys($keys)) { return 0; }
+	$in = shop_cust_in($c['keys']);
+	$st = fb_exec("UPDATE ".fb_t('tp_shop_stamps')." SET guest_key = ?, guest_key2 = ? WHERE coupon_id IS NULL AND (guest_key IN ($in) OR guest_key2 IN ($in)) AND NOT (guest_key = ? AND guest_key2 = ?)",
+		'ssss', array((string)$keys[0], (string)$keys[1], (string)$keys[0], (string)$keys[1]));
+	return $st ? max(0, (int)mysqli_stmt_affected_rows($st)) : 0;
+}
+// the customer a set of guest keys belongs to (the account keys of an order), or null
+function shop_cust_find_by_keys($keys) {
+	foreach (shop_cust_index() as $c) { foreach ((array)$keys as $k) { if ($k !== '' && in_array($k, $c['keys'], true)) { return $c; } } }
+	return null;
+}
 function shop_cust_stamp_add($id, $base, $reason, $by, $notify = false) {
 	$c = shop_cust_find($id); if (!$c) { return array('ok' => false, 'error' => 'Diesen Kunden gibt es nicht mehr.'); }
 	$base = (int)$base; if ($base < 100 || $base > 10000) { return array('ok' => false, 'error' => 'Der Grundbetrag liegt zwischen 1,00 und 100,00 Euro.'); }
@@ -235,6 +253,7 @@ function shop_cust_stamp_add($id, $base, $reason, $by, $notify = false) {
 	}
 	if (!$ok) { return array('ok' => false, 'error' => 'Der Stempel konnte nicht gespeichert werden.'); }
 	$ct = shop_cust_contact($c);
+	shop_cust_gather_stamps($c, $keys);   // stamps of the same person on other keys count with this one
 	// a full card makes the voucher and tells the guest by itself; without the tick the notice is held back (no address, no mail)
 	$made = shop_stamp_check($keys, $notify ? $c['phone'] : '', $notify ? $c['email'] : '', $c['name']);
 	$told = false;
@@ -313,8 +332,16 @@ function shop_cust_link($id, $otherId, $by) {
 	fb_exec("INSERT IGNORE INTO ".fb_t('tp_shop_customer_links')." (a, b, created_at, created_by) VALUES (?, ?, ?, ?)", 'ssss', array($a['id'], $b['id'], date('Y-m-d H:i:s'), mb_substr((string)$by, 0, 60)));
 	shop_cust_log($a['id'], 'link', 'Zusammengeführt mit '.($b['name'] !== '' ? $b['name'] : 'Kunde').' ('.$b['phone'].')', $by);
 	$idx = shop_cust_index(true);
-	$new = null; foreach ($idx as $c) { if (in_array($a['id'], $c['keys'], true)) { $new = $c['id']; break; } }
-	return array('ok' => true, 'id' => $new ?: $a['id']);
+	$new = null; $nc = null; foreach ($idx as $c) { if (in_array($a['id'], $c['keys'], true)) { $new = $c['id']; $nc = $c; break; } }
+	// the stamps of both customers now belong on one card: onto the keys of the account, and a card that is full by this becomes its voucher (the guest gets the mail, like after an order)
+	$moved = 0; $made = 0;
+	if ($nc) {
+		$keys = shop_cust_keys($nc); $moved = shop_cust_gather_stamps($nc, $keys);
+		if (shop_stamp_has_keys($keys)) { $ct = shop_cust_contact($nc); $made = shop_stamp_check($keys, $nc['phone'], $ct['mail'] !== '' ? $ct['mail'] : $nc['email'], $nc['name']); }
+		if ($moved > 0 || $made > 0) { shop_cust_log($nc['id'], 'stamp~', $moved.' Stempel auf eine Karte gelegt'.($made ? '; Karte voll, Gutschein ausgestellt' : ''), $by); shop_cust_index(true); }
+	}
+	$msg = 'Zusammengeführt.'.($moved > 0 ? ' '.$moved.' Stempel liegen jetzt auf einer Karte.' : '').($made > 0 ? ' Die Karte ist voll, der Gutschein ist ausgestellt.' : '');
+	return array('ok' => true, 'id' => $new ?: $a['id'], 'msg' => $msg);
 }
 function shop_cust_unlink($id, $by) {
 	$c = shop_cust_find($id); if (!$c) { return array('ok' => false, 'error' => 'Diesen Kunden gibt es nicht mehr.'); }

@@ -402,11 +402,27 @@ function shop_acc_address_save($acc, $street, $zip, $city, $note, $name = '', $p
 	return array('ok' => true, 'zone' => array('fee' => (int)$r['zone']['fee_cents'], 'min' => (int)$min));
 }
 
+// the stamps the guest can see in the account: the open ones, and the ones that made the voucher that is still to be used (so the voucher can be followed back)
+function shop_stamp_items($keys, $voucher) {
+	if (!shop_stamp_has_keys($keys)) { return array(); }
+	$cid = 0;
+	if (is_array($voucher) && !empty($voucher['code'])) { $cp = shop_coupon_by_code($voucher['code']); $cid = $cp ? (int)$cp['id'] : 0; }
+	$rows = fb_rows("SELECT id, order_id, base_cents, earned_at, expires_at, coupon_id FROM ".fb_t('tp_shop_stamps')." WHERE ((coupon_id IS NULL AND expires_at > ?) OR coupon_id = ?) AND ".shop_stamp_match()." ORDER BY earned_at, id",
+		'siss', array(date('Y-m-d H:i:s'), $cid, $keys[0], $keys[1]));
+	$out = array();
+	foreach ($rows as $r) {
+		$out[] = array('at' => date('d.m.Y', strtotime($r['earned_at'])), 'until' => date('d.m.Y', strtotime($r['expires_at'])), 'base' => (int)$r['base_cents'],
+			'manual' => (int)$r['order_id'] < 0, 'used' => $r['coupon_id'] !== null);
+	}
+	return $out;
+}
+
 // everything the page needs about the signed-in guest in one call
 function shop_acc_overview($acc, $type = 'delivery') {
 	$keys = shop_acc_keys($acc);
 	$stamp = shop_stamp_state($keys, $type === 'pickup' ? 'pickup' : 'delivery', 0);
 	$stamp['authed'] = true;
+	$stamp['items'] = shop_stamp_items($keys, $stamp['voucher']);
 	$orders = shop_acc_orders($acc);
 	return array('ok' => true, 'account' => array('mask_phone' => $acc['mask_phone'], 'mask_mail' => $acc['mask_mail'], 'has_phone' => $keys[0] !== '', 'has_mail' => $keys[1] !== ''),
 		'address' => shop_acc_address($acc),

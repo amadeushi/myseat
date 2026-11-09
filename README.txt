@@ -52,6 +52,13 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-09 == mySeat v6.84.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Behoben (Stempelkarte nach dem Zusammenfuehren zweier Kunden): Die Stempel eines Kunden lagen nach dem Zusammenfuehren (und bei Stempeln von Hand vor dem Konto) auf anderen Schluesseln als die des Kontos. Die Pruefung "Karte voll" und der Shop zaehlten nur die Schluessel des Kontos, eine Karte mit 5 Stempeln wurde nie zum Gutschein (Fall Dittmer, die Daten sind von Hand repariert).
+ * Jetzt: Beim Zusammenfuehren, beim Gutschreiben von Hand und beim Abschluss einer Bestellung mit Konto werden alle offenen Stempel derselben Person auf die Schluessel des Kontos gelegt (shop_cust_gather_stamps), bevor die Karte geprueft wird. Ist die Karte danach voll, wird der Gutschein ausgestellt und der Gast per Mail benachrichtigt; das Backend sagt es in der Bestaetigung. Stempel, die schon zu einem Gutschein gehoeren, bleiben unveraendert, Stempel fremder Personen werden nie verschoben.
+ * Neu im Konto des Gastes (Reiter "Stempel"): "Deine Stempel im Einzelnen" mit Datum, Herkunft (Bestellung / von uns gutgeschrieben) und Warenwert; nach dem Gutschein steht "Daraus ist dein Gutschein entstanden" mit den Stempeln, bis er eingeloest ist.
+ * Hinweistext beim Zusammenfuehren im Kundenbereich angepasst (die Stempel bleiben nicht mehr, wie sie sind). Keine Aenderung an der Datenbank.
+
 2026-11-09 == mySeat v6.83.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu (Bestellseite, AUS bis zum Einschalten): "Kartenspiel". Ein Gast ohne Kundenkonto, der eine Weile im Shop ist (Standard 60 Sekunden), ohne zu bestellen, sieht unten einen kleinen Hinweis "Kleines Spiel gefällig? Such dir drei Karten aus." (Spielen / Nein danke). Beim Spielen erscheinen vier verdeckte Karten, drei werden nacheinander aufgedeckt (Blitz, Schnitzel), die dritte zeigt den Gutschein: "Treffer! 10 % Rabatt auf deine nächste Bestellung" mit persönlichem Code (KARTE-XXXX). Wer "Nein danke" oder Schließen wählt, sieht das Spiel 14 Tage nicht wieder. Der Code wird im Browser gemerkt (amadeusPromoCode wie beim QR-Code) und an der Kasse von selbst eingetragen. Die Karten drehen sich per CSS; bei "reduzierte Bewegung" blenden sie nur um. Im Text steht nirgends etwas über Zufall oder Gewinnchance, jeder, der spielt, bekommt den Gutschein.

@@ -3896,6 +3896,8 @@ function shop_stamp_award($orderId) {
 	$st = fb_exec("INSERT IGNORE INTO ".fb_t('tp_shop_stamps')." (order_id, guest_key, guest_key2, base_cents, earned_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)", 'ississ',
 		array((int)$o['id'], $keys[0], $keys[1], $base, date('Y-m-d H:i:s'), date('Y-m-d H:i:s', strtotime('+'.$cfg['months'].' months'))));
 	if (!$st || mysqli_stmt_affected_rows($st) !== 1) { return; }
+	// stamps of the same person that lie on other keys (given by hand before the account, or of a linked customer) are moved onto these keys first, so the card counts them all
+	try { require_once __DIR__.'/shop_customers.class.php'; shop_cust_gather_stamps(shop_cust_find_by_keys($keys), $keys); } catch (Throwable $e) { error_log('mySeat stamp gather: '.$e->getMessage()); }
 	$issued = shop_stamp_check($keys, $o['phone'], $o['email'], $o['customer_name']);
 	if (!$issued) { shop_stamp_notify_stamp($o['email'], $o['customer_name'], $keys); }
 }

@@ -274,9 +274,21 @@
 			'<button type="button" class="gb-btn ghost acc-danger" data-acc-delete>Konto löschen</button></div></details></div>';
 		if (tab === 'stamp') {
 			var box = $('#acc-stamp', dlg);
-			if (me.stamp && me.stamp.on) { AmadeusStamp.render(box, me.stamp, { known: true, next: true }); } else { box.innerHTML = '<p class="acc-empty">Die Stempelkarte gibt es zurzeit nicht.</p>'; }
+			if (me.stamp && me.stamp.on) { AmadeusStamp.render(box, me.stamp, { known: true, next: true }); box.insertAdjacentHTML('beforeend', stampList(me.stamp)); } else { box.innerHTML = '<p class="acc-empty">Die Stempelkarte gibt es zurzeit nicht.</p>'; }
 		}
 		if (!keepTab) { var h = $('#acc-title', dlg); if (h) { h.focus({ preventScroll: true }); } }
+	}
+
+	// every stamp of the card with the day, where it came from and what it counts for; the ones that made the voucher below the card stay listed until it is used
+	function stampList(st) {
+		var it = (st && st.items) || [];
+		if (!it.length) { return ''; }
+		var open = it.filter(function (s) { return !s.used; }), used = it.filter(function (s) { return s.used; });
+		function row(s) { return '<li><span>' + esc(s.at) + ' · ' + (s.manual ? 'von uns gutgeschrieben' : 'Bestellung') + '</span><span>Warenwert ' + esc(SH.fmt(s.base)) + '</span></li>'; }
+		var h = '<div class="acc-stl"><h4>Deine Stempel im Einzelnen</h4>';
+		if (open.length) { h += '<ul>' + open.map(row).join('') + '</ul>'; }
+		if (used.length) { h += '<p class="acc-stl-h">Daraus ist dein Gutschein entstanden</p><ul class="is-used">' + used.map(row).join('') + '</ul>'; }
+		return h + '</div>';
 	}
 
 	function signedOut(msg) { setMe({ ok: true, signed_in: false, sms: !me || me.sms !== false }); dlg.close(); SH.toast(msg); }
