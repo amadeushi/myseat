@@ -301,6 +301,20 @@
 .co-form h1 { font-family: var(--font-display); font-weight: 400; font-size: 40px; line-height: 1.1; margin-bottom: 8px; }
 .co-sec { border: 0; padding: 0; margin: 24px 0 0; min-width: 0; }
 .co-sec[hidden] { display: none; }
+/* Zugabe an der Kasse: one item at its own price, above the payment */
+.co-addon { display: flex; align-items: center; gap: 14px; margin: 24px 0 0; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-2); }
+.co-addon[hidden] { display: none; }
+.co-addon-img { flex: none; width: 64px; height: 64px; border-radius: var(--radius-md); object-fit: cover; background: var(--surface-3); }
+.co-addon-txt { flex: 1; min-width: 0; }
+.co-addon-kick { display: block; font-size: 13px; font-weight: 700; color: var(--gold-strong); }
+.co-addon-txt strong { display: block; margin-top: 2px; font-size: 16px; overflow-wrap: anywhere; }
+.co-addon-txt small { display: block; margin-top: 2px; font-size: 13px; color: var(--text-muted); overflow-wrap: anywhere; }
+.co-addon-btn { flex: none; min-height: 44px; padding: 0 18px; border: 1px solid var(--gold); border-radius: var(--radius-pill); background: transparent; color: var(--gold-strong); font-size: 14px; font-weight: 700; touch-action: manipulation; transition: background 150ms ease, color 150ms ease, transform 100ms ease; }
+.co-addon-btn:active { transform: scale(0.97); }
+.co-addon-btn[aria-pressed="true"] { background: var(--gold); color: #1a1408; }
+@media (hover: hover) and (pointer: fine) { .co-addon-btn:hover { background: rgba(201, 162, 89, 0.14); } .co-addon-btn[aria-pressed="true"]:hover { background: var(--gold-strong); } }
+@media (max-width: 480px) { .co-addon { flex-wrap: wrap; } .co-addon-txt { flex-basis: calc(100% - 78px); } .co-addon-btn { width: 100%; } }
+@media (prefers-reduced-motion: reduce) { .co-addon-btn { transition: none; } }
 .co-sec legend { font-family: var(--font-display); font-size: 24px; padding: 0; margin-bottom: 12px; }
 .co-hint { color: var(--text-muted); font-size: 14px; margin-top: 10px; }
 .co-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }

@@ -33,7 +33,7 @@ function shop_offers_kinds() {
 			(SELECT MIN(price_cents) FROM ".fb_t('tp_shop_variations')." v2 WHERE v2.product_id = p.id) AS vmin,
 			(SELECT COUNT(*) FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id) AS nvar,
 			(SELECT COUNT(*) FROM ".fb_t('tp_shop_product_groups')." pg WHERE pg.product_id = p.id) AS ngroup
-		FROM ".fb_t('tp_shop_products')." p LEFT JOIN ".fb_t('tp_shop_categories')." c ON c.id = p.category_id WHERE p.active = 1") as $p) {
+		FROM ".fb_t('tp_shop_products')." p LEFT JOIN ".fb_t('tp_shop_categories')." c ON c.id = p.category_id WHERE p.active = 1 AND p.addon = ''") as $p) {
 		$cat = (string)$p['cat']; $kind = shop_upsell_kind($cat);
 		if ($kind === '') {
 			if (preg_match('/wein/iu', $cat)) { $kind = 'wine'; }
@@ -124,6 +124,48 @@ function shop_offers_extra_line($eval) {
 		}
 	}
 	return null;
+}
+
+/*
+ * ---- "Zugabe an der Kasse": ONE extra item at a special price, offered once in the checkout, before the guest pays (a Mini dessert, a small drink).
+ * Built so that nobody gains by holding something back to get it cheaper later:
+ *   - it is an item of its own (a Mini portion, a small size), flagged "Zugabe" in the menu editor: it is not on the menu at all, so the guest has nothing to compare
+ *     its price with, and the same dish on the menu keeps its normal price. There is never a crossed-out price or a percentage.
+ *   - only a kind the cart does not have yet (no dessert in the cart, no free dessert as the extra: then maybe a drink), from a goods value on, one piece per order.
+ *   - which one is offered changes from day to day (a fixed rotation over the add-ons that fit), so nobody can plan on it; the same cart sees the same offer all day.
+ *   - the server decides: the order only takes the add-on that shop_addon_pick() itself picks for this cart at this moment; anything else is refused.
+ * The add-on is a line without a product id, like the free extra: it does not count as sold, and "Nochmal bestellen" does not put it into the next cart.
+ */
+function shop_addon_cfg() {
+	$v = shop_setting('addon_min'); $v = ($v === null || $v === '') ? 18 : (float)str_replace(',', '.', (string)$v);
+	return array('on' => shop_flag('addon_on'), 'min_cents' => (int)round(max(0, min(500, $v)) * 100));
+}
+// the add-on this cart is offered ($items: priced lines, $cartSub: their sum in cents, $offers: shop_offers_eval of the cart), or null
+function shop_addon_pick($items, $cartSub, $offers = null) {
+	$cfg = shop_addon_cfg();
+	if (!$cfg['on'] || $cartSub <= 0 || $cartSub < $cfg['min_cents']) { return null; }
+	$kinds = shop_offers_kinds(); $have = array();
+	foreach ($items as $it) {
+		$pid = (int)(isset($it['product_id']) ? $it['product_id'] : 0);
+		if ($pid > 0 && isset($kinds[$pid])) { $have[$kinds[$pid]['kind']] = true; }
+	}
+	// the free extra the guest takes counts as something that is in the cart (a dessert as the free extra: no second dessert is offered)
+	if ($offers && !empty($offers['on']) && !empty($offers['reached']) && !empty($offers['choice']) && $offers['choice'] !== 'voucher') {
+		$ep = (int)$offers['choice'];
+		if ($ep > 0 && isset($kinds[$ep])) { $have[$kinds[$ep]['kind']] = true; }
+	}
+	$cands = array();
+	foreach (fb_rows("SELECT p.id, p.title, p.description, p.image_url, p.price_cents, p.addon, p.allergens, p.sold_out_on,
+			(SELECT COUNT(*) FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id) AS nvar,
+			(SELECT COUNT(*) FROM ".fb_t('tp_shop_product_groups')." pg WHERE pg.product_id = p.id) AS ngroup
+		FROM ".fb_t('tp_shop_products')." p WHERE p.active = 1 AND p.addon <> '' ORDER BY p.sort, p.id") as $p) {
+		if (isset($have[$p['addon']]) || (int)$p['price_cents'] <= 0 || (int)$p['nvar'] > 0 || (int)$p['ngroup'] > 0 || shop_out_today($p['sold_out_on'])) { continue; }
+		$cands[] = $p;
+	}
+	if (!$cands) { return null; }
+	$p = $cands[((int)date('Y') * 400 + (int)date('z')) % count($cands)];
+	$img = ($p['image_url'] !== '' && shop_img_ok($p['image_url'])) ? shop_img_thumb($p['image_url'], 240) : '';
+	return array('id' => (int)$p['id'], 'title' => $p['title'], 'description' => $p['description'], 'price' => (int)$p['price_cents'], 'kind' => $p['addon'], 'image' => $img, 'allergens' => $p['allergens']);
 }
 
 // the voucher instead of the extra: personal, one use, a goods value of at least the set minimum; the guest is told by mail or SMS. Returns the coupon or null.

@@ -94,6 +94,27 @@ if ($op === 'offers') {
 	api_out($e);
 }
 
+// the card game: may this visitor be offered it now (GET, nothing changes), and the third card (POST: makes the voucher of this game)
+if ($op === 'card_state') {
+	api_out(array_merge(array('ok' => true), shop_card_state(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '')));
+}
+if ($op === 'card_play') {
+	if ($_SERVER['REQUEST_METHOD'] !== 'POST') { api_out(array('ok' => false, 'error' => 'Das Spiel gibt es gerade nicht.'), 405); }
+	api_out(shop_card_play(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : ''));
+}
+
+// the add-on of the checkout ("Zugabe an der Kasse"): the one item this cart is offered right now, or null; the same function decides when the order is placed
+if ($op === 'addon') {
+	$lines = (isset($body['lines']) && is_array($body['lines'])) ? array_slice($body['lines'], 0, 60) : array();
+	$items = array(); $sub = 0;
+	foreach ($lines as $l) {
+		$r = shop_price_line(is_array($l) ? $l : array());
+		if (!$r['ok']) { api_out(array('ok' => true, 'item' => null)); }
+		$items[] = $r['line']; $sub += $r['line']['line_cents'];
+	}
+	api_out(array('ok' => true, 'item' => shop_addon_pick($items, $sub, shop_offers_eval($items, isset($body['extra']) ? $body['extra'] : null))));
+}
+
 if ($op === 'quote') {
 	$lines = (isset($body['lines']) && is_array($body['lines'])) ? array_slice($body['lines'], 0, 60) : array();
 	$out = array(); $sub = 0;

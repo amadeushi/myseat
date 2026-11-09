@@ -3,7 +3,7 @@
 (function () {
 	'use strict';
 	var KEY = 'amadeusCartV2', GUEST = 'amadeusGuestV1', TOKEN = document.body.dataset.token;
-	var S = { mode: 'delivery', cart: [], extra: '', offers: null, info: null, zone: null, zoneKey: '', zoneAmbiguous: false, zoneWords: '', w3wKey: '', slots: null, tipPct: 0, tipCustom: '', when: 'asap', pay: '', busy: false, coupon: null, group: null, stamp: null, voucher: null, stampSig: '' };
+	var S = { mode: 'delivery', cart: [], extra: '', addon: null, addonTake: false, offers: null, info: null, zone: null, zoneKey: '', zoneAmbiguous: false, zoneWords: '', w3wKey: '', slots: null, tipPct: 0, tipCustom: '', when: 'asap', pay: '', busy: false, coupon: null, group: null, stamp: null, voucher: null, stampSig: '' };
 	var GKEY = 'amadeusBasketV1';
 	var form = document.getElementById('co-form');
 
@@ -76,9 +76,32 @@
 	function offerCents() { return (S.offers && S.offers.on) ? (S.offers.combo_cents || 0) : 0; }
 	function loadOffers() {
 		if (!S.cart.length) { return; }
-		post('offers', { extra: S.extra, lines: S.cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; }) }).then(function (r) { S.offers = r.ok ? r : null; renderSummary(); }).catch(function () {});
+		post('offers', { extra: S.extra, lines: S.cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; }) }).then(function (r) { S.offers = r.ok ? r : null; renderSummary(); loadAddon(); }).catch(function () { loadAddon(); });
 	}
-	function total() { return Math.max(0, subtotal() - discount() - offerCents() + fee() + tipCents()); }
+	// the add-on of the checkout ("Zugabe an der Kasse"): the one item the server offers for this cart (it decides again when the order is placed); only what the guest tapped is added.
+	// It is not part of subtotal(): no coupon, no minimum order, no stamp value and no tip is worked out from it.
+	function addonCents() { return (S.addonTake && S.addon) ? S.addon.price : 0; }
+	function loadAddon() {
+		var prev = S.addon;
+		if (!S.cart.length) { S.addon = null; S.addonTake = false; renderAddon(); return; }
+		post('addon', { extra: S.extra, lines: S.cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; }) }).then(function (r) {
+			S.addon = (r.ok && r.item) ? r.item : null;
+			if (!S.addon || (prev && prev.id !== S.addon.id)) { S.addonTake = false; }
+			renderAddon(); renderSummary();
+		}).catch(function () { S.addon = null; S.addonTake = false; renderAddon(); });
+	}
+	function renderAddon() {
+		var el = $('#co-addon'); if (!el) { return; }
+		var a = S.addon;
+		if (!a) { el.hidden = true; el.innerHTML = ''; return; }
+		var all = (a.allergens || '').trim();
+		el.innerHTML = (a.image ? '<img class="co-addon-img" src="' + esc(a.image) + '" alt="" width="64" height="64" loading="lazy" decoding="async"/>' : '') +
+			'<div class="co-addon-txt"><span class="co-addon-kick">Zur Bestellung dazu</span><strong>' + esc(a.title) + '</strong>' +
+			(a.description ? '<small>' + esc(a.description) + '</small>' : '') + (all ? '<small>Allergene: ' + esc(all) + '</small>' : '') + '</div>' +
+			'<button type="button" class="co-addon-btn" id="co-addon-btn" aria-pressed="' + (S.addonTake ? 'true' : 'false') + '">' + (S.addonTake ? 'Dabei · entfernen' : 'Für ' + fmt(a.price) + ' dazu') + '</button>';
+		el.hidden = false;
+	}
+	function total() { return Math.max(0, subtotal() - discount() - offerCents() + addonCents() + fee() + tipCents()); }
 	// gift voucher (Wertgutschein): pays up to its balance, the rest is paid the chosen way (the server checks number and code again with the order)
 	function gvApply() { return S.gv ? Math.min(S.gv.balance, total()) : 0; }
 	function due() { return Math.max(0, total() - gvApply()); }
@@ -97,7 +120,8 @@
 			if (of.choice && of.choice !== 'voucher') { var ex = (of.extras || []).filter(function (e) { return e.id === of.choice; })[0]; if (ex) { $('#co-lines').innerHTML += '<div class="cart-line"><h3>1× ' + esc(ex.title) + '</h3><span class="cart-lineprice">gratis</span><p class="cart-opts">dein Gratis-Extra</p></div>'; } }
 			else if (of.choice === 'voucher') { $('#co-lines').innerHTML += '<div class="cart-line"><h3>Gutschein statt Extra</h3><span class="cart-lineprice">' + fmt(of.voucher_cents) + '</span><p class="cart-opts">kommt nach der Bestellung per Mail oder SMS</p></div>'; }
 		}
-		var h = '<div class="cart-row"><span>Zwischensumme</span><span>' + fmt(subtotal()) + '</span></div>';
+		if (addonCents() > 0) { $('#co-lines').innerHTML += '<div class="cart-line"><h3>1× ' + esc(S.addon.title) + '</h3><span class="cart-lineprice">' + fmt(S.addon.price) + '</span><p class="cart-opts">Zugabe zur Bestellung</p></div>'; }
+		var h = '<div class="cart-row"><span>Zwischensumme</span><span>' + fmt(subtotal() + addonCents()) + '</span></div>';
 		if (offerCents() > 0) { h += '<div class="cart-row coupon"><span>' + esc(S.offers.combo_text) + '</span><span>&minus;' + fmt(offerCents()) + '</span></div>'; }
 		if (S.coupon) { h += '<div class="cart-row coupon"><span>Gutschein ' + esc(S.coupon.code) + ' <button type="button" class="co-coupon-off" id="co-coupon-off">entfernen</button></span><span>&minus;' + fmt(S.coupon.discount) + '</span></div>'; }
 		else if (S.voucher && S.voucher.discount > 0) { h += '<div class="cart-row coupon"><span>Stempelkarten-Gutschein</span><span>&minus;' + fmt(S.voucher.discount) + '</span></div>'; }
@@ -510,11 +534,11 @@
 		post('create', {
 			idem: S.idem,
 			type: S.mode, when: when, payment: S.pay, tip: tipCents(), name: f.name.value, phone: f.phone.value, email: f.email.value, note: f.note.value, nl_news: f.nl_news.checked ? 1 : 0, nl_stamps: f.nl_stamps.checked ? 1 : 0,
-			street: f.street.value, zip: f.zip.value, city: f.city.value, words: S.zoneWords, address_note: f.address_note.value, website: f.website.value, coupon: S.coupon ? S.coupon.code : '', gv_number: S.gv ? S.gv.number : '', gv_code: S.gv ? S.gv.code : '', extra: S.extra,
+			street: f.street.value, zip: f.zip.value, city: f.city.value, words: S.zoneWords, address_note: f.address_note.value, website: f.website.value, coupon: S.coupon ? S.coupon.code : '', gv_number: S.gv ? S.gv.number : '', gv_code: S.gv ? S.gv.code : '', extra: S.extra, addon: addonCents() > 0 ? S.addon.id : 0,
 			lines: S.cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; }),
 			group: S.group ? S.group.token : '', me: S.group ? S.group.me : '', rev: S.group ? (S.group.rev || '') : ''
 		}).then(function (r) {
-			if (!r.ok) { S.idem = newIdem(); var msg = r.error || 'Das hat nicht geklappt.'; err.textContent = msg; S.busy = false; updateSubmit(); $('#co-why').textContent = msg; err.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); return; }
+			if (!r.ok) { S.idem = newIdem(); loadAddon(); var msg = r.error || 'Das hat nicht geklappt.'; err.textContent = msg; S.busy = false; updateSubmit(); $('#co-why').textContent = msg; err.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); return; }
 			try {
 				if (S.group) { localStorage.removeItem(GKEY); } // the shared basket is done; the own cart stays as it was
 				else { var d = JSON.parse(localStorage.getItem(KEY) || '{}'); d.cart = []; localStorage.setItem(KEY, JSON.stringify(d)); }
@@ -525,6 +549,7 @@
 		}).catch(function () { var msg = 'Das hat nicht geklappt. Bitte versuche es noch einmal.'; err.textContent = msg; S.busy = false; updateSubmit(); $('#co-why').textContent = msg; err.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); });
 	});
 
+	document.addEventListener('click', function (ev) { var b = ev.target && ev.target.closest ? ev.target.closest('#co-addon-btn') : null; if (b && S.addon) { S.addonTake = !S.addonTake; renderAddon(); renderSummary(); } });
 	load(); loadChosen(); prefill(); accountPrefill(); loadOffers();
 	document.addEventListener('input', function (ev) { if (ev.target && ev.target.id === 'co-quick-note') { form.elements.note.value = ev.target.value; } });
 	form.addEventListener('change', function (ev) { if (ev.target && (ev.target.name === 'nl_news' || ev.target.name === 'nl_stamps')) { syncNl(); } });

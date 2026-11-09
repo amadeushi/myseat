@@ -16,6 +16,8 @@ $has_conf = false; $has_sn = false;   // $has_sn: a dish with the Schnitzel conf
 foreach ($menu as $c0) { foreach ($c0['products'] as $p0) { if (!empty($p0['configurator'])) { $has_conf = true; if ((int)$p0['configurator'] === 3) { $has_sn = true; } } } }
 $notice = (string)shop_setting('notice');
 $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order history, favorites, stamp card (konto.js)
+$card_cfg = shop_card_cfg();
+$card_on = $shop_public && $card_cfg['on'] && !shop_acc_current(); // card game for guests without an account (cardgame.js); the server decides again when it is offered
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -31,6 +33,7 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 	<?php if ($has_conf): ?><link rel="stylesheet" href="pizza.css?v=<?php echo @filemtime(__DIR__.'/pizza.css'); ?>"/><?php endif; ?>
 	<?php if ($has_sn): ?><link rel="stylesheet" href="schnitzel.css?v=<?php echo @filemtime(__DIR__.'/schnitzel.css'); ?>"/><?php endif; ?>
 	<?php if ($acc_on): ?><link rel="stylesheet" href="stempel.css?v=<?php echo @filemtime(__DIR__.'/stempel.css'); ?>"/><link rel="stylesheet" href="konto.css?v=<?php echo @filemtime(__DIR__.'/konto.css'); ?>"/><?php endif; ?>
+	<?php if ($card_on): ?><link rel="stylesheet" href="cardgame.css?v=<?php echo @filemtime(__DIR__.'/cardgame.css'); ?>"/><?php endif; ?>
 <link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
 	<script type="speculationrules">{"prerender":[{"where":{"selector_matches":"a[href='checkout.php']"},"eagerness":"moderate"}]}</script>
@@ -177,6 +180,7 @@ $acc_on = $shop_public && shop_acc_enabled(); // guest account: sign-in, order h
 	<script src="dragscroll.js?v=<?php echo @filemtime(__DIR__.'/dragscroll.js'); ?>"></script>
 	<script src="shop.js?v=<?php echo @filemtime(__DIR__.'/shop.js'); ?>"></script>
 	<?php if ($acc_on): ?><script src="stempel.js?v=<?php echo @filemtime(__DIR__.'/stempel.js'); ?>"></script><script src="konto.js?v=<?php echo @filemtime(__DIR__.'/konto.js'); ?>"></script><?php endif; ?>
+	<?php if ($card_on): ?><script src="cardgame.js?v=<?php echo @filemtime(__DIR__.'/cardgame.js'); ?>" data-after="<?php echo (int)$card_cfg['after']; ?>" defer></script><?php endif; ?>
 <?php endif; ?>
 </body>
 </html>

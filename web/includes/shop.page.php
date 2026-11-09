@@ -376,6 +376,21 @@ $sh_secret = function ($label, $value, $hint = '') use ($sh_e) {
 		<h5 class="sh-sub2">Pizza + Getränk</h5>
 		<?php $sh_row('sh-oc', 'offer_combo', 'Nachlass auf das Getränk', '€', '0 = aus.', '', 'decimal'); ?>
 
+		<h4 class="sh-sub">Zugabe an der Kasse</h4>
+		<?php $sh_help('Ein Extra zum eigenen Preis, einmal angeboten auf der Kassenseite, bevor der Gast bezahlt (ein Mini-Dessert, ein kleines Getränk).', '<b>So pflegst du es:</b> Lege im Menü ein eigenes, kleineres Gericht an (zum Beispiel "Mini-Tiramisu im Glas") und stelle im Gericht "Zugabe an der Kasse" ein. Es steht dann nicht in der Speisekarte. <b>Was angeboten wird:</b> eine Zugabe, die der Warenkorb noch nicht hat (kein Dessert im Warenkorb: ein Dessert; hat er schon eins: ein Getränk), ab dem Warenwert unten, einmal pro Bestellung. Welche, wechselt von Tag zu Tag. Der Preis wird nie durchgestrichen und nie als Prozent gezeigt, denn es ist ein eigenes Gericht. Den Preis legst du im Gericht fest.'); ?>
+		<?php $sh_cb('addon_on', 'Zugabe an der Kasse anbieten'); ?>
+		<?php $sh_row('sh-adm', 'addon_min', 'Angebot ab Warenwert', '€', '', '', 'decimal'); ?>
+
+		<h4 class="sh-sub">Kartenspiel</h4>
+		<?php $sh_help('Ein kleines Spiel für Gäste ohne Konto, die eine Weile im Shop sind, ohne zu bestellen: vier verdeckte Karten, drei werden aufgedeckt, die dritte zeigt einen persönlichen Gutschein.', '<b>Ablauf:</b> Nach der eingestellten Zeit erscheint unten ein kleiner Hinweis "Kleines Spiel gefällig?". Wer spielt, deckt drei Karten auf und bekommt mit der dritten einen Gutschein mit eigenem Code (KARTE-XXXX), der an der Kasse von selbst eingetragen wird. <b>Grenzen:</b> Der Gutschein gilt einmal und nur für die eingestellten Tage; jede Person (Telefonnummer oder E-Mail) kann insgesamt nur einen Gutschein aus dem Spiel einlösen; von derselben Adresse aus gibt es höchstens drei Spiele in dieser Zeit. Gäste mit Konto sehen das Spiel nicht, sie haben die Stempelkarte. Die Gutscheine des Spiels erscheinen nicht in deiner Gutscheinliste. Im Spiel steht nirgends etwas über Zufall oder Gewinnchance.'); ?>
+		<?php $sh_cb('cardgame_on', 'Kartenspiel anbieten'); ?>
+		<?php $sh_row('sh-cgp', 'cardgame_percent', 'Gutschein', '%'); ?>
+		<?php $sh_row('sh-cgm', 'cardgame_min', 'Gilt ab Warenwert', '€', '', '', 'decimal'); ?>
+		<?php $sh_row('sh-cgd', 'cardgame_days', 'Gutschein gültig', 'Tage'); ?>
+		<?php $sh_row('sh-cga', 'cardgame_after', 'Das Spiel erscheint nach', 'Sekunden'); ?>
+		<?php $sh_cg = shop_card_stats(); ?>
+		<p class="sh-hint">Bisher gespielt: <?php echo (int)$sh_cg['made']; ?> mal, eingelöst: <?php echo (int)$sh_cg['used']; ?> mal.</p>
+
 		<h4 class="sh-sub">Bestell-Chat <span class="sh-chip">in Erprobung</span></h4>
 		<?php $sh_help('Gäste bestellen im Gespräch mit Antwortknöpfen unter <code>/order/chat.php</code>. Preise und Liefergebiet kommen immer aus dem Shop, bei Allergien oder Beschwerden wird der Gast zum Anruf gebeten.', 'Ablauf: Gericht wählen, Adresse prüfen, Zeit und Zahlung, am Ende eine Zusammenfassung zum Bestätigen. Die Handynummer wird mit einem SMS-Code bestätigt, dafür muss das Kundenkonto eingeschaltet sein. Ausgeschaltet gibt es die Seite für Gäste nicht, du selbst siehst sie als Mitarbeiter trotzdem (zum Testen).'); ?>
 		<?php $sh_cb('chat_on', 'Bestell-Chat einschalten'); ?>

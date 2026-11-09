@@ -101,6 +101,9 @@ function shop_ensure_schema() {
 	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_coupon_uses')." (
 		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `coupon_id` INT UNSIGNED NOT NULL, `order_id` INT UNSIGNED NOT NULL, `guest_key` CHAR(40) NOT NULL DEFAULT '', `guest_key2` CHAR(40) NOT NULL DEFAULT '',
 		`discount_cents` INT NOT NULL DEFAULT 0, `created_at` DATETIME NOT NULL, KEY `coupon` (`coupon_id`), KEY `ord` (`order_id`)) $opts");
+	// the games of the "Kartenspiel" (one line per voucher the game made): the address (hashed) that played, to limit the games per address (web/classes/shop_cardgame.class.php)
+	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_card_plays')." (
+		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `ip_hash` CHAR(16) NOT NULL, `code` VARCHAR(40) NOT NULL, `created_at` DATETIME NOT NULL, KEY `ip` (`ip_hash`, `created_at`)) $opts");
 	$icol = fb_rows("SHOW INDEX FROM ".fb_t('tp_shop_order_items')." WHERE Key_name = 'prod'");
 	if (!$icol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_order_items')." ADD INDEX `prod` (`product_id`)"); }
 	$ccol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'coupon_code'");
@@ -179,6 +182,9 @@ function shop_ensure_schema() {
 	if (!$socol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_products')." ADD `sold_out_on` DATE NULL DEFAULT NULL, ADD `added_at` DATE NULL DEFAULT NULL"); }
 	$cfcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_products')." LIKE 'configurator'");
 	if (!$cfcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_products')." ADD `configurator` TINYINT NOT NULL DEFAULT 0"); }
+	// "Zugabe an der Kasse": a dish with a kind here ('sweet', 'drink', 'snack') is no part of the menu, it is only offered once in the checkout at its own price (see shop_addon_pick in shop_offers.class.php)
+	$adcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_products')." LIKE 'addon'");
+	if (!$adcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_products')." ADD `addon` VARCHAR(8) NOT NULL DEFAULT ''"); }
 	$iccol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_group_items')." LIKE 'icon'");
 	if (!$iccol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_group_items')." ADD `icon` VARCHAR(20) NOT NULL DEFAULT ''"); }
 	$frcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'fail_reason'");
@@ -364,6 +370,10 @@ function shop_defaults() {
 		'offer_extras' => '',       // product ids (without choices) the guest can take as the free extra, comma separated
 		'offer_voucher' => '2', 'offer_voucher_min' => '20', 'offer_voucher_days' => '30', // the voucher instead of the extra: euro, from this goods value (euro), days valid
 		'offer_combo' => '1',       // pizza + drink: euro off the drink per pizza (0 = off)
+		'addon_on' => '0',          // "Zugabe an der Kasse": one extra item at a special price, offered once in the checkout before the guest pays (shop_addon_pick); off until the owner switches it on
+		'addon_min' => '18',        // euro: the offer appears from this goods value
+		'cardgame_on' => '0',       // "Kartenspiel": a guest without an account who has been on the order page for a while is offered four cards, the third shows a personal voucher (web/classes/shop_cardgame.class.php); off until the owner switches it on
+		'cardgame_percent' => '10', 'cardgame_min' => '15', 'cardgame_days' => '7', 'cardgame_after' => '60',   // percent off the goods, from this goods value (euro), valid for this many days, the game appears after this many seconds on the shop
 		'stamp_on' => '1',          // stamp card: every finished order is a stamp, a full card becomes a voucher (see shop_stamp_*)
 		'stamp_percent' => '10', 'stamp_goal' => '5', 'stamp_months' => '12', 'voucher_days' => '90',
 		'promo_code_uber_eats' => 'ZEUS10-U', 'promo_code_lieferando' => 'ZEUS10-L', 'promo_percent' => '10', 'promo_min_cents' => '1500', 'promo_until' => '2027-01-31',   // "order directly with us" block on the slip of a platform order: only while the coupon of that code exists (shop_promo_for_source)
@@ -534,7 +544,7 @@ function shop_allergen_label($code) {
 function shop_catalog() {
 	shop_ensure_schema();
 	$cats = fb_rows("SELECT id, name, description FROM ".fb_t('tp_shop_categories')." WHERE active = 1 ORDER BY sort, id");
-	$prods = fb_rows("SELECT id, category_id, title, description, image_url, price_cents, allergens FROM ".fb_t('tp_shop_products')." WHERE active = 1 ORDER BY sort, id");
+	$prods = fb_rows("SELECT id, category_id, title, description, image_url, price_cents, allergens FROM ".fb_t('tp_shop_products')." WHERE active = 1 AND addon = '' ORDER BY sort, id");
 	$vars = fb_rows("SELECT id, product_id, title, price_cents, multiplier FROM ".fb_t('tp_shop_variations')." ORDER BY sort, id");
 	$mods = fb_rows("SELECT gi.id, pg.product_id, g.id AS group_id, gi.title, gi.price_cents, gi.max_qty, g.title AS group_title, g.min_qty, g.max_qty AS group_max
 		FROM ".fb_t('tp_shop_product_groups')." pg JOIN ".fb_t('tp_shop_modgroups')." g ON g.id = pg.group_id JOIN ".fb_t('tp_shop_group_items')." gi ON gi.group_id = g.id
@@ -1244,7 +1254,7 @@ function shop_menu($featured = false, $outLast = false) {
 			(SELECT COUNT(*) FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id) AS nvar,
 			(SELECT MIN(v.price_cents) FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id) AS vmin,
 			(SELECT COUNT(*) FROM ".fb_t('tp_shop_product_groups')." pg WHERE pg.product_id = p.id) AS nmod
-		FROM ".fb_t('tp_shop_products')." p WHERE p.active = 1 ORDER BY p.sort, p.id");
+		FROM ".fb_t('tp_shop_products')." p WHERE p.active = 1 AND p.addon = '' ORDER BY p.sort, p.id");
 	$by = array(); $pop = shop_popular_ids();
 	foreach ($prods as $p) {
 		$p['out'] = shop_out_today($p['sold_out_on']); $p['blocked'] = shop_out_blocked($p['sold_out_on']); $p['popular'] = in_array((int)$p['id'], $pop, true); $p['isnew'] = shop_is_new($p['added_at']);   // marks of the order page and the chat
@@ -1326,6 +1336,17 @@ function shop_create_order($in) {
 	$offers = shop_offers_eval($items, isset($in['extra']) ? $in['extra'] : null);
 	$extraLine = shop_offers_extra_line($offers);
 	if ($extraLine) { $items[] = $extraLine; }
+	// the add-on of the checkout ("Zugabe an der Kasse"): only the item the server itself would offer for this cart right now, priced from the menu, once. A line without a product id
+	// (like the free extra): it does not count as sold, and "Nochmal bestellen" never puts it into a later cart at the special price.
+	$addonLine = null; $addonId = (int)(isset($in['addon']) ? $in['addon'] : 0);
+	if ($addonId > 0) {
+		$ad = shop_addon_pick($items, $sub, $offers);
+		if (!$ad || (int)$ad['id'] !== $addonId) { return array('ok' => false, 'error' => 'Die Zugabe gibt es für diese Bestellung gerade nicht. Bitte nimm sie heraus und bestelle noch einmal.'); }
+		$ar = shop_price_line(array('pid' => $addonId, 'qty' => 1));
+		if (!$ar['ok']) { return array('ok' => false, 'error' => $ar['error']); }
+		$addonLine = $ar['line']; $addonLine['product_id'] = null; $addonLine['note'] = 'Zugabe an der Kasse';
+		$items[] = $addonLine;
+	}
 	$offerCents = $offers['on'] ? (int)$offers['combo_cents'] : 0; $offerNote = $offerCents > 0 ? $offers['combo_text'].' -'.shop_money($offerCents) : '';
 	$offerChoice = ($offers['on'] && $offers['reached'] && $offers['choice'] === 'voucher' && !empty($in['acc_id'])) ? 'voucher' : '';
 	// contact
@@ -1395,6 +1416,8 @@ function shop_create_order($in) {
 		if (!$cr['ok'] && !$auto) { return array('ok' => false, 'error' => $cr['error']); }
 		if ($cr['ok']) { $coupon = $cr['coupon']; $discount = $cr['discount']; }
 	}
+	// the add-on is goods like any other, but it comes after the checks above: no coupon, no minimum order and no free-extra threshold is worked out from it
+	if ($addonLine) { $sub += (int)$addonLine['line_cents']; }
 	$total = max(0, $sub - $discount - $offerCents + $fee + $tip);
 	// gift voucher (number + security code, checked here again): it pays up to its balance; what is left is paid the chosen way, all of it covered = paid with the voucher
 	$gvV = null; $gvCents = 0;
@@ -2180,9 +2203,9 @@ function shop_diet_clean($list) {
 function shop_me_products($onlyId = 0) {
 	$where = $onlyId ? "WHERE id = ".(int)$onlyId : '';
 	$out = array();
-	foreach (fb_rows("SELECT p.id, p.category_id, p.title, p.description, p.image_url, p.price_cents, p.allergens, p.active, p.configurator, p.diet, p.featured, c.name AS cat FROM ".fb_t('tp_shop_products')." p LEFT JOIN ".fb_t('tp_shop_categories')." c ON c.id = p.category_id ".str_replace('WHERE id', 'WHERE p.id', $where)." ORDER BY p.sort, p.id") as $p) {
+	foreach (fb_rows("SELECT p.id, p.category_id, p.title, p.description, p.image_url, p.price_cents, p.allergens, p.active, p.configurator, p.diet, p.featured, p.addon, c.name AS cat FROM ".fb_t('tp_shop_products')." p LEFT JOIN ".fb_t('tp_shop_categories')." c ON c.id = p.category_id ".str_replace('WHERE id', 'WHERE p.id', $where)." ORDER BY p.sort, p.id") as $p) {
 		$out[(int)$p['id']] = array('id' => (int)$p['id'], 'category_id' => (int)$p['category_id'], 'title' => $p['title'], 'description' => $p['description'], 'image_url' => $p['image_url'],
-			'price' => (int)$p['price_cents'], 'allergens' => $p['allergens'], 'active' => (int)$p['active'], 'configurator' => (int)$p['configurator'], 'featured' => $p['featured'] === null ? 0 : (int)$p['featured'], 'variations' => array(), 'groups' => array(),
+			'price' => (int)$p['price_cents'], 'allergens' => $p['allergens'], 'active' => (int)$p['active'], 'configurator' => (int)$p['configurator'], 'addon' => (string)$p['addon'], 'featured' => $p['featured'] === null ? 0 : (int)$p['featured'], 'variations' => array(), 'groups' => array(),
 			'diet' => $p['diet'] === null ? array() : array_values(array_filter(explode(',', $p['diet']))), 'diet_set' => $p['diet'] !== null, 'diet_suggest' => shop_diet_suggest($p['title'], $p['description'], $p['cat']));
 	}
 	if ($out) {
@@ -2279,6 +2302,11 @@ function shop_me_save_product($d) {
 		$g = (int)$g;
 		if ($g && !in_array($g, $groups, true) && fb_row("SELECT id FROM ".fb_t('tp_shop_modgroups')." WHERE id = ?", 'i', array($g))) { $groups[] = $g; }
 	}
+	// "Zugabe an der Kasse": offered only in the checkout, so it needs a price, no variants and no option groups (the guest takes it with one tap)
+	$addon = isset($d['addon']) ? (string)$d['addon'] : '';
+	if (!in_array($addon, array('', 'sweet', 'drink', 'snack'), true)) { $addon = ''; }
+	if ($addon !== '' && $price <= 0) { return array('ok' => false, 'error' => 'Eine Zugabe an der Kasse braucht einen Preis.'); }
+	if ($addon !== '' && ($vars || $groups)) { return array('ok' => false, 'error' => 'Eine Zugabe an der Kasse hat keine Varianten und keine Zubehörgruppen. Bitte nimm sie heraus.'); }
 	if ($id) {
 		if (!fb_row("SELECT id FROM ".fb_t('tp_shop_products')." WHERE id = ?", 'i', array($id))) { return array('ok' => false, 'error' => 'Dieses Gericht gibt es nicht mehr.'); }
 		fb_exec("UPDATE ".fb_t('tp_shop_products')." SET category_id = ?, title = ?, description = ?, image_url = ?, price_cents = ?, allergens = ?, active = ?, configurator = ? WHERE id = ?", 'isssisiii', array($cat, $title, $desc, $image, $price, $all, $active, $conf, $id));
@@ -2288,8 +2316,8 @@ function shop_me_save_product($d) {
 		$id = (int)mysqli_insert_id(fb_db());
 	}
 	// the rubric "Unsere Bestseller": a position (1 = first) or nothing
-	$feat = !empty($d['featured']) ? max(1, min(99, (int)$d['featured'])) : null;
-	fb_exec("UPDATE ".fb_t('tp_shop_products')." SET featured = ? WHERE id = ?", 'ii', array($feat, $id));
+	$feat = (!empty($d['featured']) && $addon === '') ? max(1, min(99, (int)$d['featured'])) : null;   // an add-on is not on the menu, so it is not a bestseller either
+	fb_exec("UPDATE ".fb_t('tp_shop_products')." SET featured = ?, addon = ? WHERE id = ?", 'isi', array($feat, $addon, $id));
 	// the diet marks the owner ticked: saving a dish marks it as looked at (an empty tick list is an answer, too)
 	if (array_key_exists('diet', $d)) { fb_exec("UPDATE ".fb_t('tp_shop_products')." SET diet = ? WHERE id = ?", 'si', array(shop_diet_clean($d['diet']), $id)); }
 	if ($oldImg && $oldImg['image_url'] !== '' && $oldImg['image_url'] !== $image) { shop_img_release($oldImg['image_url']); }
@@ -3345,6 +3373,11 @@ function shop_coupon_check($code, $type, $sub, $keys = array('', '')) {
 		$hit = fb_row("SELECT id FROM ".fb_t('tp_shop_coupon_uses')." WHERE coupon_id = ? AND ((guest_key <> '' AND guest_key = ?) OR (guest_key2 <> '' AND guest_key2 = ?)) LIMIT 1", 'iss', array((int)$c['id'], $keys[0], $keys[1]));
 		if ($hit) { return $no('Du hast diesen Gutschein schon eingelöst. Er gilt pro Person nur einmal.'); }
 	}
+	// the vouchers of the card game: every game made a code of its own, but a guest redeems only one of them in total
+	if ($c['note'] === 'Kartenspiel' && ($keys[0] !== '' || $keys[1] !== '')) {
+		$hit = fb_row("SELECT u.id FROM ".fb_t('tp_shop_coupon_uses')." u JOIN ".fb_t('tp_shop_coupons')." cc ON cc.id = u.coupon_id WHERE cc.note = 'Kartenspiel' AND ((u.guest_key <> '' AND u.guest_key = ?) OR (u.guest_key2 <> '' AND u.guest_key2 = ?)) LIMIT 1", 'ss', array($keys[0], $keys[1]));
+		if ($hit) { return $no('Du hast schon einen Gutschein aus dem Kartenspiel eingelöst. Er gilt pro Person nur einmal.'); }
+	}
 	$d = $c['kind'] === 'percent' ? (int)round($sub * (int)$c['value'] / 100) : (int)$c['value'];
 	if ($c['kind'] === 'percent' && (int)$c['max_discount_cents'] > 0) { $d = min($d, (int)$c['max_discount_cents']); }
 	$d = max(0, min($d, $sub));
@@ -3464,7 +3497,7 @@ function shop_me_coupon_row($c) {
 }
 function shop_me_coupons() {
 	$out = array();
-	foreach (fb_rows("SELECT * FROM ".fb_t('tp_shop_coupons')." ORDER BY active DESC, created_at DESC, id DESC") as $c) { $out[] = shop_me_coupon_row($c); }
+	foreach (fb_rows("SELECT * FROM ".fb_t('tp_shop_coupons')." WHERE note <> 'Kartenspiel' ORDER BY active DESC, created_at DESC, id DESC") as $c) { $out[] = shop_me_coupon_row($c); }   // the vouchers of the card game are many and made by themselves: the settings page counts them
 	return $out;
 }
 function shop_me_save_coupon($d) {
@@ -3540,7 +3573,7 @@ function shop_upsell_candidates($cartProductIds, $limit = 3) {
 			(SELECT MIN(price_cents) FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id) AS vmin,
 			(SELECT COUNT(*) FROM ".fb_t('tp_shop_variations')." v WHERE v.product_id = p.id) AS nvar,
 			(SELECT COUNT(*) FROM ".fb_t('tp_shop_product_groups')." pg WHERE pg.product_id = p.id) AS ngroup
-		FROM ".fb_t('tp_shop_products')." p WHERE p.active = 1 ORDER BY p.sort, p.id") as $p) {
+		FROM ".fb_t('tp_shop_products')." p WHERE p.active = 1 AND p.addon = '' ORDER BY p.sort, p.id") as $p) {
 		$pid = (int)$p['id']; $cid = (int)$p['category_id'];
 		if (!isset($kindOf[$cid])) { continue; }
 		if (in_array($pid, $cartIds, true)) { $cartKinds[$kindOf[$cid]] = true; continue; }
@@ -4030,6 +4063,7 @@ require_once __DIR__.'/shop_newsletter.class.php';
 require_once __DIR__.'/shop_tours.class.php';
 require_once __DIR__.'/shop_flags.class.php';
 require_once __DIR__.'/shop_offers.class.php';
+require_once __DIR__.'/shop_cardgame.class.php';
 require_once __DIR__.'/shop_push.class.php';
 require_once __DIR__.'/shop_issue.class.php';
 require_once __DIR__.'/shop_issue_chat.class.php';
