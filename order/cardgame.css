@@ -16,16 +16,39 @@
 .cg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 320px; margin: 0 auto; }
 .cg-card { position: relative; display: block; aspect-ratio: 5 / 6; padding: 0; border: 0; background: none; perspective: 700px; -webkit-tap-highlight-color: transparent; touch-action: manipulation; color: var(--gold-strong); }
 .cg-card:disabled { opacity: 0.45; }
-.cg-in { position: relative; display: block; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 520ms cubic-bezier(0.2, 0.7, 0.2, 1); }
-.cg-card.is-up .cg-in { transform: rotateY(180deg); }
+/* Aufdecken (nach dem Vorbild "Card Draw": Flip Reveal, Snap Squash, Edge Glow, Rarity Shine). Alles nur transform und opacity; mit "Bewegung reduzieren" bleibt nur der ruhige Wechsel unten. */
+.cg-in { position: relative; display: block; width: 100%; height: 100%; transform-style: preserve-3d; }
+.cg-card.is-up .cg-in { transform: rotateY(180deg); animation: cg-flip 300ms cubic-bezier(0.3, 0.6, 0.25, 1); }   /* 1 Flip: in 0,3 s um, mit kleinem Bogen nach oben */
+@keyframes cg-flip { 0% { transform: translateY(0) scale(1) rotateY(0); } 50% { transform: translateY(-14px) scale(1.06) rotateY(90deg); } 100% { transform: translateY(0) scale(1) rotateY(180deg); } }
+.cg-card.is-up { transform-origin: 50% 100%; animation: cg-squash 260ms ease-out 280ms; }   /* 3 Squash: beim Aufsetzen kurz breiter und flacher, dann zurück */
+@keyframes cg-squash { 0% { transform: scale(1); } 35% { transform: scale(1.12, 0.9); } 70% { transform: scale(0.98, 1.02); } 100% { transform: scale(1); } }
 .cg-back, .cg-face { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 .cg-back { border: 1px solid var(--gold); background: linear-gradient(160deg, #26221c, #14110e); }
 .cg-back img { opacity: 0.85; }
 .cg-back::after { content: ''; position: absolute; inset: 7px; border: 1px solid rgba(201, 162, 89, 0.35); border-radius: 8px; pointer-events: none; }
-.cg-face { transform: rotateY(180deg); border: 1px solid var(--gold); background: var(--surface-3); }
+.cg-face { transform: rotateY(180deg); border: 1px solid var(--gold); background: var(--surface-3); overflow: hidden; }
 .cg-word { font-size: 14px; font-weight: 700; color: var(--text); }
 .cg-pct { font-family: var(--font-display); font-size: 42px; line-height: 1; color: var(--gold-strong); }
 .cg-card.is-win .cg-face { box-shadow: 0 0 0 2px var(--gold), 0 0 26px rgba(201, 162, 89, 0.45); }
+/* 5 Edge Glow: beim Aufsetzen ein Ring um die Karte, der etwa 16 px wächst und ausblendet; die dritte Karte stärker */
+.cg-card::after { content: ''; position: absolute; inset: -1px; border: 2px solid var(--gold-strong); border-radius: 13px; opacity: 0; pointer-events: none; }
+.cg-card.is-up::after { animation: cg-ring 480ms ease-out 290ms forwards; }
+.cg-card.is-win::after { border-width: 3px; animation-name: cg-ring-win; animation-duration: 640ms; }
+@keyframes cg-ring { 0% { opacity: 0.6; transform: scale(1); } 100% { opacity: 0; transform: scale(1.1); } }
+@keyframes cg-ring-win { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.18); } }
+/* 6 Shine: ein Glanz läuft in 0,25 s über die aufgedeckte Karte; bei der dritten (dem Gutschein) dazu Strahlen und Funken */
+.cg-face::before { content: ''; position: absolute; inset: -10% -60%; background: linear-gradient(105deg, transparent 38%, rgba(255, 244, 214, 0.45) 50%, transparent 62%); opacity: 0; transform: translateX(-70%); pointer-events: none; }
+.cg-card.is-up .cg-face::before { animation: cg-shine 250ms ease-out 330ms forwards; }
+.cg-card.is-win .cg-face::before { background: linear-gradient(105deg, transparent 36%, rgba(255, 244, 214, 0.8) 50%, transparent 64%); }
+@keyframes cg-shine { 0% { opacity: 1; transform: translateX(-70%); } 100% { opacity: 1; transform: translateX(70%); } }
+.cg-card.is-win::before { content: ''; position: absolute; inset: -28%; z-index: -1; border-radius: 50%; pointer-events: none; opacity: 0;
+	background: repeating-conic-gradient(from 0deg, rgba(233, 205, 140, 0.55) 0 5deg, transparent 5deg 24deg);
+	-webkit-mask: radial-gradient(circle, #000 28%, transparent 68%); mask: radial-gradient(circle, #000 28%, transparent 68%); animation: cg-rays 1000ms ease-out 300ms forwards; }
+@keyframes cg-rays { 0% { opacity: 0; transform: scale(0.7) rotate(0deg); } 25% { opacity: 1; } 100% { opacity: 0; transform: scale(1.15) rotate(24deg); } }
+.cg-card.is-win .cg-face::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0; animation: cg-spark 900ms ease-out 380ms forwards;
+	background: radial-gradient(circle at 18% 22%, #fff3c8 0 2px, transparent 3px), radial-gradient(circle at 82% 30%, #fff3c8 0 1.5px, transparent 2.5px), radial-gradient(circle at 70% 82%, #fff3c8 0 2px, transparent 3px),
+		radial-gradient(circle at 24% 76%, #fff3c8 0 1.5px, transparent 2.5px), radial-gradient(circle at 50% 12%, #fff3c8 0 1.5px, transparent 2.5px); }
+@keyframes cg-spark { 0% { opacity: 0; transform: scale(0.8); } 30% { opacity: 1; transform: scale(1); } 60% { opacity: 0.45; } 100% { opacity: 0; transform: scale(1.15); } }
 .cg-count { margin: 14px 0 0; min-height: 22px; font-size: 14px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .cg-result { margin: 14px 0 0; padding-top: 14px; border-top: 1px solid var(--border-soft); }
 .cg-result[hidden] { display: none; }
@@ -38,7 +61,9 @@
 @media (prefers-reduced-motion: reduce) {
 	.cg-offer { animation: none; }
 	.cg-in { transform-style: flat; transition: none; }
-	.cg-card.is-up .cg-in { transform: none; }
+	.cg-card.is-up .cg-in { transform: none; animation: none; }
+	.cg-card.is-up { animation: none; }
+	.cg-card::before, .cg-card::after, .cg-card.is-up::after, .cg-card.is-win::before, .cg-card.is-win::after, .cg-face::before, .cg-card.is-up .cg-face::before, .cg-card.is-win .cg-face::before, .cg-card.is-win .cg-face::after { display: none; animation: none; }
 	.cg-back, .cg-face { backface-visibility: visible; -webkit-backface-visibility: visible; transition: opacity 120ms linear; }
 	.cg-face { transform: none; opacity: 0; }
 	.cg-card.is-up .cg-face { opacity: 1; }

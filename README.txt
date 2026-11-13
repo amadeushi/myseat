@@ -52,6 +52,13 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-14 == mySeat v6.87.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Kartenspiel: neues Aufdecken der Karten (order/cardgame.css), nach dem Vorbild eines Card-Draw-Videos: Flip in 0,3 s mit kleinem Bogen, Squash beim Aufsetzen (kurz breiter und flacher, dann zurueck), ein Ring um die Karte, der waechst und ausblendet (Edge Glow), und ein Glanz, der ueber die Karte laeuft; bei der dritten Karte (dem Gutschein) staerker, dazu Strahlen und Funken. Alles nur transform und opacity. Mit "Bewegung reduzieren" entfallen die neuen Effekte, die Karte wechselt nur ruhig.
+ * Kartenspiel: "Treffer!" und der Code erscheinen erst nach etwa 0,8 s, wenn die Karte gelandet ist und geglaenzt hat (mit "Bewegung reduzieren" sofort).
+ * Kartenspiel: die ersten beiden Karten zeigen bei jedem Spiel zwei verschiedene Motive aus einem Pool von sieben (Blitz, Schnitzel, Pizza, Zitrone, Stern, Flamme, Krone), zufaellig im Browser gewaehlt, nur Dekoration; die dritte Karte ist immer der Gutschein. Es kommt nie zweimal Schnitzel vor.
+ * Das Schnitzel ist die Zeichnung des Schnitzel-Konfigurators (order/schnitzel.js) in den drei Sorten der Karte: Sambalschnitzel, Jaegerschnitzel, Schnitzel Toskana, jeweils mit Zitrone. Das Bild steckt als fester Text in cardgame.js (gemeinsames Schnitzel plus eine Soßen-Schicht je Sorte); aendert sich der Konfigurator, muss es neu erzeugt werden.
+
 2026-11-14 == mySeat v6.86.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Umbau der Messung "Dauer bis zur Bestellung" (v6.85.0) auf den Server, datenschutzfreundlich: Im Browser des Gastes wird dafuer nichts mehr gespeichert oder gelesen (sessionStorage amadeusVisitT0 / amadeusCartT0 und das Mitsenden von visit_s / cart_s mit der Bestellung sind entfernt; der eigene Timer des Kartenspiels in cardgame.js bleibt).
