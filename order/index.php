@@ -4,6 +4,7 @@
  * cart lives in the browser until the guest goes to the checkout (checkout.php).
  */
 require __DIR__.'/bootstrap.inc.php';
+if (!$shop_staff) { shop_visit_touch(); }   // a page of the visit: the first one starts the visit time (statistic, shop_visit.class.php; nothing is stored in the browser)
 $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 $lang = 'de';
 if (!$shop_public) {

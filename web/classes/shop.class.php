@@ -151,10 +151,6 @@ function shop_ensure_schema() {
 	// offers: what the pizza + drink offer took off (offer_cents), what it says on the bon, and the guest's wish for the free extra ('voucher' = a voucher instead)
 	$ocol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'offer_cents'");
 	if (!$ocol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `offer_cents` INT NOT NULL DEFAULT 0, ADD `offer_note` VARCHAR(160) NOT NULL DEFAULT '', ADD `offer_choice` VARCHAR(12) NOT NULL DEFAULT ''"); }
-	// how long the guest was on the order page, and how long the cart was filled, when the order was sent (seconds; NULL = not known, e.g. a new tab). Only a statistic for
-	// the best moment of the card game (see shop_visit_stats); no connection to a person beyond the order itself
-	$vcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'visit_s'");
-	if (!$vcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `visit_s` INT NULL DEFAULT NULL, ADD `cart_s` INT NULL DEFAULT NULL"); }
 	$rcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_uber_slips')." LIKE 'ref'"); // reference receipts ('delivery', 'pickup'): the model examples that are never deleted
 	if (!$rcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_uber_slips')." ADD `ref` VARCHAR(12) NOT NULL DEFAULT ''"); }
 	$kcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_print_jobs')." LIKE 'kind'"); // print jobs that are no order slip: the daily reports
@@ -1474,9 +1470,8 @@ function shop_create_order($in) {
 		shop_log($id, 'voucher', 'Gutschein '.$gvV['number'].' zahlt '.shop_money($gvCents));
 	}
 	if (!empty($in['acc_id'])) { fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET account_id = ? WHERE id = ?", 'ii', array((int)$in['acc_id'], $id)); }
-	// the times the page measured (seconds since the first page of the visit, since the first article in the cart); anything outside 0 to 4 hours is not a real visit and is not kept
-	$vs = isset($in['visit_s']) && is_numeric($in['visit_s']) ? (int)$in['visit_s'] : -1; $cs = isset($in['cart_s']) && is_numeric($in['cart_s']) ? (int)$in['cart_s'] : -1;
-	if (($vs >= 0 && $vs <= 14400) || ($cs >= 0 && $cs <= 14400)) { fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET visit_s = ?, cart_s = ? WHERE id = ?", 'iii', array(($vs >= 0 && $vs <= 14400) ? $vs : null, ($cs >= 0 && $cs <= 14400) ? $cs : null, $id)); }
+	// the visit statistic (shop_visit.class.php): the server counts how long this visit took into time slots that have no order and no guest in them; a test order does not count
+	if (!$test) { try { $vt = shop_visit_take(); shop_visit_record($vt[0], $vt[1]); } catch (Throwable $e) { error_log('mySeat visit stats: '.$e->getMessage()); } }
 	if ($offerCents > 0 || $offerChoice !== '') { fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET offer_cents = ?, offer_note = ?, offer_choice = ? WHERE id = ?", 'issi', array($offerCents, $offerNote, $offerChoice, $id)); }
 	if ($coupon) {
 		fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET coupon_code = ?, discount_cents = ? WHERE id = ?", 'sii', array($coupon['code'], $discount, $id));
@@ -4070,6 +4065,7 @@ require_once __DIR__.'/shop_tours.class.php';
 require_once __DIR__.'/shop_flags.class.php';
 require_once __DIR__.'/shop_offers.class.php';
 require_once __DIR__.'/shop_cardgame.class.php';
+require_once __DIR__.'/shop_visit.class.php';
 require_once __DIR__.'/shop_push.class.php';
 require_once __DIR__.'/shop_issue.class.php';
 require_once __DIR__.'/shop_issue_chat.class.php';

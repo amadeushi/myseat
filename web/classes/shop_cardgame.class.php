@@ -61,23 +61,6 @@ function shop_card_play($ip) {
 	return array('ok' => true, 'code' => $code, 'until' => date('d.m.Y', strtotime($until)), 'percent' => (int)$st['percent'], 'min' => (int)$st['min'], 'days' => (int)$st['days']);
 }
 
-// how long guests were on the order page before they sent an order: the statistic for the best moment of the game (cardgame_after). visit = seconds from the first page of the
-// visit (a tab) to the order, cart = seconds from the first article in the cart to the order. The orders of the last $days days that carry the measured seconds; p25 / p50 / p75 / p90 =
-// a quarter / half / three quarters / nine tenths of the orders were sent within this many seconds
-function shop_visit_stats($days = 30) {
-	shop_ensure_schema();
-	$since = date('Y-m-d H:i:s', time() - (int)$days * 86400);
-	$out = array();
-	foreach (array('visit' => 'visit_s', 'cart' => 'cart_s') as $k => $col) {
-		$v = array();
-		foreach (fb_rows("SELECT $col AS s FROM ".fb_t('tp_shop_orders')." WHERE is_test = 0 AND source = 'shop' AND $col IS NOT NULL AND created_at > ? ORDER BY $col", 's', array($since)) as $r) { $v[] = (int)$r['s']; }
-		$n = count($v);
-		$q = function ($p) use ($v, $n) { return $n ? $v[(int)min($n - 1, floor($p * $n))] : 0; };
-		$out[$k] = array('n' => $n, 'p25' => $q(0.25), 'p50' => $q(0.5), 'p75' => $q(0.75), 'p90' => $q(0.9));
-	}
-	return $out;
-}
-
 // for the settings page: how many vouchers the game made, how many were redeemed
 function shop_card_stats() {
 	shop_ensure_schema();

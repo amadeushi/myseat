@@ -52,6 +52,14 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-14 == mySeat v6.86.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Umbau der Messung "Dauer bis zur Bestellung" (v6.85.0) auf den Server, datenschutzfreundlich: Im Browser des Gastes wird dafuer nichts mehr gespeichert oder gelesen (sessionStorage amadeusVisitT0 / amadeusCartT0 und das Mitsenden von visit_s / cart_s mit der Bestellung sind entfernt; der eigene Timer des Kartenspiels in cardgame.js bleibt).
+ * Neu (web/classes/shop_visit.class.php): Der Server merkt sich in der Sitzung die Zeit des ersten Aufrufs der Bestellseite oder Kasse (shop_visit_touch) und des ersten Warenkorb-Aufrufs mit mindestens einem Artikel (op=offers). Beim Absenden einer echten Bestellung (nicht Test, nicht Mitarbeiter) zaehlt er die Sekunden in eine Tabelle mit Zeitfaechern (tp_shop_visit_buckets: Tag, Art, Fach zu 15 Sekunden, Anzahl; wird beim ersten Aufruf angelegt). Kein Bezug zu Bestellung, Gast oder Adresse; Zeilen aelter als 120 Tage werden taeglich geloescht. Besuche unter 3 Sekunden oder ueber 4 Stunden zaehlen nicht, nach 30 Minuten Pause beginnt ein neuer Besuch.
+ * Einstellungen > Lieferservice > Kartenspiel: "ein Viertel nach hoechstens ..., die Haelfte nach ..., drei Viertel ..., neun Zehntel ..." (Ende des Zeitfachs, "mehr als 20 Min." darueber), einmal vom ersten Aufruf und einmal vom ersten Artikel an, letzte 30 Tage, ab 5 Bestellungen.
+ * Die in v6.85.0 angelegten Spalten visit_s und cart_s in tp_shop_orders werden nicht mehr angelegt oder befuellt; auf dem Server bleiben sie leer bestehen (koennen von Hand entfernt werden).
+ * Noch offen: der Datenschutz-Zusatz zur Dauer bis zur Bestellung auf der Website (Text steht zur Freigabe aus).
+
 2026-11-13 == mySeat v6.85.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Kartenspiel: Wer im Spiel einen Gutschein gewinnt, kann ihn auch einloesen. Die Regel "ein Gutschein aus dem Kartenspiel pro Gast" an der Kasse (shop_coupon_check) ist entfallen, der Code bleibt einmal nutzbar. Wie oft jemand spielen kann, begrenzt weiter das Spiel selbst (einmal pro Sitzung, 3 Spiele pro Anschluss und Gueltigkeitszeitraum).

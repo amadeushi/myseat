@@ -4,6 +4,7 @@
  * shell; order/checkout.js fills the summary from the cart in the browser and posts the order to api.php (op=create).
  */
 require __DIR__.'/bootstrap.inc.php';
+if (!$shop_staff) { shop_visit_touch(); }   // a page of the visit (statistic, shop_visit.class.php)
 $brand = !empty($settings['brandName']) ? $settings['brandName'] : 'Amadeus';
 $lang = 'de';
 if (!$shop_public || !$shop_accepting) { header('Location: ./'); exit; }

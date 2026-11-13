@@ -81,6 +81,7 @@ if ($op === 'upsell') {
 // offers of the cart (free extra above a threshold, suggestions that close the gap, pizza + drink): worked out from the priced cart; the same function decides when the order is placed
 if ($op === 'offers') {
 	$lines = (isset($body['lines']) && is_array($body['lines'])) ? array_slice($body['lines'], 0, 60) : array();
+	if ($lines && !$shop_staff) { shop_visit_touch(true); }   // the first cart with an article starts the cart time of this visit (statistic, shop_visit.class.php)
 	$items = array(); $ids = array();
 	foreach ($lines as $l) {
 		$r = shop_price_line(is_array($l) ? $l : array());
