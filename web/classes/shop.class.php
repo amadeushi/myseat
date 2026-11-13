@@ -151,6 +151,10 @@ function shop_ensure_schema() {
 	// offers: what the pizza + drink offer took off (offer_cents), what it says on the bon, and the guest's wish for the free extra ('voucher' = a voucher instead)
 	$ocol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'offer_cents'");
 	if (!$ocol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `offer_cents` INT NOT NULL DEFAULT 0, ADD `offer_note` VARCHAR(160) NOT NULL DEFAULT '', ADD `offer_choice` VARCHAR(12) NOT NULL DEFAULT ''"); }
+	// how long the guest was on the order page, and how long the cart was filled, when the order was sent (seconds; NULL = not known, e.g. a new tab). Only a statistic for
+	// the best moment of the card game (see shop_visit_stats); no connection to a person beyond the order itself
+	$vcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'visit_s'");
+	if (!$vcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_orders')." ADD `visit_s` INT NULL DEFAULT NULL, ADD `cart_s` INT NULL DEFAULT NULL"); }
 	$rcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_uber_slips')." LIKE 'ref'"); // reference receipts ('delivery', 'pickup'): the model examples that are never deleted
 	if (!$rcol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_uber_slips')." ADD `ref` VARCHAR(12) NOT NULL DEFAULT ''"); }
 	$kcol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_print_jobs')." LIKE 'kind'"); // print jobs that are no order slip: the daily reports
@@ -1470,6 +1474,9 @@ function shop_create_order($in) {
 		shop_log($id, 'voucher', 'Gutschein '.$gvV['number'].' zahlt '.shop_money($gvCents));
 	}
 	if (!empty($in['acc_id'])) { fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET account_id = ? WHERE id = ?", 'ii', array((int)$in['acc_id'], $id)); }
+	// the times the page measured (seconds since the first page of the visit, since the first article in the cart); anything outside 0 to 4 hours is not a real visit and is not kept
+	$vs = isset($in['visit_s']) && is_numeric($in['visit_s']) ? (int)$in['visit_s'] : -1; $cs = isset($in['cart_s']) && is_numeric($in['cart_s']) ? (int)$in['cart_s'] : -1;
+	if (($vs >= 0 && $vs <= 14400) || ($cs >= 0 && $cs <= 14400)) { fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET visit_s = ?, cart_s = ? WHERE id = ?", 'iii', array(($vs >= 0 && $vs <= 14400) ? $vs : null, ($cs >= 0 && $cs <= 14400) ? $cs : null, $id)); }
 	if ($offerCents > 0 || $offerChoice !== '') { fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET offer_cents = ?, offer_note = ?, offer_choice = ? WHERE id = ?", 'issi', array($offerCents, $offerNote, $offerChoice, $id)); }
 	if ($coupon) {
 		fb_exec("UPDATE ".fb_t('tp_shop_orders')." SET coupon_code = ?, discount_cents = ? WHERE id = ?", 'sii', array($coupon['code'], $discount, $id));
@@ -3373,11 +3380,8 @@ function shop_coupon_check($code, $type, $sub, $keys = array('', '')) {
 		$hit = fb_row("SELECT id FROM ".fb_t('tp_shop_coupon_uses')." WHERE coupon_id = ? AND ((guest_key <> '' AND guest_key = ?) OR (guest_key2 <> '' AND guest_key2 = ?)) LIMIT 1", 'iss', array((int)$c['id'], $keys[0], $keys[1]));
 		if ($hit) { return $no('Du hast diesen Gutschein schon eingelöst. Er gilt pro Person nur einmal.'); }
 	}
-	// the vouchers of the card game: every game made a code of its own, but a guest redeems only one of them in total
-	if ($c['note'] === 'Kartenspiel' && ($keys[0] !== '' || $keys[1] !== '')) {
-		$hit = fb_row("SELECT u.id FROM ".fb_t('tp_shop_coupon_uses')." u JOIN ".fb_t('tp_shop_coupons')." cc ON cc.id = u.coupon_id WHERE cc.note = 'Kartenspiel' AND ((u.guest_key <> '' AND u.guest_key = ?) OR (u.guest_key2 <> '' AND u.guest_key2 = ?)) LIMIT 1", 'ss', array($keys[0], $keys[1]));
-		if ($hit) { return $no('Du hast schon einen Gutschein aus dem Kartenspiel eingelöst. Er gilt pro Person nur einmal.'); }
-	}
+	// the vouchers of the card game: whoever wins one can redeem it. Every code is single-use and bound to its own game; how often one person can play is limited at the game
+	// (once per session, a few games per address and period, see shop_cardgame.class.php), so no rule against a second voucher is needed here
 	$d = $c['kind'] === 'percent' ? (int)round($sub * (int)$c['value'] / 100) : (int)$c['value'];
 	if ($c['kind'] === 'percent' && (int)$c['max_discount_cents'] > 0) { $d = min($d, (int)$c['max_discount_cents']); }
 	$d = max(0, min($d, $sub));

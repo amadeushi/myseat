@@ -353,6 +353,12 @@
 		return out;
 	}
 	function subtotal() { return cartLines().reduce(function (s, l) { return s + l.unit * l.qty; }, 0); }
+	// time of this visit (a tab): when the first page was opened and when the first article went into the cart; the checkout sends both as seconds with the order, only as a
+	// statistic for the best moment of the card game. sessionStorage only, gone when the tab is closed
+	try { if (!sessionStorage.getItem('amadeusVisitT0')) { sessionStorage.setItem('amadeusVisitT0', String(Date.now())); } } catch (e) {}
+	document.addEventListener('amadeus:cart', function () {
+		try { if (subtotal() > 0 && !sessionStorage.getItem('amadeusCartT0')) { sessionStorage.setItem('amadeusCartT0', String(Date.now())); } } catch (e) {}
+	});
 	function count() { return cartLines().reduce(function (s, l) { return s + l.qty; }, 0); }
 	function minOrder() { if (!state.info) { return 0; } return state.mode === 'delivery' ? (state.zone ? state.zone.min : state.info.min_delivery) : state.info.min_pickup; }
 

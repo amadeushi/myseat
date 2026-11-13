@@ -507,6 +507,8 @@
 	if ($('#co-gv-code')) { $('#co-gv-code').addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); applyGv(); } }); }
 	// one key per order attempt: when the answer gets lost and the guest taps again (or taps twice), the server answers with the order it already made instead of making a second one.
 	// An answer of the server ("not possible") ends the attempt, the next one gets a new key.
+	// seconds since a time that shop.js noted in sessionStorage (null when it is not known, e.g. the page was opened in a new tab); the server keeps only 0 to 4 hours
+	function since(key) { try { var t = +sessionStorage.getItem(key) || 0; return t > 0 ? Math.max(0, Math.round((Date.now() - t) / 1000)) : null; } catch (e) { return null; } }
 	function newIdem() { var a = new Uint8Array(16); try { crypto.getRandomValues(a); } catch (e) { for (var i = 0; i < 16; i++) { a[i] = Math.floor(Math.random() * 256); } } return Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join(''); }
 	S.idem = newIdem();
 	// the browser may have prerendered this page while the guest was still in the cart: when the cart changed since, start over with the current one
@@ -536,13 +538,15 @@
 			type: S.mode, when: when, payment: S.pay, tip: tipCents(), name: f.name.value, phone: f.phone.value, email: f.email.value, note: f.note.value, nl_news: f.nl_news.checked ? 1 : 0, nl_stamps: f.nl_stamps.checked ? 1 : 0,
 			street: f.street.value, zip: f.zip.value, city: f.city.value, words: S.zoneWords, address_note: f.address_note.value, website: f.website.value, coupon: S.coupon ? S.coupon.code : '', gv_number: S.gv ? S.gv.number : '', gv_code: S.gv ? S.gv.code : '', extra: S.extra, addon: addonCents() > 0 ? S.addon.id : 0,
 			lines: S.cart.map(function (l) { return { pid: l.pid, vid: l.vid, opts: l.opts, qty: l.qty, note: l.note }; }),
-			group: S.group ? S.group.token : '', me: S.group ? S.group.me : '', rev: S.group ? (S.group.rev || '') : ''
+			group: S.group ? S.group.token : '', me: S.group ? S.group.me : '', rev: S.group ? (S.group.rev || '') : '',
+			visit_s: since('amadeusVisitT0'), cart_s: since('amadeusCartT0')
 		}).then(function (r) {
 			if (!r.ok) { S.idem = newIdem(); loadAddon(); var msg = r.error || 'Das hat nicht geklappt.'; err.textContent = msg; S.busy = false; updateSubmit(); $('#co-why').textContent = msg; err.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); return; }
 			try {
 				if (S.group) { localStorage.removeItem(GKEY); } // the shared basket is done; the own cart stays as it was
 				else { var d = JSON.parse(localStorage.getItem(KEY) || '{}'); d.cart = []; localStorage.setItem(KEY, JSON.stringify(d)); }
 			} catch (e) {}
+			try { sessionStorage.removeItem('amadeusVisitT0'); sessionStorage.removeItem('amadeusCartT0'); } catch (e) {}   // the visit is over; the next order in this tab is a new one
 			try { var sp2 = JSON.parse(localStorage.getItem('amadeusPromoCode') || 'null'); if (sp2 && S.coupon && sp2.code === S.coupon.code) { localStorage.removeItem('amadeusPromoCode'); } } catch (e) {}   // the remembered code is used up with this order
 			rememberLast();
 			location.href = r.redirect;

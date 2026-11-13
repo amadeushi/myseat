@@ -390,6 +390,17 @@ $sh_secret = function ($label, $value, $hint = '') use ($sh_e) {
 		<?php $sh_row('sh-cga', 'cardgame_after', 'Das Spiel erscheint nach', 'Sekunden'); ?>
 		<?php $sh_cg = shop_card_stats(); ?>
 		<p class="sh-hint">Bisher gespielt: <?php echo (int)$sh_cg['made']; ?> mal, eingelöst: <?php echo (int)$sh_cg['used']; ?> mal.</p>
+		<?php
+		// how long guests take from the first page to the order: the basis for "Das Spiel erscheint nach" (measured with every order since this was switched on)
+		$sh_vs = shop_visit_stats(30);
+		$sh_sec = function ($s) { return $s >= 120 ? round($s / 60, 1).' Min.' : (int)$s.' Sek.'; };
+		foreach (array('visit' => 'Vom ersten Aufruf des Shops bis zur Bestellung', 'cart' => 'Vom ersten Artikel im Warenkorb bis zur Bestellung') as $sh_k => $sh_lbl) {
+			$sh_r = $sh_vs[$sh_k];
+			echo '<p class="sh-hint">'.htmlspecialchars($sh_lbl, ENT_QUOTES, 'UTF-8').' (letzte 30 Tage, '.(int)$sh_r['n'].' Bestellungen): '.($sh_r['n'] >= 5
+				? 'ein Viertel nach '.$sh_sec($sh_r['p25']).', die Hälfte nach '.$sh_sec($sh_r['p50']).', drei Viertel nach '.$sh_sec($sh_r['p75']).', neun Zehntel nach '.$sh_sec($sh_r['p90']).'.'
+				: 'noch zu wenig Bestellungen mit Messung.').'</p>';
+		}
+		?>
 
 		<h4 class="sh-sub">Bestell-Chat <span class="sh-chip">in Erprobung</span></h4>
 		<?php $sh_help('Gäste bestellen im Gespräch mit Antwortknöpfen unter <code>/order/chat.php</code>. Preise und Liefergebiet kommen immer aus dem Shop, bei Allergien oder Beschwerden wird der Gast zum Anruf gebeten.', 'Ablauf: Gericht wählen, Adresse prüfen, Zeit und Zahlung, am Ende eine Zusammenfassung zum Bestätigen. Die Handynummer wird mit einem SMS-Code bestätigt, dafür muss das Kundenkonto eingeschaltet sein. Ausgeschaltet gibt es die Seite für Gäste nicht, du selbst siehst sie als Mitarbeiter trotzdem (zum Testen).'); ?>

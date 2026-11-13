@@ -52,6 +52,13 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-13 == mySeat v6.85.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Kartenspiel: Wer im Spiel einen Gutschein gewinnt, kann ihn auch einloesen. Die Regel "ein Gutschein aus dem Kartenspiel pro Gast" an der Kasse (shop_coupon_check) ist entfallen, der Code bleibt einmal nutzbar. Wie oft jemand spielen kann, begrenzt weiter das Spiel selbst (einmal pro Sitzung, 3 Spiele pro Anschluss und Gueltigkeitszeitraum).
+ * Neu (Messung, nur Statistik): Wie lange Gaeste bis zur Bestellung brauchen. Der Shop merkt sich pro Tab (sessionStorage amadeusVisitT0 / amadeusCartT0) den ersten Aufruf und den ersten Artikel im Warenkorb; die Kasse schickt daraus zwei Zahlen in Sekunden mit der Bestellung mit (Spalten visit_s und cart_s in tp_shop_orders, werden beim ersten Aufruf angelegt; nur 0 bis 4 Stunden werden gespeichert, sonst NULL). Nach der Bestellung werden die Zeitpunkte geloescht.
+ * Einstellungen > Lieferservice > Kartenspiel zeigt dazu (letzte 30 Tage, ab 5 Bestellungen): ein Viertel / die Haelfte / drei Viertel / neun Zehntel der Bestellungen waren nach so vielen Sekunden abgeschickt (shop_visit_stats), einmal vom ersten Aufruf und einmal vom ersten Artikel an. Daran laesst sich "Das Spiel erscheint nach" festlegen.
+ * Noch offen: ein Satz zur Besuchsdauer im Datenschutz (Text steht zur Freigabe aus).
+
 2026-11-09 == mySeat v6.84.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Behoben (Stempelkarte nach dem Zusammenfuehren zweier Kunden): Die Stempel eines Kunden lagen nach dem Zusammenfuehren (und bei Stempeln von Hand vor dem Konto) auf anderen Schluesseln als die des Kontos. Die Pruefung "Karte voll" und der Shop zaehlten nur die Schluessel des Kontos, eine Karte mit 5 Stempeln wurde nie zum Gutschein (Fall Dittmer, die Daten sind von Hand repariert).
