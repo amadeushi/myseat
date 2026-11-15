@@ -467,8 +467,33 @@
 	function removeGv() { S.gv = null; $('#co-gv-toggle').hidden = false; $('#co-gv-num').value = ''; $('#co-gv-code').value = ''; gvMsg('', false); renderSummary(); }
 	function removeCoupon() { S.coupon = null; $('#co-coupon-toggle').hidden = false; $('#co-coupon-in').value = ''; couponMsg('', false); renderSummary(); }
 
+	// ---- phone: the same rule as the server (sms_normalize_phone), so the guest hears early when no SMS can reach this number; the order goes through either way
+	var SMS_CC = (document.body.dataset.smsCc || '').replace(/\D/g, '');
+	function isMobile(v) {
+		var s = String(v).replace(/\(\s*0\s*\)/g, '').trim().replace(/[\s\-\/.()]/g, '');
+		if (!/^\+?\d+$/.test(s)) { return false; }
+		if (s.indexOf('00') === 0) { s = '+' + s.slice(2); }
+		else if (s[0] === '0') { s = '+' + SMS_CC + s.slice(1); }
+		else if (s[0] !== '+') {
+			if (/^1[567]\d{8,9}$/.test(s)) { s = '+49' + s; } else if (/^491[567]\d{8,9}$/.test(s)) { s = '+' + s; } else { return false; }
+		}
+		if (s.indexOf('+490') === 0) { s = '+49' + s.slice(4); }
+		if (s.indexOf('+430') === 0) { s = '+43' + s.slice(4); }
+		if (!/^\+[1-9]\d{7,14}$/.test(s)) { return false; }
+		if (s.indexOf('+43') === 0 && !/^\+436\d{7,11}$/.test(s)) { return false; }
+		if (s.indexOf('+49') === 0 && !/^\+491[567]\d{8,9}$/.test(s)) { return false; }
+		return true;
+	}
+	function phoneHint(final) {
+		var h = $('#co-phone-hint'), v = form.elements.phone.value.trim();
+		if (!h || !SMS_CC) { return; }
+		if (!v || isMobile(v)) { h.hidden = true; } else if (final) { h.hidden = false; }
+	}
+
 	// ---- events
+	form.addEventListener('change', function (ev) { if (ev.target.name === 'phone') { phoneHint(true); } });
 	form.addEventListener('input', function (ev) {
+		if (ev.target.name === 'phone') { phoneHint(false); }
 		if (/^(street|zip|city)$/.test(ev.target.name)) { checkZone(); }
 		if (/^(street|zip|city|name|phone)$/.test(ev.target.name)) { updateSubmit(); }
 		if (ev.target.id === 'co-w3w') { checkZoneW3W(); updateSubmit(); }

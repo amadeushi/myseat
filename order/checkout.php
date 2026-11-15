@@ -27,7 +27,7 @@ $imprint = (!empty($settings['imprintUrl']) && preg_match('#^https?://#i', $sett
 <link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
 </head>
-<body class="shop-shell checkout" data-token="<?php echo shop_h($_SESSION['shop_token']); ?>" data-account="<?php echo shop_acc_enabled() ? '1' : '0'; ?>">
+<body class="shop-shell checkout" data-token="<?php echo shop_h($_SESSION['shop_token']); ?>" data-account="<?php echo shop_acc_enabled() ? '1' : '0'; ?>" data-sms-cc="<?php echo (function_exists('sms_enabled') && sms_enabled() && shop_flag('sms_orders')) ? shop_h(sms_cfg()['cc']) : ''; ?>">
 	<header class="shop-top">
 		<div class="shop-top-in">
 			<a class="shop-logo" href="./" aria-label="<?php echo shop_h($brand); ?>"><?php echo brand_logo_html($brand, 'brand-logo'); ?></a>
@@ -87,6 +87,7 @@ $imprint = (!empty($settings['imprintUrl']) && preg_match('#^https?://#i', $sett
 					<label class="co-f"><span>E-Mail (optional)</span><input type="email" name="email" autocomplete="email" enterkeyhint="next" maxlength="160"/></label>
 					<label class="co-f wide"><span>Anmerkung zur Bestellung (optional)</span><input type="text" name="note" enterkeyhint="done" maxlength="500"/></label>
 				</div>
+				<p class="co-hint" id="co-phone-hint" role="status" hidden>Das erkennen wir nicht als Handynummer, du bekommst dann keine SMS zu deiner Bestellung. Bestellen kannst du trotzdem.</p>
 				<label class="co-check"><input type="checkbox" name="remember" value="1"/> Meine Angaben auf diesem Gerät merken, damit es beim nächsten Mal schneller geht</label>
 				<div class="co-nl" role="group" aria-label="Mails von uns">
 					<label class="co-check"><input type="checkbox" name="nl_news" value="1"/> <span><?php echo shop_h(shop_nl_consent_text('news')); ?></span></label>

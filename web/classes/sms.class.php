@@ -141,7 +141,7 @@ function sms_ensure_schema() {
 
 /*
  * E.164 mobile number or null. "0151 2345678" and "0049 151 ..." work; the default country code applies
- * to a leading 0. Germany (+49 15x/16x/17x) and Austria (+43 6xx) must be mobile numbers, a landline
+ * to a leading 0. A German mobile number without the 0 ("151 2345678", "49 151 2345678") is taken as well. Germany (+49 15x/16x/17x) and Austria (+43 6xx) must be mobile numbers, a landline
  * cannot receive an SMS.
  */
 function sms_normalize_phone($input) {
@@ -151,7 +151,12 @@ function sms_normalize_phone($input) {
 	if ($s === '' || !preg_match('/^\+?\d+$/', $s)) { return null; }
 	if (strpos($s, '00') === 0) { $s = '+'.substr($s, 2); }
 	elseif ($s[0] === '0') { $s = sms_cfg()['cc'].substr($s, 1); }
-	elseif ($s[0] !== '+') { return null; }
+	elseif ($s[0] !== '+') {
+		// typed without the 0 and without the "+": a German mobile number ("151 2345678") or one with the country code but no "+" ("49 151 ...")
+		if (preg_match('/^1[567]\d{8,9}$/', $s)) { $s = '+49'.$s; }
+		elseif (preg_match('/^491[567]\d{8,9}$/', $s)) { $s = '+'.$s; }
+		else { return null; }
+	}
 	if (strpos($s, '+490') === 0) { $s = '+49'.substr($s, 4); }
 	if (strpos($s, '+430') === 0) { $s = '+43'.substr($s, 4); }
 	if (!preg_match('/^\+[1-9]\d{7,14}$/', $s)) { return null; }
