@@ -317,6 +317,7 @@
 @media (prefers-reduced-motion: reduce) { .co-addon-btn { transition: none; } }
 .co-sec legend { font-family: var(--font-display); font-size: 24px; padding: 0; margin-bottom: 12px; }
 .co-hint { color: var(--text-muted); font-size: 14px; margin-top: 10px; }
+.co-f .co-hint { margin-top: 0; font-size: 13px; line-height: 1.35; }
 .co-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .co-f { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--text-muted); min-width: 0; }
 .co-f.wide { grid-column: 1 / -1; }

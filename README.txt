@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-15 == mySeat v6.89.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geaendert (Kasse): Der Hinweis zur Handynummer steht jetzt direkt unter dem Telefonfeld (vorher als eigener Absatz unter dem ganzen Raster, also unter dem Feld "Anmerkung") und ist ein Satz: "Keine Handynummer erkannt: Du bekommst keine SMS zur Bestellung." Neue Regel .co-f .co-hint in order/shop.css (kleinere Schrift, kein oberer Abstand).
+
 2026-11-15 == mySeat v6.89.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Behoben: Eine deutsche Handynummer ohne die fuehrende 0 ("151 2345678", "176 12345678") und ohne "+" ("49 151 2345678", "491512345678") wurde bisher nicht als Mobilnummer erkannt (sms_normalize_phone gab null zurueck). Folge: Die Bestell-SMS ("unterwegs", "abholbereit"), die SMS "Stempelkarte voll", die Erinnerung zur Reservierung und die Anmeldung im Kundenkonto per SMS gingen an diese Gaeste nicht; die Bestellung selbst wurde angenommen. Jetzt wird die Nummer als +49 15x/16x/17x erkannt (Vorwahl 15, 16 oder 17 plus 8 bis 9 Ziffern). Festnetznummern ("5121 123456") und oesterreichische Nummern ohne 0 bleiben weiter abgelehnt, weil sie sich ohne 0 nicht sicher von einer deutschen Nummer unterscheiden lassen. Alle bisherigen Schreibweisen ergeben dasselbe wie vorher. Stempelkarte und Gutscheine erkannten den Gast schon vorher an den letzten neun Ziffern und aendern sich nicht.
