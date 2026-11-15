@@ -101,7 +101,7 @@ if ($op === 'card_state') {
 }
 if ($op === 'card_play') {
 	if ($_SERVER['REQUEST_METHOD'] !== 'POST') { api_out(array('ok' => false, 'error' => 'Das Spiel gibt es gerade nicht.'), 405); }
-	api_out(shop_card_play(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : ''));
+	api_out(shop_card_play(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '', isset($body['game']) ? (string)$body['game'] : ''));
 }
 
 // the add-on of the checkout ("Zugabe an der Kasse"): the one item this cart is offered right now, or null; the same function decides when the order is placed

@@ -29,7 +29,7 @@ shop_ensure_schema();
 $op = isset($_POST['op']) ? (string)$_POST['op'] : '';
 
 if ($op === 'save') {
-	foreach (array('public', 'accepting', 'test_mode', 'allow_cash', 'allow_card_door', 'allow_online', 'tip_enabled', 'sms_orders', 'stamp_on', 'offers_on', 'addon_on', 'cardgame_on', 'tours_on', 'chat_on', 'chat_ai_on', 'account_on', 'account_sms', 'feedback_on', 'places_suggest', 'issue_on', 'issue_sms_driver', 'issue_chat_on', 'issue_ai_on', 'driver_here_on', 'driver_here_gps') as $flag) {
+	foreach (array('public', 'accepting', 'test_mode', 'allow_cash', 'allow_card_door', 'allow_online', 'tip_enabled', 'sms_orders', 'stamp_on', 'offers_on', 'addon_on', 'cardgame_on', 'cardgame_g_cards', 'cardgame_g_wheel', 'cardgame_g_scratch', 'tours_on', 'chat_on', 'chat_ai_on', 'account_on', 'account_sms', 'feedback_on', 'places_suggest', 'issue_on', 'issue_sms_driver', 'issue_chat_on', 'issue_ai_on', 'driver_here_on', 'driver_here_gps') as $flag) {
 		shop_setting_set($flag, !empty($_POST[$flag]) ? '1' : '0');
 	}
 	foreach (array('eta_delivery_min' => array(10, 240), 'kitchen_drive_min' => array(0, 60), 'lead_pickup_min' => array(0, 240), 'slot_min' => array(5, 60), 'days_ahead' => array(0, 14),

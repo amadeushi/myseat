@@ -181,7 +181,7 @@ $card_on = $shop_public && $card_cfg['on'] && !shop_acc_current(); // card game 
 	<script src="dragscroll.js?v=<?php echo @filemtime(__DIR__.'/dragscroll.js'); ?>"></script>
 	<script src="shop.js?v=<?php echo @filemtime(__DIR__.'/shop.js'); ?>"></script>
 	<?php if ($acc_on): ?><script src="stempel.js?v=<?php echo @filemtime(__DIR__.'/stempel.js'); ?>"></script><script src="konto.js?v=<?php echo @filemtime(__DIR__.'/konto.js'); ?>"></script><?php endif; ?>
-	<?php if ($card_on): ?><script src="cardgame.js?v=<?php echo @filemtime(__DIR__.'/cardgame.js'); ?>" data-after="<?php echo (int)$card_cfg['after']; ?>" defer></script><?php endif; ?>
+	<?php if ($card_on): ?><script src="cardgame.js?v=<?php echo @filemtime(__DIR__.'/cardgame.js'); ?>" data-after="<?php echo (int)$card_cfg['after']; ?>" data-v="<?php echo max((int)@filemtime(__DIR__.'/cardgame_cards.js'), (int)@filemtime(__DIR__.'/cardgame_wheel.js'), (int)@filemtime(__DIR__.'/cardgame_scratch.js')); ?>" defer></script><?php endif; ?>
 <?php endif; ?>
 </body>
 </html>

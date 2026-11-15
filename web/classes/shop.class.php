@@ -104,6 +104,8 @@ function shop_ensure_schema() {
 	// the games of the "Kartenspiel" (one line per voucher the game made): the address (hashed) that played, to limit the games per address (web/classes/shop_cardgame.class.php)
 	$q("CREATE TABLE IF NOT EXISTS ".fb_t('tp_shop_card_plays')." (
 		`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, `ip_hash` CHAR(16) NOT NULL, `code` VARCHAR(40) NOT NULL, `created_at` DATETIME NOT NULL, KEY `ip` (`ip_hash`, `created_at`)) $opts");
+	// which of the mini games it was (cards, wheel, scratch); older lines are the card game
+	if (!fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_card_plays')." LIKE 'game'")) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_card_plays')." ADD `game` VARCHAR(10) NOT NULL DEFAULT 'cards'"); }
 	$icol = fb_rows("SHOW INDEX FROM ".fb_t('tp_shop_order_items')." WHERE Key_name = 'prod'");
 	if (!$icol) { mysqli_query($db, "ALTER TABLE ".fb_t('tp_shop_order_items')." ADD INDEX `prod` (`product_id`)"); }
 	$ccol = fb_rows("SHOW COLUMNS FROM ".fb_t('tp_shop_orders')." LIKE 'coupon_code'");
@@ -373,6 +375,7 @@ function shop_defaults() {
 		'addon_on' => '0',          // "Zugabe an der Kasse": one extra item at a special price, offered once in the checkout before the guest pays (shop_addon_pick); off until the owner switches it on
 		'addon_min' => '18',        // euro: the offer appears from this goods value
 		'cardgame_on' => '0',       // "Kartenspiel": a guest without an account who has been on the order page for a while is offered four cards, the third shows a personal voucher (web/classes/shop_cardgame.class.php); off until the owner switches it on
+		'cardgame_g_cards' => '1', 'cardgame_g_wheel' => '1', 'cardgame_g_scratch' => '1',   // which mini games are in the draw (cards, wheel, scratch card): every visit gets exactly one of the switched-on games, which one is chance (shop_card_game_of_session); the game itself runs when "cardgame_on" is on
 		'cardgame_percent' => '10', 'cardgame_min' => '15', 'cardgame_days' => '7', 'cardgame_after' => '60',   // percent off the goods, from this goods value (euro), valid for this many days, the game appears after this many seconds on the shop
 		'stamp_on' => '1',          // stamp card: every finished order is a stamp, a full card becomes a voucher (see shop_stamp_*)
 		'stamp_percent' => '10', 'stamp_goal' => '5', 'stamp_months' => '12', 'voucher_days' => '90',

@@ -20,6 +20,21 @@ function shop_card_cfg() {
 }
 function shop_card_ip_hash($ip) { return substr(hash('sha256', (string)$ip.'|myseat-shop'), 0, 16); }
 
+// the mini games that can be offered: the cards (cardgame_g_cards), the wheel, the scratch card; all unlock the same voucher with the same limits. None switched on = the cards
+const SHOP_CARD_GAMES = array('cards', 'wheel', 'scratch');
+function shop_card_games() {
+	$out = array();
+	foreach (SHOP_CARD_GAMES as $g) { if (shop_flag('cardgame_g_'.$g)) { $out[] = $g; } }
+	return $out ? $out : array('cards');
+}
+// one game per visit: chosen among the switched-on ones, the same for the whole session (so the guest sees the game of the offer and nothing else)
+function shop_card_game_of_session() {
+	$on = shop_card_games();
+	$g = isset($_SESSION['shop_card_game']) ? (string)$_SESSION['shop_card_game'] : '';
+	if (!in_array($g, $on, true)) { $g = $on[random_int(0, count($on) - 1)]; $_SESSION['shop_card_game'] = $g; }
+	return $g;
+}
+
 // once a day: vouchers of the game that nobody used and that ran out 30 days ago, and the lines (hashed address) of the games after 90 days (the privacy statement says so)
 function shop_card_gc() {
 	$last = (int)shop_setting('cardgame_gc');
@@ -38,13 +53,16 @@ function shop_card_state($ip) {
 	if (!$c['on'] || shop_acc_current() || !empty($_SESSION['shop_card_played'])) { return $out; }
 	$r = fb_row("SELECT COUNT(*) AS n FROM ".fb_t('tp_shop_card_plays')." WHERE ip_hash = ? AND created_at > ?", 'ss', array(shop_card_ip_hash($ip), date('Y-m-d H:i:s', time() - $c['days'] * 86400)));
 	$out['eligible'] = !$r || (int)$r['n'] < SHOP_CARD_PER_IP;
+	if ($out['eligible']) { $out['game'] = shop_card_game_of_session(); }
 	return $out;
 }
 
 // the third card: makes the voucher of this game. Returns ok + code, until (date), percent, min, days, or ok false + error
-function shop_card_play($ip) {
+function shop_card_play($ip, $game = '') {
 	$st = shop_card_state($ip);
 	if (!$st['eligible']) { return array('ok' => false, 'error' => 'Das Spiel gibt es gerade nicht.'); }
+	// the game that was played: the one the browser says when it is switched on, else the one of this visit
+	$game = in_array((string)$game, shop_card_games(), true) ? (string)$game : shop_card_game_of_session();
 	$alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; $code = '';
 	for ($try = 0; $try < 12; $try++) {
 		$k = 'KARTE-';
@@ -56,7 +74,7 @@ function shop_card_play($ip) {
 	$ok = fb_exec("INSERT INTO ".fb_t('tp_shop_coupons')." (code, note, kind, value, max_discount_cents, min_order_cents, applies, valid_until, max_uses, per_guest, used, active, created_at)
 		VALUES (?, ?, 'percent', ?, 0, ?, 'all', ?, 1, 1, 0, 1, NOW())", 'ssiis', array($code, SHOP_CARD_NOTE, (int)$st['percent'], (int)$st['min'], $until));
 	if (!$ok) { return array('ok' => false, 'error' => 'Das hat gerade nicht geklappt. Bitte versuche es später noch einmal.'); }
-	fb_exec("INSERT INTO ".fb_t('tp_shop_card_plays')." (ip_hash, code, created_at) VALUES (?, ?, NOW())", 'ss', array(shop_card_ip_hash($ip), $code));
+	fb_exec("INSERT INTO ".fb_t('tp_shop_card_plays')." (ip_hash, code, game, created_at) VALUES (?, ?, ?, NOW())", 'sss', array(shop_card_ip_hash($ip), $code, $game));
 	$_SESSION['shop_card_played'] = 1;
 	return array('ok' => true, 'code' => $code, 'until' => date('d.m.Y', strtotime($until)), 'percent' => (int)$st['percent'], 'min' => (int)$st['min'], 'days' => (int)$st['days']);
 }
@@ -65,5 +83,10 @@ function shop_card_play($ip) {
 function shop_card_stats() {
 	shop_ensure_schema();
 	$r = fb_row("SELECT COUNT(*) AS n, COALESCE(SUM(used), 0) AS u FROM ".fb_t('tp_shop_coupons')." WHERE note = ?", 's', array(SHOP_CARD_NOTE));
-	return array('made' => $r ? (int)$r['n'] : 0, 'used' => $r ? (int)$r['u'] : 0);
+	// per game: how often it was played and how many of its vouchers were redeemed (the lines of the games are kept for 90 days)
+	$by = array();
+	foreach (fb_rows("SELECT p.game AS g, COUNT(*) AS n, COALESCE(SUM(c.used), 0) AS u FROM ".fb_t('tp_shop_card_plays')." p LEFT JOIN ".fb_t('tp_shop_coupons')." c ON c.code = p.code GROUP BY p.game") as $row) {
+		$by[(string)$row['g']] = array('made' => (int)$row['n'], 'used' => (int)$row['u']);
+	}
+	return array('made' => $r ? (int)$r['n'] : 0, 'used' => $r ? (int)$r['u'] : 0, 'by' => $by);
 }

@@ -52,6 +52,16 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-14 == mySeat v6.88.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu: zwei weitere Minispiele neben dem Kartenspiel, die denselben Gutschein freischalten (10 %, einmal einloesbar, gleiche Begrenzungen: ein Spiel pro Besuch, 3 Spiele pro Anschluss und Gueltigkeitszeitraum): ein RAD und ein RUBBELLOS. Alle drei sehen nach vier Versuchen aus, beim dritten kommt der Gutschein, der vierte findet nie statt; erst beim dritten Schritt wird der Gutschein angelegt (der Server wird vorher nicht gefragt, wer vorher aufhoert, hat nichts verbraucht).
+ * Rad (order/cardgame_wheel.js): acht Felder (vier "10 %", vier Motive), vier Marken darunter, "bis zu vier Drehungen". Drehung 1 und 2 bleiben auf einem Motivfeld (nie zweimal auf demselben), die dritte auf einem "10 %"-Feld; die vierte Marke wird abgedunkelt. Mit "Bewegung reduzieren" dreht es sich nicht.
+ * Rubbellos (order/cardgame_scratch.js): vier Rubbelfelder im 2x2-Raster wie die vier Karten; nacheinander drei frei rubbeln (ein angefangenes Feld erst fertig), unter den ersten beiden ein Motiv, unter dem dritten "10 % Gutschein", das vierte bleibt zugedeckt. "Alles aufdecken" deckt das naechste Feld auf (Tastatur, Sprachsteuerung).
+ * Aufbau: order/cardgame.js ist jetzt die Huelle (Zeitpunkt, Hinweis, Dialog, Ergebnis mit Code, Anfrage an den Server); jedes Spiel ist eine eigene Datei (cardgame_cards.js, cardgame_wheel.js, cardgame_scratch.js), die nur geladen wird, wenn sie dran ist. Die Version der Spiel-Dateien kommt als data-v am Skript-Tag der Seite.
+ * Zufall: Pro Besuch gibt es genau ein Spiel; welches, entscheidet der Zufall unter den eingeschalteten (gleich verteilt, fuer den ganzen Besuch dasselbe, Sitzung). Einstellungen > Lieferservice > Minispiel: "Karten", "Rad", "Rubbellos" einzeln schaltbar; STANDARD: alle drei an (cardgame_g_cards / _wheel / _scratch), das Minispiel selbst bleibt ueber "Minispiel anbieten" (cardgame_on) geschaltet. Keiner an = die Karten.
+ * Statistik: die Tabelle tp_shop_card_plays hat eine neue Spalte "game" (cards, wheel, scratch; aeltere Zeilen = cards, wird beim ersten Aufruf angelegt); die Einstellungsseite zeigt je Spiel, wie oft es gespielt und eingeloest wurde (letzte 90 Tage).
+ * Hilfetexte zum Spiel auf der Einstellungsseite berichtigt (die Regel "ein Gutschein pro Person" gilt seit v6.85.0 nicht mehr).
+
 2026-11-14 == mySeat v6.87.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Kartenspiel: neues Aufdecken der Karten (order/cardgame.css), nach dem Vorbild eines Card-Draw-Videos: Flip in 0,3 s mit kleinem Bogen, Squash beim Aufsetzen (kurz breiter und flacher, dann zurueck), ein Ring um die Karte, der waechst und ausblendet (Edge Glow), und ein Glanz, der ueber die Karte laeuft; bei der dritten Karte (dem Gutschein) staerker, dazu Strahlen und Funken. Alles nur transform und opacity. Mit "Bewegung reduzieren" entfallen die neuen Effekte, die Karte wechselt nur ruhig.

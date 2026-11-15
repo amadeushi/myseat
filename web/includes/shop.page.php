@@ -381,15 +381,26 @@ $sh_secret = function ($label, $value, $hint = '') use ($sh_e) {
 		<?php $sh_cb('addon_on', 'Zugabe an der Kasse anbieten'); ?>
 		<?php $sh_row('sh-adm', 'addon_min', 'Angebot ab Warenwert', '€', '', '', 'decimal'); ?>
 
-		<h4 class="sh-sub">Kartenspiel</h4>
-		<?php $sh_help('Ein kleines Spiel für Gäste ohne Konto, die eine Weile im Shop sind, ohne zu bestellen: vier verdeckte Karten, drei werden aufgedeckt, die dritte zeigt einen persönlichen Gutschein.', '<b>Ablauf:</b> Nach der eingestellten Zeit erscheint unten ein kleiner Hinweis "Kleines Spiel gefällig?". Wer spielt, deckt drei Karten auf und bekommt mit der dritten einen Gutschein mit eigenem Code (KARTE-XXXX), der an der Kasse von selbst eingetragen wird. <b>Grenzen:</b> Der Gutschein gilt einmal und nur für die eingestellten Tage; jede Person (Telefonnummer oder E-Mail) kann insgesamt nur einen Gutschein aus dem Spiel einlösen; von derselben Adresse aus gibt es höchstens drei Spiele in dieser Zeit. Gäste mit Konto sehen das Spiel nicht, sie haben die Stempelkarte. Die Gutscheine des Spiels erscheinen nicht in deiner Gutscheinliste. Im Spiel steht nirgends etwas über Zufall oder Gewinnchance.'); ?>
-		<?php $sh_cb('cardgame_on', 'Kartenspiel anbieten'); ?>
+		<h4 class="sh-sub">Minispiel</h4>
+		<?php $sh_help('Ein kleines Spiel für Gäste ohne Konto, die eine Weile im Shop sind, ohne zu bestellen: drei Karten aufdecken, ein Rad drehen oder Felder freirubbeln. Es sieht nach vier Versuchen aus, beim dritten steht ein persönlicher Gutschein, davor nur Motive, der vierte kommt nie. Erst beim dritten Versuch wird der Gutschein angelegt.', '<b>Ablauf:</b> Nach der eingestellten Zeit erscheint unten ein kleiner Hinweis "Kleines Spiel gefällig?". Wer spielt, bekommt am Ende einen Gutschein mit eigenem Code (KARTE-XXXX), der an der Kasse von selbst eingetragen wird. <b>Grenzen:</b> Der Gutschein gilt einmal und nur für die eingestellten Tage; von derselben Adresse aus gibt es höchstens drei Spiele in dieser Zeit, und höchstens eines je Besuch. Gäste mit Konto sehen das Spiel nicht, sie haben die Stempelkarte. Die Gutscheine des Spiels erscheinen nicht in deiner Gutscheinliste. Im Spiel steht nirgends etwas über Zufall, Glück oder Gewinnchance.'); ?>
+		<?php $sh_cb('cardgame_on', 'Minispiel anbieten'); ?>
+		<p class="sh-hint">Welche Spiele sind im Lostopf? Jeder Besuch bekommt genau ein Spiel, und welches, entscheidet der Zufall unter den eingeschalteten (für den ganzen Besuch dasselbe). Alle drei laufen gleich ab: vier Versuche zur Auswahl, beim dritten steht der Gutschein, der vierte kommt nie. Alle schalten denselben Gutschein frei.</p>
+		<?php $sh_cb('cardgame_g_cards', 'Karten (vier Karten, drei werden aufgedeckt)'); ?>
+		<?php $sh_cb('cardgame_g_wheel', 'Rad (bis zu vier Drehungen, die dritte gewinnt)'); ?>
+		<?php $sh_cb('cardgame_g_scratch', 'Rubbellos (vier Felder, drei werden freigerubbelt)'); ?>
 		<?php $sh_row('sh-cgp', 'cardgame_percent', 'Gutschein', '%'); ?>
 		<?php $sh_row('sh-cgm', 'cardgame_min', 'Gilt ab Warenwert', '€', '', '', 'decimal'); ?>
 		<?php $sh_row('sh-cgd', 'cardgame_days', 'Gutschein gültig', 'Tage'); ?>
 		<?php $sh_row('sh-cga', 'cardgame_after', 'Das Spiel erscheint nach', 'Sekunden'); ?>
 		<?php $sh_cg = shop_card_stats(); ?>
 		<p class="sh-hint">Bisher gespielt: <?php echo (int)$sh_cg['made']; ?> mal, eingelöst: <?php echo (int)$sh_cg['used']; ?> mal.</p>
+		<?php
+		// per game (the lines of the games are kept for 90 days): what is played and redeemed more often
+		$sh_gn = array('cards' => 'Karten', 'wheel' => 'Rad', 'scratch' => 'Rubbellos');
+		$sh_gl = array();
+		foreach ($sh_gn as $sh_gk => $sh_gt) { if (isset($sh_cg['by'][$sh_gk])) { $sh_gl[] = $sh_gt.': '.(int)$sh_cg['by'][$sh_gk]['made'].' gespielt, '.(int)$sh_cg['by'][$sh_gk]['used'].' eingelöst'; } }
+		if (count($sh_gl) > 1) { echo '<p class="sh-hint">Je Spiel (letzte 90 Tage): '.htmlspecialchars(implode(' · ', $sh_gl), ENT_QUOTES, 'UTF-8').'.</p>'; }
+		?>
 		<?php
 		// how long guests take from the first page to the order: the basis for "Das Spiel erscheint nach" (measured with every order since this was switched on)
 		$sh_vs = shop_visit_stats(30);
