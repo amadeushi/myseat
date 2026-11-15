@@ -1,4 +1,4 @@
-/* Minispiel der Bestellseite: nach einer Weile im Shop, ohne zu bestellen, wird einem Gast ohne Konto ein kleines Spiel angeboten (Karten aufdecken, ein Rad drehen oder ein Feld freirubbeln).
+/* Minispiel der Bestellseite: nach einer Weile auf der Seite (nur im Arbeitsspeicher gezählt, nur bei sichtbarem Tab), ohne zu bestellen, wird einem Gast ohne Konto ein kleines Spiel angeboten (Karten aufdecken, ein Rad drehen oder ein Feld freirubbeln).
    Am Ende steht ein persönlicher Gutschein (web/classes/shop_cardgame.class.php macht ihn; der Server entscheidet, ob und welches Spiel gerade angeboten wird, card_state).
    Diese Datei ist die Hülle: Zeitpunkt, Hinweis unten, Dialog, Ergebnis mit Code. Jedes Spiel ist eine eigene Datei (cardgame_cards.js, cardgame_wheel.js, cardgame_scratch.js), die erst geladen wird,
    wenn sie dran ist, und sich als window.AmadeusGames.<name> meldet: { title, sub, count, mount(stage, api) }. Die Spiele melden nur das Ende mit api.win(), den Server fragt api.play().
@@ -8,13 +8,11 @@
 	'use strict';
 	var me = document.currentScript;
 	var AFTER = Math.max(15, +(me && me.dataset.after) || 60) * 1000, VER = (me && me.dataset.v) || '';
-	var KEY = 'amadeusCardGame', T0 = 'amadeusVisitT0', PROMO = 'amadeusPromoCode';
+	var KEY = 'amadeusCardGame', PROMO = 'amadeusPromoCode';
 	var FAIL = 'Das hat gerade nicht geklappt. Bitte versuche es später noch einmal.';
 	var OFFER = { cards: 'Such dir drei Karten aus.', wheel: 'Dreh am Rad.', scratch: 'Rubbel drei Felder frei.' };
 	function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 	function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
-	function ssGet(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }
-	function ssSet(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }
 	function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 	function fmt(c) { return (c / 100).toFixed(2).replace('.', ',').replace(',00', '') + ' €'; }
 	function reduced() { return !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); }
@@ -23,13 +21,16 @@
 	var st = {}; try { st = JSON.parse(lsGet(KEY) || '{}') || {}; } catch (e) {}
 	if (st.done || (st.no && Date.now() - st.no < 14 * 86400000)) { return; }
 
-	// time on the shop of this visit (a tab session), counted from the first page
-	var t0 = +ssGet(T0) || 0;
-	if (!t0) { t0 = Date.now(); ssSet(T0, String(t0)); }
+	// time the guest has looked at this page: counted in memory only (nothing is stored in the browser for it), and only while the tab is visible,
+	// so a tab that was left open for hours does not bring the time with it and the game does not appear the moment the guest comes back
+	var seen = 0, lastTick = Date.now();
 	var cfg = null, offerEl = null, timer = setInterval(tick, 3000);
 	function dialogOpen() { return !!document.querySelector('dialog[open]'); }
 	function tick() {
-		if (document.visibilityState !== 'visible' || dialogOpen() || Date.now() - t0 < AFTER) { return; }
+		var now = Date.now();
+		if (document.visibilityState === 'visible') { seen += Math.min(now - lastTick, 4000); }
+		lastTick = now;
+		if (document.visibilityState !== 'visible' || dialogOpen() || seen < AFTER) { return; }
 		clearInterval(timer);
 		fetch('api.php?op=card_state', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (r) {
 			if (r && r.ok && r.eligible) { cfg = r; showOffer(); }

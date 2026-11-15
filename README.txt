@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-15 == mySeat v6.90.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geaendert (Minispiel, Datenschutz): Die Zeit bis zum Angebot ("Das Spiel erscheint nach", cardgame_after) wird nicht mehr im Browser gespeichert. Bisher stand der Besuchsbeginn als amadeusVisitT0 im sessionStorage; das war fuer die Funktion nicht erforderlich (Paragraph 25 TDDDG), weil es vor der Entscheidung des Gastes zum Spielen geschah. Jetzt zaehlt cardgame.js die Sekunden nur in einer Variable im Arbeitsspeicher der geoeffneten Seite, und nur, solange der Tab sichtbar ist. Folgen: Es wird nichts mehr im Browser abgelegt, ein Tab, der stundenlang im Hintergrund lag, bringt keine Zeit mit (das Spiel erscheint nicht sofort bei der Rueckkehr, sondern nach der eingestellten Zeit sichtbarer Anschauzeit), und ein Neuladen der Seite oder der Weg ueber die Kasse beginnt die Zaehlung von vorn. Gespeichert bleiben nur localStorage amadeusCardGame (gespielt oder abgelehnt) und amadeusPromoCode. Der Datenschutz-Absatz "Minispiel" auf amadeus-hildesheim.de nennt jetzt die Anfrage vorab (der Server rechnet die Adresse kurz in den Pruefwert um, ohne zu speichern), den Hinweis auf "abgelehnt" und keinen sessionStorage mehr.
+
 2026-11-15 == mySeat v6.89.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geaendert (Kasse): Der Hinweis zur Handynummer steht jetzt direkt unter dem Telefonfeld (vorher als eigener Absatz unter dem ganzen Raster, also unter dem Feld "Anmerkung") und ist ein Satz: "Keine Handynummer erkannt: Du bekommst keine SMS zur Bestellung." Neue Regel .co-f .co-hint in order/shop.css (kleinere Schrift, kein oberer Abstand).
