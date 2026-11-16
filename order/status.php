@@ -228,6 +228,18 @@ $delivery = $order && $order['type'] === 'delivery';
 		<?php endif; ?>
 
 		<?php
+			// Zeus Ride while the guest waits (the phone is in the hand anyway): a small hint to the game, in a new tab so the status page and the live map stay open. Only while the game is on and the order is on its way
+			$zrc = shop_ride_cfg();
+			if ($zrc['on'] && $zrc['tiers'] && in_array($st, array('new', 'accepted', 'preparing', 'ready', 'delivering'), true)):
+		?>
+		<div class="st-box st-direct st-ride">
+			<h2>Während du wartest</h2>
+			<p>Zeus Ride: Fahr mit dem Lieferroller durch Hildesheim und sammle Zeus-Münzen. Dafür gibt es Rabatt auf deine nächste Bestellung.</p>
+			<p><a class="cart-go" href="ride.php" target="_blank" rel="noopener">Zeus Ride fahren</a></p>
+		</div>
+		<?php endif; ?>
+
+		<?php
 			// stamp card: what this order brings (or brought) the guest; the stamp lands once, when the finished order is seen first
 			if ($st !== 'cancelled' && $st !== 'failed' && shop_stamp_cfg()['on']):
 				$sKeys = shop_coupon_guest_keys($order['phone'], $order['email']);

@@ -52,6 +52,12 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-16 == mySeat v6.92.0 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Neu (Zeus Ride): Der Lieferbeleg der Disposition (web/bon.php, 72 mm, bei Lieferungen) druckt einen Block "ZEUS RIDE": was das Spiel ist (ohne Muenzzahlen: "Dafuer gibt es Rabatt auf deine naechste Bestellung."), ein QR-Code auf amds.at/ride, die Adresse und die Kleinschrift (einmal pro Person, Tage, Warenwert). Gebaut wie der Block "DIREKT BEI UNS" der Uber- und Lieferando-Belege (QR als SVG), neue Funktion shop_slip_ride_html in web/classes/shop_ride.class.php. Er erscheint nur, solange Zeus Ride eingeschaltet ist und der neue Schalter "Zeus Ride auf dem Lieferbeleg drucken" (ride_slip, Standard an) an ist; bei Abholungen nicht. Er steht unter dem Block der Plattform-Bestellungen, falls der auch gedruckt wird.
+ * Neu (Statusseite): Solange eine Bestellung unterwegs ist (eingegangen bis unterwegs), zeigt die Statusseite (order/status.php) den Hinweis "Waehrend du wartest": Zeus Ride mit Knopf, der in einem neuen Tab oeffnet, damit die Statusseite mit der Karte offen bleibt. Nur wenn Zeus Ride an ist.
+ * amadeus.delivery (nicht Teil von mySeat): neuer Abschnitt "Zeus Ride" auf der Startseite und Eintrag "Zeus Ride" in der Fusszeile aller Seiten, beide fuehren auf https://amds.at/ride.
+
 2026-11-16 == mySeat v6.91.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Geaendert (Zeus Ride): Ein gewonnener Gutschein bleibt sichtbar. Der Code steht mit Knopf "Kopieren", Rabatt, Warenwert und Ablaufdatum dauerhaft unter dem Spiel, im Startbild und in jedem Ende-Bild, damit ihn der Gast von Hand im Shop einfuegen kann (bisher stand nach dem Gewinn nur "Du hast deinen Gutschein schon"). Der Server merkt den Code in der Sitzung, solange der Gutschein gilt und nicht eingeloest ist (shop_ride_state, Feld have); der Browser merkt Code, Prozent, Warenwert und Datum im Eintrag amadeusPromoCode (die Kasse liest davon nur den Code). Neu im Ende-Bild: "Von diesem Anschluss gibt es keinen weiteren Gutschein.", wenn die Grenze der Adresse erreicht ist. Die Leinwand laesst jetzt Platz fuer alles unter dem Spiel (Gutscheinzeile, Leiste, Musikzeile).

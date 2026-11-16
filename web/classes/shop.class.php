@@ -377,6 +377,7 @@ function shop_defaults() {
 		'cardgame_on' => '0',       // "Kartenspiel": a guest without an account who has been on the order page for a while is offered four cards, the third shows a personal voucher (web/classes/shop_cardgame.class.php); off until the owner switches it on
 		'cardgame_g_cards' => '1', 'cardgame_g_wheel' => '1', 'cardgame_g_scratch' => '1',   // which mini games are in the draw (cards, wheel, scratch card): every visit gets exactly one of the switched-on games, which one is chance (shop_card_game_of_session); the game itself runs when "cardgame_on" is on
 		'cardgame_percent' => '10', 'cardgame_min' => '15', 'cardgame_days' => '7', 'cardgame_after' => '60',   // percent off the goods, from this goods value (euro), valid for this many days, the game appears after this many seconds on the shop
+		'ride_slip' => '1',         // Zeus Ride on the paper slip of a delivery (QR code and explanation, web/bon.php), while the game is on
 		'ride_on' => '0',           // "Zeus Ride": the pixel game on order/ride.php (web/classes/shop_ride.class.php); off until the owner switches it on
 		'ride_lo_min' => '20', 'ride_lo_percent' => '5', 'ride_min' => '50', 'ride_percent' => '10', 'ride_hi_min' => '70', 'ride_hi_percent' => '20',   // three steps: coins (of 79) and percent off the goods: consolation prize, voucher, high score (0 percent = step off)
 		'ride_min_order' => '15', 'ride_days' => '7',   // from this goods value (euro), valid for this many days

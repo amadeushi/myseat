@@ -416,6 +416,7 @@ $sh_secret = function ($label, $value, $hint = '') use ($sh_e) {
 		<h4 class="sh-sub">Zeus Ride</h4>
 		<?php $sh_help('Ein kleines Pixelspiel auf einer eigenen Seite (<code>/order/ride.php</code>): Der Gast fährt mit dem Lieferroller durch Hildesheim und sammelt Zeus-Münzen. Ab der eingestellten Münzzahl bekommt er einen persönlichen Gutschein.', '<b>Ablauf:</b> Die Seite ist ein Link (Websites, QR-Code). Wer genug Münzen hat, bekommt am Ende einen Code (ZEUS-XXXX), der an der Kasse von selbst eingetragen wird. <b>Grenzen:</b> Der Gutschein gilt einmal und nur für die eingestellten Tage. Von derselben Adresse aus gibt es zusammen mit den Minispielen höchstens drei Gutscheine in dieser Zeit, und höchstens einen je Besuch. Der Server prüft die Laufnummer, die Zeit und die höchstmögliche Münzzahl; ganz fälschungssicher ist ein Spiel im Browser nicht, der Schaden bleibt durch die Grenzen klein. Ausgeschaltet gibt es die Seite für Gäste nicht, du selbst siehst sie als Mitarbeiter trotzdem (zum Testen). Im Spiel steht nirgends etwas über Zufall oder Gewinnchance.'); ?>
 		<?php $sh_cb('ride_on', 'Zeus Ride einschalten'); ?>
+		<?php $sh_cb('ride_slip', 'Zeus Ride auf dem Lieferbeleg drucken (Erklärung und QR-Code, bei jeder Lieferung)'); ?>
 		<p class="sh-hint">Drei Stufen: Wer die Münzen einer Stufe erreicht, bekommt den Gutschein der höchsten erreichten Stufe. 0 Prozent schaltet eine Stufe aus.</p>
 		<?php $sh_row('sh-rdlm', 'ride_lo_min', 'Trostpreis ab', 'Münzen (von 79)'); ?>
 		<?php $sh_row('sh-rdlp', 'ride_lo_percent', 'Trostpreis', '%'); ?>
