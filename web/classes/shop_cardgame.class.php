@@ -40,7 +40,7 @@ function shop_card_gc() {
 	$last = (int)shop_setting('cardgame_gc');
 	if (time() - $last < 86400) { return; }
 	shop_setting_set('cardgame_gc', (string)time());
-	fb_exec("DELETE FROM ".fb_t('tp_shop_coupons')." WHERE note = ? AND used = 0 AND valid_until < ?", 'ss', array(SHOP_CARD_NOTE, date('Y-m-d H:i:s', time() - 30 * 86400)));
+	fb_exec("DELETE FROM ".fb_t('tp_shop_coupons')." WHERE note IN (?, ?) AND used = 0 AND valid_until < ?", 'sss', array(SHOP_CARD_NOTE, 'Zeus Ride', date('Y-m-d H:i:s', time() - 30 * 86400)));   // the vouchers of the card game and of Zeus Ride (shop_ride.class.php)
 	fb_exec("DELETE FROM ".fb_t('tp_shop_card_plays')." WHERE created_at < ?", 's', array(date('Y-m-d H:i:s', time() - 90 * 86400)));
 }
 

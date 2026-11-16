@@ -377,6 +377,9 @@ function shop_defaults() {
 		'cardgame_on' => '0',       // "Kartenspiel": a guest without an account who has been on the order page for a while is offered four cards, the third shows a personal voucher (web/classes/shop_cardgame.class.php); off until the owner switches it on
 		'cardgame_g_cards' => '1', 'cardgame_g_wheel' => '1', 'cardgame_g_scratch' => '1',   // which mini games are in the draw (cards, wheel, scratch card): every visit gets exactly one of the switched-on games, which one is chance (shop_card_game_of_session); the game itself runs when "cardgame_on" is on
 		'cardgame_percent' => '10', 'cardgame_min' => '15', 'cardgame_days' => '7', 'cardgame_after' => '60',   // percent off the goods, from this goods value (euro), valid for this many days, the game appears after this many seconds on the shop
+		'ride_on' => '0',           // "Zeus Ride": the pixel game on order/ride.php (web/classes/shop_ride.class.php); off until the owner switches it on
+		'ride_lo_min' => '20', 'ride_lo_percent' => '5', 'ride_min' => '50', 'ride_percent' => '10', 'ride_hi_min' => '70', 'ride_hi_percent' => '20',   // three steps: coins (of 79) and percent off the goods: consolation prize, voucher, high score (0 percent = step off)
+		'ride_min_order' => '15', 'ride_days' => '7',   // from this goods value (euro), valid for this many days
 		'stamp_on' => '1',          // stamp card: every finished order is a stamp, a full card becomes a voucher (see shop_stamp_*)
 		'stamp_percent' => '10', 'stamp_goal' => '5', 'stamp_months' => '12', 'voucher_days' => '90',
 		'promo_code_uber_eats' => 'ZEUS10-U', 'promo_code_lieferando' => 'ZEUS10-L', 'promo_percent' => '10', 'promo_min_cents' => '1500', 'promo_until' => '2027-01-31',   // "order directly with us" block on the slip of a platform order: only while the coupon of that code exists (shop_promo_for_source)
@@ -3499,7 +3502,7 @@ function shop_me_coupon_row($c) {
 }
 function shop_me_coupons() {
 	$out = array();
-	foreach (fb_rows("SELECT * FROM ".fb_t('tp_shop_coupons')." WHERE note <> 'Kartenspiel' ORDER BY active DESC, created_at DESC, id DESC") as $c) { $out[] = shop_me_coupon_row($c); }   // the vouchers of the card game are many and made by themselves: the settings page counts them
+	foreach (fb_rows("SELECT * FROM ".fb_t('tp_shop_coupons')." WHERE note NOT IN ('Kartenspiel', 'Zeus Ride') ORDER BY active DESC, created_at DESC, id DESC") as $c) { $out[] = shop_me_coupon_row($c); }   // the vouchers of the card game and of Zeus Ride are many and made by themselves: the settings page counts them
 	return $out;
 }
 function shop_me_save_coupon($d) {
@@ -4068,6 +4071,7 @@ require_once __DIR__.'/shop_tours.class.php';
 require_once __DIR__.'/shop_flags.class.php';
 require_once __DIR__.'/shop_offers.class.php';
 require_once __DIR__.'/shop_cardgame.class.php';
+require_once __DIR__.'/shop_ride.class.php';
 require_once __DIR__.'/shop_visit.class.php';
 require_once __DIR__.'/shop_push.class.php';
 require_once __DIR__.'/shop_issue.class.php';

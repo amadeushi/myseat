@@ -104,6 +104,16 @@ if ($op === 'card_play') {
 	api_out(shop_card_play(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '', isset($body['game']) ? (string)$body['game'] : ''));
 }
 
+// Zeus Ride (the game on order/ride.php): a run starts (POST, gives the one-time run number), a run ends (POST, reports the coins, makes the voucher from the coin minimum); web/classes/shop_ride.class.php
+if ($op === 'ride_start') {
+	if ($_SERVER['REQUEST_METHOD'] !== 'POST') { api_out(array('ok' => false, 'error' => 'Das Spiel gibt es gerade nicht.'), 405); }
+	api_out(shop_ride_start(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : ''));
+}
+if ($op === 'ride_finish') {
+	if ($_SERVER['REQUEST_METHOD'] !== 'POST') { api_out(array('ok' => false, 'error' => 'Das Spiel gibt es gerade nicht.'), 405); }
+	api_out(shop_ride_finish(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '', isset($body['run']) ? $body['run'] : '', isset($body['coins']) ? $body['coins'] : 0));
+}
+
 // the add-on of the checkout ("Zugabe an der Kasse"): the one item this cart is offered right now, or null; the same function decides when the order is placed
 if ($op === 'addon') {
 	$lines = (isset($body['lines']) && is_array($body['lines'])) ? array_slice($body['lines'], 0, 60) : array();

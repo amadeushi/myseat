@@ -1,0 +1,18 @@
+Musik von Zeus Ride (order/ride.php)
+
+Datei:    midnight_drive.m4a  (AAC, 128 kbps, 48 kHz, Stereo, 203,6 Sekunden)
+Titel:    Midnight Drive
+Autor:    congusbongus (https://soundcloud.com/congus-bongus/midnight-drive)
+Quelle:   https://opengameart.org/content/midnight-drive
+          Datei midnight_drive.ogg (Original, Ogg Vorbis, 48 kHz, 3,5 MB)
+Lizenz:   CC0 1.0 (Public Domain Dedication), laut der Seite des Stuecks; die Seite listet es unter "8-bit Chiptune commercial ok"
+          https://creativecommons.org/publicdomain/zero/1.0/
+Geladen:  2026-11-16
+
+Bearbeitung: Das Original (Ogg) wurde ohne Aenderung am Klang in AAC (m4a) umgewandelt, weil iPhones Ogg nicht zuverlaessig abspielen.
+Im Spiel (order/ride.js) wird beim Laden das Ende des Stuecks in den Anfang eingeblendet, damit die Endlosschleife keine Stille hat.
+
+CC0 verlangt keine Namensnennung und erlaubt die gewerbliche Nutzung und Bearbeitung. Wir nennen den Autor trotzdem auf der Spielseite.
+Die Lizenzangabe auf OpenGameArt traegt der Autor selbst ein; die Seite wurde am Tag des Ladens angesehen.
+
+Nicht eingebaut: Starlight City von Zane Little Music, CC0, https://opengameart.org/content/starlight-city-loop-included

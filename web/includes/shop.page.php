@@ -413,6 +413,21 @@ $sh_secret = function ($label, $value, $hint = '') use ($sh_e) {
 		}
 		?>
 
+		<h4 class="sh-sub">Zeus Ride</h4>
+		<?php $sh_help('Ein kleines Pixelspiel auf einer eigenen Seite (<code>/order/ride.php</code>): Der Gast fährt mit dem Lieferroller durch Hildesheim und sammelt Zeus-Münzen. Ab der eingestellten Münzzahl bekommt er einen persönlichen Gutschein.', '<b>Ablauf:</b> Die Seite ist ein Link (Websites, QR-Code). Wer genug Münzen hat, bekommt am Ende einen Code (ZEUS-XXXX), der an der Kasse von selbst eingetragen wird. <b>Grenzen:</b> Der Gutschein gilt einmal und nur für die eingestellten Tage. Von derselben Adresse aus gibt es zusammen mit den Minispielen höchstens drei Gutscheine in dieser Zeit, und höchstens einen je Besuch. Der Server prüft die Laufnummer, die Zeit und die höchstmögliche Münzzahl; ganz fälschungssicher ist ein Spiel im Browser nicht, der Schaden bleibt durch die Grenzen klein. Ausgeschaltet gibt es die Seite für Gäste nicht, du selbst siehst sie als Mitarbeiter trotzdem (zum Testen). Im Spiel steht nirgends etwas über Zufall oder Gewinnchance.'); ?>
+		<?php $sh_cb('ride_on', 'Zeus Ride einschalten'); ?>
+		<p class="sh-hint">Drei Stufen: Wer die Münzen einer Stufe erreicht, bekommt den Gutschein der höchsten erreichten Stufe. 0 Prozent schaltet eine Stufe aus.</p>
+		<?php $sh_row('sh-rdlm', 'ride_lo_min', 'Trostpreis ab', 'Münzen (von 79)'); ?>
+		<?php $sh_row('sh-rdlp', 'ride_lo_percent', 'Trostpreis', '%'); ?>
+		<?php $sh_row('sh-rdm', 'ride_min', 'Gutschein ab', 'Münzen (von 79)'); ?>
+		<?php $sh_row('sh-rdp', 'ride_percent', 'Gutschein', '%'); ?>
+		<?php $sh_row('sh-rdhm', 'ride_hi_min', 'Highscore ab', 'Münzen (von 79)'); ?>
+		<?php $sh_row('sh-rdhp', 'ride_hi_percent', 'Highscore', '%'); ?>
+		<?php $sh_row('sh-rdo', 'ride_min_order', 'Gilt ab Warenwert', '€', '', '', 'decimal'); ?>
+		<?php $sh_row('sh-rdd', 'ride_days', 'Gutscheine gültig', 'Tage'); ?>
+		<?php $sh_rd = shop_ride_stats(); ?>
+		<p class="sh-hint">Bisher Gutscheine gemacht: <?php echo (int)$sh_rd['made']; ?>, eingelöst: <?php echo (int)$sh_rd['used']; ?>.<?php $sh_rl = array(); foreach ($sh_rd['by'] as $sh_rp => $sh_rv) { $sh_rl[] = (int)$sh_rp.' %: '.(int)$sh_rv['made'].' gemacht, '.(int)$sh_rv['used'].' eingelöst'; } echo $sh_rl ? ' ('.htmlspecialchars(implode(' · ', $sh_rl), ENT_QUOTES, 'UTF-8').')' : ''; ?></p>
+
 		<h4 class="sh-sub">Bestell-Chat <span class="sh-chip">in Erprobung</span></h4>
 		<?php $sh_help('Gäste bestellen im Gespräch mit Antwortknöpfen unter <code>/order/chat.php</code>. Preise und Liefergebiet kommen immer aus dem Shop, bei Allergien oder Beschwerden wird der Gast zum Anruf gebeten.', 'Ablauf: Gericht wählen, Adresse prüfen, Zeit und Zahlung, am Ende eine Zusammenfassung zum Bestätigen. Die Handynummer wird mit einem SMS-Code bestätigt, dafür muss das Kundenkonto eingeschaltet sein. Ausgeschaltet gibt es die Seite für Gäste nicht, du selbst siehst sie als Mitarbeiter trotzdem (zum Testen).'); ?>
 		<?php $sh_cb('chat_on', 'Bestell-Chat einschalten'); ?>
