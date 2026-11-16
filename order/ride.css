@@ -7,6 +7,12 @@ canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edge
 .rd-bar { display: flex; justify-content: center; gap: 22px; padding: 6px 12px calc(6px + env(safe-area-inset-bottom)); touch-action: manipulation; }
 .rd-bar a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; color: #b9aadf; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
 @media (hover: hover) and (pointer: fine) { .rd-bar a:hover { color: #f4eaff; } }
+/* the voucher the guest already has: always visible under the game, with the code to copy */
+.rd-have { margin: 0; padding: 4px 12px 0; text-align: center; font-size: 14px; color: #f4eaff; touch-action: manipulation; user-select: text; -webkit-user-select: text; }
+.rd-have[hidden] { display: none; }
+.rd-have strong { color: #ffd45a; letter-spacing: 0.08em; font-size: 16px; }
+.rd-have small { display: block; color: #b9aadf; font-size: 12px; }
+.rd-have .rd-link { min-height: 36px; }
 .rd-msg { align-self: center; justify-self: center; padding: 24px; text-align: center; user-select: text; -webkit-user-select: text; }
 .rd-msg h1 { margin: 0 0 8px; font-size: 28px; }
 .rd-off .rd-bar { align-self: start; }

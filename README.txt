@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-16 == mySeat v6.91.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Geaendert (Zeus Ride): Ein gewonnener Gutschein bleibt sichtbar. Der Code steht mit Knopf "Kopieren", Rabatt, Warenwert und Ablaufdatum dauerhaft unter dem Spiel, im Startbild und in jedem Ende-Bild, damit ihn der Gast von Hand im Shop einfuegen kann (bisher stand nach dem Gewinn nur "Du hast deinen Gutschein schon"). Der Server merkt den Code in der Sitzung, solange der Gutschein gilt und nicht eingeloest ist (shop_ride_state, Feld have); der Browser merkt Code, Prozent, Warenwert und Datum im Eintrag amadeusPromoCode (die Kasse liest davon nur den Code). Neu im Ende-Bild: "Von diesem Anschluss gibt es keinen weiteren Gutschein.", wenn die Grenze der Adresse erreicht ist. Die Leinwand laesst jetzt Platz fuer alles unter dem Spiel (Gutscheinzeile, Leiste, Musikzeile).
+
 2026-11-16 == mySeat v6.91.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu: Zeus Ride, ein kleines Pixelspiel auf einer eigenen Seite (order/ride.php, das Spiel in order/ride.js, die Gestaltung in order/ride.css). Der Gast faehrt mit dem Lieferroller durch Hildesheim (Marktplatz mit Rathaus und Rolandbrunnen, Dom mit Rosenstock, St. Michaelis, St. Andreas), sammelt Zeus-Muenzen (der Kopf der Dogge), holt Schnitzel (Leben) und Boosts (Blitz-Turbo, Magnet, Zeus-Schild) und hat einen Lebensbalken. Musik: "Midnight Drive" von congusbongus (CC0), in order/ride_music/ mit Beleg (LIZENZ.txt); ein Knopf schaltet den Ton aus (nur im Arbeitsspeicher gemerkt). Der Link kommt von den Websites und einem QR-Code (Kurzlink amds.at/ride).

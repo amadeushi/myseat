@@ -25,9 +25,10 @@ $music = is_file(__DIR__.'/ride_music/midnight_drive.m4a') ? 'ride_music/midnigh
 	<link rel="stylesheet" href="ride.css?v=<?php echo @filemtime(__DIR__.'/ride.css'); ?>"/>
 	<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
-<body class="rd<?php echo $show ? '' : ' rd-off'; ?>" data-token="<?php echo shop_h($_SESSION['shop_token']); ?>" data-tiers="<?php echo shop_h(json_encode($st['tiers'])); ?>" data-eligible="<?php echo $st['eligible'] ? '1' : '0'; ?>" data-dev="<?php echo $dev ? '1' : '0'; ?>" data-music="<?php echo shop_h($music); ?>">
+<body class="rd<?php echo $show ? '' : ' rd-off'; ?>" data-token="<?php echo shop_h($_SESSION['shop_token']); ?>" data-tiers="<?php echo shop_h(json_encode($st['tiers'])); ?>" data-eligible="<?php echo $st['eligible'] ? '1' : '0'; ?>" data-have="<?php echo shop_h($st['have'] ? json_encode($st['have']) : ''); ?>" data-dev="<?php echo $dev ? '1' : '0'; ?>" data-music="<?php echo shop_h($music); ?>">
 <?php if ($show): ?>
 	<div id="stage"><canvas id="c" width="180" height="320" role="img" aria-label="Zeus Ride: Du fährst einen weißen Lieferroller mit schwarzem Kasten durch Hildesheim, sammelst goldene Zeus-Münzen mit dem Kopf der Dogge, achtest auf deine Lebensleiste und holst dir Schnitzel und Boosts. Lenken mit einem Finger in die Wunschrichtung, am Rechner mit Pfeiltasten oder A und D."></canvas></div>
+	<p class="rd-have" id="rd-have" hidden></p>
 	<div class="rd-win" id="rd-win" role="status" hidden></div>
 	<noscript><p class="rd-msg">Für das Spiel braucht dein Browser JavaScript.</p></noscript>
 <?php else: ?>

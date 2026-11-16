@@ -35,7 +35,10 @@ function shop_ride_state($ip) {
 	shop_ensure_schema();
 	shop_card_gc();
 	$c = shop_ride_cfg();
-	$out = array('on' => $c['on'], 'eligible' => false, 'min' => $c['min'], 'tiers' => $c['tiers'], 'min_order' => $c['min_cents'], 'days' => $c['days']);
+	$out = array('on' => $c['on'], 'eligible' => false, 'min' => $c['min'], 'tiers' => $c['tiers'], 'min_order' => $c['min_cents'], 'days' => $c['days'], 'have' => null);
+	// the voucher this visit already won (kept in the session): shown again with its code as long as it is valid and not redeemed, so the guest can copy it
+	$w = (isset($_SESSION['shop_ride_won']) && is_array($_SESSION['shop_ride_won'])) ? $_SESSION['shop_ride_won'] : null;
+	if ($w && !empty($w['code'])) { $cp = shop_coupon_by_code($w['code']); if ($cp && (int)$cp['active'] && (int)$cp['used'] < (int)$cp['max_uses'] && (!$cp['valid_until'] || strtotime($cp['valid_until']) >= time())) { $out['have'] = $w; } }
 	if (!$c['on'] || !empty($_SESSION['shop_ride_won'])) { return $out; }
 	$r = fb_row("SELECT COUNT(*) AS n FROM ".fb_t('tp_shop_card_plays')." WHERE ip_hash = ? AND created_at > ?", 'ss', array(shop_card_ip_hash($ip), date('Y-m-d H:i:s', time() - $c['days'] * 86400)));
 	$out['eligible'] = !$r || (int)$r['n'] < SHOP_CARD_PER_IP;
@@ -62,7 +65,7 @@ function shop_ride_finish($ip, $run, $coins) {
 	$tier = null;   // the best step these coins reach
 	foreach ($st['tiers'] as $t) { if ($coins >= $t['min'] && ($tier === null || $t['percent'] > $tier['percent'])) { $tier = $t; } }
 	if ($tier === null) { return array('ok' => true, 'win' => false, 'why' => 'few', 'coins' => $coins); }
-	if (!$st['eligible']) { return array('ok' => true, 'win' => false, 'why' => 'have', 'coins' => $coins); }
+	if (!$st['eligible']) { return array('ok' => true, 'win' => false, 'why' => 'have', 'coins' => $coins, 'have' => $st['have']); }
 	$alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; $code = '';
 	for ($try = 0; $try < 12; $try++) {
 		$k = 'ZEUS-';
@@ -75,8 +78,9 @@ function shop_ride_finish($ip, $run, $coins) {
 		VALUES (?, ?, 'percent', ?, 0, ?, 'all', ?, 1, 1, 0, 1, NOW())", 'ssiis', array($code, SHOP_RIDE_NOTE, (int)$tier['percent'], (int)$st['min_order'], $until));
 	if (!$ok) { return array('ok' => false, 'error' => 'Das hat gerade nicht geklappt. Bitte versuche es später noch einmal.'); }
 	fb_exec("INSERT INTO ".fb_t('tp_shop_card_plays')." (ip_hash, code, game, created_at) VALUES (?, ?, 'ride', NOW())", 'ss', array(shop_card_ip_hash($ip), $code));
-	$_SESSION['shop_ride_won'] = 1;
-	return array('ok' => true, 'win' => true, 'coins' => $coins, 'code' => $code, 'until' => date('d.m.Y', strtotime($until)), 'percent' => (int)$tier['percent'], 'min_order' => (int)$st['min_order'], 'days' => (int)$st['days']);
+	$out = array('code' => $code, 'until' => date('d.m.Y', strtotime($until)), 'percent' => (int)$tier['percent'], 'min_order' => (int)$st['min_order'], 'days' => (int)$st['days']);
+	$_SESSION['shop_ride_won'] = $out;   // the visit has its voucher: no second one, and the code can be shown again (shop_ride_state)
+	return array_merge(array('ok' => true, 'win' => true, 'coins' => $coins), $out);
 }
 
 // for the settings page: how many vouchers the game made, how many were redeemed

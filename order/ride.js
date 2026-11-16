@@ -373,6 +373,20 @@
 	function finish(why) { st = 'end'; endWhy = why; endAt = performance.now(); report(); }
 	// ---- the server: a run starts (run number), a run ends (the coins; the voucher comes back when enough were collected)
 	function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+	// the voucher already won: the server tells (session), else this browser remembers it (amadeusPromoCode keeps code, percent, end date); shown under the game so the code can be copied
+	var haveEl = document.getElementById('rd-have'), HAVE = (function () {
+		var h = null; try { h = JSON.parse(B.have || 'null'); } catch (e) {}
+		if (!h) { try { var p = JSON.parse(localStorage.getItem('amadeusPromoCode') || 'null'), m = p && p.until ? /^(\d\d)\.(\d\d)\.(\d{4})$/.exec(p.until) : null; if (p && /^ZEUS-/.test(p.code || '') && m && new Date(+m[3], +m[2] - 1, +m[1], 23, 59, 59) >= new Date()) { h = p; } } catch (e) {} }
+		return (h && h.code) ? h : null;
+	})();
+	function copyCode(b, code) { try { navigator.clipboard.writeText(code).then(function () { b.textContent = 'Kopiert'; }, function () { b.textContent = 'Bitte von Hand kopieren'; }); } catch (e) { b.textContent = 'Bitte von Hand kopieren'; } }
+	function showHave(h) {
+		if (!haveEl || !h || !h.code) { return; }
+		HAVE = h;
+		haveEl.innerHTML = 'Dein Gutschein: <strong>' + esc(h.code) + '</strong> <button type="button" class="rd-link" data-rd="copy">Kopieren</button><small>' + esc(h.percent) + ' % Rabatt, ab ' + esc(fmtEur(h.min_order)) + ' Warenwert, bis ' + esc(h.until) + '. An der Kasse wird er eingetragen.</small>';
+		haveEl.dataset.code = h.code; haveEl.hidden = false; fit();
+	}
+	if (haveEl) { haveEl.addEventListener('click', function (ev) { var b = ev.target.closest('[data-rd="copy"]'); if (b) { copyCode(b, haveEl.dataset.code || ''); } }); }
 	function nextTier(n) { for (var i = 0; i < TIERS.length; i++) { if (TIERS[i].min > n) { return TIERS[i]; } } return null; }   // the next step above n coins (the server sends them ascending)
 	function fmtEur(c) { return (c / 100).toFixed(2).replace('.', ',').replace(',00', '') + ' €'; }
 	function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
@@ -411,7 +425,8 @@
 		api('ride_finish', { run: id, coins: n }).then(function (r) {
 			if (st !== 'end') { return; }
 			res = (r && r.ok) ? r : { err: true };
-			if (res.win) { lsSet('amadeusPromoCode', JSON.stringify({ code: res.code, at: Date.now() })); lsSet('amadeusCardGame', JSON.stringify({ done: Date.now(), code: res.code })); ELIG = false; showWin(res); }
+			if (res.win) { lsSet('amadeusPromoCode', JSON.stringify({ code: res.code, at: Date.now(), percent: res.percent, until: res.until, min_order: res.min_order })); lsSet('amadeusCardGame', JSON.stringify({ done: Date.now(), code: res.code })); ELIG = false; showWin(res); showHave(res); }
+			else if (res.have) { showHave(res.have); }
 		});
 	}
 	function showWin(r) {
@@ -422,6 +437,7 @@
 		winEl.dataset.code = r.code; winEl.hidden = false;
 	}
 	function hideWin() { if (winEl) { winEl.hidden = true; winEl.innerHTML = ''; } }
+	setTimeout(function () { showHave(HAVE); }, 0);
 	if (winEl) { winEl.addEventListener('click', function (ev) {
 		var b = ev.target.closest('[data-rd]'); if (!b) { return; }
 		if (b.dataset.rd === 'again') { begin(); return; }
@@ -502,7 +518,7 @@
 		if (st === 'ready') { ctx.fillStyle = 'rgba(11,7,22,.55)'; ctx.fillRect(0, 32, W, H); panel(8, 38, W - 16, 266);
 			tx('Zeus', W / 2, 46, 4, C.gold, C.pink, 'center'); tx('Ride', W / 2, 76, 4, C.teal, C.pink, 'center');
 			ctx.drawImage(ZEUSP, 0, 0, 24, 28, 32, 110, 48, 56); ctx.drawImage(SC[0], 0, 0, 30, 30, 96, 110, 60, 60);
-			if (ELIG) { TIERS.forEach(function (t, i) { tx('Ab ' + t.min + ' Münzen: ' + t.percent + ' %', W / 2, 168 + i * 10, 1, C.gold, C.dark, 'center'); }); } else { tx('Gutschein schon geholt.', W / 2, 168, 1, C.gold, C.dark, 'center'); }
+			if (ELIG) { TIERS.forEach(function (t, i) { tx('Ab ' + t.min + ' Münzen: ' + t.percent + ' %', W / 2, 168 + i * 10, 1, C.gold, C.dark, 'center'); }); } else { tx(HAVE ? 'Dein Gutschein: ' + HAVE.code : 'Gutschein schon geholt.', W / 2, 168, 1, C.gold, C.dark, 'center'); }
 			var cy0 = 168 + Math.max(1, ELIG ? TIERS.length : 1) * 10 + 4;
 			(CTL === 'halves' ? ['Halte links oder rechts,', 'um zu lenken.'] : CTL === 'fixed' ? ['Halte den Daumen auf den', 'Ring und zieh in die', 'Fahrtrichtung.'] : ['Finger auf den Bildschirm,', 'zieh in die Richtung,', 'in die du fahren willst.']).forEach(function (t, i) { tx(t, W / 2, cy0 + i * 11, 1, C.ink, C.dark, 'center'); });
 			tx('Am Rechner: Pfeiltasten.', W / 2, cy0 + 36, 1, C.dim, C.dark, 'center'); tx('Spring über die Sperren.', W / 2, cy0 + 47, 1, C.dim, C.dark, 'center');
@@ -517,7 +533,8 @@
 			var ry = 156;
 			if (res && res.win) { tx('Dein Gutschein:', W / 2, ry, 1, C.gold, C.dark, 'center'); tx(res.code, W / 2, ry + 14, 2, C.ink, C.pink, 'center'); var nx = nextTier(got); if (nx) { tx('Ab ' + nx.min + ' Münzen: ' + nx.percent + ' %', W / 2, 190, 1, C.dim, C.dark, 'center'); } }
 			else if (res && res.err) { tx('Gutschein gerade', W / 2, ry, 1, C.dim, C.dark, 'center'); tx('nicht möglich.', W / 2, ry + 12, 1, C.dim, C.dark, 'center'); }
-			else if (res && res.why === 'have') { tx('Du hast deinen', W / 2, ry, 1, C.dim, C.dark, 'center'); tx('Gutschein schon.', W / 2, ry + 12, 1, C.dim, C.dark, 'center'); }
+			else if (res && !ELIG && (res.have || HAVE)) { var hv = res.have || HAVE; tx('Dein Gutschein:', W / 2, ry, 1, C.gold, C.dark, 'center'); tx(hv.code, W / 2, ry + 14, 2, C.ink, C.pink, 'center'); }
+			else if (res && res.why === 'have') { tx('Von diesem Anschluss gibt es', W / 2, ry, 1, C.dim, C.dark, 'center'); tx('keinen weiteren Gutschein.', W / 2, ry + 12, 1, C.dim, C.dark, 'center'); }
 			else if (res && ELIG && nextTier(got)) { var nt = nextTier(got); tx('Noch ' + (nt.min - got) + (nt.min - got === 1 ? ' Münze' : ' Münzen'), W / 2, ry, 1, C.gold, C.dark, 'center'); tx('bis ' + nt.percent + ' % Rabatt.', W / 2, ry + 12, 1, C.gold, C.dark, 'center'); }
 			else if (!res) { tx('Einen Moment ...', W / 2, ry, 1, C.dim, C.dark, 'center'); }
 			if (endWhy === 'Kaputt!') { tx('Schnitzel füllen das Leben.', W / 2, 206, 1, C.dim, C.dark, 'center'); }
@@ -534,7 +551,7 @@
 		else { var rem = dt * SIM; while (rem > 1e-6) { var dd = Math.min(rem, 1 / 30); update(dd); rem -= dd; } }   // real frame time, so it runs evenly on 60 and 120 Hz screens
 		render(); requestAnimationFrame(frame);
 	}
-	function fit() { var bar = document.querySelector('.rd-bar'), s2 = Math.min(innerWidth / W, (innerHeight - (bar ? bar.offsetHeight : 0)) / H); if (s2 >= 2) { s2 = Math.floor(s2); } cv.style.width = Math.floor(W * s2) + 'px'; cv.style.height = Math.floor(H * s2) + 'px'; }
+	function fit() { var below = 0, s2; Array.prototype.forEach.call(document.querySelectorAll('.rd-bar, .rd-credit, .rd-have'), function (e) { below += e.hidden ? 0 : e.offsetHeight; }); s2 = Math.min(innerWidth / W, (innerHeight - below - 6) / H); if (s2 >= 2) { s2 = Math.floor(s2); } cv.style.width = Math.floor(W * s2) + 'px'; cv.style.height = Math.floor(H * s2) + 'px'; }
 	addEventListener('resize', fit); fit();
 	if (DEV) window.__ride = { snd: function () { return music.state(); }, signs: signs, ch: chunks, spr: { SC: SC, COIN: COIN, PKS: PKS, ZEUSP: ZEUSP, HEART: HEART }, life: function () { return life; }, fx: fx, pk: function () { return pk; }, pickups: pickups, hurt: hurt, st: function () { return st; }, car: car, TOTAL: TOTAL, NTOK: NTOK, start: function () { primary(); }, at: at, got: function () { return got; }, left: function () { return tleft; }, why: function () { return endWhy; }, chunks: function () { return Object.keys(chunks).length; }, force: function (v) { st = v; }, lm: LM, segs: segs, cam: cam };
 	requestAnimationFrame(frame);
