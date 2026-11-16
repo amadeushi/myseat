@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-16 == mySeat v6.92.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Behoben: Das Logo fehlte auf dem Reservierungsschild (web/reservation_bon.php) trotz der Korrektur aus v6.90.1 noch immer. Die Seite war in Ordnung (im Chrome-Druck erschien das Logo), also lag es am Druckweg des Geraets, und das Logo hing von mehreren Dingen ab: Download von der Website, weiss-auf-transparent, CSS-Filter, Canvas. Jetzt ist das Logo ein fertig schwarzes Bild auf weissem Grund von diesem Server (web/images/reservation-logo.png, 736 x 270 px, doppelte Druckaufloesung fuer 46 mm); Filter, Canvas und Download von der Website entfallen, es kann nichts mehr weiss auf weiss gedruckt werden. Laedt das Bild nicht, steht weiterhin der Name als Text. Geprueft: Chrome-PDF mit dem Bild (gleich scharf wie zuvor) und der echte Weg im versteckten Rahmen (Bild geladen, 46 mm breit, ohne Filter, Schild sichtbar im Druckmoment). Nicht geprueft: der Ausdruck auf dem echten Bondrucker.
+
 2026-11-16 == mySeat v6.92.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu (Zeus Ride): Der Lieferbeleg der Disposition (web/bon.php, 72 mm, bei Lieferungen) druckt einen Block "ZEUS RIDE": was das Spiel ist (ohne Muenzzahlen: "Dafuer gibt es Rabatt auf deine naechste Bestellung."), ein QR-Code auf amds.at/ride, die Adresse und die Kleinschrift (einmal pro Person, Tage, Warenwert). Gebaut wie der Block "DIREKT BEI UNS" der Uber- und Lieferando-Belege (QR als SVG), neue Funktion shop_slip_ride_html in web/classes/shop_ride.class.php. Er erscheint nur, solange Zeus Ride eingeschaltet ist und der neue Schalter "Zeus Ride auf dem Lieferbeleg drucken" (ride_slip, Standard an) an ist; bei Abholungen nicht. Er steht unter dem Block der Plattform-Bestellungen, falls der auch gedruckt wird.

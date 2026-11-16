@@ -74,8 +74,8 @@ $title = count($reservations) > 1 ? 'Reservierungsschilder '.$reservations[0]['r
 		body { width: 72mm; margin: 0 auto; font-family: 'Raleway', Arial, Helvetica, sans-serif; text-align: center; font-variant-numeric: lining-nums; }
 		.slip { width: 72mm; padding: 3mm 3.5mm 7mm; break-inside: avoid; }
 		.slip + .slip { break-before: page; page-break-before: always; }
-		/* the logo is white on transparent: print it black */
-		.logo { display: block; width: 46mm; height: auto; margin: 0 auto 2mm; filter: brightness(0); }
+		/* the logo is a finished black image on white (web/images/reservation-logo.png, from this server): no filter, no canvas, nothing the printing path could turn into white on white */
+		.logo { display: block; width: 46mm; height: auto; margin: 0 auto 2mm; }
 		.logo-text { font-size: 16pt; font-weight: 800; letter-spacing: .3em; text-transform: uppercase; margin-bottom: 3mm; }
 		.rule { border: 0; border-top: 1.1mm solid #000; margin: 0; }
 		.kind { margin-top: 3mm; font-size: 15pt; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; padding-left: .2em; }
@@ -108,7 +108,7 @@ $title = count($reservations) > 1 ? 'Reservierungsschilder '.$reservations[0]['r
 <?php foreach ($slips as $sl): $r = $sl['r']; $i = $sl['i']; $n = $sl['n']; $label = preg_replace('/^Tisch\s+/i', '', $sl['table']);
 	$ts = strtotime($r['reservation_date']); $dateText = $days[(int)date('w', $ts)].', '.date('d.m.Y', $ts); $time = substr($r['reservation_time'], 0, 5); $pax = (int)$r['reservation_pax']; ?>
 	<section class="slip">
-		<img class="logo" src="<?php echo $h(brand_logo_url()); ?>" alt="<?php echo $h($brand); ?>" onerror="this.outerHTML='&lt;div class=&quot;logo-text&quot;&gt;'+this.alt+'&lt;/div&gt;'"/>
+		<img class="logo" src="images/reservation-logo.png" width="736" height="270" alt="<?php echo $h($brand); ?>" onerror="this.outerHTML='&lt;div class=&quot;logo-text&quot;&gt;'+this.alt+'&lt;/div&gt;'"/>
 		<hr class="rule"/>
 		<div class="kind">Reservierung</div>
 		<div class="date"><?php echo $h($dateText); ?></div>
@@ -162,24 +162,11 @@ $title = count($reservations) > 1 ? 'Reservierungsschilder '.$reservations[0]['r
 			});
 			return chain.then(function () { document.body.className = ''; st.textContent = ''; });
 		};
-		// the logo is white on transparent. The CSS filter (brightness(0)) that turns it black is not applied by every printing path (a thermal printer prints the white logo as nothing),
-		// so the logo is painted black into a canvas of its own: it is a black image, whatever the printer does with filters. (Drawing needs no CORS; the pixels are never read.)
-		var blackLogos = function () {
-			Array.prototype.slice.call(document.querySelectorAll('img.logo')).forEach(function (im) {
-				try {
-					if (!im.naturalWidth) { return; }
-					var c = document.createElement('canvas'), g;
-					c.width = im.naturalWidth; c.height = im.naturalHeight; c.className = 'logo'; c.setAttribute('role', 'img'); c.setAttribute('aria-label', im.alt);
-					g = c.getContext('2d'); g.drawImage(im, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
-					im.parentNode.replaceChild(c, im);
-				} catch (e) {}
-			});
-		};
 		// the printer only gets the signs once the web fonts and the logo are in
 		window.addEventListener('load', function () {
 			var fonts = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
 			var imgs = Array.prototype.map.call(document.images, function (im) { return im.complete ? 0 : new Promise(function (ok) { im.onload = im.onerror = ok; }); });
-			Promise.all([fonts].concat(imgs)).then(function () { blackLogos(); fit(); if (parent !== window || auto) { return wait(150).then(printAll); } });
+			Promise.all([fonts].concat(imgs)).then(function () { fit(); if (parent !== window || auto) { return wait(150).then(printAll); } });
 		});
 	})();
 </script>
