@@ -332,6 +332,10 @@ $(document).ready(function() {
 				del_rep = selectedArray[ selectedIndex ].name;
 				del_row	= $("#" + del_id).parents('tr:first');
 
+				// a waiting-list entry with an e-mail address: offer "tell the guest" (pre-ticked); every other row never shows the tick
+				$('#wl-notify').prop('checked', true);
+				$('#wl-notify-label').css('display', $(selectedArray[ selectedIndex ]).data('wlmail') ? 'block' : 'none');
+
 				// reset every time the (shared, reused) modal opens, so a previous row's
 				// checked state can never carry over and silently enable "delete series"
 				$('#confirm-delete-all').prop('checked', false);
@@ -362,7 +366,8 @@ $(document).ready(function() {
 		 if(author_value.length>2){
 				$.ajax({
 					url: 'ajax/modify_entry.php',
-					data: 'action=DEL&cellid=' + del_id + '&button=' + del_button + '&repeatid=' + del_rep + '&author=' + author_value,
+					data: 'action=DEL&cellid=' + del_id + '&button=' + del_button + '&repeatid=' + del_rep + '&author=' + author_value
+						+ '&notify=' + (($('#wl-notify-label').css('display') !== 'none' && $('#wl-notify').prop('checked')) ? 1 : 0),
 					type: 'post',
 					cache: false,
 					dataType: 'html',
@@ -425,10 +430,15 @@ $(document).ready(function() {
 		var selected = $select.val();
 		var wasPending = $select.hasClass('st-PEN');
 		status_id = status_id.substring(5,30);
+		// cancelling a waiting-list entry that has an e-mail address: ask whether the guest gets the "no table" mail (the cancellation happens either way)
+		var notify = '';
+		if (selected === 'CXL' && $select.closest('tr').find('.delbtn').data('wlmail')) {
+			notify = '&notify=' + (confirm('Gast per Mail über die Absage informieren?\n\nOK = Mail senden\nAbbrechen = ohne Mail (die Reservierung wird trotzdem storniert)') ? 1 : 0);
+		}
 		$.ajax({
 		type: "POST",
 		url: "ajax/modify_status.php",
-		data: 'value=' + selected + '&id=' + status_id,
+		data: 'value=' + selected + '&id=' + status_id + notify,
 		success: function(result){
 			if ($.trim(result) !== 'OK') { location.reload(); return; }
 			// Storniert hides the reservation from this list entirely (and the footer's guest/table

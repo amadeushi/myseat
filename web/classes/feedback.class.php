@@ -124,6 +124,7 @@ function fb_find_due_reservations($hours_min = 24, $hours_max = 96) {
 		LEFT JOIN ".fb_t('tp_feedback')." f ON f.reservation_id = r.reservation_id
 		LEFT JOIN ".fb_t('tp_mail_optout')." o ON o.reservation_id = r.reservation_id
 		WHERE r.reservation_hidden = 0
+		AND r.reservation_wait = 0
 		AND o.reservation_id IS NULL
 		AND r.reservation_status <> 'NSW'
 		AND r.reservation_guest_email <> ''

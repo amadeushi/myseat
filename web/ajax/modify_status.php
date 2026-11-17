@@ -55,6 +55,10 @@ if ($value === 'CXL') {
 		.($was_pending ? ", reservation_approval='declined'" : '')
 		." WHERE reservation_id=".$id);
 	if ($was_pending) { appr_send_guest_mail($r, 'declined'); }
+	// a waiting-list booking that is cancelled (and not cancelled before): the guest gets the matching "no table" mail - only when the staff said yes in the question (notify=1)
+	elseif ((int)$r['reservation_wait'] === 1 && (int)$r['reservation_hidden'] === 0 && isset($_POST['notify']) && $_POST['notify'] === '1') {
+		try { appr_waitlist_declined($r); } catch (Throwable $e) { error_log('mySeat waitlist decline: '.$e->getMessage()); }
+	}
 	echo 'OK';
 	exit;
 }

@@ -119,6 +119,61 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 	);
 	$t = isset($tr[$lang]) ? $tr[$lang] : $tr['en'];
 
+// a booking the staff entered in the backend that fell onto the waiting list (the guest thinks of it as a reservation, the mail says "noted, not firm yet")
+	$twb = array(
+		'de' => array(
+			'title_ok'     => 'Deine Reservierung ist aufgenommen',
+			'lead_ok'      => 'Sie ist noch nicht fest. Wir prüfen es und melden uns, ob es klappt.',
+			'cancel_h'     => 'Doch verhindert?',
+			'cancel_t'     => 'Sag uns bitte Bescheid, dann ziehen wir deine Reservierung zurück.',
+			'cancel_open'  => 'Reservierung zurückziehen',
+			'confirm_text' => 'Möchtest du deine Reservierung wirklich zurückziehen?',
+			'confirm_btn'  => 'Ja, zurückziehen',
+			'keep'         => 'Nein, Reservierung behalten',
+			'done_title'   => 'Reservierung zurückgezogen',
+			'done_text'    => 'Wir haben deine Reservierung zurückgezogen. Wir hoffen, dich bald wieder bei uns zu sehen.',
+		),
+		'en' => array(
+			'title_ok'     => 'Your reservation is noted',
+			'lead_ok'      => 'It is not firm yet. We will check and let you know whether it works out.',
+			'cancel_h'     => 'Cannot make it?',
+			'cancel_t'     => 'Please let us know and we will withdraw your reservation.',
+			'cancel_open'  => 'Withdraw reservation',
+			'confirm_text' => 'Do you really want to withdraw your reservation?',
+			'confirm_btn'  => 'Yes, withdraw it',
+			'keep'         => 'No, keep my reservation',
+			'done_title'   => 'Reservation withdrawn',
+			'done_text'    => 'We have withdrawn your reservation. We hope to see you again soon.',
+		),
+	);
+// a guest on the waiting list has no table: the same page, but it must not say "your table is reserved" and has no calendar, arrival or share parts
+	$tw = array(
+		'de' => array(
+			'title_ok'     => 'Du stehst auf der Warteliste',
+			'lead_ok'      => 'Einen Tisch haben wir damit noch nicht für dich. Sagt jemand ab, schreiben wir dir.',
+			'cancel_h'     => 'Doch nicht mehr nötig?',
+			'cancel_t'     => 'Sag uns bitte Bescheid, dann nehmen wir dich von der Liste.',
+			'cancel_open'  => 'Von der Warteliste abmelden',
+			'confirm_text' => 'Möchtest du dich wirklich von der Warteliste abmelden?',
+			'confirm_btn'  => 'Ja, abmelden',
+			'keep'         => 'Nein, auf der Warteliste bleiben',
+			'done_title'   => 'Du bist abgemeldet',
+			'done_text'    => 'Wir haben dich von der Warteliste genommen. Wir hoffen, dich bald wieder bei uns zu sehen.',
+		),
+		'en' => array(
+			'title_ok'     => 'You are on the waiting list',
+			'lead_ok'      => 'That is not a table yet. If someone cancels, we will write to you.',
+			'cancel_h'     => 'No longer needed?',
+			'cancel_t'     => 'Please let us know and we will take you off the list.',
+			'cancel_open'  => 'Leave waiting list',
+			'confirm_text' => 'Do you really want to leave the waiting list?',
+			'confirm_btn'  => 'Yes, leave the list',
+			'keep'         => 'No, stay on the waiting list',
+			'done_title'   => 'You have left the waiting list',
+			'done_text'    => 'We have taken you off the waiting list. We hope to see you again soon.',
+		),
+	);
+
 	$h = function($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); };
 
 // input: from the emailed link / the lookup form (GET) or the confirm button (POST)
@@ -172,6 +227,15 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 		}
 	}
 
+// waiting-list row: swap in its own wording (the page for a table must not be shown to someone without one)
+	// - a guest who asked for the waiting list in the widget ("Contact Form") hears "waiting list"
+	// - a guest whose booking the staff entered in the backend never asked for a list: for them the reservation is "noted, not firm yet" (same words as their e-mail)
+	$is_wait = ($res && !empty($res['reservation_wait']));
+	if ($is_wait) {
+		$wl = isset($tr[$lang]) && isset($tw[$lang]) ? $lang : 'en';
+		$t = array_merge($t, (isset($res['reservation_booker_name']) && $res['reservation_booker_name'] === 'Contact Form') ? $tw[$wl] : $twb[$wl]);
+	}
+
 // visitors arriving from the emailed link have no session yet: derive
 // outlet + property from the reservation, else from the first web outlet
 	if ($res) {
@@ -217,7 +281,7 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 		$tel_href = strlen($tel_digits) >= 6 ? 'tel:'.(substr($tel_digits, 0, 1) === '0' ? '+49'.substr($tel_digits, 1) : '+'.$tel_digits) : '';
 		// calendar file of this reservation (same event as in the confirmation mail: same UID, so no duplicate)
 		$ics_query = 'nr='.urlencode($nr).($token !== '' ? '&t='.$token : '&email='.urlencode($email)).'&lang='.$lang;
-		if (isset($_GET['ics']) && !$is_past && !$is_pending) {
+		if (isset($_GET['ics']) && !$is_past && !$is_pending && !$is_wait) {
 			$addr_line = trim(bm_clean(isset($prp_info['street']) ? $prp_info['street'] : '').', '.bm_clean(isset($prp_info['zip']) ? $prp_info['zip'] : '').' '.bm_clean(isset($prp_info['city']) ? $prp_info['city'] : ''), ' ,');
 			$ics = bm_ics_build(array(
 				'lang' => ($lang === 'de' ? 'de' : 'en'), 'brand' => bm_clean($brand), 'address' => trim(bm_clean($brand).($addr_line !== '' ? ', '.$addr_line : ''), ' ,'),
@@ -237,7 +301,7 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 		// forwardable summary for people joining the guest (no cancel link, no token) - same
 		// source as the mailto link in the confirmation mail, but with the table the reservation
 		// is currently assigned to, since that can change after the mail was sent
-		$share = (!$is_pending && !$is_past) ? bm_share_text($lang, array(
+		$share = (!$is_pending && !$is_wait && !$is_past) ? bm_share_text($lang, array(
 			'host' => bm_clean($res['reservation_guest_name']), 'brand' => bm_clean($brand),
 			'date_text' => $when, 'time_text' => $at, 'table' => trim((string)$res['reservation_table']), 'gi' => $gi,
 		)) : null;
@@ -290,7 +354,7 @@ require_once __DIR__ . '/../web/classes/mysql_compat.php'; session_start();
 			<?php endif; ?>
 		</dl>
 
-		<?php if (!$is_pending && !$is_past): ?>
+		<?php if (!$is_pending && !$is_wait && !$is_past): ?>
 		<div class="guest-quick-actions">
 			<a class="guest-btn guest-ics" href="cancel.php?<?php echo $h($ics_query); ?>&amp;ics=1"><?php echo $h($t['ics']); ?></a>
 			<button type="button" class="guest-btn guest-share" id="guest-share-btn"

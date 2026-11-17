@@ -35,6 +35,11 @@ secureSuperGlobals();
 	elseif (isset($_POST['button'])){$button=$_POST['button'];}
 	
 
+// waiting-list bookings tell the guest what happened (confirmed / no table): mail helpers
+require_once('../classes/local.class.php');
+require_once('../classes/approval.class.php');
+require_once('../classes/booking_mail.class.php');
+
 if ($action=="DEL"){
 	if ($button == 'all'){
 		// ****** DELETE MULTI ******
@@ -48,7 +53,13 @@ if ($action=="DEL"){
 		return $cmd_delete;
 	}else if ($button == 'single'){	
 		// ****** DELETE SINGLE ******
+		// a waiting-list booking that is cancelled: the guest gets the matching "no table" mail - only when the staff left the tick in the cancel window (notify=1);
+		// no parameter (an old cached script) means no mail. Read the row first, the cancel hides it.
+		$wl_row = appr_waitlist_row($cellid);
 		$cmd_delete = querySQL('del_res_single');
+		if ($wl_row && isset($_POST['notify']) && $_POST['notify'] === '1') {
+			try { appr_waitlist_declined($wl_row); } catch (Throwable $e) { error_log('mySeat waitlist decline: '.$e->getMessage()); }
+		}
 		// ** plugin hook
 		if ($hook->hook_exist('after_del_res')) {
 			$hook->execute_hook('after_del_res');
@@ -56,8 +67,12 @@ if ($action=="DEL"){
 		return $cmd_delete;
 	}
 }else if ($action=="ALW"){	
-		// ****** ALLOW SINGLE ******
+		// ****** ALLOW SINGLE ****** (a waiting-list booking becomes a confirmed one; the guest hears about it, once)
+		$wl_row = appr_waitlist_row($cellid);
 		$cmd_allow = querySQL('alw_res_single');
+		if ($wl_row) {
+			try { appr_waitlist_confirmed($wl_row); } catch (Throwable $e) { error_log('mySeat waitlist confirm: '.$e->getMessage()); }
+		}
 		// ** plugin hook
 		if ($hook->hook_exist('after_alw_res')) {
 			$hook->execute_hook('after_alw_res');

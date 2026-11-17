@@ -9,7 +9,12 @@
 	<div id='error_msg'></div><br/>
 	<label><?php echo _author;?></label>
 	<input type="text" id="conf-author" value=""/>
-	<br/><br/>
+	<br/>
+	<?php /* only shown for a waiting-list entry whose guest has an e-mail address (custom.js); pre-ticked: the guest gets the "no table" mail */ ?>
+	<label class="modal-confirm-all" id="wl-notify-label" style="display:none;">
+		<input type="checkbox" id="wl-notify" checked="checked"/> Gast per Mail über die Absage informieren
+	</label>
+	<br/>
 	<p class="modal-danger-note" id="modal-danger-note" style="display:none;">
 		<?php echo _delete_all_warning; ?>
 	</p>

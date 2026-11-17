@@ -115,7 +115,7 @@ function bt($key, $arg = null) {
 				'cancel_res'     => 'Reservierung stornieren',
 				'pending_title'  => 'Anfrage eingegangen',
 				'pending_text'   => 'Vielen Dank für deine Anfrage! Da es sich um eine größere Gruppe handelt, bestätigen wir dir deinen Tisch persönlich. Du erhältst in Kürze eine finale Bestätigung per E-Mail.',
-				'waitlist_text'  => 'Für deinen Wunschtermin sind aktuell keine Tische mehr frei. Wir haben dich auf die Warteliste gesetzt und melden uns, sobald ein Platz frei wird.',
+				'waitlist_text'  => 'Für deinen Wunschtermin sind gerade alle Tische vergeben. Du stehst auf unserer Warteliste. Einen Tisch haben wir damit noch nicht für dich, und wir können nicht versprechen, dass einer frei wird. Sagt jemand ab, schreiben wir dir. Eine Mail mit allen Angaben ist unterwegs.',
 				'error_text'     => 'Deine Reservierung konnte leider nicht angelegt werden.',
 				'error_retry'    => 'Bitte versuche es noch einmal oder schreib uns direkt:',
 				'retry'          => 'Erneut versuchen',
@@ -162,7 +162,7 @@ function bt($key, $arg = null) {
 				'cancel_res'     => 'Cancel reservation',
 				'pending_title'  => 'Request received',
 				'pending_text'   => 'Thank you for your request! As this is a larger group, we will confirm your table personally. You will receive a final confirmation by email shortly.',
-				'waitlist_text'  => 'There are currently no tables left for your requested time. We have put you on the waiting list and will get in touch as soon as a table becomes available.',
+				'waitlist_text'  => 'All tables for your requested time are taken right now. You are on our waiting list. That is not a table yet, and we cannot promise that one will open up. If someone cancels, we will write to you. An email with all the details is on its way.',
 				'error_text'     => 'Unfortunately your reservation could not be created.',
 				'error_retry'    => 'Please try again or write to us directly:',
 				'retry'          => 'Try again',
@@ -754,7 +754,20 @@ function processBooking(){
 				$values[] = "'pending'";
 			}
 
-		  if ($waitlist != 1){
+		  // A full slot is no longer thrown away: the request is stored as a waiting-list row (reservation_wait = 1). It does not count
+		  // against capacity (every capacity query reads reservation_wait = 0), shows up in the day view under "Warteliste" and the staff
+		  // is told by mail; the guest gets the waiting-list mail. Staff confirms it later (web/ajax/modify_entry.php, action ALW).
+		  $is_wait = ($waitlist == 1);
+		  // the same waiting-list request twice (double click, second try) must not create a second row or send a second mail
+		  $dupe_wait = false;
+		  if ($is_wait) {
+			$dup = query("SELECT `reservation_id` FROM `$dbTables->reservations` WHERE `reservation_wait` = '1' AND `reservation_hidden` = '0'
+				AND `reservation_date` = '".$_SESSION['selectedDate']."' AND `reservation_time` = ".$_SESSION['reservation_time']."
+				AND `reservation_outlet_id` = '".(int)$_SESSION['outletID']."' AND `reservation_pax` = ".(int)$res_pax."
+				AND `reservation_guest_email` = '".$_POST['reservation_guest_email']."' LIMIT 1");
+			$dupe_wait = ($dup && mysqli_num_rows($dup) > 0);
+		  }
+		  if (!$dupe_wait){
 			// enter into database - a new online booking must only ever INSERT,
 			// never update an existing reservation (no ON DUPLICATE KEY UPDATE)
 			$query = "INSERT INTO `$dbTables->reservations` (`".implode('`,`', $keys)."`) VALUES (".implode(',', $values).")";
@@ -763,8 +776,8 @@ function processBooking(){
 
 			// Reservation ID
 	 		$resID = mysql_insert_id();
-			// the row exists now, so the next request's availability check will see it - release
-			if ($cap_lock_ok) { myseat_release_lock($cap_lock_key); }
+			// the row exists now, so the next request's availability check will see it - release (a waiting-list row released its lock above and does not count anyway)
+			if ($cap_lock_ok && !$is_wait) { myseat_release_lock($cap_lock_key); }
 
 			// *** send confirmation email
 				// ** PHPMailer class
@@ -772,11 +785,11 @@ function processBooking(){
 				// ** plugin hook
 				if ($hook->hook_exist('after_booking')) {
 					$_SESSION['form'] = $_POST;
-					$hook->execute_hook('after_booking', $needs_approval ? 'pending' : 'confirmed');
+					$hook->execute_hook('after_booking', $is_wait ? 'waitlist' : ($needs_approval ? 'pending' : 'confirmed'));
 				}
 
 			// newsletter: the tick only asks for the confirmation mail (double opt-in); nothing is mailable before the guest has confirmed
-			if (isset($_POST['reservation_advertise']) && $_POST['reservation_advertise'] === 'YES') {
+			if (!$is_wait && isset($_POST['reservation_advertise']) && $_POST['reservation_advertise'] === 'YES') {
 				try {
 					require_once(__DIR__.'/../web/classes/shop.class.php');
 					shop_nl_from_form(trim((string)$_POST['reservation_guest_email']), stripslashes(trim((string)(isset($_POST['reservation_guest_name']) ? $_POST['reservation_guest_name'] : ''))), true, false, 'widget', 0,
@@ -788,12 +801,12 @@ function processBooking(){
 			$result = query("INSERT INTO `$dbTables->res_history` (reservation_id,author) VALUES ('%d','%s')",$resID,mysql_real_escape_string(isset($_SESSION['author']) ? $_SESSION['author'] : ''));
 			// table plan: put the new reservation on a table (optional, never breaks the booking) -
 			// skipped for a pending request, since staff might still decline it
-			if (!$needs_approval && is_file(__DIR__.'/../web/classes/tableplan_assign.class.php')) {
+			if (!$needs_approval && !$is_wait && is_file(__DIR__.'/../web/classes/tableplan_assign.class.php')) {
 				require_once(__DIR__.'/../web/classes/tableplan_assign.class.php');
 				tp_hook_after_booking($resID);
 			}
-			// Reservation was done - 2 = confirmed, 3 = pending staff approval
-			$waitlist = $needs_approval ? 3 : 2;
+			// Reservation was done - 2 = confirmed, 3 = pending staff approval; a waiting-list row stays 1
+			if (!$is_wait) { $waitlist = $needs_approval ? 3 : 2; }
 		  }
 			// reservation done, handle back waitlist status
 			return $waitlist;

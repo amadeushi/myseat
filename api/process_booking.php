@@ -185,9 +185,9 @@ $prp_info = querySQL('property_info');
 	} else {
 		$eyebrow = $de ? 'Warteliste' : 'Waiting list';
 		$title = $de ? ($n !== '' ? 'Du stehst auf der Warteliste, '.$n.'.' : 'Du stehst auf der Warteliste.') : ($n !== '' ? 'You are on the waiting list, '.$n.'.' : 'You are on the waiting list.');
-		$lead = $de ? 'Wird ein Tisch frei, schreiben wir dir. Bis dahin ist nichts verloren.' : 'If a table becomes free, we will write to you. Nothing is lost until then.';
+		$lead = $de ? 'Einen Tisch haben wir damit noch nicht für dich, und wir können nicht versprechen, dass einer frei wird. Sagt jemand ab, schreiben wir dir.' : 'That is not a table yet, and we cannot promise that one will open up. If someone cancels, we will write to you.';
 		$steps = array(array($de ? 'Jetzt' : 'Now', ($de ? 'Du stehst auf der Liste, eine Mail ist unterwegs an ' : 'You are on the list, an e-mail is on its way to ').$c['mail'].'.'),
-			array($de ? 'Sobald ein Tisch frei ist' : 'As soon as a table is free', $de ? 'Wir schreiben dir.' : 'We write to you.'));
+			array($de ? 'Sagt jemand ab' : 'If someone cancels', $de ? 'Wir schreiben dir, und du entscheidest, ob du den Tisch willst.' : 'We write to you and you decide whether you want the table.'));
 	}
 	$t = $de ? array('date' => 'Datum', 'time' => 'Uhrzeit', 'guests' => 'Personen', 'nr' => 'Buchungsnummer', 'next' => 'Was jetzt passiert', 'ics' => 'In den Kalender', 'share' => 'Mit Mitgästen teilen', 'copied' => 'In die Zwischenablage kopiert', 'failed' => 'Kopieren nicht möglich, bitte manuell kopieren',
 			'ics_done' => 'Die Kalender-Datei ist geladen. Öffne sie, dann ist der Termin gespeichert.', 'know' => 'Gut zu wissen', 'park' => 'Wo parke ich?', 'way' => 'Wie komme ich hin?', 'access' => 'Geht es barrierefrei?', 'late' => 'Verspätest du dich?', 'late_t' => 'Ruf kurz an, dann wissen wir Bescheid.',

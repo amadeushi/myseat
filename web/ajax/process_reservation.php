@@ -229,7 +229,9 @@ if ($_SESSION['token'] == $_POST['token'] && $compare_pass > 0 ) {
 			//$res_pax = ($_SESSION['outletID'] == $_POST['old_outlet_id']) ? $res_pax : $res_pax*2;
 			//$res_tbl = ($_SESSION['outletID'] == $_POST['old_outlet_id']) ? 1 : 2;
 			
-		// main loop to store all reservations ( one or recurring)	
+		// set when a booking falls onto the waiting list because the slot is full: the guest then gets the "noted, not firm yet" mail instead of "reserved"
+		$went_wait = false;
+		// main loop to store all reservations ( one or recurring)
 		 while ( $res_dat <= $recurring_date) {
 			
 			// build new reservation date
@@ -269,6 +271,7 @@ if ($_SESSION['token'] == $_POST['token'] && $compare_pass > 0 ) {
 
 			// a timed-out lock is treated the same as "no room" - never insert without the lock held
 			if( !$cap_lock_ok || $res_pax > $val_capacity || $tbl_capacity  < 1 ){
+				$went_wait = true;
 				//prevent double array entry
 				$index = array_search('reservation_wait',$keys);
 				if($index>0){
@@ -375,13 +378,21 @@ if ($_SESSION['token'] == $_POST['token'] && $compare_pass > 0 ) {
 				}
 			}
 		
-			// *** send confirmation email
+			// a new booking that fell onto the waiting list: tell the staff plainly what the guest was (not) told - the guest is no waiting-list guest in their own eyes
+			if ($went_wait && empty($_POST['reservation_id'])) {
+				$guest_to = html_entity_decode(trim((string)(isset($_POST['reservation_guest_email']) ? $_POST['reservation_guest_email'] : '')), ENT_QUOTES, 'UTF-8');
+				$_SESSION['errors'][] = ($_POST['email_type'] != 'no' && filter_var($guest_to, FILTER_VALIDATE_EMAIL))
+					? 'Kein Tisch mehr frei: Der Eintrag steht auf der Warteliste. Der Gast hat eine Mail bekommen, dass die Reservierung aufgenommen, aber noch nicht fest ist. Bestätigst oder lehnst du sie ab, bekommt er automatisch Bescheid.'
+					: 'Kein Tisch mehr frei: Der Eintrag steht auf der Warteliste. Der Gast wurde nicht benachrichtigt (keine Bestätigung angehakt oder keine E-Mail-Adresse), bitte sprich mit ihm. Bestätigst oder lehnst du den Eintrag später ab, bekommt er bei vorhandener E-Mail-Adresse automatisch Bescheid.';
+			}
+
+			// *** send confirmation email ("held" = noted, but not firm yet, when the booking went onto the waiting list; no confirmation SMS then)
 			if ( $_POST['email_type'] != 'no' && $new_id != $_POST['reservation_id']) {
 				// ** PHPMailer class
 				require_once('../classes/phpmailer/class.phpmailer.php');
 				// ** plugin hook
 				if ($hook->hook_exist('after_booking')) {
-					$hook->execute_hook('after_booking');
+					$hook->execute_hook('after_booking', $went_wait ? 'held' : 'confirmed');
 				}
 			}
 }

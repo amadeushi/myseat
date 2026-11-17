@@ -224,10 +224,13 @@ function bm_build($d) {
 	$de = ($lang === 'de');
 	// 'confirmed' (default, unchanged) | 'pending' (awaiting staff approval) | 'declined' | 'approved' | 'reminder' | 'updated' (the staff changed a confirmed reservation and sends the new details)
 	$mode = isset($d['mode']) ? $d['mode'] : 'confirmed';
+	// more modes: 'waitlist' (guest asked for the waiting list in the widget) | 'freed' (a waiting-list table opened up) | 'held' (the staff booked a table in the backend, the slot is full: noted, not firm yet)
+	// | 'wl_declined' (waiting-list request ended without a table) | 'bk_declined' (the same for a booking the staff entered)
+	$declined = in_array($mode, array('declined', 'wl_declined', 'bk_declined'), true);
 	// the person signing the guest mails ("Hamun vom Amadeus-Team"); optional $settings['mailSignName']
 	$who = !empty($settings['mailSignName']) ? $settings['mailSignName'] : 'Hamun';
 	// arrival, parking, accessibility and the menus only belong in a mail that confirms a table
-	$with_info = in_array($mode, array('confirmed', 'approved', 'reminder', 'updated'), true);
+	$with_info = in_array($mode, array('confirmed', 'approved', 'freed', 'reminder', 'updated'), true);
 
 	$outlet   = bm_clean($d['outlet']['outlet_name']);
 	$name     = bm_clean($form['reservation_guest_name']);
@@ -264,7 +267,7 @@ function bm_build($d) {
 		$greeting = 'Hallo '.$name.',';
 		// a declined request never got a booking number - showing one would read as a
 		// confirmed reference for a table that doesn't exist
-		$rows     = ($mode === 'declined')
+		$rows     = $declined
 			? array('Datum' => $date_txt, 'Uhrzeit' => $time_txt, 'Personen' => (string)$pax)
 			: array('Datum' => $date_txt, 'Uhrzeit' => $time_txt, 'Personen' => (string)$pax, 'Buchungsnummer' => $number);
 		if ($notes !== '') { $rows['Deine Anmerkung'] = $notes; }
@@ -280,6 +283,25 @@ function bm_build($d) {
 			$cancel_t = 'Hat sich etwas geändert? Du kannst deine Anfrage jederzeit zurückziehen:';
 			$cancel_l = 'Anfrage zurückziehen';
 			$auto     = 'Diese E-Mail wurde automatisch nach deiner Online-Anfrage versendet.';
+		} elseif ($mode === 'held') {
+			$subject  = 'Deine Reservierung ist aufgenommen, aber noch nicht fest';
+			$intro    = 'wir haben deine Reservierung für '.$date_txt.' um '.$time_txt.' aufgenommen. Ehrlich gesagt sind zu dieser Zeit gerade alle Tische vergeben, deshalb ist sie noch nicht fest. Wir prüfen es und melden uns, ob es klappt. Bis dahin musst du nichts tun.';
+			$head     = 'Deine Reservierung ist aufgenommen';
+			$cancel_t = 'Hat sich etwas geändert? Du kannst deine Reservierung jederzeit zurückziehen:';
+			$cancel_l = 'Reservierung zurückziehen';
+			$auto     = 'Diese E-Mail wurde automatisch nach deiner Reservierung versendet.';
+		} elseif ($mode === 'wl_declined') {
+			$subject  = 'Kein Tisch frei geworden: Suchen wir mit dir einen anderen Tag?';
+			$intro    = 'für '.$date_txt.' um '.$time_txt.' war bei uns jeder Tisch vergeben, und es ist keiner frei geworden. Deshalb nehmen wir dich von der Warteliste. Das tut uns leid, du hattest dir diesen Termin ja schon vorgenommen. Wir hatten dir gleich gesagt, dass wir nichts versprechen können, und trotzdem ärgert es uns, dass es nicht geklappt hat. Wenn du magst, suchen wir gemeinsam einen anderen Tag oder eine andere Uhrzeit. Antworte einfach auf diese Mail, dann schauen wir, was bei uns noch frei ist, und du entscheidest. Dann sitzt du vielleicht schon bald trotzdem bei uns am Tisch.';
+			$head     = 'Leider kein Tisch frei geworden';
+			$cancel_t = ''; $cancel_l = '';
+			$auto     = 'Diese E-Mail wurde automatisch versendet, nachdem wir deine Wartelisten-Anfrage bearbeitet haben.';
+		} elseif ($mode === 'bk_declined') {
+			$subject  = 'Kein Tisch frei geworden: Suchen wir mit dir einen anderen Tag?';
+			$intro    = 'für '.$date_txt.' um '.$time_txt.' ist bei uns leider doch kein Tisch frei, und wir müssen deine Reservierung absagen. Das tut uns leid, du hattest dich ja schon auf den Termin eingestellt. Wenn du magst, suchen wir gemeinsam einen anderen Tag oder eine andere Uhrzeit. Antworte einfach auf diese Mail, dann schauen wir, was noch frei ist, und du entscheidest. Dann sitzt du vielleicht schon bald trotzdem bei uns am Tisch.';
+			$head     = 'Leider kein Tisch frei';
+			$cancel_t = ''; $cancel_l = '';
+			$auto     = 'Diese E-Mail wurde automatisch versendet, nachdem wir deine Reservierung bearbeitet haben.';
 		} elseif ($mode === 'declined') {
 			$subject  = 'Zu deiner Anfrage für den '.$date_txt;
 			$intro    = 'danke für deine Anfrage. Zu diesem Termin können wir eure Gruppe leider nicht unterbringen, das tut uns wirklich leid. Wir helfen gern weiter: Wenn du magst, suchen wir gemeinsam nach einem Ausweichtermin. Melde dich einfach bei uns.';
@@ -300,6 +322,20 @@ function bm_build($d) {
 			$cancel_t = 'Falls etwas dazwischenkommt, sag uns bitte kurz Bescheid, dann kann jemand anderes deinen Platz bekommen:';
 			$cancel_l = 'Reservierung stornieren';
 			$auto     = 'Diese E-Mail wurde automatisch versendet, nachdem wir deine Reservierung geändert haben.';
+		} elseif ($mode === 'waitlist') {
+			$subject  = 'Noch kein Tisch, aber du stehst auf der Warteliste';
+			$intro    = 'für '.$date_txt.' um '.$time_txt.' sind bei uns alle Tische vergeben. Du stehst jetzt auf unserer Warteliste, für '.$pers_de.'. Ein Tisch ist das noch nicht, und wir können dir nicht versprechen, dass einer frei wird. Sagt jemand ab, schreiben wir dir, und du entscheidest, ob du ihn willst. Bis dahin musst du nichts tun. Magst du nicht warten? Antworte auf diese Mail, dann suchen wir mit dir einen anderen Termin.';
+			$head     = 'Du stehst auf der Warteliste';
+			$cancel_t = 'Hat sich etwas geändert? Du kannst dich jederzeit von der Warteliste nehmen:';
+			$cancel_l = 'Von der Warteliste abmelden';
+			$auto     = 'Diese E-Mail wurde automatisch nach deiner Online-Anfrage für die Warteliste versendet.';
+		} elseif ($mode === 'freed') {
+			$subject  = 'Es hat geklappt: Für '.$date_txt.' um '.$time_txt.' ist ein Tisch frei geworden';
+			$intro    = 'es hat geklappt: Für '.$date_txt.' um '.$time_txt.' ist ein Tisch frei geworden, und wir haben ihn für '.$pers_de.' eingeplant. Unten steht alles für den Weg zu uns.';
+			$head     = 'Dein Tisch ist frei geworden';
+			$cancel_t = 'Falls etwas dazwischenkommt, sag uns bitte kurz Bescheid, dann kann jemand anderes deinen Platz bekommen:';
+			$cancel_l = 'Reservierung stornieren';
+			$auto     = 'Diese E-Mail wurde automatisch versendet, nachdem wir dich von der Warteliste bestätigt haben.';
 		} elseif ($mode === 'approved') {
 			$subject  = 'Gute Nachrichten: Dein Tisch für '.$pax.' ist bestätigt';
 			$intro    = 'wir haben deinen Tisch fest für euch eingeplant und freuen uns auf euch! Unten findest du alles, was du für die Anreise wissen musst.';
@@ -319,7 +355,7 @@ function bm_build($d) {
 		$greeting = 'Hello '.$name.',';
 		// a declined request never got a booking number - showing one would read as a
 		// confirmed reference for a table that doesn't exist
-		$rows     = ($mode === 'declined')
+		$rows     = $declined
 			? array('Date' => $date_txt, 'Time' => $time_txt, 'Guests' => (string)$pax)
 			: array('Date' => $date_txt, 'Time' => $time_txt, 'Guests' => (string)$pax, 'Booking number' => $number);
 		if ($notes !== '') { $rows['Your note'] = $notes; }
@@ -335,6 +371,25 @@ function bm_build($d) {
 			$cancel_t = 'Something changed? You can withdraw your request at any time:';
 			$cancel_l = 'Withdraw request';
 			$auto     = 'This email was sent automatically after your online request.';
+		} elseif ($mode === 'held') {
+			$subject  = 'Your reservation is noted, but not firm yet';
+			$intro    = 'we have noted your reservation for '.$date_txt.' at '.$time_txt.'. To be honest, all tables are taken at that time right now, so it is not firm yet. We will check and let you know whether it works out. Until then you do not need to do anything.';
+			$head     = 'Your reservation is noted';
+			$cancel_t = 'Something changed? You can withdraw your reservation at any time:';
+			$cancel_l = 'Withdraw reservation';
+			$auto     = 'This email was sent automatically after your reservation.';
+		} elseif ($mode === 'wl_declined') {
+			$subject  = 'No table free after all: shall we find another day with you?';
+			$intro    = 'no table was free at all for '.$date_txt.' at '.$time_txt.', and none opened up. So we are taking you off the waiting list. We are sorry, you had already made plans around this date. We told you from the start that we could not promise anything, and it still bothers us that it did not work out. If you like, we can look for another day or time together. Just reply to this email, we will check what is still free, and you decide. Maybe you will be sitting at our table soon after all.';
+			$head     = 'No table opened up';
+			$cancel_t = ''; $cancel_l = '';
+			$auto     = 'This email was sent automatically after we reviewed your waiting-list request.';
+		} elseif ($mode === 'bk_declined') {
+			$subject  = 'No table free after all: shall we find another day with you?';
+			$intro    = 'unfortunately there is no table free on '.$date_txt.' at '.$time_txt.' after all, and we have to cancel your reservation. We are sorry, you had already planned around the date. If you like, we can look for another day or time together. Just reply to this email, we will check what is still free, and you decide. Maybe you will be sitting at our table soon after all.';
+			$head     = 'No table free';
+			$cancel_t = ''; $cancel_l = '';
+			$auto     = 'This email was sent automatically after we reviewed your reservation.';
 		} elseif ($mode === 'declined') {
 			$subject  = 'About your request for '.$date_txt;
 			$intro    = 'thank you for your request. Unfortunately we cannot fit your group in at that time, and we are truly sorry. We are happy to help: if you like, we can look for another date together. Just get in touch.';
@@ -355,6 +410,20 @@ function bm_build($d) {
 			$cancel_t = 'If something comes up, please let us know so someone else can take your seat:';
 			$cancel_l = 'Cancel reservation';
 			$auto     = 'This email was sent automatically after we changed your reservation.';
+		} elseif ($mode === 'waitlist') {
+			$subject  = 'No table yet, but you are on the waiting list';
+			$intro    = 'all tables for '.$date_txt.' at '.$time_txt.' are taken. You are on our waiting list now, for '.$pers_en.'. That is not a table yet, and we cannot promise that one will open up. If someone cancels, we will write to you and you decide whether you want it. Until then you do not need to do anything. Rather not wait? Reply to this email and we will look for another date with you.';
+			$head     = 'You are on the waiting list';
+			$cancel_t = 'Something changed? You can take yourself off the waiting list at any time:';
+			$cancel_l = 'Leave waiting list';
+			$auto     = 'This email was sent automatically after your online request for the waiting list.';
+		} elseif ($mode === 'freed') {
+			$subject  = 'It worked out: a table has opened up on '.$date_txt.' at '.$time_txt;
+			$intro    = 'it worked out: a table has opened up on '.$date_txt.' at '.$time_txt.', and we have set it aside for '.$pers_en.'. Below you will find everything you need to know for getting here.';
+			$head     = 'Your table has opened up';
+			$cancel_t = 'If something comes up, please let us know so someone else can take your seat:';
+			$cancel_l = 'Cancel reservation';
+			$auto     = 'This email was sent automatically after we confirmed you from the waiting list.';
 		} elseif ($mode === 'approved') {
 			$subject  = 'Good news: your table for '.$pax.' is confirmed';
 			$intro    = 'we have set your table aside and are looking forward to seeing you! Below you will find everything you need to know for getting here.';
@@ -483,7 +552,7 @@ function bm_build($d) {
 		.bm_mail_logo_row($brand, '28px 32px 4px')
 		.'<tr><td style="font-family:Georgia,\'Times New Roman\',serif;padding:0 32px 8px;font-size:26px;line-height:1.25;color:#1c1a18;">'.$h($head).'</td></tr>'
 		.'<tr><td style="'.$font.'padding:12px 32px 4px;font-size:16px;line-height:1.6;color:#333333;">'.$h($greeting).'<br><br>'.$h($intro).'</td></tr>'
-		.'<tr><td style="padding:12px 32px;"><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="'.($mode === 'declined' ? 'border-top:1px solid #e6e0d2;border-bottom:1px solid #e6e0d2;' : 'background-color:#faf8f3;border:1px solid #e6e0d2;border-radius:6px;').'"><tr><td style="padding:12px 18px;"><table role="presentation" cellpadding="0" cellspacing="0">'.$row_html.'</table></td></tr></table></td></tr>'
+		.'<tr><td style="padding:12px 32px;"><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="'.($declined ? 'border-top:1px solid #e6e0d2;border-bottom:1px solid #e6e0d2;' : 'background-color:#faf8f3;border:1px solid #e6e0d2;border-radius:6px;').'"><tr><td style="padding:12px 18px;"><table role="presentation" cellpadding="0" cellspacing="0">'.$row_html.'</table></td></tr></table></td></tr>'
 		.($cancel_t !== '' ? '<tr><td style="'.$font.'padding:8px 32px 4px;font-size:16px;line-height:1.6;color:#333333;">'.$h($cancel_t).'<br><a href="'.$h($cancel).'" style="color:#8a6d3b;font-weight:bold;">'.$h($cancel_l).'</a></td></tr>' : '')
 		.$menu_html
 		.$info_html
@@ -521,21 +590,29 @@ function bm_build($d) {
 	$request_url = isset($d['request_url']) ? $d['request_url'] : '';
 	$backend_url = isset($d['backend_url']) ? $d['backend_url'] : '';
 	$pending = ($mode === 'pending');
+	$wait    = ($mode === 'waitlist' || $mode === 'held');   // every table taken: the guest is on the waiting list, nothing is blocked, staff confirms in the day view when a table opens up
+	$held    = ($mode === 'held');   // the same, but the staff entered the booking in the backend: the guest thinks of it as a reservation, not as a waiting list
 	$online  = ($d['origin'] === 'online');
 	$booker  = (!empty($form['reservation_booker_name']) && !$online) ? bm_clean($form['reservation_booker_name']) : '';
 	$a_subject = ($pending
 		? ($de ? 'Entscheidung nötig: ' : 'Decision needed: ')
-		: ($de ? 'Neue Reservierung: ' : 'New reservation: ')).$name.', '.($de ? $pers_de : $pers_en).', '.$date_txt.', '.$time_txt;
+		: ($wait ? ($de ? 'Warteliste: ' : 'Waiting list: ') : ($de ? 'Neue Reservierung: ' : 'New reservation: '))).$name.', '.($de ? $pers_de : $pers_en).', '.$date_txt.', '.$time_txt;
 
 	$L = $de
-		? array('badge_new' => 'Neue Reservierung', 'badge_req' => 'Entscheidung nötig', 'head_new' => 'Reservierung für '.$pers_de, 'head_req' => 'Anfrage für '.$pers_de,
+		? array('badge_wait' => 'Warteliste', 'head_wait' => 'Wartelisten-Anfrage für '.$pers_de, 'cta_wait' => 'Warteliste in der Tagesansicht öffnen',
+			'wait_text' => 'Für diesen Termin sind alle Tische vergeben, deshalb steht der Gast auf der Warteliste. Der Platz ist nicht geblockt und zählt nicht gegen die Kapazität. Wird ein Tisch frei, bestätigst du den Gast in der Tagesansicht unter "Warteliste", und er bekommt automatisch seine Bestätigung. Der Gast weiß, dass noch kein Tisch sicher ist.',
+			'held_text' => 'Diese Reservierung wurde im Backend angelegt, aber für diese Zeit sind alle Tische vergeben. Der Eintrag steht deshalb auf der Warteliste, der Platz ist nicht geblockt. Der Gast hat eine Mail bekommen, dass die Reservierung aufgenommen, aber noch nicht fest ist. Bestätige oder lehne sie in der Tagesansicht unter "Warteliste" ab, der Gast bekommt dann automatisch Bescheid.',
+			'badge_new' => 'Neue Reservierung', 'badge_req' => 'Entscheidung nötig', 'head_new' => 'Reservierung für '.$pers_de, 'head_req' => 'Anfrage für '.$pers_de,
 			'date' => 'Datum', 'time' => 'Uhrzeit', 'pax' => 'Personen', 'guest' => 'Gast', 'phone' => 'Telefon', 'note' => 'Notiz des Gastes', 'nr' => 'Buchungsnummer',
 			'source' => 'Quelle', 'online' => 'Online-Formular', 'backend' => 'Backend', 'by' => 'Erfasst von',
 			'req_text' => 'Die Plätze sind für diese Anfrage bereits geblockt. Der Gast wartet auf deine Antwort: mit einem Klick bestätigst oder lehnst du ab, und er bekommt automatisch die passende Mail.',
 			'new_text' => 'Der Tisch ist zugesagt, der Gast hat seine Bestätigung bereits erhalten.',
 			'cta_req' => 'Anfrage ansehen & entscheiden', 'cta_new' => 'Im Backend öffnen', 'backend' => 'Backend', 'open_backend' => 'Oder direkt im Backend öffnen',
 			'foot' => 'Automatische Nachricht von mySeat. Wenn du auf diese Mail antwortest, geht die Antwort direkt an den Gast.', 'none' => '-')
-		: array('badge_new' => 'New reservation', 'badge_req' => 'Decision needed', 'head_new' => 'Reservation for '.$pers_en, 'head_req' => 'Request for '.$pers_en,
+		: array('badge_wait' => 'Waiting list', 'head_wait' => 'Waiting-list request for '.$pers_en, 'cta_wait' => 'Open waiting list in the day view',
+			'wait_text' => 'All tables are taken for this slot, so the guest is on the waiting list. The seats are not blocked and do not count against capacity. When a table opens up, confirm the guest in the day view under "Waiting list" and they automatically get their confirmation. The guest knows that no table is certain yet.',
+			'held_text' => 'This reservation was entered in the backend, but all tables are taken for this time. The entry therefore sits on the waiting list and the seats are not blocked. The guest received an email saying the reservation is noted but not firm yet. Confirm or decline it in the day view under "Waiting list" and the guest is informed automatically.',
+			'badge_new' => 'New reservation', 'badge_req' => 'Decision needed', 'head_new' => 'Reservation for '.$pers_en, 'head_req' => 'Request for '.$pers_en,
 			'date' => 'Date', 'time' => 'Time', 'pax' => 'Guests', 'guest' => 'Guest', 'phone' => 'Phone', 'note' => 'Note from the guest', 'nr' => 'Booking number',
 			'source' => 'Source', 'online' => 'Online form', 'backend' => 'Backend', 'by' => 'Entered by',
 			'req_text' => 'The seats for this request are already blocked. The guest is waiting for your answer: confirm or decline with one click and they automatically get the matching email.',
@@ -545,7 +622,7 @@ function bm_build($d) {
 
 	$a  = $pending
 		? ($de ? 'Neue Reservierungsanfrage - deine Entscheidung ist nötig' : 'New reservation request - your decision is needed')."\r\n\r\n"
-		: ($de ? 'Neue Reservierung' : 'New reservation').($online ? ' (online)' : ($de ? ' (Backend)' : ' (backend)'))."\r\n\r\n";
+		: ($wait ? ($de ? 'Neue Wartelisten-Anfrage' : 'New waiting-list request') : ($de ? 'Neue Reservierung' : 'New reservation')).($online ? ' (online)' : ($de ? ' (Backend)' : ' (backend)'))."\r\n\r\n";
 	$a .= $L['nr'].': '.$number."\r\n";
 	$a .= $L['date'].': '.$date_txt."\r\n";
 	$a .= $L['time'].': '.$time_txt."\r\n";
@@ -556,7 +633,8 @@ function bm_build($d) {
 	if ($notes !== '') { $a .= ($de ? 'Notiz' : 'Note').': '.$notes."\r\n"; }
 	if ($booker !== '') { $a .= $L['by'].': '.$booker."\r\n"; }
 	if ($pending && $request_url !== '') { $a .= "\r\n".$L['cta_req'].":\r\n".$request_url."\r\n"; }
-	if ($backend_url !== '') { $a .= "\r\n".($pending ? $L['open_backend'] : $L['cta_new']).":\r\n".$backend_url."\r\n"; }
+	if ($wait) { $a .= "\r\n".$L[$held ? 'held_text' : 'wait_text']."\r\n"; }
+	if ($backend_url !== '') { $a .= "\r\n".($pending ? $L['open_backend'] : ($wait ? $L['cta_wait'] : $L['cta_new'])).":\r\n".$backend_url."\r\n"; }
 
 	$primary_url = $pending ? $request_url : $backend_url;
 	$btn = function ($url, $label, $primary) use ($h, $font) {
@@ -581,21 +659,21 @@ function bm_build($d) {
 	$note_html = $notes !== ''
 		? '<tr><td style="padding:4px 32px 12px;"><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#fff8e6;border:1px solid #ecd9a6;border-radius:6px;"><tr><td style="'.$font.'padding:12px 16px;font-size:15px;line-height:1.55;color:#333333;"><strong style="display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#8a6d3b;padding-bottom:3px;">'.$h($L['note']).'</strong>'.nl2br($h($notes)).'</td></tr></table></td></tr>'
 		: '';
-	$badge_bg = $pending ? '#fbe9c0' : '#e4efe1';
-	$badge_fg = $pending ? '#6b4a00' : '#2c5a2a';
+	$badge_bg = ($pending || $wait) ? '#fbe9c0' : '#e4efe1';
+	$badge_fg = ($pending || $wait) ? '#6b4a00' : '#2c5a2a';
 	$a_html = '<!DOCTYPE html><html lang="'.$lang.'"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'.$h($a_subject).'</title></head>'
 		.'<body style="margin:0;padding:0;background-color:#f4f1ea;">'
 		.'<div style="display:none;max-height:0;overflow:hidden;opacity:0;">'.$h($name.', '.$pax.' - '.$date_txt.', '.$time_txt).'</div>'
 		.'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f1ea;"><tr><td align="center" style="padding:24px 12px;">'
 		.'<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px;background-color:#ffffff;border:1px solid #e6e0d2;">'
-		.'<tr><td style="'.$font.'padding:26px 32px 0;"><span style="display:inline-block;padding:5px 12px;border-radius:999px;background-color:'.$badge_bg.';color:'.$badge_fg.';font-size:12px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;">'.$h($pending ? $L['badge_req'] : $L['badge_new']).'</span>'
+		.'<tr><td style="'.$font.'padding:26px 32px 0;"><span style="display:inline-block;padding:5px 12px;border-radius:999px;background-color:'.$badge_bg.';color:'.$badge_fg.';font-size:12px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;">'.$h($pending ? $L['badge_req'] : ($wait ? $L['badge_wait'] : $L['badge_new'])).'</span>'
 		.bm_mail_logo_inline($brand).'</td></tr>'
-		.'<tr><td style="font-family:Georgia,\'Times New Roman\',serif;padding:12px 32px 6px;font-size:26px;line-height:1.25;color:#1c1a18;">'.$h($pending ? $L['head_req'] : $L['head_new']).'</td></tr>'
+		.'<tr><td style="font-family:Georgia,\'Times New Roman\',serif;padding:12px 32px 6px;font-size:26px;line-height:1.25;color:#1c1a18;">'.$h($pending ? $L['head_req'] : ($wait ? $L['head_wait'] : $L['head_new'])).'</td></tr>'
 		.'<tr><td style="padding:10px 32px 16px;"><table role="presentation" cellpadding="0" cellspacing="0"><tr>'.$fact($L['date'], $date_txt).$fact($L['time'], $time_txt).$fact($L['pax'], (string)$pax).'</tr></table></td></tr>'
 		.'<tr><td style="padding:0 32px 8px;"><table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-top:1px solid #e6e0d2;"><tr><td style="padding-top:8px;"><table role="presentation" cellpadding="0" cellspacing="0">'.$details.'</table></td></tr></table></td></tr>'
 		.$note_html
-		.'<tr><td style="'.$font.'padding:8px 32px 16px;font-size:15px;line-height:1.6;color:#333333;">'.$h($pending ? $L['req_text'] : $L['new_text']).'</td></tr>'
-		.($primary_url !== '' ? '<tr><td style="padding:0 32px 8px;">'.$btn($primary_url, $pending ? $L['cta_req'] : $L['cta_new'], $pending).'</td></tr>' : '')
+		.'<tr><td style="'.$font.'padding:8px 32px 16px;font-size:15px;line-height:1.6;color:#333333;">'.$h($pending ? $L['req_text'] : ($wait ? $L[$held ? 'held_text' : 'wait_text'] : $L['new_text'])).'</td></tr>'
+		.($primary_url !== '' ? '<tr><td style="padding:0 32px 8px;">'.$btn($primary_url, $pending ? $L['cta_req'] : ($wait ? $L['cta_wait'] : $L['cta_new']), $pending || $wait).'</td></tr>' : '')
 		.($pending && $backend_url !== '' ? '<tr><td style="'.$font.'padding:8px 32px 0;font-size:14px;line-height:1.6;color:#555555;"><a href="'.$h($backend_url).'" style="color:#6b5330;text-decoration:underline;">'.$h($L['open_backend']).'</a></td></tr>' : '')
 		.'<tr><td style="'.$font.'padding:22px 32px 24px;font-size:12px;line-height:1.6;color:#6e685c;">'.$h($L['foot']).'</td></tr>'
 		.'</table></td></tr></table></body></html>';

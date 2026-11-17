@@ -106,7 +106,7 @@ function appr_send_guest_mail($r, $mode) {
 			'restaurant_phone' => !empty($property['phone']) ? $property['phone'] : '',
 		));
 	}
-	if ($mode === 'approved') {
+	if ($mode === 'approved' || $mode === 'freed') {
 		require_once __DIR__.'/sms.class.php';
 		sms_send_for_reservation('confirmation', array(
 			'reservation_id' => $r['reservation_id'], 'phone' => $r['reservation_guest_phone'], 'brand' => $brand,
@@ -147,6 +147,45 @@ function appr_approve($r) {
 	tp_hook_after_booking((int)$r['reservation_id']);
 	appr_send_guest_mail($r, 'approved');
 	return true;
+}
+
+// A waiting-list row (reservation_wait = 1, not cancelled) or null. Read BEFORE the backend changes it (confirm or cancel), so a second click finds nothing and sends no second mail.
+function appr_waitlist_row($reservation_id) {
+	global $dbTables;
+	$link = $GLOBALS['__mysql_compat_link'];
+	$q = mysqli_query($link, "SELECT * FROM `".$dbTables->reservations."` WHERE reservation_id = ".(int)$reservation_id." AND reservation_wait = '1' AND reservation_hidden = '0' LIMIT 1");
+	$r = $q ? mysqli_fetch_assoc($q) : null;
+	return $r ?: null;
+}
+
+// Where a waiting-list row comes from: the guest widget sends reservation_booker_name = 'Contact Form'; anything else was entered by the staff in the backend
+// (the slot was full, the guest never asked for a waiting list and thinks of it as a reservation). The two get different wording.
+function appr_is_online_row($r) {
+	return isset($r['reservation_booker_name']) && $r['reservation_booker_name'] === 'Contact Form';
+}
+
+// a usable e-mail address of the guest (the stored value is HTML-escaped)
+function appr_guest_mail_ok($r) {
+	return filter_var(html_entity_decode(trim((string)$r['reservation_guest_email']), ENT_QUOTES, 'UTF-8'), FILTER_VALIDATE_EMAIL) !== false;
+}
+
+// Staff confirmed a waiting-list booking (reservation_wait is 0 now): the table goes to the guest's table plan and the guest hears about it:
+// online request -> "a table has opened up" (freed), backend booking -> the normal confirmation (approved); both with the confirmation SMS for a mobile number.
+// A guest without an e-mail address is not mailed.
+function appr_waitlist_confirmed($r) {
+	require_once __DIR__.'/tableplan_assign.class.php';
+	tp_hook_after_booking((int)$r['reservation_id']);
+	if (!appr_guest_mail_ok($r)) { return false; }
+	$res = appr_send_guest_mail($r, appr_is_online_row($r) ? 'freed' : 'approved');
+	return !empty($res['mail']);
+}
+
+// Staff cancelled a waiting-list booking: the guest gets the "no table" mail that fits - the waiting-list wording for an online request (wl_declined),
+// "we have to cancel your reservation" for a backend booking (bk_declined). A guest without an e-mail address is not mailed.
+function appr_waitlist_declined($r) {
+	if (!appr_guest_mail_ok($r)) { return false; }
+	$res = appr_send_guest_mail($r, appr_is_online_row($r) ? 'wl_declined' : 'bk_declined');
+	return !empty($res['mail']);
 }
 
 // decline a pending request: hides it like a cancellation (frees the capacity) + decline mail

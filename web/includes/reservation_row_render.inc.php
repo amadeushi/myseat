@@ -77,10 +77,11 @@ function render_reservation_row_tr($row) {
 
 	// WAITLIST ALLOW BUTTON
 	if($_SESSION['wait'] == 1){
+		// the staff decides, not the arithmetic: the check mark is always there. When the system says "no room left" it asks once before it confirms anyway (no need to raise the capacity by hand first).
 		$leftspace = leftSpace(substr($row->reservation_time,0,5), $availability);
-		if($leftspace >= $row->reservation_pax && $_SESSION['outlet_max_tables']-$tbl_availability[substr($row->reservation_time,0,5)] >= 1){
-			echo"&nbsp;<a href='#' name='".$id."' class='alwbtn'>".uiIcon('check', array('class' => 'help', 'title' => _allow, 'alt' => _allow))."</a>&nbsp;&nbsp;";
-		}
+		$wl_fits = ($leftspace >= $row->reservation_pax && $_SESSION['outlet_max_tables']-$tbl_availability[substr($row->reservation_time,0,5)] >= 1);
+		$wl_ask = $wl_fits ? '' : ' onclick="if(!confirm(\'Laut System ist für diese Uhrzeit kein Platz mehr frei. Trotzdem bestätigen?\')){event.stopImmediatePropagation();return false;}"';
+		echo"&nbsp;<a href='#' name='".$id."' class='alwbtn'".$wl_ask.">".uiIcon('check', array('class' => 'help', 'title' => _allow, 'alt' => _allow))."</a>&nbsp;&nbsp;";
 	}
 	// TABLE SIGN on the receipt printer
 	if ( current_user_can('Reservation-Edit') && $q!=3 ){
@@ -90,7 +91,9 @@ function render_reservation_row_tr($row) {
 	echo "<a href='?p=102&resID=".$id."'>".uiIcon('pen', array('class' => 'help', 'title' => _detail, 'alt' => _detail))."</a>&nbsp;&nbsp;";
 	// DELETE BUTTON
 	if ( current_user_can( 'Reservation-Delete' ) && $q!=3 ){
-    	echo"<a href='#modalsecurity' name='".$row->repeat_id."' id='".$id."' class='delbtn'>
+		// a waiting-list entry whose guest has an e-mail address: cancelling it can tell the guest (the cancel window and the status dropdown ask, see custom.js)
+		$wl_mail = ($_SESSION['wait'] == 1 && filter_var(html_entity_decode(trim((string)$row->reservation_guest_email), ENT_QUOTES, 'UTF-8'), FILTER_VALIDATE_EMAIL) !== false) ? " data-wlmail='1'" : '';
+    	echo"<a href='#modalsecurity' name='".$row->repeat_id."' id='".$id."' class='delbtn'".$wl_mail.">
 			".uiIcon('cross', array('class' => 'help', 'title' => _delete, 'alt' => _cancelled))."</a>";
 	}
 	echo"</td></tr>";
