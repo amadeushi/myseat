@@ -1207,6 +1207,11 @@ function shop_zones_overlaps($zones) {
 	return $out;
 }
 
+// a street line as a comparison key: lower case, no spaces or punctuation, ß as ss - "Am Ratsbauhof 7 A" and "am ratsbauhof 7a" are the same address
+function shop_addr_key($s) {
+	return preg_replace('/[\s.,]+/u', '', str_replace('ß', 'ss', mb_strtolower((string)$s)));
+}
+
 // the zone of an address: array(ok, zone (id, name, fee_cents, min_order_cents), lat, lng, error, reason).
 // reason is 'not_found' (geocoding itself failed - the UI may then offer a what3words code instead) or
 // 'outside_zone' (a real, found address that is simply not served).
@@ -1227,6 +1232,14 @@ function shop_find_zone($street, $zip, $city) {
 		if ($z) { $c['zone'] = $z; $deliverable[] = $c; }
 	}
 	if (!$deliverable) { return array('ok' => false, 'reason' => 'outside_zone', 'error' => 'Diese Adresse liegt leider außerhalb unseres Liefergebiets. Du kannst gern bei uns abholen.', 'lat' => $lat, 'lng' => $lng); }
+	// several matches, but one of them is exactly what was typed ("Am Ratsbauhof 7" next to "Am Ratsbauhof 7A", both in the same PLZ): that one wins, there is nothing to choose.
+	// Without this a guest or the till could never get past the pick list - the pick only handed back the PLZ, which both matches share, so the same question came again.
+	// Two exact matches (the same street name in two PLZ) still ask.
+	if (count($deliverable) > 1) {
+		$typed = shop_addr_key($street);
+		$same = array_values(array_filter($deliverable, function ($c) use ($typed) { return shop_addr_key($c['road']) === $typed; }));
+		if (count($same) === 1) { $deliverable = $same; }
+	}
 	if (count($deliverable) === 1) {
 		$c = $deliverable[0];
 		return array('ok' => true, 'zone' => $c['zone'], 'lat' => $c['lat'], 'lng' => $c['lng'], 'postcode' => $c['postcode'], 'road' => $c['road']);

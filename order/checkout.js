@@ -333,6 +333,7 @@
 		$$('.co-candidate', box).forEach(function (btn, i) {
 			btn.addEventListener('click', function () {
 				var c = list[i], out = $('#co-zone');
+				form.elements.street.value = c.road;   // the street of the pick too: matches that share the PLZ ("Am Ratsbauhof 7" / "7A") would be asked again when the order is sent; with the exact street the server settles it
 				form.elements.zip.value = c.postcode;
 				S.zoneKey = form.elements.street.value.trim() + '|' + form.elements.zip.value.trim() + '|' + form.elements.city.value.trim();
 				S.zone = c.zone; S.zoneAmbiguous = false;

@@ -90,6 +90,7 @@
 			btn.addEventListener('click', function () {
 				var c = list[i], s = $('#sz-street'), z = $('#sz-zip'), cty = $('#sz-city');
 				if (!s || !z) { return; }
+				s.value = c.road;   // the street of the pick too (see checkout.js): the same exact street is then settled by the server without a second question
 				z.value = c.postcode;
 				zoneKey = s.value.trim() + '|' + z.value.trim() + '|' + cty.value.trim();
 				state.zone = c.zone; modeChosen('delivery');

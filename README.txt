@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-18 == mySeat v6.94.2 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Behoben (Adressen mit zwei Treffern, Kasse und Shop): Bei "Am Ratsbauhof 7" fand die Adresssuche zwei Treffer, "Am Ratsbauhof 7A" und "Am Ratsbauhof 7" (beide 31134, gleiche Zone, gleiche Gebuehr), und fragte "Mehrere passende Adressen". Die Auswahl kam nie an: Kasse (web/js/orders_pos.js) und Gast-Checkout (order/checkout.js) uebernahmen bei der Wahl nur die Postleitzahl, die bei beiden gleich ist, und der Server (web/classes/shop.class.php shop_find_zone) fragte beim Neupruefen und beim Anlegen der Bestellung wieder dasselbe. Auch Gaeste im Shop konnten so an der Bestellung scheitern. Jetzt gewinnt der Treffer, der genau der getippten Adresse entspricht (Gross-/Kleinschreibung, Leerzeichen, Satzzeichen und ss/ß egal, shop_addr_key); gibt es genau einen, wird er ohne Rueckfrage genommen. Gibt es keinen genauen oder zwei genaue (gleiche Strasse in zwei PLZ), bleibt die Frage. Dazu uebernimmt die Auswahl jetzt auch die Strasse des Treffers ins Strassenfeld (Kasse, Checkout und Schnellpruefung auf der Menueseite order/shop.js), damit die naechste Pruefung eindeutig ist.
+
 2026-11-18 == mySeat v6.94.1 == amadeushi - http://github.com/amadeushi/myseat
 
  * Behoben (Zeus-Ride-Banner, order/shop.css): Auf dem Handy sass der Pixel-Titel "ZEUS RIDE" nur etwa 4 Pixel unter dem oberen Rahmen, fast an der Kante. Das Banner hat oben jetzt mehr Luft (16 statt 10 Pixel Innenabstand).

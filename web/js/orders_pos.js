@@ -467,7 +467,7 @@
 				if (r.reason === 'ambiguous' && r.candidates && r.candidates.length) {
 					S.zoneErr = '';
 					z.innerHTML = '<p class="kx-zone-l">Mehrere Treffer, bitte wählen:</p>' + r.candidates.map(function (c, i) { return '<button type="button" class="kx-pick" data-i="' + i + '">' + esc(c.road) + ', ' + esc(c.postcode) + '</button>'; }).join(' ');
-					$$('.kx-pick', z).forEach(function (b) { b.addEventListener('click', function () { f.elements.zip.value = r.candidates[+b.dataset.i].postcode; checkZone(); }); });
+					$$('.kx-pick', z).forEach(function (b) { b.addEventListener('click', function () { var c = r.candidates[+b.dataset.i]; f.elements.street.value = c.road; f.elements.zip.value = c.postcode; checkZone(); }); });   // the street of the pick too: matches that share the PLZ ("Am Ratsbauhof 7" / "7A") were asked again and again; with the exact street the server settles it
 				} else { S.zoneErr = r.error || 'Die Adresse wurde nicht gefunden.'; z.innerHTML = ''; }
 				renderAlerts(); return;
 			}
