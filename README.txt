@@ -52,6 +52,10 @@ config/config.general.php (defaults apply when missing):
   $settings['lastBookingMinutes'] = 60;   (v0.2165)  last online booking, minutes before closing
   $settings['brandName'] = 'Amadeus';     (v0.2166)  name shown in the backend header and login
 
+2026-11-18 == mySeat v6.94.1 == amadeushi - http://github.com/amadeushi/myseat
+
+ * Behoben (Zeus-Ride-Banner, order/shop.css): Auf dem Handy sass der Pixel-Titel "ZEUS RIDE" nur etwa 4 Pixel unter dem oberen Rahmen, fast an der Kante. Das Banner hat oben jetzt mehr Luft (16 statt 10 Pixel Innenabstand).
+
 2026-11-18 == mySeat v6.94.0 == amadeushi - http://github.com/amadeushi/myseat
 
  * Neu (Bestellseite): kleines Zeus-Ride-Banner im Pixel-Miami-Stil (order/index.php), unter den Hinweisen und ueber der Suchleiste. Es zeigt einen Ausschnitt aus dem Spiel (Strasse von oben, Roller, Zeus-Muenzen) und den Titel in Pixelschrift, dazu den Text der Statusseite ("Fahr mit dem Lieferroller durch Hildesheim und sammle Zeus-Muenzen. Dafuer gibt es Rabatt auf deine naechste Bestellung.") und den Knopf "Jetzt fahren". Es erscheint nur, wenn Zeus Ride eingeschaltet ist (Einstellungen > Lieferservice > Zeus Ride). Der Link oeffnet das Spiel (ride.php) in einem neuen Tab, damit der Warenkorb bleibt; das Kreuz schliesst das Banner fuer den Besuch (sessionStorage "zr_x", keine Personendaten), beim naechsten Besuch ist es wieder da. Bilder: order/zeusride_szene.svg und order/zeusride_titel.svg (aus den Sprites und Farben von order/ride.js, ohne fremde Schrift und ohne externen Aufruf), Stil: order/shop.css (.zr-*). Keine Muenzzahlen und keine Gewinnchance im Text.
