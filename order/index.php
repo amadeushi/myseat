@@ -83,6 +83,26 @@ $card_on = $shop_public && $card_cfg['on'] && !shop_acc_current(); // card game 
 	<?php if (!$shop_accepting): ?><p class="shop-notice">Wir nehmen gerade keine Bestellungen an. Du kannst dich schon in Ruhe umsehen.<?php echo $shop_staff ? ' (Vorschau für Mitarbeiter)' : ''; ?></p><?php endif; ?>
 
 	<?php
+		// Zeus Ride: a small invitation for every guest, in the pixel look of the game. Only while the game is switched on (same condition as the hint on the status page); it opens the game in a new tab,
+		// so the basket stays here. The cross closes it for this visit (sessionStorage, no personal data); a new visit shows it again.
+		$zrc = shop_ride_cfg();
+		if ($zrc['on'] && $zrc['tiers']):
+	?>
+	<aside class="zr-banner" id="zr-banner" aria-label="Zeus Ride">
+		<a class="zr-link" href="ride.php" target="_blank" rel="noopener">
+			<img class="zr-scene" src="zeusride_szene.svg?v=<?php echo @filemtime(__DIR__.'/zeusride_szene.svg'); ?>" alt="" width="104" height="96"/>
+			<span class="zr-body">
+				<img class="zr-title" src="zeusride_titel.svg?v=<?php echo @filemtime(__DIR__.'/zeusride_titel.svg'); ?>" alt="Zeus Ride" width="171" height="27"/>
+				<span class="zr-text">Fahr mit dem Lieferroller durch Hildesheim und sammle Zeus-Münzen. <b>Dafür gibt es Rabatt auf deine nächste Bestellung.</b></span>
+				<span class="zr-go">Jetzt fahren</span>
+			</span>
+		</a>
+		<button type="button" class="zr-x" id="zr-x" aria-label="Banner schließen"><svg viewBox="0 0 7 7" width="14" height="14" aria-hidden="true" shape-rendering="crispEdges"><path fill="currentColor" d="M0 0h2v1h1v1h1V1h1V0h2v2H6v1H5v1h1v1h1v2H5V6H4V5H3v1H2v1H0V5h1V4h1V3H1V2H0z"/></svg></button>
+	</aside>
+	<script>(function () { var b = document.getElementById('zr-banner'), x = document.getElementById('zr-x'); if (!b || !x) { return; } try { if (sessionStorage.getItem('zr_x') === '1') { b.hidden = true; return; } } catch (e) {} x.addEventListener('click', function () { b.hidden = true; try { sessionStorage.setItem('zr_x', '1'); } catch (e) {} }); })();</script>
+	<?php endif; ?>
+
+	<?php
 		// diet filter: only the marks that at least one dish has (the owner ticks them in the menu editor)
 		$diet_has = array();
 		foreach ($menu as $c0) { foreach ($c0['products'] as $p0) { foreach (array_filter(explode(',', (string)$p0['diet'])) as $f0) { $diet_has[$f0] = true; } } }

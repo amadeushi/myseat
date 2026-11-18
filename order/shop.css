@@ -34,6 +34,38 @@
 .shop-status.is-closed::before { background: var(--danger); }
 .shop-notice { background: var(--surface-2); border-bottom: 1px solid var(--border-soft); color: var(--gold-strong); text-align: center; font-size: 14px; padding: 10px 16px; }
 
+/* Zeus Ride banner (order/index.php): the pixel world of the game as a small invitation on the order page. Colors and sprites are those of the game (order/ride.js);
+   the frame is three lines (teal, pink, dark) with stepped corners, the stripes at the bottom are the sunset of the game's title card. */
+.zr-banner { --zr-bg: #120d24; --zr-pink: #ff4fa3; --zr-teal: #19d3c5; --zr-gold: #ffd45a; --zr-ink: #f4eaff; --zr-dim: #b9aadf;
+	--zr-step: polygon(6px 0, calc(100% - 6px) 0, calc(100% - 6px) 3px, calc(100% - 3px) 3px, calc(100% - 3px) 6px, 100% 6px, 100% calc(100% - 6px), calc(100% - 3px) calc(100% - 6px), calc(100% - 3px) calc(100% - 3px), calc(100% - 6px) calc(100% - 3px), calc(100% - 6px) 100%, 6px 100%, 6px calc(100% - 3px), 3px calc(100% - 3px), 3px calc(100% - 6px), 0 calc(100% - 6px), 0 6px, 3px 6px, 3px 3px, 6px 3px);
+	position: relative; max-width: 812px; margin: 14px auto 0; padding: 0 16px; }
+.zr-banner[hidden] { display: none; }
+.zr-link { position: relative; z-index: 0; display: flex; align-items: center; gap: 14px; padding: 10px 14px 20px 10px; color: var(--zr-ink); text-decoration: none; background: var(--zr-teal); clip-path: var(--zr-step); touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.zr-link::before, .zr-link::after { content: ''; position: absolute; z-index: -1; clip-path: var(--zr-step); }
+.zr-link::before { inset: 3px; background: var(--zr-pink); }
+.zr-link::after { inset: 6px; background: var(--zr-bg) linear-gradient(to top, #ff9a3c 0 3px, transparent 3px 6px, var(--zr-pink) 6px 9px, transparent 9px); }
+.zr-link:focus-visible { background: var(--zr-gold); outline: none; }
+.zr-scene { flex: none; width: 104px; height: 96px; image-rendering: pixelated; image-rendering: crisp-edges; box-shadow: 0 0 0 2px #0b0716, 4px 4px 0 2px rgba(0, 0, 0, 0.45); }
+.zr-body { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
+.zr-title { width: 171px; height: 27px; image-rendering: pixelated; image-rendering: crisp-edges; }
+.zr-text { font-size: 13px; line-height: 1.36; color: var(--zr-ink); text-wrap: pretty; }
+.zr-text b { color: var(--zr-gold); font-weight: 600; }
+.zr-go { display: inline-flex; align-items: center; min-height: 34px; margin-top: 2px; padding: 0 14px; background: var(--zr-gold); color: var(--zr-bg); font-size: 14px; font-weight: 700; letter-spacing: 0.02em; box-shadow: 3px 3px 0 var(--zr-pink); }
+.zr-link:active .zr-go { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--zr-pink); }
+.zr-x { position: absolute; top: 7px; right: 20px; z-index: 1; width: 36px; height: 36px; display: grid; place-items: center; padding: 0; border: 0; background: none; color: var(--zr-dim); cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.zr-x::before { content: ''; position: absolute; inset: -4px; }   /* the touch target is 44 px although the cross is small */
+.zr-x:active { color: var(--zr-ink); }
+@media (max-width: 369px) { .zr-title { width: 114px; height: 18px; } }   /* narrow phones: the title at half size (still whole pixels), so it never runs under the cross */
+.zr-x:focus-visible { outline: 3px solid var(--zr-gold); outline-offset: -6px; }
+@media (hover: hover) and (pointer: fine) { .zr-link:hover .zr-go { background: #ffe18a; } .zr-x:hover { color: var(--zr-ink); } }
+@media (min-width: 560px) {
+	.zr-link { gap: 20px; }
+	.zr-body { display: grid; grid-template-columns: minmax(0, 46ch) auto; justify-content: start; column-gap: 26px; row-gap: 6px; align-items: center; justify-items: start; }
+	.zr-title, .zr-text { grid-column: 1; }
+	.zr-text { max-width: 46ch; }
+	.zr-go { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+}
+
 /* quick delivery-zone check on the menu page, before the guest builds a cart (see checkout.php's own .co-zone for the
    paired flow, re-checked there regardless). Collapsed into a small toggle by default; shop-zone-box is a floating
    dropdown (like the datepicker/offer-dialog elsewhere in this app), not a row reflowing the header. It stays open
